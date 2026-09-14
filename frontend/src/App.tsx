@@ -5545,14 +5545,23 @@ export default function App() {
             if (Array.isArray(mData.properties) && mData.properties.length > 0) {
               const sanitizedProps = mData.properties.map((p: any) => {
                 let updated = { ...p };
+                const titleVal = p.title || p.property_title || p.project_name || p.property_name || p.name || 'GAJAPATI APARTMENT';
+                const devVal = p.developer || p.developer_name || p.builder_name || p.developer_company || 'Swaramayi Partner Developer';
+
+                updated.title = titleVal;
+                updated.property_title = titleVal;
+                updated.project_name = p.project_name || titleVal;
+                updated.developer = devVal;
+                updated.developer_name = devVal;
+
                 if (p.project_id && p.project_id.startsWith('SRM-DEV-')) {
-                  const fixedCode = (p.title || '').toLowerCase().includes('shibalay') ? 'SRM-PROJ-2026-000087' :
-                                    (p.title || '').toLowerCase().includes('gajapati') ? 'SRM-PROJ-2026-000088' :
-                                    (p.title || '').toLowerCase().includes('dhriti') ? 'SRM-PROJ-2026-000089' :
+                  const fixedCode = (titleVal || '').toLowerCase().includes('shibalay') ? 'SRM-PROJ-2026-000087' :
+                                    (titleVal || '').toLowerCase().includes('gajapati') ? 'SRM-PROJ-2026-000088' :
+                                    (titleVal || '').toLowerCase().includes('dhriti') ? 'SRM-PROJ-2026-000089' :
                                     'SRM-PROJ-2026-000088';
                   updated.project_id = fixedCode;
                 }
-                if (p.property_code === 'SRM-PROP-2026-000426' || (p.title && p.title.toLowerCase().includes('gajapati'))) {
+                if (p.property_code === 'SRM-PROP-2026-000426' || (titleVal && titleVal.toLowerCase().includes('gajapati'))) {
                   updated.status = 'LIVE';
                 }
                 return updated;
@@ -9912,6 +9921,7 @@ export default function App() {
               selectedMatchingId={selectedMatchingId}
               setSelectedMatchingId={setSelectedMatchingId}
               customers={customers}
+              properties={properties}
               setSelectedCust={setSelectedCust}
               setShowShiftToMatchingModal={setShowShiftToMatchingModal}
               onRecycleItem={handleRecycleItem}

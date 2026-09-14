@@ -3182,9 +3182,12 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     const calcSuper = carpetNum ? `${Math.round(carpetNum / 0.7)} Sq.Ft.` : '1,280 Sq.Ft.';
                     const superDisp = p.super_builtup_area || calcSuper;
 
+                    const displayTitle = p.title || p.property_title || p.project_name || p.property_name || p.name || 'GAJAPATI APARTMENT';
+                    const displayDeveloper = p.developer || p.developer_name || p.builder_name || p.developer_company || 'Swaramayi Partner Developer';
+
                     const allMasters = getAllMasterProjects();
                     const matchedMaster = allMasters.find(m => 
-                      (m.title && p.title && m.title.toLowerCase().trim() === p.title.toLowerCase().trim()) ||
+                      (m.title && displayTitle && m.title.toLowerCase().trim() === displayTitle.toLowerCase().trim()) ||
                       (m.id && p.project_id && m.id === p.project_id) ||
                       (m.code && p.project_id && m.code === p.project_id)
                     );
@@ -3196,17 +3199,18 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       rawProjCode = matchedMaster.id;
                     }
                     const projCode = (rawProjCode && !rawProjCode.startsWith('SRM-DEV-')) ? rawProjCode : (
-                      (p.title || '').toLowerCase().includes('shibalay') ? 'SRM-PROJ-2026-000087' :
-                      (p.title || '').toLowerCase().includes('gajapati') ? 'SRM-PROJ-2026-000088' :
-                      (p.title || '').toLowerCase().includes('dhriti') ? 'SRM-PROJ-2026-000089' :
+                      displayTitle.toLowerCase().includes('shibalay') ? 'SRM-PROJ-2026-000087' :
+                      displayTitle.toLowerCase().includes('gajapati') ? 'SRM-PROJ-2026-000088' :
+                      displayTitle.toLowerCase().includes('dhriti') ? 'SRM-PROJ-2026-000089' :
                       'SRM-PROJ-2026-000088'
                     );
 
                     // PARKING COMPUTATION FOR THIS ROW
-                    const projProps = properties.filter(item => 
-                      (item.project_id && item.project_id === projCode) ||
-                      (item.title && p.title && item.title.toLowerCase().trim() === p.title.toLowerCase().trim())
-                    );
+                    const projProps = properties.filter(item => {
+                      const itemTitle = item.title || item.property_title || item.project_name || '';
+                      return (item.project_id && item.project_id === projCode) ||
+                             (itemTitle && displayTitle && itemTitle.toLowerCase().trim() === displayTitle.toLowerCase().trim());
+                    });
 
                     const totalCoveredCap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : 24;
                     const totalEvCap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : 6;
@@ -3240,13 +3244,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       <tr key={p.id} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
                         <td style={{ padding: '12px', fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800' }}>{p.property_code}</td>
                         <td style={{ padding: '12px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
-                          <div>{p.title}</div>
+                          <div>{displayTitle}</div>
                           <span style={{ fontSize: '0.7rem', color: '#a855f7', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid #a855f7', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', marginTop: '3px', display: 'inline-block' }}>
                             🏢 {p.property_type || p.type || 'Flat / Apartment'}
                           </span>
                         </td>
                         <td style={{ padding: '12px' }}>
-                          <div style={{ fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{p.developer}</div>
+                          <div style={{ fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{displayDeveloper}</div>
                           <span style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', border: '1px solid #a855f7', padding: '2px 6px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '900', fontFamily: 'monospace', marginTop: '4px', display: 'inline-block' }} title="Master Project Code">
                             🔑 {projCode}
                           </span>

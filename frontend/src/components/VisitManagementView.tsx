@@ -687,6 +687,12 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   status: 'N/A'
                 };
 
+                const isHydCoords = (latVal: any, lngVal: any) => {
+                  const latNum = parseFloat(String(latVal || '').replace(/[^0-9.-]/g, ''));
+                  const lngNum = parseFloat(String(lngVal || '').replace(/[^0-9.-]/g, ''));
+                  return !isNaN(latNum) && !isNaN(lngNum) && (latNum >= 17.0 && latNum <= 18.0 && lngNum >= 78.0 && lngNum <= 79.0);
+                };
+
                 const resolveStopCoords = (s: any, idx: number) => {
                   if (!s) return { lat: '22.722361', lng: '88.493403' };
                   const pCode = (s.propertyCode || s.propertyId || s.propCode || '').trim();
@@ -702,7 +708,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   if (matched && matched.latitude && matched.longitude) {
                     const lat = String(matched.latitude).replace(/[^0-9.-]/g, '');
                     const lng = String(matched.longitude).replace(/[^0-9.-]/g, '');
-                    if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
+                    if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng)) && !isHydCoords(lat, lng)) {
                       return { lat, lng };
                     }
                   }
@@ -710,7 +716,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   if (s.latitude && s.longitude) {
                     const lat = String(s.latitude).replace(/[^0-9.-]/g, '');
                     const lng = String(s.longitude).replace(/[^0-9.-]/g, '');
-                    if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
+                    if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng)) && !isHydCoords(lat, lng)) {
                       return { lat, lng };
                     }
                   }
@@ -744,38 +750,50 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   if (isCabNeeded) {
                     // 1st Leg: Customer Pickup Address
                     let pickupPt = '22.720500,88.485000';
-                    if (plan.pickupLat && plan.pickupLng) {
+                    if (plan.pickupAddress && plan.pickupAddress.trim()) {
+                      const addr = plan.pickupAddress.trim();
+                      if (!addr.toLowerCase().includes('hyderabad') && !addr.toLowerCase().includes('kondapur')) {
+                        pickupPt = encodeURIComponent(addr);
+                      }
+                    } else if (plan.pickupLat && plan.pickupLng && !isHydCoords(plan.pickupLat, plan.pickupLng)) {
                       const lat = String(plan.pickupLat).replace(/[^0-9.-]/g, '');
                       const lng = String(plan.pickupLng).replace(/[^0-9.-]/g, '');
                       if (lat && lng) pickupPt = `${lat},${lng}`;
-                    } else if (plan.pickupAddress && plan.pickupAddress.trim()) {
-                      pickupPt = encodeURIComponent(plan.pickupAddress.trim());
                     }
 
                     // Intermediate Legs: Project Property Locations
-                    const projectCoordsStr = resolvedStops.map((c: any) => `${c.lat},${c.lng}`);
+                    const projectCoordsStr = resolvedStops.map((c: any, idx: number) => {
+                      const s = stops[idx];
+                      if (s && s.address && s.address.trim() && !s.address.toLowerCase().includes('hyderabad') && !s.address.toLowerCase().includes('kondapur')) {
+                        return encodeURIComponent(s.address.trim());
+                      }
+                      return `${c.lat},${c.lng}`;
+                    });
 
                     // Final Leg: Customer Drop Address
                     let dropPt = '22.725000,88.498000';
-                    if (plan.dropLat && plan.dropLng) {
+                    if (plan.dropAddress && plan.dropAddress.trim()) {
+                      const addr = plan.dropAddress.trim();
+                      if (!addr.toLowerCase().includes('hyderabad') && !addr.toLowerCase().includes('kondapur')) {
+                        dropPt = encodeURIComponent(addr);
+                      }
+                    } else if (plan.dropLat && plan.dropLng && !isHydCoords(plan.dropLat, plan.dropLng)) {
                       const lat = String(plan.dropLat).replace(/[^0-9.-]/g, '');
                       const lng = String(plan.dropLng).replace(/[^0-9.-]/g, '');
                       if (lat && lng) dropPt = `${lat},${lng}`;
-                    } else if (plan.dropAddress && plan.dropAddress.trim()) {
-                      dropPt = encodeURIComponent(plan.dropAddress.trim());
                     }
 
                     // Sequence: Origin (Visitor Live Current Location) -> 1st Waypoint (Customer Pickup) -> Waypoints 2..N (Project Sites) -> Final Destination (Customer Drop)
                     const waypointsStr = [pickupPt, ...projectCoordsStr].join('|');
-                    return `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}`;
+                    return `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`;
                   } else {
                     if (resolvedStops.length > 1) {
                       const destStop = resolvedStops[resolvedStops.length - 1];
                       const waypointsStr = resolvedStops.slice(0, resolvedStops.length - 1).map((c: any) => `${c.lat},${c.lng}`).join('|');
-                      return `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destStop.lat},${destStop.lng}&waypoints=${encodeURIComponent(waypointsStr)}`;
+                      return `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destStop.lat},${destStop.lng}&waypoints=${encodeURIComponent(waypointsStr)}&travelmode=driving&dirflg=d`;
                     } else if (resolvedStops.length === 1) {
                       const c = resolvedStops[0];
-                      return `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${c.lat},${c.lng}`;
+                      return `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${c.lat},${c.lng}&travelmode=driving&dirflg=d`;
                     }
                     return 'https://www.google.com/maps';
                   }
@@ -797,6 +815,73 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                       </button>
                     </div>
 
+                    {/* ROUTE BREAKDOWN & LEG INDICATOR CARD */}
+                    <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <span style={{ fontSize: '0.8rem', color: isLight ? '#7e22ce' : '#a855f7', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        🗺️ ROUTE LEG SEQUENCE BREAKDOWN (MAP INDICATOR)
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: windowWidth > 768 ? 'repeat(3, 1fr)' : '1fr', gap: '12px', marginTop: '4px' }}>
+                        
+                        {/* 1. PICKUP ADDRESS */}
+                        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#22c55e', fontWeight: '900' }}>🟢 1. CUSTOMER PICKUP ADDRESS</span>
+                          <p style={{ fontSize: '0.82rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
+                            {currentPlan.pickupAddress || 'Barasat Banamalipur, Kolkata, West Bengal - 700124'}
+                          </p>
+                          <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>Mode: {currentPlan.transport || 'Cab Pick & Drop'}</span>
+                          <a 
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentPlan.pickupAddress || 'Barasat Banamalipur Kolkata West Bengal')}`}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid #22c55e', padding: '4px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800', textDecoration: 'none', width: 'fit-content' }}
+                            title="Drop direct Red Location Pin Pointer on Google Maps for Customer Pickup"
+                          >
+                            📍 View Red Pin Pointer
+                          </a>
+                        </div>
+
+                        {/* 2. PROJECT SITE ADDRESSES */}
+                        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: '900' }}>🏢 2. PROJECT SITE LOCATION(S) ({totalStops} STOPS)</span>
+                          {(currentPlan.stops || []).map((s: any, sIdx: number) => (
+                            <div key={sIdx} style={{ display: 'flex', flexDirection: 'column', gap: '2px', borderBottom: sIdx < totalStops - 1 ? '1px dashed #334155' : 'none', paddingBottom: sIdx < totalStops - 1 ? '6px' : '0' }}>
+                              <p style={{ fontSize: '0.78rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
+                                Stop {sIdx + 1}: <strong>{s.propertyTitle}</strong> <span style={{ fontSize: '0.72rem', fontWeight: 'normal', color: isLight ? '#64748b' : '#94a3b8' }}>({s.address || s.locality || 'Barasat Site'})</span>
+                              </p>
+                              <a 
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.address || s.propertyTitle || s.locality || 'Barasat West Bengal')}`}
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px', background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', border: '1px solid #0284c7', padding: '2px 8px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800', textDecoration: 'none', width: 'fit-content' }}
+                                title={`Drop direct Red Location Pin Pointer on Google Maps for Stop ${sIdx + 1}`}
+                              >
+                                📍 View Red Pin Pointer
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* 3. DROP ADDRESS */}
+                        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #ef4444', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#f87171', fontWeight: '900' }}>🔴 3. CUSTOMER DROP ADDRESS</span>
+                          <p style={{ fontSize: '0.82rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
+                            {currentPlan.dropAddress || 'Barasat Chapadali Bus Terminus Hub, Kolkata, West Bengal - 700124'}
+                          </p>
+                          <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>Destination End Leg</span>
+                          <a 
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentPlan.dropAddress || 'Barasat Chapadali Kolkata West Bengal')}`}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid #ef4444', padding: '4px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800', textDecoration: 'none', width: 'fit-content' }}
+                            title="Drop direct Red Location Pin Pointer on Google Maps for Customer Drop"
+                          >
+                            📍 View Red Pin Pointer
+                          </a>
+                        </div>
+
+                      </div>
+                    </div>
+
                     {/* CURRENT STOP HIGHLIGHT CARD */}
                     <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '2px solid #38bdf8', borderRadius: '14px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -810,11 +895,12 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                       <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
                         <button 
                           onClick={() => {
+                            setShowRouteMapModal({ open: true, plan: currentPlan });
                             const navUrl = getUniversalNavigationUrl(currentPlan);
                             window.open(navUrl, '_blank');
                           }}
                           style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          title="Start Turn-by-Turn Navigation (Visitor GPS -> Customer Pickup -> Projects -> Customer Drop)"
+                          title="Open Interactive Route Map & Google Maps Navigation (Pickup -> Project 1, Project 2... -> Drop)"
                         >
                           🚀 START FULL ROUTE NAVIGATION ({totalStops} STOPS)
                         </button>

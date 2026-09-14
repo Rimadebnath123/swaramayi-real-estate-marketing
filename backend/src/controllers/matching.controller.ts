@@ -239,7 +239,7 @@ export async function scheduleSiteVisit(req: AuthRequest, res: Response) {
     scheduled_time: scheduled_time || '11:00 AM',
     otp_code: otpCode,
     is_otp_verified: true,
-    gps_checkin: '17.4612° N, 78.3689° E (Accuracy 5m)',
+    gps_checkin: '22.722361° N, 88.493403° E (Accuracy 5m)',
     visit_status: 'SCHEDULED',
     created_at: new Date().toISOString()
   };

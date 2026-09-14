@@ -48,8 +48,8 @@ const parseLatLng = (p: any) => {
   const lat = parseFloat(String(p?.latitude || '').replace(/[^\d.-]/g, ''));
   const lng = parseFloat(String(p?.longitude || '').replace(/[^\d.-]/g, ''));
   return {
-    lat: !isNaN(lat) && lat !== 0 ? lat : 17.4478,
-    lng: !isNaN(lng) && lng !== 0 ? lng : 78.3789
+    lat: !isNaN(lat) && lat !== 0 ? lat : 22.722361,
+    lng: !isNaN(lng) && lng !== 0 ? lng : 88.493403
   };
 };
 
@@ -603,7 +603,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
             {/* BOTTOM MAP STATUS OVERLAY */}
             <div style={{ position: 'absolute', bottom: '12px', left: '12px', right: '12px', zIndex: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isLight ? 'rgba(255, 255, 255, 0.94)' : 'rgba(15, 23, 42, 0.94)', backdropFilter: 'blur(8px)', padding: '8px 14px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', fontSize: '0.75rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '65%' }}>
-                📍 GPS Engine • {searchedLocationPin ? `Searched: ${searchedLocationPin.name}` : (selectedProperty ? selectedProperty.title : 'Hyderabad Core')} ({anchorCoords.lat.toFixed(4)}, {anchorCoords.lng.toFixed(4)})
+                📍 GPS Engine • {searchedLocationPin ? `Searched: ${searchedLocationPin.name}` : (selectedProperty ? selectedProperty.title : 'Barasat Core')} ({anchorCoords.lat.toFixed(4)}, {anchorCoords.lng.toFixed(4)})
               </span>
               <span style={{ color: '#22c55e', fontWeight: '800', whiteSpace: 'nowrap' }}>
                 ● Radar Active ({finalFilteredProperties.length} Tracked {selectedRadius !== 'ALL' ? `@ ${selectedRadius}km radius` : ''})
@@ -630,7 +630,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
                 {selectedProperty?.title || 'No Property Selected'}
               </h3>
               <p style={{ fontSize: '0.82rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
-                📍 {selectedProperty?.locality || 'Hyderabad Core'}, Hyderabad
+                📍 {selectedProperty?.locality || 'Barasat Core'}, West Bengal
               </p>
             </div>
 

@@ -22,6 +22,7 @@ interface PropertySourcingRequestsViewProps {
   individualCostSheets?: any[];
   costSheetShares?: any[];
   scheduledVisits?: any[];
+  onRecycleItem?: (itemData: any) => void;
 }
 
 export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsViewProps> = ({
@@ -39,7 +40,8 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
   setSelectedMatchingId,
   individualCostSheets = [],
   costSheetShares = [],
-  scheduledVisits = []
+  scheduledVisits = [],
+  onRecycleItem
 }) => {
   // Sourcing Requests Queue with LocalStorage Persistence & Dynamic Fallback
   const [internalSourcingRequests, setInternalSourcingRequests] = useState<any[]>(() => {
@@ -590,10 +592,20 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
                           {isSuperAdmin && (
                             <button
                               onClick={() => {
-                                if (window.confirm(`⚠️ SUPER ADMIN CONFIRMATION:\n\nAre you sure you want to permanently delete Sourcing Request ${req.id} for ${req.customer_name}?`)) {
+                                if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Sourcing Request ${req.id} for ${req.customer_name}? It will be moved to Recycle Bin.`)) {
+                                  if (onRecycleItem) {
+                                    onRecycleItem({
+                                      id: req.id || `SRC-${Date.now()}`,
+                                      title: `Sourcing Request - ${req.customer_name || 'Client'} (${req.id})`,
+                                      category: 'Lead',
+                                      originalLocation: 'Property Sourcing Requests Desk',
+                                      details: `Locality: ${req.locality || 'N/A'}, Budget: ${req.budget || 'N/A'}`,
+                                      originalData: req
+                                    });
+                                  }
                                   const nextList = sourcingRequests.filter((r: any) => r.id !== req.id);
                                   setSourcingRequests(nextList);
-                                  alert(`🗑️ Sourcing Request ${req.id} permanently deleted.`);
+                                  alert(`🗑️ Sourcing Request ${req.id} moved to Recycle Bin.`);
                                 }
                               }}
                               style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.73rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}

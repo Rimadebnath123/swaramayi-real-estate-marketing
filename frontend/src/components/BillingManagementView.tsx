@@ -21,6 +21,7 @@ interface BillingManagementViewProps {
   branches?: any[];
   properties?: any[];
   customers?: any[];
+  onRecycleItem?: (itemData: any) => void;
 }
 
 export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
@@ -43,6 +44,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
   branches = [],
   properties = [],
   customers = [],
+  onRecycleItem,
 }) => {
   const isSuperAdmin = !currentRole || currentRole.toUpperCase().includes('SUPER ADMIN') || currentRole.toUpperCase().includes('OWNER') || currentRole.toUpperCase().includes('ADMIN');
   const getCurrentUserBranch = () => {
@@ -859,6 +861,16 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                                   }
                                   return true;
                                 });
+                                if (onRecycleItem) {
+                                  onRecycleItem({
+                                    id: i.id || i.invoice_number || `INV-${Date.now()}`,
+                                    title: `Invoice - ${i.customer_name || i.developer_name || i.party_name || 'Client'} (${i.invoice_number || i.id})`,
+                                    category: 'Billing',
+                                    originalLocation: 'Billing Management Vault',
+                                    details: `Category: ${i.invoice_category || 'CUSTOMER'}, Total Amount: ₹${Number(i.total_invoice_amount || 0).toLocaleString('en-IN')}`,
+                                    originalData: i
+                                  });
+                                }
                                 if (setInvoices) {
                                   setInvoices(remainingInvoices);
                                 }
@@ -868,7 +880,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                                 if (syncAllToMongoDB) {
                                   syncAllToMongoDB({ invoices: remainingInvoices });
                                 }
-                                alert(`🗑️ Invoice record deleted.`);
+                                alert(`🗑️ Invoice record moved to Recycle Bin.`);
                               }
                             }}
                             style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}

@@ -89,18 +89,25 @@ function ScheduleVisitModalContent({
   const [orderedStops, setOrderedStops] = useState<any[]>(() => {
     const initList = initialCS ? [initialCS] : eligibleCostSheets.slice(0, 1);
     return initList.map((cs: any, idx: number) => {
-      const pCode = cs.propertyCode || cs.propertySnapshot?.propertyCode;
-      const matchedProp = properties.find((p: any) => p.property_code === pCode || p.id === pCode || (cs.propertySnapshot?.propertyTitle && p.title.toLowerCase().includes(cs.propertySnapshot.propertyTitle.toLowerCase())));
+      const pCode = cs?.propertyCode || cs?.propertySnapshot?.propertyCode;
+      const csTitle = (cs?.propertySnapshot?.propertyTitle || '').toLowerCase();
+      const matchedProp = properties.find((p: any) => 
+        p && (
+          p.property_code === pCode || 
+          p.id === pCode || 
+          (csTitle && p.title && (p.title || '').toLowerCase().includes(csTitle))
+        )
+      );
       return {
         stopNum: idx + 1,
         costSheetId: cs.costSheetId,
         propertyId: cs.propertyId || matchedProp?.id || `PROP-0${idx + 1}`,
         propertyCode: pCode,
         propertyTitle: cs.propertySnapshot?.propertyTitle || matchedProp?.title || 'Property Site',
-        locality: cs.propertySnapshot?.locality || matchedProp?.locality || 'Hyderabad',
+        locality: cs.propertySnapshot?.locality || matchedProp?.locality || 'Barasat, Kolkata',
         developer: matchedProp?.developer || 'Swaramayi Partner Developer',
-        latitude: matchedProp?.latitude || '17.4612° N',
-        longitude: matchedProp?.longitude || '78.3689° E'
+        latitude: matchedProp?.latitude || '22.722361° N',
+        longitude: matchedProp?.longitude || '88.493403° E'
       };
     });
   });
@@ -149,18 +156,25 @@ function ScheduleVisitModalContent({
       setSelectedCsIds([...selectedCsIds, csId]);
       const cs = eligibleCostSheets.find((c: any) => c.costSheetId === csId);
       if (cs) {
-        const pCode = cs.propertyCode || cs.propertySnapshot?.propertyCode;
-        const matchedProp = properties.find((p: any) => p.property_code === pCode || p.id === pCode || (cs.propertySnapshot?.propertyTitle && p.title.toLowerCase().includes(cs.propertySnapshot.propertyTitle.toLowerCase())));
+        const pCode = cs?.propertyCode || cs?.propertySnapshot?.propertyCode;
+        const csTitle = (cs?.propertySnapshot?.propertyTitle || '').toLowerCase();
+        const matchedProp = properties.find((p: any) => 
+          p && (
+            p.property_code === pCode || 
+            p.id === pCode || 
+            (csTitle && p.title && (p.title || '').toLowerCase().includes(csTitle))
+          )
+        );
         setOrderedStops([...orderedStops, {
           stopNum: orderedStops.length + 1,
           costSheetId: cs.costSheetId,
           propertyId: cs.propertyId || matchedProp?.id || 'PROP-NEW',
           propertyCode: pCode,
           propertyTitle: cs.propertySnapshot?.propertyTitle || matchedProp?.title || 'Property Site',
-          locality: cs.propertySnapshot?.locality || matchedProp?.locality || 'Hyderabad',
+          locality: cs.propertySnapshot?.locality || matchedProp?.locality || 'Barasat, Kolkata',
           developer: matchedProp?.developer || 'Partner Developer',
-          latitude: matchedProp?.latitude || '17.4612° N',
-          longitude: matchedProp?.longitude || '78.3689° E'
+          latitude: matchedProp?.latitude || '22.722361° N',
+          longitude: matchedProp?.longitude || '88.493403° E'
         }]);
       }
     }
@@ -209,14 +223,14 @@ function ScheduleVisitModalContent({
       visitDate: visitDate,
       startTime: startTime,
       status: 'ASSIGNED',
-      pickupAddress: pickupAddress,
-      pickupLat: '17.4478° N',
-      pickupLng: '78.3789° E',
+      pickupAddress: pickupAddress || 'Barasat Banamalipur, Kolkata, West Bengal - 700124',
+      pickupLat: '22.720500° N',
+      pickupLng: '88.485000° E',
       pickupStatus: 'PENDING',
       pickupTime: pickupTime,
-      dropAddress: dropAddress,
-      dropLat: '17.4478° N',
-      dropLng: '78.3789° E',
+      dropAddress: dropAddress || 'Barasat Chapadali Bus Terminus Hub, Kolkata, West Bengal - 700124',
+      dropLat: '22.725000° N',
+      dropLng: '88.498000° E',
       dropStatus: 'PENDING',
       currentStopIndex: 0,
       autoNavigateNext: true,
@@ -797,18 +811,18 @@ function VisitDetailModalContent({
                                     const remainingStops = (plan.stops || []).slice(idx).filter((s: any) => s && (s.latitude || s.longitude));
                                     if (remainingStops.length > 1) {
                                       const destStop = remainingStops[remainingStops.length - 1];
-                                      const destLat = (destStop.latitude || '17.4612').replace(/[^0-9.-]/g, '');
-                                      const destLng = (destStop.longitude || '78.3689').replace(/[^0-9.-]/g, '');
+                                      const destLat = (destStop.latitude || '22.722361').replace(/[^0-9.-]/g, '');
+                                      const destLng = (destStop.longitude || '88.493403').replace(/[^0-9.-]/g, '');
                                       const waypointsStr = remainingStops.slice(0, remainingStops.length - 1).map((s: any) => {
-                                        const lat = (s.latitude || '17.4612').replace(/[^0-9.-]/g, '');
-                                        const lng = (s.longitude || '78.3689').replace(/[^0-9.-]/g, '');
+                                        const lat = (s.latitude || '22.722361').replace(/[^0-9.-]/g, '');
+                                        const lng = (s.longitude || '88.493403').replace(/[^0-9.-]/g, '');
                                         return `${lat},${lng}`;
                                       }).join('|');
-                                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&waypoints=${encodeURIComponent(waypointsStr)}`, '_blank');
+                                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destLat},${destLng}&waypoints=${encodeURIComponent(waypointsStr)}`, '_blank');
                                     } else {
-                                      const cleanLat = (stop.latitude || '17.4612').replace(/[^0-9.-]/g, '');
-                                      const cleanLng = (stop.longitude || '78.3689').replace(/[^0-9.-]/g, '');
-                                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}`, '_blank');
+                                      const cleanLat = (stop.latitude || '22.722361').replace(/[^0-9.-]/g, '');
+                                      const cleanLng = (stop.longitude || '88.493403').replace(/[^0-9.-]/g, '');
+                                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${cleanLat},${cleanLng}`, '_blank');
                                     }
                                   }}
                                   style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem' }}
@@ -846,21 +860,37 @@ function VisitDetailModalContent({
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button 
                   onClick={() => {
+                    const isCabNeeded = 
+                      (plan?.transport || '').toLowerCase().includes('cab') ||
+                      (plan?.transport || '').toLowerCase().includes('pick') ||
+                      Boolean(plan?.pickupAddress || plan?.pickupLat);
+
                     const validStops = (plan?.stops || []).filter((s: any) => s && (s.latitude || s.longitude));
-                    if (validStops.length > 1) {
-                      const destStop = validStops[validStops.length - 1];
-                      const destLat = (destStop.latitude || '17.4612').replace(/[^0-9.-]/g, '');
-                      const destLng = (destStop.longitude || '78.3689').replace(/[^0-9.-]/g, '');
-                      const waypointsStr = validStops.slice(0, validStops.length - 1).map((s: any) => {
-                        const lat = (s.latitude || '17.4612').replace(/[^0-9.-]/g, '');
-                        const lng = (s.longitude || '78.3689').replace(/[^0-9.-]/g, '');
-                        return `${lat},${lng}`;
-                      }).join('|');
-                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&waypoints=${encodeURIComponent(waypointsStr)}`, '_blank');
-                    } else if (validStops.length === 1) {
-                      const cleanLat = (validStops[0].latitude || '17.4612').replace(/[^0-9.-]/g, '');
-                      const cleanLng = (validStops[0].longitude || '78.3689').replace(/[^0-9.-]/g, '');
-                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}`, '_blank');
+                    const projectCoords = validStops.map((s: any) => {
+                      const lat = (s.latitude || '22.722361').replace(/[^0-9.-]/g, '');
+                      const lng = (s.longitude || '88.493403').replace(/[^0-9.-]/g, '');
+                      return `${lat},${lng}`;
+                    });
+
+                    if (isCabNeeded) {
+                      const cleanPickLat = plan.pickupLat ? plan.pickupLat.replace(/[^0-9.-]/g, '') : '';
+                      const cleanPickLng = plan.pickupLng ? plan.pickupLng.replace(/[^0-9.-]/g, '') : '';
+                      const pickPt = (cleanPickLat && cleanPickLng) ? `${cleanPickLat},${cleanPickLng}` : (plan.pickupAddress ? encodeURIComponent(plan.pickupAddress) : '22.720500,88.485000');
+
+                      const cleanDropLat = plan.dropLat ? plan.dropLat.replace(/[^0-9.-]/g, '') : '';
+                      const cleanDropLng = plan.dropLng ? plan.dropLng.replace(/[^0-9.-]/g, '') : '';
+                      const dropPt = (cleanDropLat && cleanDropLng) ? `${cleanDropLat},${cleanDropLng}` : (plan.dropAddress ? encodeURIComponent(plan.dropAddress) : '22.725000,88.498000');
+
+                      const waypointsStr = [pickPt, ...projectCoords].join('|');
+                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}`, '_blank');
+                    } else {
+                      if (projectCoords.length > 1) {
+                        const dest = projectCoords[projectCoords.length - 1];
+                        const waypointsStr = projectCoords.slice(0, projectCoords.length - 1).join('|');
+                        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest}&waypoints=${encodeURIComponent(waypointsStr)}`, '_blank');
+                      } else if (projectCoords.length === 1) {
+                        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${projectCoords[0]}`, '_blank');
+                      }
                     }
                   }}
                   style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer' }}
@@ -869,9 +899,9 @@ function VisitDetailModalContent({
                 </button>
                 <button 
                   onClick={() => {
-                    const cleanLat = plan.pickupLat ? plan.pickupLat.replace(/[^0-9.]/g, '') : '17.4478';
-                    const cleanLng = plan.pickupLng ? plan.pickupLng.replace(/[^0-9.]/g, '') : '78.3789';
-                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}`, '_blank');
+                    const cleanLat = plan.pickupLat ? plan.pickupLat.replace(/[^0-9.]/g, '') : '22.720500';
+                    const cleanLng = plan.pickupLng ? plan.pickupLng.replace(/[^0-9.]/g, '') : '88.485000';
+                    window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${cleanLat},${cleanLng}`, '_blank');
                   }}
                   style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
                 >
@@ -879,9 +909,9 @@ function VisitDetailModalContent({
                 </button>
                 <button 
                   onClick={() => {
-                    const cleanLat = plan.dropLat ? plan.dropLat.replace(/[^0-9.]/g, '') : '17.4478';
-                    const cleanLng = plan.dropLng ? plan.dropLng.replace(/[^0-9.]/g, '') : '78.3789';
-                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}`, '_blank');
+                    const cleanLat = plan.dropLat ? plan.dropLat.replace(/[^0-9.]/g, '') : '22.725000';
+                    const cleanLng = plan.dropLng ? plan.dropLng.replace(/[^0-9.]/g, '') : '88.498000';
+                    window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${cleanLat},${cleanLng}`, '_blank');
                   }}
                   style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
                 >
@@ -992,9 +1022,9 @@ function IndividualStopModalContent({
   setActiveProjectSubTab
 }: any) {
   const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
-  const cleanLat = stop.latitude.replace(/[^0-9.]/g, '') || '17.4612';
-  const cleanLng = stop.longitude.replace(/[^0-9.]/g, '') || '78.3689';
-  const mapsDirUrl = `https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}`;
+  const cleanLat = stop.latitude.replace(/[^0-9.]/g, '') || '22.722361';
+  const cleanLng = stop.longitude.replace(/[^0-9.]/g, '') || '88.493403';
+  const mapsDirUrl = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${cleanLat},${cleanLng}`;
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2100, padding: '20px' }}>
@@ -1111,9 +1141,9 @@ function PvaVerificationModalContent({
     propertyCode: 'SRM-PROP-2026-000421',
     costSheetId: 'SRM-CS-2026-000145',
     developer: 'Partner Developer',
-    locality: 'Hyderabad',
-    latitude: '17.4612° N',
-    longitude: '78.3689° E'
+    locality: 'Barasat',
+    latitude: '22.722361° N',
+    longitude: '88.493403° E'
   };
 
   const [otpInput, setOtpInput] = useState<string>('849201');
@@ -1190,7 +1220,7 @@ function PvaVerificationModalContent({
       costSheetId: safeStop.costSheetId || 'SRM-CS-2026-000145',
       projectId: `SRM-PROJ-2026-0000${20 + nextPvaNum}`,
       projectTitle: safeStop.propertyTitle || 'Project Property',
-      locality: safeStop.locality || 'Hyderabad',
+      locality: safeStop.locality || 'Barasat',
       developerId: `DEV-0${nextPvaNum}`,
       developerName: safeStop.developer || 'Partner Developer',
       salesPersonId: 'USR-07',
@@ -1200,8 +1230,8 @@ function PvaVerificationModalContent({
       departureTime: '',
       geofenceStatus: 'GEOFENCE_VERIFIED',
       gpsAccuracyMeters: `14m (Within ${geofenceRadiusMeters}m Allowed Radius)`,
-      salesPersonLat: safeStop.latitude || '17.4612° N',
-      salesPersonLng: safeStop.longitude || '78.3689° E',
+      salesPersonLat: safeStop.latitude || '22.722361° N',
+      salesPersonLng: safeStop.longitude || '88.493403° E',
       customerOtpStatus: 'OTP_VERIFIED',
       otpVerifiedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       otpHashRef: `SHA256:verified_otp_${otpInput}`,
@@ -1209,12 +1239,6 @@ function PvaVerificationModalContent({
       customerSignature: signatureData,
       developerRepName: devRepName,
       developerRepMobile: devRepMobile,
-      documentVersion: 'V1.0',
-      documentUrl: `file:///pva_${pvaId}.pdf`,
-      digitalVerificationRef: `SHA256-SWARAMAYI-${pvaId}-VERIFIED`,
-      protectionPeriodMonths: protectionPeriodMonths,
-      protectionStartDate: todayStr,
-      protectionEndDate: expDateStr,
       status: 'VISIT_VERIFIED',
       createdAt: new Date().toLocaleString(),
       updatedAt: new Date().toLocaleString(),
@@ -1338,7 +1362,7 @@ function PvaVerificationModalContent({
             <div>
               <span style={{ fontSize: '0.75rem', color: '#22c55e', fontWeight: '900' }}>STEP 1: GPS GEOFENCE AUDIT PASSED</span>
               <p style={{ fontSize: '0.8rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', marginTop: '2px' }}>
-                Sales Executive Position: <strong>{safeStop.latitude || '17.4612° N'}, {safeStop.longitude || '78.3689° E'}</strong>
+                Sales Executive Position: <strong>{safeStop.latitude || '22.722361° N'}, {safeStop.longitude || '88.493403° E'}</strong>
               </p>
               <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>Distance to Site: <strong>14 meters</strong> (Allowed Radius: {geofenceRadiusMeters}m)</span>
             </div>
@@ -1632,29 +1656,23 @@ const getPropLatLng = (p: any) => {
   }
 
   const localityCoords: { [key: string]: { lat: number; lng: number } } = {
-    'Kondapur': { lat: 17.4612, lng: 78.3689 },
-    'Financial District': { lat: 17.4401, lng: 78.3489 },
-    'Madinaguda': { lat: 17.4921, lng: 78.3412 },
-    'Hitec City': { lat: 17.4478, lng: 78.3789 },
-    'Nanakramguda': { lat: 17.4201, lng: 78.3410 },
-    'Madhapur': { lat: 17.4486, lng: 78.3908 },
-    'Gachibowli': { lat: 17.4400, lng: 78.3489 },
-    'Kokapet': { lat: 17.3980, lng: 78.3300 },
-    'Tellapur': { lat: 17.4520, lng: 78.2850 },
-    'Kukatpally': { lat: 17.4849, lng: 78.4138 },
-    'Miyapur': { lat: 17.4968, lng: 78.3614 },
-    'Jubilee Hills': { lat: 17.4319, lng: 78.4071 },
-    'Banjara Hills': { lat: 17.4156, lng: 78.4347 },
-    'Begumpet': { lat: 17.4447, lng: 78.4664 },
+    'Barasat': { lat: 22.722361, lng: 88.493403 },
+    'Chapadali': { lat: 22.722361, lng: 88.493403 },
+    'Dakbangla': { lat: 22.715420, lng: 88.479150 },
+    'Colony': { lat: 22.725000, lng: 88.498000 },
+    'Hela Battala': { lat: 22.718000, lng: 88.488000 },
     'Madhamgram': { lat: 22.698021, lng: 88.463723 },
     'Madhyamgram': { lat: 22.698021, lng: 88.463723 },
     'Durganagar': { lat: 22.695051, lng: 88.465127 },
-    'Mehdipatnam': { lat: 17.3950, lng: 78.4400 },
-    'Attapur': { lat: 17.3750, lng: 78.4300 },
-    'Uppal': { lat: 17.4050, lng: 78.5600 },
-    'LB Nagar': { lat: 17.3450, lng: 78.5500 },
-    'Secunderabad': { lat: 17.4399, lng: 78.4983 },
-    'Kompally': { lat: 17.5350, lng: 78.4850 }
+    'Kolkata': { lat: 22.572646, lng: 88.363895 },
+    'New Town': { lat: 22.575000, lng: 88.475000 },
+    'Salt Lake': { lat: 22.580000, lng: 88.420000 },
+    'Kondapur': { lat: 22.722361, lng: 88.493403 },
+    'Gachibowli': { lat: 22.715420, lng: 88.479150 },
+    'Hitec City': { lat: 22.710000, lng: 88.475000 },
+    'Financial District': { lat: 22.723000, lng: 88.490000 },
+    'Tellapur': { lat: 22.720500, lng: 88.485000 },
+    'Kokapet': { lat: 22.725000, lng: 88.498000 }
   };
 
   const loc = p ? (p.locality || p.title || '') : '';
@@ -1663,7 +1681,7 @@ const getPropLatLng = (p: any) => {
     return localityCoords[match];
   }
 
-  return { lat: 17.4478, lng: 78.3789 };
+  return { lat: 22.722361, lng: 88.493403 };
 };
 
 function InteractiveLeafletMap({
@@ -1724,7 +1742,7 @@ function InteractiveLeafletMap({
       const map = L.map(mapContainerRef.current, {
         zoomControl: true,
         scrollWheelZoom: true
-      }).setView([17.4478, 78.3789], 12);
+      }).setView([22.722361, 88.493403], 12);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
@@ -1732,6 +1750,21 @@ function InteractiveLeafletMap({
       }).addTo(map);
 
       mapInstanceRef.current = map;
+
+      // Automatically request browser's current GPS location if available
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.setView([pos.coords.latitude, pos.coords.longitude], 13);
+            }
+          },
+          () => {
+            // Geolocation fallback already at Barasat WB
+          },
+          { enableHighAccuracy: true, timeout: 5000 }
+        );
+      }
     }
   }, [leafletReady]);
 
@@ -1908,6 +1941,8 @@ export default function App() {
 
   // Search & Global BI Filter States
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [searchCategoryFilter, setSearchCategoryFilter] = useState<string>('ALL');
   const [dateFilter, setDateFilter] = useState<'today' | 'this_week' | 'this_month' | 'this_quarter' | 'this_year'>('this_month');
 
   // Display Theme Mode (Dark vs Light)
@@ -2357,12 +2392,12 @@ export default function App() {
     assignedExecutive: 'Ramesh Pawar (Field Exec - Kondapur)',
     visitDate: '2026-08-22',
     startTime: '10:00 AM',
-    pickupAddress: 'Hitec City Metro Station, Gate 2, Hyderabad',
-    pickupLat: '17.4478° N',
-    pickupLng: '78.3789° E',
-    dropAddress: 'Hitec City Metro Station, Gate 2, Hyderabad',
-    dropLat: '17.4478° N',
-    dropLng: '78.3789° E',
+    pickupAddress: 'Barasat Banamalipur, Kolkata, West Bengal - 700124',
+    pickupLat: '22.720500° N',
+    pickupLng: '88.485000° E',
+    dropAddress: 'Barasat Chapadali Bus Terminus Hub, Kolkata, West Bengal - 700124',
+    dropLat: '22.725000° N',
+    dropLng: '88.498000° E',
     selectedPropertyIds: ['PROP-01', 'PROP-05', 'PROP-03', 'PROP-02'],
     autoNavigateNext: true
   });
@@ -2567,15 +2602,15 @@ export default function App() {
   const [bulkProjectDevCsvText, setBulkProjectDevCsvText] = useState(
     `DeveloperName, ProjectTitle, DeveloperMobile, DeveloperAltMobile, Email, Locality, City, FullAddress, Latitude, Longitude, PossessionStatus, HandoverMonthAndYear, TotalCoveredParkingCapacity, CoveredParkingRate, TotalEVParkingCapacity, EVParkingRate, TotalOpenParkingCapacity, OpenParkingRate, SelectedAmenities, BuildingPhotos\n` +
     `"KRISHNA DAS (SWARAMAYI DEVELOPERS)", "SHIBALAY RESIDENCY", "9883395102", "7044293951", "krishnadas@swaramayi.com", "BARASAT, CHAPADALI", "Kolkata", "Chapadali Bus Terminus Hub, Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124", "22.722361", "88.493403", "Under Construction", "December 2026", "24", "300000", "6", "450000", "12", "150000", "Elevator; Gym; Swimming Pool; 24/7 Security; Power Backup", "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00"\n` +
-    `"My Home Group", "My Home Sayuk Phase 1", "9849088776", "9849088777", "sales@myhomegroup.in", "Tellapur", "Hyderabad", "Tellapur Main Road, Gachibowli Extension, Hyderabad 502324", "17.461200", "78.368900", "Ready to Move", "Immediate", "50", "400000", "10", "600000", "20", "200000", "24/7 Power Backup; Water Supply; Security; Swimming Pool; Clubhouse", "https://images.unsplash.com/photo-1570129477492-45c003edd2be"\n` +
+    `"My Home Group", "My Home Sayuk Phase 1", "9849088776", "9849088777", "sales@myhomegroup.in", "Barasat", "Kolkata", "Station Road, Barasat, West Bengal 700124", "22.720500", "88.485000", "Ready to Move", "Immediate", "50", "400000", "10", "600000", "20", "200000", "24/7 Power Backup; Water Supply; Security; Swimming Pool; Clubhouse", "https://images.unsplash.com/photo-1570129477492-45c003edd2be"\n` +
     `"Dhriti Builders", "Dhriti Residency", "9831012345", "9831054321", "info@dhritibuilders.com", "Madhyamgram", "Kolkata", "Jessore Road, Madhyamgram, Kolkata 700129", "22.698021", "88.463723", "Ready to Move", "Immediate", "15", "250000", "4", "350000", "8", "120000", "Elevator; CCTV cameras; Fire Safety; Security", "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9"\n` +
-    `"Rajapushpa Properties", "Rajapushpa Imperia Block 2", "9121098765", "9121098766", "contact@rajapushpa.in", "Tellapur", "Hyderabad", "Tellapur-Nallagandla Road, Hyderabad 502324", "17.440100", "78.348900", "Ready to Move", "Immediate", "40", "350000", "8", "500000", "15", "180000", "Gymnasium; Swimming Pool; Clubhouse; Children Play Area; Gardens", "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00"\n` +
-    `"Aparna Constructions", "Aparna Zenith Sky Suites", "9000112233", "9000112234", "sales@aparnaconstructions.com", "Gachibowli", "Hyderabad", "Financial District Road, Gachibowli, Hyderabad 500032", "17.447800", "78.378900", "Under Construction", "December 2026", "60", "450000", "15", "650000", "25", "250000", "Yoga Deck; Senior Citizen Park; EV Charging Stations; Luxury Clubhouse", "https://images.unsplash.com/photo-1570129477492-45c003edd2be"\n` +
-    `"Jayabheri Properties", "Jayabheri Peak County", "9888877776", "9888877775", "contact@jayabherigroup.com", "Kokapet", "Hyderabad", "NEOROP Outer Ring Road, Kokapet, Hyderabad 500075", "17.420100", "78.341000", "Ready to Move", "Immediate", "30", "500000", "10", "750000", "10", "300000", "Private Lawn; Private Lift; Solar Power; Swimming Pool; 24/7 Security", "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9"\n` +
-    `"Lansum Properties", "Lansum Elena Residences", "9955443322", "9955443321", "sales@lansum.com", "Kokapet", "Hyderabad", "Golden Mile Layout, Kokapet, Hyderabad 500075", "17.419000", "78.339500", "Ready to Move", "Immediate", "35", "400000", "8", "600000", "12", "200000", "Clubhouse; Squash Court; Infinity Pool; Gymnasium", "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00"\n` +
+    `"Rajapushpa Properties", "Rajapushpa Imperia Block 2", "9121098765", "9121098766", "contact@rajapushpa.in", "Barasat Dakbangla", "Kolkata", "Dakbangla More, Barasat, West Bengal 700124", "22.715420", "88.479150", "Ready to Move", "Immediate", "40", "350000", "8", "500000", "15", "180000", "Gymnasium; Swimming Pool; Clubhouse; Children Play Area; Gardens", "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00"\n` +
+    `"Aparna Constructions", "Aparna Zenith Sky Suites", "9000112233", "9000112234", "sales@aparnaconstructions.com", "Barasat Chapadali", "Kolkata", "Chapadali Crossing, Barasat, West Bengal 700124", "22.722361", "88.493403", "Under Construction", "December 2026", "60", "450000", "15", "650000", "25", "250000", "Yoga Deck; Senior Citizen Park; EV Charging Stations; Luxury Clubhouse", "https://images.unsplash.com/photo-1570129477492-45c003edd2be"\n` +
+    `"Jayabheri Properties", "Jayabheri Peak County", "9888877776", "9888877775", "contact@jayabherigroup.com", "Barasat Colony", "Kolkata", "Colony More, Barasat, West Bengal 700124", "22.725000", "88.498000", "Ready to Move", "Immediate", "30", "500000", "10", "750000", "10", "300000", "Private Lawn; Private Lift; Solar Power; Swimming Pool; 24/7 Security", "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9"\n` +
+    `"Lansum Properties", "Lansum Elena Residences", "9955443322", "9955443321", "sales@lansum.com", "Barasat Hela Battala", "Kolkata", "Hela Battala, Barasat, West Bengal 700124", "22.718000", "88.488000", "Ready to Move", "Immediate", "35", "400000", "8", "600000", "12", "200000", "Clubhouse; Squash Court; Infinity Pool; Gymnasium", "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00"\n` +
     `"Star Builders", "Star Horizon Phase 2", "9830099887", "9830099888", "contact@starbuilders.in", "Madhyamgram", "Kolkata", "Sodalpur Road, Madhyamgram, Kolkata 700129", "22.695500", "88.461000", "Under Construction", "June 2026", "18", "280000", "4", "400000", "8", "130000", "Rooftop Garden; Intercom Facility; CCTV cameras; Power Backup", "https://images.unsplash.com/photo-1570129477492-45c003edd2be"\n` +
-    `"Cybertech Infra", "Cyber Towers Sector 4", "9700012345", "9700012346", "leasing@cybertechinfra.com", "HITEC City", "Hyderabad", "Cyberabad IT Corridor, HITEC City, Hyderabad 500081", "17.450000", "78.381000", "Ready to Move", "Immediate", "50", "450000", "12", "600000", "20", "220000", "24/7 Security; High Speed Elevators; Central AC; 24/7 Power Backup", "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9"\n` +
-    `"Prestige Group", "Prestige High Fields Phase 1", "9010101010", "9010101011", "contact@prestigeconstructions.com", "Financial District", "Hyderabad", "Nanakramguda Main Road, Financial District, Hyderabad 500032", "17.435000", "78.349000", "Ready to Move", "Immediate", "80", "420000", "20", "600000", "30", "220000", "Supermarket; Pharmacy; Badminton Court; Tennis Court; Swimming Pool", "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00"`
+    `"Cybertech Infra", "Cyber Towers Sector 4", "9700012345", "9700012346", "leasing@cybertechinfra.com", "Barasat Champadali", "Kolkata", "Jessore Road, Barasat, West Bengal 700124", "22.710000", "88.475000", "Ready to Move", "Immediate", "50", "450000", "12", "600000", "20", "220000", "24/7 Security; High Speed Elevators; Central AC; 24/7 Power Backup", "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9"\n` +
+    `"Prestige Group", "Prestige High Fields Phase 1", "9010101010", "9010101011", "contact@prestigeconstructions.com", "Barasat Kanamor", "Kolkata", "Kanamor Road, Barasat, West Bengal 700124", "22.723000", "88.490000", "Ready to Move", "Immediate", "80", "420000", "20", "600000", "30", "220000", "Supermarket; Pharmacy; Badminton Court; Tennis Court; Swimming Pool", "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00"`
   );
 
   const handleOpenLeadModal = () => {
@@ -2932,9 +2967,9 @@ export default function App() {
     floor_plan_photos: [],
     floor_plan_photo: '',
     building_photo: '',
-    latitude: '17.4612° N',
-    longitude: '78.3689° E',
-    locality: 'Kondapur',
+    latitude: '22.722361° N',
+    longitude: '88.493403° E',
+    locality: 'Barasat',
     property_type: 'Flat / Apartment',
     configuration: '3BHK',
     carpet_area: '1,850 Sq.Ft.',
@@ -3283,14 +3318,14 @@ export default function App() {
     type: 'N/A',
     developer: 'Swaramayi System',
     project: 'N/A',
-    locality: 'Hyderabad Core',
+    locality: 'Barasat Core',
     configuration: 'N/A',
     final_price: '₹0',
     base_price: '₹0',
     price_sqft: '₹0 / sq.ft.',
     status: 'EMPTY',
-    latitude: '17.4478° N',
-    longitude: '78.3789° E'
+    latitude: '22.722361° N',
+    longitude: '88.493403° E'
   };
 
   // 5. Property Units Inventory
@@ -3465,7 +3500,7 @@ export default function App() {
   const handleRecycleItem = (itemData: {
     id?: string;
     title: string;
-    category: 'Lead' | 'Customer' | 'Project' | 'Agreement' | 'Cost Sheet';
+    category: 'Lead' | 'Customer' | 'Project' | 'Agreement' | 'Cost Sheet' | 'Billing' | 'Visit Management';
     originalLocation: string;
     details?: string;
     originalData: any;
@@ -3504,6 +3539,16 @@ export default function App() {
         break;
       case 'Cost Sheet':
         setIndividualCostSheets(prev => [data, ...prev.filter((c: any) => c.id !== data.id && c.costSheetId !== data.costSheetId)]);
+        break;
+      case 'Billing':
+        setInvoices(prev => [data, ...prev.filter((i: any) => i.id !== data.id && i.invoice_number !== data.invoice_number)]);
+        break;
+      case 'Visit Management':
+        if (data.stops || data.visitPlanId || data.visitScheduleId) {
+          setVisitPlans(prev => [data, ...prev.filter((p: any) => p.visitPlanId !== data.visitPlanId && p.visitScheduleId !== data.visitScheduleId)]);
+        } else {
+          setScheduledVisits(prev => [data, ...prev.filter((s: any) => s.visitId !== data.visitId && s.costSheetId !== data.costSheetId)]);
+        }
         break;
       default:
         if (data.full_name || data.customer_name) {
@@ -4032,14 +4077,14 @@ export default function App() {
         propertyType: prop.property_type || prop.type || 'Flat / Apartment',
         property_type: prop.property_type || prop.type || 'Flat / Apartment',
         propertyStatus: prop.status || 'AVAILABLE',
-        locality: prop.locality || 'Kondapur',
-        address: `${prop.locality || 'Kondapur'}, Gachibowli Road, Hyderabad 500084`,
-        city: prop.city || 'Hyderabad',
-        state: 'Telangana',
-        pincode: '500084',
-        googleMapLocation: `https://maps.google.com/?q=${prop.latitude || '17.4612'},${prop.longitude || '78.3689'}`,
-        latitude: prop.latitude || '17.4612° N',
-        longitude: prop.longitude || '78.3689° E',
+        locality: prop.locality || 'Barasat',
+        address: `${prop.locality || 'Barasat'}, Station Road, Barasat, West Bengal 700124`,
+        city: prop.city || 'Barasat',
+        state: 'West Bengal',
+        pincode: '700124',
+        googleMapLocation: `https://maps.google.com/?q=${prop.latitude || '22.722361'},${prop.longitude || '88.493403'}`,
+        latitude: prop.latitude || '22.722361° N',
+        longitude: prop.longitude || '88.493403° E',
         bhk: prop.configuration || '3BHK',
         unitType: prop.type || 'Apartment',
         floor: prop.floor ? `${prop.floor}th Floor` : '5th Floor',
@@ -5653,6 +5698,332 @@ export default function App() {
   const [rawSelectedAgreement, setSelectedAgreement] = useState<any>(null);
   const selectedAgreement = rawSelectedAgreement || agreements[0] || { id: 'AGR-01', agreement_code: 'SRM-AGR-CUS-2026-000301', agreement_type: 'CUSTOMER_SITE_VISIT', title: 'Customer Site Visit Agreement', party_name: 'Rohan Deshmukh', party_contact: '+91 98490 12345', property_details: 'SRM-PROP-2026-000421 (Aparna Zenon 3BHK)', signed_status: 'EXECUTED_SIGNED', signature_hash: 'OTP-VERIFIED-#482901-DIGITAL-SIG', signed_at: '16 Aug 2026 11:35 AM' };
 
+  // DYNAMIC UNIVERSAL SEARCH ENGINE MATCHES ACROSS ALL CRM DATA VAULTS
+  const universalSearchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+
+    const results: Array<{
+      id: string;
+      category: 'Property' | 'Customer' | 'Lead' | 'Match' | 'Cost Sheet' | 'Visit' | 'Agreement' | 'Booking' | 'Billing' | 'Project';
+      title: string;
+      subtitle: string;
+      badge: string;
+      badgeColor: string;
+      icon: string;
+      action: () => void;
+    }> = [];
+
+    // 1. PROPERTIES
+    (properties || []).forEach((p: any) => {
+      const code = (p.property_code || p.id || '').toString();
+      const title = (p.title || p.name || '').toString();
+      const locality = (p.locality || '').toString();
+      const developer = (p.developer || p.project_name || p.builder || '').toString();
+      const config = (p.configuration || '').toString();
+      const price = (p.final_price || p.base_price || '').toString();
+      const status = (p.status || 'AVAILABLE').toString();
+
+      if (
+        code.toLowerCase().includes(q) ||
+        title.toLowerCase().includes(q) ||
+        locality.toLowerCase().includes(q) ||
+        developer.toLowerCase().includes(q) ||
+        config.toLowerCase().includes(q) ||
+        price.toLowerCase().includes(q) ||
+        status.toLowerCase().includes(q)
+      ) {
+        results.push({
+          id: code,
+          category: 'Property',
+          icon: '🏢',
+          title: title || code,
+          subtitle: `${code} • ${locality} • ${developer || config || 'Residential'}`,
+          badge: status,
+          badgeColor: status.toUpperCase() === 'SOLD' ? '#ef4444' : '#10b981',
+          action: () => {
+            setActiveTab('project_management');
+            setActiveProjectSubTab('property_master');
+            if (typeof setSelectedProperty === 'function') setSelectedProperty(p);
+            setSearchQuery('');
+            setIsSearchFocused(false);
+          }
+        });
+      }
+    });
+
+    // 2. CUSTOMERS
+    (customers || []).forEach((c: any) => {
+      const num = (c.customer_number || c.customer_id || c.id || '').toString();
+      const name = (c.name || c.full_name || '').toString();
+      const mobile = (c.mobile || c.phone || '').toString();
+      const email = (c.email || '').toString();
+      const loc = (c.locality || c.city || '').toString();
+      const stage = (c.stage || c.status || 'ACTIVE').toString();
+
+      if (
+        num.toLowerCase().includes(q) ||
+        name.toLowerCase().includes(q) ||
+        mobile.toLowerCase().includes(q) ||
+        email.toLowerCase().includes(q) ||
+        loc.toLowerCase().includes(q) ||
+        stage.toLowerCase().includes(q)
+      ) {
+        results.push({
+          id: num,
+          category: 'Customer',
+          icon: '👤',
+          title: name || num,
+          subtitle: `${num} • 📞 ${mobile || 'N/A'} • 📍 ${loc || 'Hyderabad'}`,
+          badge: stage,
+          badgeColor: '#38bdf8',
+          action: () => {
+            setActiveTab('customer_management');
+            setActiveCustomerSubTab('customer_360_profile');
+            if (typeof setSelectedCustomer360 === 'function') setSelectedCustomer360(c);
+            setSearchQuery('');
+            setIsSearchFocused(false);
+          }
+        });
+      }
+    });
+
+    // 3. LEADS
+    (leadsList || []).forEach((l: any) => {
+      const id = (l.lead_id || l.id || '').toString();
+      const name = (l.customer_name || l.name || '').toString();
+      const mobile = (l.mobile || l.phone || '').toString();
+      const req = (l.requirement || l.preferred_locality || l.budget || '').toString();
+      const status = (l.status || 'NEW LEAD').toString();
+
+      if (
+        id.toLowerCase().includes(q) ||
+        name.toLowerCase().includes(q) ||
+        mobile.toLowerCase().includes(q) ||
+        req.toLowerCase().includes(q) ||
+        status.toLowerCase().includes(q)
+      ) {
+        results.push({
+          id: id,
+          category: 'Lead',
+          icon: '🎯',
+          title: name || id,
+          subtitle: `${id} • 📞 ${mobile || 'N/A'} • ${req || 'Inbound Lead'}`,
+          badge: status,
+          badgeColor: status.includes('HOT') ? '#ef4444' : '#f59e0b',
+          action: () => {
+            setActiveTab('lead_management');
+            setActiveLeadSubTab('lead_ingestion');
+            setSearchQuery('');
+            setIsSearchFocused(false);
+          }
+        });
+      }
+    });
+
+    // 4. MATCHES
+    (matchingRequestsQueue || []).forEach((m: any) => {
+      const id = (m.requestId || m.id || '').toString();
+      const custName = (m.customerName || '').toString();
+      const pCode = (m.propertyCode || m.propCode || '').toString();
+      const status = (m.status || 'MATCHED').toString();
+
+      if (
+        id.toLowerCase().includes(q) ||
+        custName.toLowerCase().includes(q) ||
+        pCode.toLowerCase().includes(q) ||
+        status.toLowerCase().includes(q)
+      ) {
+        results.push({
+          id: id,
+          category: 'Match',
+          icon: '⚡',
+          title: `Match #${id}`,
+          subtitle: `👤 ${custName} ➔ 🏢 ${pCode || 'Properties'}`,
+          badge: status,
+          badgeColor: '#a855f7',
+          action: () => {
+            setActiveTab('matching_management');
+            setActiveMatchingSubTab('ai_matching_engine');
+            setSearchQuery('');
+            setIsSearchFocused(false);
+          }
+        });
+      }
+    });
+
+    // 5. COST SHEETS
+    (individualCostSheets || []).forEach((cs: any) => {
+      const id = (cs.costSheetId || cs.id || '').toString();
+      const cust = (cs.customerName || cs.clientName || '').toString();
+      const propTitle = (cs.propertySnapshot?.propertyTitle || cs.propertyTitle || '').toString();
+      const total = (cs.grandTotal || cs.totalAmount || '').toString();
+      const status = (cs.status || 'OFFICIAL').toString();
+
+      if (
+        id.toLowerCase().includes(q) ||
+        cust.toLowerCase().includes(q) ||
+        propTitle.toLowerCase().includes(q) ||
+        total.toLowerCase().includes(q) ||
+        status.toLowerCase().includes(q)
+      ) {
+        results.push({
+          id: id,
+          category: 'Cost Sheet',
+          icon: '📄',
+          title: `Cost Sheet #${id}`,
+          subtitle: `👤 ${cust || 'Client'} • 🏢 ${propTitle || 'Property'}`,
+          badge: status,
+          badgeColor: '#ec4899',
+          action: () => {
+            setActiveTab('cost_sheet_share');
+            setActiveCostSheetShareSubTab('individual_cost_sheets');
+            setSearchQuery('');
+            setIsSearchFocused(false);
+          }
+        });
+      }
+    });
+
+    // 6. VISITS
+    (scheduledVisits || visitPlans || []).forEach((v: any) => {
+      const id = (v.visitPlanId || v.visitScheduleId || v.id || '').toString();
+      const cust = (v.customerName || '').toString();
+      const prop = (v.propertyTitle || (v.stops && v.stops[0]?.propertyTitle) || '').toString();
+      const date = (v.visitDate || '').toString();
+      const status = (v.status || 'SCHEDULED').toString();
+
+      if (
+        id.toLowerCase().includes(q) ||
+        cust.toLowerCase().includes(q) ||
+        prop.toLowerCase().includes(q) ||
+        date.toLowerCase().includes(q) ||
+        status.toLowerCase().includes(q)
+      ) {
+        results.push({
+          id: id,
+          category: 'Visit',
+          icon: '📅',
+          title: `Site Visit #${id}`,
+          subtitle: `👤 ${cust} • 🗓️ ${date || 'Today'} • 🏢 ${prop || 'Site'}`,
+          badge: status,
+          badgeColor: '#06b6d4',
+          action: () => {
+            setActiveTab('visit_management');
+            setActiveVisitSubTab('visit_scheduler');
+            setSearchQuery('');
+            setIsSearchFocused(false);
+          }
+        });
+      }
+    });
+
+    // 7. AGREEMENTS
+    (agreements || []).forEach((ag: any) => {
+      const id = (ag.agreementId || ag.id || '').toString();
+      const cust = (ag.customerName || ag.client_name || '').toString();
+      const code = (ag.propertyCode || ag.property_code || '').toString();
+      const status = (ag.status || 'EXECUTED').toString();
+
+      if (
+        id.toLowerCase().includes(q) ||
+        cust.toLowerCase().includes(q) ||
+        code.toLowerCase().includes(q) ||
+        status.toLowerCase().includes(q)
+      ) {
+        results.push({
+          id: id,
+          category: 'Agreement',
+          icon: '📜',
+          title: `Agreement #${id}`,
+          subtitle: `👤 ${cust} • 🏢 ${code}`,
+          badge: status,
+          badgeColor: '#6366f1',
+          action: () => {
+            setActiveTab('agreement_management');
+            setSearchQuery('');
+            setIsSearchFocused(false);
+          }
+        });
+      }
+    });
+
+    // 8. BOOKINGS
+    (bookings || []).forEach((b: any) => {
+      const id = (b.bookingId || b.id || '').toString();
+      const cust = (b.customerName || b.buyerName || '').toString();
+      const unit = (b.unitNo || b.flatNo || '').toString();
+      const status = (b.status || 'CONFIRMED').toString();
+
+      if (
+        id.toLowerCase().includes(q) ||
+        cust.toLowerCase().includes(q) ||
+        unit.toLowerCase().includes(q) ||
+        status.toLowerCase().includes(q)
+      ) {
+        results.push({
+          id: id,
+          category: 'Booking',
+          icon: '🎟️',
+          title: `Booking #${id}`,
+          subtitle: `👤 ${cust} • 🚪 Unit ${unit}`,
+          badge: status,
+          badgeColor: '#8b5cf6',
+          action: () => {
+            setActiveTab('booking_management');
+            setSearchQuery('');
+            setIsSearchFocused(false);
+          }
+        });
+      }
+    });
+
+    // 9. BILLING / INVOICES
+    (invoices || []).forEach((inv: any) => {
+      const id = (inv.invoiceNumber || inv.id || '').toString();
+      const cust = (inv.customerName || inv.clientName || '').toString();
+      const amt = (inv.totalAmount || inv.amount || '').toString();
+      const status = (inv.status || 'PAID').toString();
+
+      if (
+        id.toLowerCase().includes(q) ||
+        cust.toLowerCase().includes(q) ||
+        amt.toLowerCase().includes(q) ||
+        status.toLowerCase().includes(q)
+      ) {
+        results.push({
+          id: id,
+          category: 'Billing',
+          icon: '💳',
+          title: `Invoice #${id}`,
+          subtitle: `👤 ${cust} • 💰 ₹${amt}`,
+          badge: status,
+          badgeColor: '#14b8a6',
+          action: () => {
+            setActiveTab('billing_management');
+            setSearchQuery('');
+            setIsSearchFocused(false);
+          }
+        });
+      }
+    });
+
+    return results;
+  }, [searchQuery, properties, customers, leadsList, matchingRequestsQueue, individualCostSheets, scheduledVisits, visitPlans, agreements, bookings, invoices]);
+
+  const filteredUniversalResults = useMemo(() => {
+    if (searchCategoryFilter === 'ALL') return universalSearchResults;
+    return universalSearchResults.filter(r => r.category === searchCategoryFilter);
+  }, [universalSearchResults, searchCategoryFilter]);
+
+  const searchCategoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { ALL: universalSearchResults.length };
+    universalSearchResults.forEach(r => {
+      counts[r.category] = (counts[r.category] || 0) + 1;
+    });
+    return counts;
+  }, [universalSearchResults]);
+
 
 
   const [showNewBookingModal, setShowNewBookingModal] = useState<boolean>(false);
@@ -6192,11 +6563,7 @@ export default function App() {
       { latMin: 22.71, latMax: 22.75, lngMin: 88.47, lngMax: 88.52, locality: 'BARASAT, CHAPADALI', fullAddress: 'Chapadali Bus Terminus Hub, Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124, India' },
       { latMin: 22.67, latMax: 22.71, lngMin: 88.43, lngMax: 88.47, locality: 'Madhyamgram Hub / Jessore Road', fullAddress: 'Madhyamgram Chowrastha, Jessore Road, North 24 Parganas, Kolkata, West Bengal - 700129, India' },
       { latMin: 22.56, latMax: 22.63, lngMin: 88.42, lngMax: 88.49, locality: 'New Town Action Area / Salt Lake Sector V', fullAddress: 'Action Area I, Major Arterial Road, New Town, Salt Lake Sector V, North 24 Parganas, West Bengal - 700156, India' },
-      { latMin: 22.48, latMax: 22.56, lngMin: 88.32, lngMax: 88.42, locality: 'Kolkata South / Ballygunge Hub', fullAddress: 'Ballygunge Circular Road, Gariahat, Kolkata South, West Bengal - 700019, India' },
-      { latMin: 17.43, latMax: 17.47, lngMin: 78.33, lngMax: 78.38, locality: 'Kondapur Hub / HITEC City Sector', fullAddress: 'Kondapur Main Road, Near Cyber Towers, HITEC City, Ranga Reddy District, Hyderabad, Telangana - 500084, India' },
-      { latMin: 17.41, latMax: 17.45, lngMin: 78.35, lngMax: 78.40, locality: 'Gachibowli Financial District', fullAddress: 'Financial District, ISB Road, Gachibowli, Ranga Reddy District, Hyderabad, Telangana - 500032, India' },
-      { latMin: 17.47, latMax: 17.52, lngMin: 78.33, lngMax: 78.38, locality: 'Miyapur Hub / Chandanagar', fullAddress: 'Miyapur Cross Roads, NH 65, Serilingampally, Ranga Reddy, Hyderabad, Telangana - 500049, India' },
-      { latMin: 17.38, latMax: 17.43, lngMin: 78.42, lngMax: 78.48, locality: 'Banjara Hills / Jubilee Hills', fullAddress: 'Road No. 1, Banjara Hills, Khairatabad, Hyderabad, Telangana - 500034, India' }
+      { latMin: 22.48, latMax: 22.56, lngMin: 88.32, lngMax: 88.42, locality: 'Kolkata South / Ballygunge Hub', fullAddress: 'Ballygunge Circular Road, Gariahat, Kolkata South, West Bengal - 700019, India' }
     ];
 
     const geofenceMatch = geofences.find(g => lat >= g.latMin && lat <= g.latMax && lng >= g.lngMin && lng <= g.lngMax);
@@ -7692,53 +8059,178 @@ export default function App() {
               <Menu size={20} />
             </button>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: isLight ? '#f1f5f9' : '#1e293b', border: '1px solid #0284c7', padding: '6px 12px', borderRadius: '8px', flex: isMobile ? '1' : '0 0 440px', minWidth: isMobile ? '0' : '440px' }}>
-            <Search size={16} color="#38bdf8" />
-            <input
-              type="text"
-              placeholder={isMobile ? "🔍 Universal Search..." : "🔍 Universal Search (Property Code, Title, Customer, Mobile...)"}
-              value={searchQuery}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSearchQuery(val);
-                const q = val.trim().toUpperCase();
-                if (q.startsWith('SRM-CUS-') || q.startsWith('CUS-')) {
-                  setActiveTab('customer_management');
-                  setActiveCustomerSubTab('customer_master_vault');
-                } else if (q.startsWith('SRM-LEAD-') || q.startsWith('LEAD-')) {
-                  setActiveTab('lead_management');
-                  setActiveLeadSubTab('lead_ingestion');
-                } else if (q.startsWith('SRM-MAT-') || q.startsWith('MAT-')) {
-                  setActiveTab('matching_management');
-                  setActiveMatchingSubTab('ai_matching_engine');
-                } else if (q.startsWith('SRM-PROP-') || q.startsWith('PROP-')) {
-                  setActiveTab('project_management');
-                  setActiveProjectSubTab('property_master');
-                } else if (q.startsWith('SRM-CS-') || q.startsWith('SRM-CSS-') || q.startsWith('CS-') || q.startsWith('COST-SHEET-')) {
-                  setActiveTab('cost_sheet_share');
-                  setActiveCostSheetShareSubTab('individual_cost_sheets');
-                } else if (q.startsWith('SRM-VS-') || q.startsWith('VIS-')) {
-                  setActiveTab('visit_management');
-                  setActiveVisitSubTab('visit_scheduler');
-                } else if (q.startsWith('SRM-AGR-') || q.startsWith('AGR-')) {
-                  setActiveTab('agreement_management');
-                } else if (q.startsWith('SRM-INV-') || q.startsWith('INV-')) {
-                  setActiveTab('billing_management');
-                } else if (q.startsWith('USR-')) {
-                  setActiveTab('role_management');
-                  setActiveRoleSubTab('user_directory');
-                }
-              }}
-              style={{ background: 'transparent', border: 'none', color: isLight ? '#0f172a' : '#ffffff', outline: 'none', fontSize: '0.85rem', width: '100%', fontWeight: '700' }}
-            />
-            {searchQuery && (
-              <X 
-                size={16} 
-                color="#94a3b8" 
-                style={{ cursor: 'pointer', flexShrink: 0 }} 
-                onClick={() => setSearchQuery('')}
-                title="Clear Search"
+          <div style={{ position: 'relative', flex: isMobile ? '1' : '0 0 480px', minWidth: isMobile ? '0' : '480px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: isLight ? '#f1f5f9' : '#1e293b', border: isSearchFocused ? '2px solid #38bdf8' : '1px solid #0284c7', padding: '6px 12px', borderRadius: '8px', transition: 'all 0.2s ease' }}>
+              <Search size={16} color="#38bdf8" />
+              <input
+                type="text"
+                placeholder={isMobile ? "🔍 Universal Search..." : "🔍 Universal Search (Property Code, Title, Customer, Mobile...)"}
+                value={searchQuery}
+                onFocus={() => setIsSearchFocused(true)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSearchQuery(val);
+                  setIsSearchFocused(true);
+                  const q = val.trim().toUpperCase();
+                  if (q.startsWith('SRM-CUS-') || q.startsWith('CUS-')) {
+                    setActiveTab('customer_management');
+                    setActiveCustomerSubTab('customer_master_vault');
+                  } else if (q.startsWith('SRM-LEAD-') || q.startsWith('LEAD-')) {
+                    setActiveTab('lead_management');
+                    setActiveLeadSubTab('lead_ingestion');
+                  } else if (q.startsWith('SRM-MAT-') || q.startsWith('MAT-')) {
+                    setActiveTab('matching_management');
+                    setActiveMatchingSubTab('ai_matching_engine');
+                  } else if (q.startsWith('SRM-PROP-') || q.startsWith('PROP-')) {
+                    setActiveTab('project_management');
+                    setActiveProjectSubTab('property_master');
+                  } else if (q.startsWith('SRM-CS-') || q.startsWith('SRM-CSS-') || q.startsWith('CS-') || q.startsWith('COST-SHEET-')) {
+                    setActiveTab('cost_sheet_share');
+                    setActiveCostSheetShareSubTab('individual_cost_sheets');
+                  } else if (q.startsWith('SRM-VS-') || q.startsWith('VIS-')) {
+                    setActiveTab('visit_management');
+                    setActiveVisitSubTab('visit_scheduler');
+                  } else if (q.startsWith('SRM-AGR-') || q.startsWith('AGR-')) {
+                    setActiveTab('agreement_management');
+                  } else if (q.startsWith('SRM-INV-') || q.startsWith('INV-')) {
+                    setActiveTab('billing_management');
+                  } else if (q.startsWith('USR-')) {
+                    setActiveTab('role_management');
+                    setActiveRoleSubTab('user_directory');
+                  }
+                }}
+                style={{ background: 'transparent', border: 'none', color: isLight ? '#0f172a' : '#ffffff', outline: 'none', fontSize: '0.85rem', width: '100%', fontWeight: '700' }}
               />
+              {searchQuery && (
+                <X 
+                  size={16} 
+                  color="#94a3b8" 
+                  style={{ cursor: 'pointer', flexShrink: 0 }} 
+                  onClick={() => { setSearchQuery(''); setIsSearchFocused(false); }}
+                  title="Clear Search"
+                />
+              )}
+            </div>
+
+            {/* FLOATING DYNAMIC UNIVERSAL SEARCH DROPDOWN */}
+            {isSearchFocused && searchQuery.trim().length > 0 && (
+              <>
+                <div 
+                  style={{ position: 'fixed', inset: 0, zIndex: 99990 }} 
+                  onClick={() => setIsSearchFocused(false)} 
+                />
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '8px', background: isLight ? '#ffffff' : '#0f172a', border: '1px solid #0284c7', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(0,0,0,0.5)', zIndex: 99999, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '520px' }}>
+                  
+                  {/* SEARCH HEADER & CATEGORY FILTERS */}
+                  <div style={{ padding: '10px 14px', background: isLight ? '#f8fafc' : '#1e293b', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: '800', color: isLight ? '#0369a1' : '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>🔍 Dynamic Search Results</span>
+                        <span style={{ background: '#0284c7', color: '#ffffff', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem' }}>
+                          {universalSearchResults.length} Found
+                        </span>
+                      </span>
+                      <button onClick={() => { setSearchQuery(''); setIsSearchFocused(false); }} style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '0.72rem', cursor: 'pointer', fontWeight: '700' }}>
+                        Close (ESC)
+                      </button>
+                    </div>
+
+                    {/* CATEGORY FILTER CHIPS */}
+                    {universalSearchResults.length > 0 && (
+                      <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+                        {['ALL', 'Property', 'Customer', 'Lead', 'Match', 'Cost Sheet', 'Visit', 'Agreement', 'Booking', 'Billing'].map(cat => {
+                          const count = searchCategoryCounts[cat] || 0;
+                          if (cat !== 'ALL' && count === 0) return null;
+                          const isActive = searchCategoryFilter === cat;
+                          return (
+                            <button
+                              key={cat}
+                              onClick={(e) => { e.stopPropagation(); setSearchCategoryFilter(cat); }}
+                              style={{
+                                padding: '3px 10px',
+                                borderRadius: '16px',
+                                border: isActive ? '1px solid #38bdf8' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                                background: isActive ? '#0284c7' : (isLight ? '#ffffff' : '#0f172a'),
+                                color: isActive ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'),
+                                fontSize: '0.72rem',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              {cat === 'ALL' ? '🌐 All' : cat} ({count})
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* RESULTS LIST CONTAINER */}
+                  <div style={{ overflowY: 'auto', flex: 1, padding: '8px' }}>
+                    {filteredUniversalResults.length === 0 ? (
+                      <div style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '1.8rem', marginBottom: '6px' }}>🔍</div>
+                        <div style={{ fontWeight: '700', fontSize: '0.85rem', color: isLight ? '#334155' : '#cbd5e1' }}>
+                          No matching records found for "{searchQuery}"
+                        </div>
+                        <div style={{ fontSize: '0.75rem', marginTop: '4px', color: '#64748b' }}>
+                          Try searching by Property Code (SRM-PROP-...), Customer Name/Phone, Lead ID, Cost Sheet, or Booking Unit.
+                        </div>
+                      </div>
+                    ) : (
+                      filteredUniversalResults.slice(0, 30).map((res, idx) => (
+                        <div
+                          key={`${res.category}-${res.id}-${idx}`}
+                          onClick={() => res.action()}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justify: 'space-between',
+                            gap: '12px',
+                            cursor: 'pointer',
+                            marginBottom: '4px',
+                            background: isLight ? '#f8fafc' : '#1e293b',
+                            border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = isLight ? '#e0f2fe' : '#0369a1'; e.currentTarget.style.borderColor = '#38bdf8'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = isLight ? '#f8fafc' : '#1e293b'; e.currentTarget.style.borderColor = isLight ? '#e2e8f0' : '#334155'; }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{res.icon}</span>
+                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: '800', fontSize: '0.84rem', color: isLight ? '#0f172a' : '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {res.title}
+                                </span>
+                                <span style={{ fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', borderRadius: '4px', background: `${res.badgeColor}22`, color: res.badgeColor, border: `1px solid ${res.badgeColor}44` }}>
+                                  {res.category}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
+                                {res.subtitle}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                            <span style={{ fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '6px', background: `${res.badgeColor}18`, color: res.badgeColor }}>
+                              {res.badge}
+                            </span>
+                            <span style={{ color: '#0284c7', fontWeight: '800', fontSize: '0.8rem' }}>➔</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
             )}
           </div>
 
@@ -9225,6 +9717,7 @@ export default function App() {
               bookings={bookings}
               invoices={invoices}
               agreements={agreements}
+              onRecycleItem={handleRecycleItem}
             />
           )}
 
@@ -9313,6 +9806,7 @@ export default function App() {
               setActiveTab={setActiveTab}
               setBillingInvoiceCategory={setBillingInvoiceCategory}
               setSearchQuery={setSearchQuery}
+              onRecycleItem={handleRecycleItem}
             />
           )}
 
@@ -9358,6 +9852,7 @@ export default function App() {
               bookings={bookings}
               invoices={invoices}
               agreements={agreements}
+              onRecycleItem={handleRecycleItem}
             />
           )}
 
@@ -9379,6 +9874,7 @@ export default function App() {
               individualCostSheets={individualCostSheets}
               costSheetShares={costSheetShares}
               scheduledVisits={scheduledVisits}
+              onRecycleItem={handleRecycleItem}
             />
           )}
 
@@ -9480,6 +9976,7 @@ export default function App() {
               setActiveBookingSubTab={setActiveBookingSubTab}
               setProperties={setProperties}
               syncAllToMongoDB={syncAllToMongoDB}
+              onRecycleItem={handleRecycleItem}
             />
           )}
 
@@ -9505,6 +10002,7 @@ export default function App() {
               branches={branches}
               properties={properties}
               customers={customers}
+              onRecycleItem={handleRecycleItem}
             />
           )}
 
@@ -14997,8 +15495,8 @@ export default function App() {
                       propertyTitle: propObj.title,
                       locality: propObj.locality,
                       developer: propObj.developer,
-                      latitude: propObj.latitude || '17.4478° N',
-                      longitude: propObj.longitude || '78.3789° E',
+                      latitude: propObj.latitude || '22.722361° N',
+                      longitude: propObj.longitude || '88.493403° E',
                       address: `${propObj.title}, ${propObj.locality}`,
                       timeWindow: '03:00 PM - 04:30 PM',
                       scheduledTime: '03:15 PM',
@@ -15157,21 +15655,38 @@ export default function App() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '14px', flexWrap: 'wrap', gap: '10px' }}>
               <button 
                 onClick={() => {
-                  const validStops = (showRouteMapModal.plan.stops || []).filter((s: any) => s && (s.latitude || s.longitude));
-                  if (validStops.length > 1) {
-                    const destStop = validStops[validStops.length - 1];
-                    const destLat = (destStop.latitude || '17.4612').replace(/[^0-9.-]/g, '');
-                    const destLng = (destStop.longitude || '78.3689').replace(/[^0-9.-]/g, '');
-                    const waypointsStr = validStops.slice(0, validStops.length - 1).map((s: any) => {
-                      const lat = (s.latitude || '17.4612').replace(/[^0-9.-]/g, '');
-                      const lng = (s.longitude || '78.3689').replace(/[^0-9.-]/g, '');
-                      return `${lat},${lng}`;
-                    }).join('|');
-                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&waypoints=${encodeURIComponent(waypointsStr)}`, '_blank');
-                  } else if (validStops.length === 1) {
-                    const cleanLat = (validStops[0].latitude || '17.4612').replace(/[^0-9.-]/g, '');
-                    const cleanLng = (validStops[0].longitude || '78.3689').replace(/[^0-9.-]/g, '');
-                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}`, '_blank');
+                  const plan = showRouteMapModal.plan;
+                  const isCabNeeded = 
+                    (plan?.transport || '').toLowerCase().includes('cab') ||
+                    (plan?.transport || '').toLowerCase().includes('pick') ||
+                    Boolean(plan?.pickupAddress || plan?.pickupLat);
+
+                  const validStops = (plan?.stops || []).filter((s: any) => s && (s.latitude || s.longitude));
+                  const projectCoords = validStops.map((s: any) => {
+                    const lat = (s.latitude || '22.722361').replace(/[^0-9.-]/g, '');
+                    const lng = (s.longitude || '88.493403').replace(/[^0-9.-]/g, '');
+                    return `${lat},${lng}`;
+                  });
+
+                  if (isCabNeeded) {
+                    const cleanPickLat = plan.pickupLat ? plan.pickupLat.replace(/[^0-9.-]/g, '') : '';
+                    const cleanPickLng = plan.pickupLng ? plan.pickupLng.replace(/[^0-9.-]/g, '') : '';
+                    const pickPt = (cleanPickLat && cleanPickLng) ? `${cleanPickLat},${cleanPickLng}` : (plan.pickupAddress ? encodeURIComponent(plan.pickupAddress) : '22.720500,88.485000');
+
+                    const cleanDropLat = plan.dropLat ? plan.dropLat.replace(/[^0-9.-]/g, '') : '';
+                    const cleanDropLng = plan.dropLng ? plan.dropLng.replace(/[^0-9.-]/g, '') : '';
+                    const dropPt = (cleanDropLat && cleanDropLng) ? `${cleanDropLat},${cleanDropLng}` : (plan.dropAddress ? encodeURIComponent(plan.dropAddress) : '22.725000,88.498000');
+
+                    const waypointsStr = [pickPt, ...projectCoords].join('|');
+                    window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}`, '_blank');
+                  } else {
+                    if (projectCoords.length > 1) {
+                      const dest = projectCoords[projectCoords.length - 1];
+                      const waypointsStr = projectCoords.slice(0, projectCoords.length - 1).join('|');
+                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest}&waypoints=${encodeURIComponent(waypointsStr)}`, '_blank');
+                    } else if (projectCoords.length === 1) {
+                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${projectCoords[0]}`, '_blank');
+                    }
                   }
                 }}
                 style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.85rem' }}

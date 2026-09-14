@@ -190,6 +190,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
   bookings = [],
   invoices = [],
   agreements = [],
+  onRecycleItem,
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
@@ -426,7 +427,17 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
     const custName = (req.customerName || req.name || '').toString().trim();
     const mobile = (req.mobile || '').toString().replace(/\D/g, '');
 
-    if (window.confirm(`Are you sure you want to remove matching request & customer "${custName || reqId}" from Matching Management?`)) {
+    if (window.confirm(`Are you sure you want to remove matching request & customer "${custName || reqId}" from Matching Management? It will be moved to Recycle Bin.`)) {
+      if (onRecycleItem) {
+        onRecycleItem({
+          id: reqId || `MAT-${Date.now()}`,
+          title: `Matching Request - ${custName || 'Client'} (${reqId})`,
+          category: 'Lead',
+          originalLocation: 'Matching Management Vault',
+          details: `Customer ID: ${custNum || 'N/A'}, Mobile: ${mobile || 'N/A'}`,
+          originalData: req
+        });
+      }
       if (setMatchingRequestsQueue) {
         setMatchingRequestsQueue(prev => {
           const next = (prev || []).filter(r => {
@@ -1188,9 +1199,11 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     }
                     const queryStr = propertySearchQuery.trim().toLowerCase();
                     const matchedProp = properties.find(p => 
-                      p.property_code.toLowerCase().includes(queryStr) ||
-                      p.title.toLowerCase().includes(queryStr) ||
-                      p.locality.toLowerCase().includes(queryStr)
+                      p && (
+                        (p.property_code || '').toString().toLowerCase().includes(queryStr) ||
+                        (p.title || '').toString().toLowerCase().includes(queryStr) ||
+                        (p.locality || '').toString().toLowerCase().includes(queryStr)
+                      )
                     );
                     if (matchedProp) {
                       const activeCustUsedProps = activeMatchingReq
@@ -1314,11 +1327,11 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     .filter(p => {
                       if (!propertySearchQuery.trim()) return true;
                       const q = propertySearchQuery.trim().toLowerCase();
-                      return p.property_code.toLowerCase().includes(q) ||
-                        p.title.toLowerCase().includes(q) ||
-                        p.locality.toLowerCase().includes(q) ||
-                        p.developer.toLowerCase().includes(q) ||
-                        p.configuration.toLowerCase().includes(q);
+                      return (p.property_code || '').toString().toLowerCase().includes(q) ||
+                        (p.title || '').toString().toLowerCase().includes(q) ||
+                        (p.locality || '').toString().toLowerCase().includes(q) ||
+                        (p.developer || '').toString().toLowerCase().includes(q) ||
+                        (p.configuration || '').toString().toLowerCase().includes(q);
                     })
                     .sort((a, b) => {
                       const aIsUsed = activeCustUsedCodesSet.has((a.property_code || '').toString().trim().toUpperCase());

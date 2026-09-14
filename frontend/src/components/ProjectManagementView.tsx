@@ -52,6 +52,7 @@ interface ProjectManagementViewProps {
   bookings?: any[];
   invoices?: any[];
   agreements?: any[];
+  onRecycleItem?: (itemData: any) => void;
 }
 
 export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
@@ -105,6 +106,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   formatIndianRupees,
   detectLocalityFromCoords,
   setPropertyUnits,
+  onRecycleItem,
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
@@ -113,16 +115,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const PROJECT_GPS_MAP: Record<string, { lat: string; lng: string }> = {
     'SHIBALAY RESIDENCY': { lat: '22.722361', lng: '88.493403' },
     'GAJAPATI APARTMENT': { lat: '22.722361', lng: '88.493403' },
-    'My Home Sayuk': { lat: '17.4612', lng: '78.3689' },
+    'My Home Sayuk': { lat: '22.720500', lng: '88.485000' },
     'Dhriti Residency': { lat: '22.698021', lng: '88.463723' },
-    'Rajapushpa Imperia': { lat: '17.4401', lng: '78.3489' },
-    'Aparna Zenith': { lat: '17.4478', lng: '78.3789' },
-    'Jayabheri Peak': { lat: '17.4201', lng: '78.3410' },
-    'Lansum Elena': { lat: '17.4190', lng: '78.3395' },
+    'Rajapushpa Imperia': { lat: '22.715420', lng: '88.479150' },
+    'Aparna Zenith': { lat: '22.722361', lng: '88.493403' },
+    'Jayabheri Peak': { lat: '22.725000', lng: '88.498000' },
+    'Lansum Elena': { lat: '22.718000', lng: '88.488000' },
     'Star Horizon': { lat: '22.6955', lng: '88.4610' },
-    'Cyber Towers': { lat: '17.4500', lng: '78.3810' },
-    'Aparna Zenon': { lat: '17.4285', lng: '78.3560' },
-    'Prestige High Fields': { lat: '17.4350', lng: '78.3490' }
+    'Cyber Towers': { lat: '22.710000', lng: '88.475000' },
+    'Aparna Zenon': { lat: '22.722361', lng: '88.493403' },
+    'Prestige High Fields': { lat: '22.723000', lng: '88.490000' }
   };
 
   const getGpsForProject = (projTitle?: string, defaultLat?: string, defaultLng?: string) => {
@@ -1580,7 +1582,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       type="text" 
                       value={newPropertyForm.latitude} 
                       onChange={(e) => setNewPropertyForm({ ...newPropertyForm, latitude: e.target.value })} 
-                      placeholder="e.g. 22.698021 or 17.44008" 
+                      placeholder="e.g. 22.698021 or 22.722361" 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
                     />
                   </div>
@@ -3605,7 +3607,17 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
                             {isSuperAdmin && (
                               <button
                                 onClick={() => {
-                                  if (window.confirm(`⚠️ SUPER ADMIN CONFIRMATION:\n\nAre you sure you want to permanently delete Developer ${dev.id} (${dev.name})?`)) {
+                                  if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Developer ${dev.id} (${dev.name})? It will be moved to Recycle Bin.`)) {
+                                    if (onRecycleItem) {
+                                      onRecycleItem({
+                                        id: dev.id || `DEV-${Date.now()}`,
+                                        title: `Developer - ${dev.name || 'Partner Developer'} (${dev.id})`,
+                                        category: 'Project',
+                                        originalLocation: 'Developer & Channel Partner Master',
+                                        details: `Mobile: ${dev.mobile || 'N/A'}, Projects: ${dev.projectsCount || 0}`,
+                                        originalData: dev
+                                      });
+                                    }
                                     const nextList = developerMasterList.filter((d: any) => d.id !== dev.id && d.name !== dev.name);
                                     setDeveloperMasterList(nextList);
                                     if (setDevelopers) setDevelopers(nextList);
@@ -3618,7 +3630,7 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
                                         body: JSON.stringify({ developers: nextList })
                                       }).catch(() => {});
                                     } catch (e) {}
-                                    alert(`🗑️ Developer ${dev.name} permanently deleted.`);
+                                    alert(`🗑️ Developer ${dev.name} moved to Recycle Bin.`);
                                   }
                                 }}
                                 style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.73rem', cursor: 'pointer' }}

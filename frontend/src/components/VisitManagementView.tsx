@@ -58,6 +58,7 @@ interface VisitManagementViewProps {
   setActiveBookingSubTab?: (tab: any) => void;
   syncAllToMongoDB?: (overrideData?: any) => Promise<void>;
   setShowShiftToMatchingModal?: (val: any) => void;
+  onRecycleItem?: (itemData: any) => void;
 }
 
 export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
@@ -116,6 +117,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
   setActiveBookingSubTab,
   syncAllToMongoDB,
   setShowShiftToMatchingModal,
+  onRecycleItem,
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
@@ -567,7 +569,17 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                               {isSuperAdmin && (
                                 <button 
                                   onClick={() => {
-                                    if (window.confirm(`⚠️ SUPER ADMIN CONFIRMATION:\n\nAre you sure you want to permanently delete Visit Route Plan ${plan.visitPlanId || plan.visitScheduleId} for ${plan.customerName || 'Customer'} from the system and database?`)) {
+                                    if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Visit Route Plan ${plan.visitPlanId || plan.visitScheduleId} for ${plan.customerName || 'Customer'}? It will be moved to Recycle Bin.`)) {
+                                      if (onRecycleItem) {
+                                        onRecycleItem({
+                                          id: plan.visitPlanId || plan.visitScheduleId || `VS-${Date.now()}`,
+                                          title: `Visit Schedule - ${plan.customerName || 'Client'} (${plan.visitPlanId || plan.visitScheduleId})`,
+                                          category: 'Visit Management',
+                                          originalLocation: 'Visit Management Desk',
+                                          details: `Executive: ${plan.assignedExecutive || 'N/A'}, Stops: ${plan.stops?.length || 0}`,
+                                          originalData: plan
+                                        });
+                                      }
                                       const updatedPlans = (visitPlans || []).filter((p: any) => 
                                         p.visitPlanId !== plan.visitPlanId && 
                                         p.visitScheduleId !== plan.visitPlanId && 
@@ -599,7 +611,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                           site_visits: updatedVisits
                                         });
                                       }
-                                      alert(`🗑️ Visit Route Plan ${plan.visitPlanId || plan.visitScheduleId} has been permanently deleted from the database.`);
+                                      alert(`🗑️ Visit Route Plan ${plan.visitPlanId || plan.visitScheduleId} moved to Recycle Bin.`);
                                     }
                                   }}
                                   style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem' }}
@@ -708,7 +720,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   if (t.includes('dhriti') || t.includes('colony') || t.includes('dakbangla')) return { lat: '22.715420', lng: '88.479150' };
                   if (t.includes('shibalay') || t.includes('chapadali')) return { lat: '22.722361', lng: '88.493403' };
                   if (t.includes('greenwood') || t.includes('vip road') || t.includes('airport')) return { lat: '22.645200', lng: '88.438500' };
-                  if (t.includes('aparna') || t.includes('zenon') || t.includes('kondapur')) return { lat: '17.461250', lng: '78.368920' };
+                  if (t.includes('aparna') || t.includes('zenon') || t.includes('kondapur')) return { lat: '22.722361', lng: '88.493403' };
 
                   const baseLat = 22.722361;
                   const baseLng = 88.493403;
@@ -716,6 +728,57 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                     lat: (baseLat + (idx * 0.01825)).toFixed(6),
                     lng: (baseLng + (idx * -0.01540)).toFixed(6)
                   };
+                };
+
+                const getUniversalNavigationUrl = (plan: any) => {
+                  if (!plan) return 'https://www.google.com/maps';
+
+                  const stops = plan.stops || [];
+                  const resolvedStops = stops.map((s: any, idx: number) => resolveStopCoords(s, idx));
+
+                  const isCabNeeded = 
+                    (plan.transport || '').toLowerCase().includes('cab') ||
+                    (plan.transport || '').toLowerCase().includes('pick') ||
+                    Boolean(plan.pickupAddress || plan.pickupLat);
+
+                  if (isCabNeeded) {
+                    // 1st Leg: Customer Pickup Address
+                    let pickupPt = '22.720500,88.485000';
+                    if (plan.pickupLat && plan.pickupLng) {
+                      const lat = String(plan.pickupLat).replace(/[^0-9.-]/g, '');
+                      const lng = String(plan.pickupLng).replace(/[^0-9.-]/g, '');
+                      if (lat && lng) pickupPt = `${lat},${lng}`;
+                    } else if (plan.pickupAddress && plan.pickupAddress.trim()) {
+                      pickupPt = encodeURIComponent(plan.pickupAddress.trim());
+                    }
+
+                    // Intermediate Legs: Project Property Locations
+                    const projectCoordsStr = resolvedStops.map((c: any) => `${c.lat},${c.lng}`);
+
+                    // Final Leg: Customer Drop Address
+                    let dropPt = '22.725000,88.498000';
+                    if (plan.dropLat && plan.dropLng) {
+                      const lat = String(plan.dropLat).replace(/[^0-9.-]/g, '');
+                      const lng = String(plan.dropLng).replace(/[^0-9.-]/g, '');
+                      if (lat && lng) dropPt = `${lat},${lng}`;
+                    } else if (plan.dropAddress && plan.dropAddress.trim()) {
+                      dropPt = encodeURIComponent(plan.dropAddress.trim());
+                    }
+
+                    // Sequence: Origin (Visitor Live Current Location) -> 1st Waypoint (Customer Pickup) -> Waypoints 2..N (Project Sites) -> Final Destination (Customer Drop)
+                    const waypointsStr = [pickupPt, ...projectCoordsStr].join('|');
+                    return `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}`;
+                  } else {
+                    if (resolvedStops.length > 1) {
+                      const destStop = resolvedStops[resolvedStops.length - 1];
+                      const waypointsStr = resolvedStops.slice(0, resolvedStops.length - 1).map((c: any) => `${c.lat},${c.lng}`).join('|');
+                      return `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destStop.lat},${destStop.lng}&waypoints=${encodeURIComponent(waypointsStr)}`;
+                    } else if (resolvedStops.length === 1) {
+                      const c = resolvedStops[0];
+                      return `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${c.lat},${c.lng}`;
+                    }
+                    return 'https://www.google.com/maps';
+                  }
                 };
 
                 return (
@@ -747,18 +810,11 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                       <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
                         <button 
                           onClick={() => {
-                            const resolvedStops = planStops.map((s: any, idx: number) => resolveStopCoords(s, idx));
-                            if (resolvedStops.length > 1) {
-                              const destStop = resolvedStops[resolvedStops.length - 1];
-                              const waypointsStr = resolvedStops.slice(0, resolvedStops.length - 1).map((c: any) => `${c.lat},${c.lng}`).join('|');
-                              window.open(`https://www.google.com/maps/dir/?api=1&destination=${destStop.lat},${destStop.lng}&waypoints=${encodeURIComponent(waypointsStr)}`, '_blank');
-                            } else if (resolvedStops.length === 1) {
-                              const c = resolvedStops[0];
-                              window.open(`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`, '_blank');
-                            }
+                            const navUrl = getUniversalNavigationUrl(currentPlan);
+                            window.open(navUrl, '_blank');
                           }}
                           style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          title="Start Turn-by-Turn Google Maps Navigation through ALL stops in the route"
+                          title="Start Turn-by-Turn Navigation (Visitor GPS -> Customer Pickup -> Projects -> Customer Drop)"
                         >
                           🚀 START FULL ROUTE NAVIGATION ({totalStops} STOPS)
                         </button>
@@ -1424,7 +1480,17 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                           {isSuperAdmin && (
                             <button 
                               onClick={() => {
-                                if (window.confirm(`⚠️ SUPER ADMIN CONFIRMATION:\n\nAre you sure you want to permanently delete Scheduled Visit record ${v.visitId || v.costSheetId || 'this visit'} for ${v.customerName || 'Customer'} from the system and database?`)) {
+                                if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Scheduled Visit record ${v.visitId || v.costSheetId || 'this visit'} for ${v.customerName || 'Customer'}? It will be moved to Recycle Bin.`)) {
+                                  if (onRecycleItem) {
+                                    onRecycleItem({
+                                      id: v.visitId || v.costSheetId || `VIS-${Date.now()}`,
+                                      title: `Site Visit - ${v.customerName || 'Client'} (${v.visitId || v.costSheetId})`,
+                                      category: 'Visit Management',
+                                      originalLocation: 'Scheduled Site Visits Vault',
+                                      details: `Property: ${v.propertyTitle || 'N/A'}, Date: ${v.visitDate || 'N/A'}`,
+                                      originalData: v
+                                    });
+                                  }
                                   const updatedVisits = (scheduledVisits || []).filter((sv: any) => 
                                     sv.visitId !== v.visitId && 
                                     sv.costSheetId !== v.costSheetId && 
@@ -1459,7 +1525,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                     });
                                   }
 
-                                  alert(`🗑️ Scheduled Visit record ${v.visitId || v.costSheetId || ''} has been permanently deleted from the database.`);
+                                  alert(`🗑️ Scheduled Visit record ${v.visitId || v.costSheetId || ''} moved to Recycle Bin.`);
                                 }
                               }}
                               style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}

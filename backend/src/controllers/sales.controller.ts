@@ -28,13 +28,13 @@ export async function siteVisitCheckin(req: AuthRequest, res: Response) {
 
   loadData();
 
-  let projectGeo = { geo_latitude: 17.4623, geo_longitude: 78.3582, geo_fence_radius_meters: 300 };
+  let projectGeo = { geo_latitude: 22.722361, geo_longitude: 88.493403, geo_fence_radius_meters: 300 };
   if (project_id) {
     const proj = dbStore.data.projects.find(p => p.id === project_id);
     if (proj) {
       projectGeo = {
-        geo_latitude: proj.geo_latitude || 17.4623,
-        geo_longitude: proj.geo_longitude || 78.3582,
+        geo_latitude: proj.geo_latitude || 22.722361,
+        geo_longitude: proj.geo_longitude || 88.493403,
         geo_fence_radius_meters: proj.geo_fence_radius_meters || 300
       };
     }

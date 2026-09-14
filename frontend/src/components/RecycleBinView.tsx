@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import {
   Trash2, RotateCcw, Search, AlertTriangle, CheckCircle2,
-  Users, UserCheck, Building2, FileText, DollarSign
+  Users, UserCheck, Building2, FileText, DollarSign, CreditCard, Navigation
 } from 'lucide-react';
 
 export interface RecycleBinItem {
   id: string;
   title: string;
-  category: 'Lead' | 'Customer' | 'Project' | 'Agreement' | 'Cost Sheet';
+  category: 'Lead' | 'Customer' | 'Project' | 'Agreement' | 'Cost Sheet' | 'Billing' | 'Visit Management';
   deletedBy: string;
   deletedAt: string;
   originalLocation: string;
@@ -78,6 +78,8 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
       case 'Project': return <Building2 size={16} color="#f59e0b" />;
       case 'Agreement': return <FileText size={16} color="#ec4899" />;
       case 'Cost Sheet': return <DollarSign size={16} color="#8b5cf6" />;
+      case 'Billing': return <CreditCard size={16} color="#06b6d4" />;
+      case 'Visit Management': return <Navigation size={16} color="#eab308" />;
       default: return <Trash2 size={16} color="#94a3b8" />;
     }
   };
@@ -185,7 +187,7 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
       }}>
         {/* Category Tabs */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {['ALL', 'Lead', 'Customer', 'Project', 'Agreement', 'Cost Sheet'].map(cat => {
+          {['ALL', 'Lead', 'Customer', 'Project', 'Agreement', 'Cost Sheet', 'Billing', 'Visit Management'].map(cat => {
             const count = cat === 'ALL'
               ? recycledItems.length
               : recycledItems.filter(i => i.category === cat).length;
@@ -261,7 +263,7 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
             </h3>
             <p style={{ fontSize: '0.875rem', margin: 0 }}>
               {recycledItems.length === 0
-                ? 'Your Recycle Bin is empty! Any records deleted from Leads, Customers, Projects, Agreements, or Cost Sheets will automatically be stored here.'
+                ? 'Your Recycle Bin is empty! Any records deleted from Leads, Customers, Projects, Agreements, Cost Sheets, Billing, or Visit Management will automatically be stored here.'
                 : 'No items match your search filter.'}
             </p>
           </div>

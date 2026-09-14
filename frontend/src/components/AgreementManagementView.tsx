@@ -70,8 +70,8 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
                 propertyCode: 'SRM-PROP-2026-000426', 
                 costSheetId: 'COST-SHEET-2026-000001', 
                 developer: 'Dhriti Builders & Developers', 
-                latitude: '17.4612° N', 
-                longitude: '78.3689° E' 
+                latitude: '22.722361° N', 
+                longitude: '88.493403° E' 
               };
               setShowPvaVerificationModal({ open: true, plan, stop });
             }}

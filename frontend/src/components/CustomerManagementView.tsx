@@ -46,6 +46,7 @@ interface CustomerManagementViewProps {
   setSearchQuery?: (q: string) => void;
   users?: any[];
   syncAllToMongoDB?: (overrideData?: any) => void;
+  onRecycleItem?: (itemData: any) => void;
 }
 
 export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
@@ -58,6 +59,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
   activeCustomerSubTab,
   setActiveCustomerSubTab,
   customers = [],
+  onRecycleItem,
   setCustomers,
   selectedCust = {},
   setSelectedCust,
@@ -907,7 +909,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
       ],
       '10. VISIT CHECK-IN ID': [
         { label: 'GPS Geofence Check-in ID', value: item.id },
-        { label: 'Geofence Location Coordinates', value: '17.4623° N, 78.3562° E' },
+        { label: 'Geofence Location Coordinates', value: '22.722361° N, 88.493403° E' },
         { label: 'Distance from Site Lounge', value: '12 Meters (Inside Geofence Boundary)' },
         { label: 'GPS Radius Check', value: 'PASSED (< 50m Radius)' },
         { label: 'Check-In Verification Mode', value: 'Automated Mobile GPS Geofence' },
@@ -1577,11 +1579,22 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                               {isSuperAdmin && (
                                 <button 
                                   onClick={() => {
-                                    if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to permanently delete customer record ${c.customer_number || c.id} (${c.name})?`)) {
+                                    if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete customer record ${c.customer_number || c.id} (${c.name})? It will be moved to Recycle Bin.`)) {
                                       const targetCustNum = (c.customer_number || c.customerNumber || '').toString().toLowerCase().trim();
                                       const targetMob = (c.mobile || c.phone || '').toString().replace(/\D/g, '');
                                       const targetName = (c.name || c.full_name || '').toString().toLowerCase().trim();
                                       const targetId = (c.id || c._id || '').toString().toLowerCase().trim();
+
+                                      if (onRecycleItem) {
+                                        onRecycleItem({
+                                          id: c.id || c.customer_number || `CUS-${Date.now()}`,
+                                          title: `Customer - ${c.name || 'Client'} (${c.customer_number || c.id})`,
+                                          category: 'Customer',
+                                          originalLocation: 'Customer Management Vault',
+                                          details: `Mobile: ${c.mobile || 'N/A'}, Locality: ${c.locality || 'N/A'}`,
+                                          originalData: c
+                                        });
+                                      }
 
                                       if (setCustomers) {
                                         setCustomers((prev: any[]) => (prev || []).filter((cust: any) => {
@@ -1613,7 +1626,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                                           return true;
                                         }));
                                       }
-                                      alert(`🗑️ Customer record ${c.customer_number || c.name} deleted permanently.`);
+                                      alert(`🗑️ Customer record ${c.customer_number || c.name} moved to Recycle Bin.`);
                                     }
                                   }}
                                   style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }}

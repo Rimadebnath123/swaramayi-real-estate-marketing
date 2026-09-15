@@ -30,602 +30,960 @@ import { BulkLeadUploadModal } from './components/BulkLeadUploadModal';
 import { MatchingManagementView } from './components/MatchingManagementView';
 import { PropertySourcingRequestsView } from './components/PropertySourcingRequestsView';
 import { MultiSelectFloorSelector } from './components/MultiSelectFloorSelector';
+import { loadGoogleMapsApi, geocodeAddress, getGoogleMapsApiKey } from './utils/googleMapsLoader';
 
-function InteractiveRoutePlanMap({ plan, isLight = false }: { plan: any; isLight?: boolean }) {
+function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: { plan: any; isLight?: boolean; autoStart?: boolean }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
+  const mapWrapperRef = useRef<HTMLDivElement>(null);
+  const googleMapRef = useRef<any>(null);
+  const directionsRendererRef = useRef<any>(null);
+  const leafletMapRef = useRef<any>(null);
   const carMarkerRef = useRef<any>(null);
-  const liveGpsMarkerRef = useRef<any>(null);
-  const drivenPolylineRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+  const polylinesRef = useRef<any[]>([]);
+  const animationFrameRef = useRef<number | null>(null);
 
+  // Map & Navigation States
+  const [googleMapsReady, setGoogleMapsReady] = useState<boolean>(false);
   const [leafletReady, setLeafletReady] = useState<boolean>(Boolean((window as any).L));
-  const [mapLayer, setMapLayer] = useState<'google_roadmap' | 'google_satellite' | 'osm'>('google_roadmap');
-  const [isDriving, setIsDriving] = useState<boolean>(false);
-  const [speedMultiplier, setSpeedMultiplier] = useState<number>(2);
-  const [currentStepIdx, setCurrentStepIdx] = useState<number>(0);
-  const [stepsList, setStepsList] = useState<any[]>([]);
+  const [apiKeyError, setApiKeyError] = useState<boolean>(false);
+  const [mapType, setMapType] = useState<'roadmap' | 'satellite'>('roadmap');
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [autoRecenter, setAutoRecenter] = useState<boolean>(true);
 
-  // Real-time GPS device tracking state
-  const [isLiveGpsActive, setIsLiveGpsActive] = useState<boolean>(false);
-  const [liveGpsInfo, setLiveGpsInfo] = useState<{ lat: number; lng: number; speed: number; accuracy: number } | null>(null);
-  const watchIdRef = useRef<number | null>(null);
+  // Navigation Control States
+  const shouldAutoStart = Boolean((plan && plan.autoStart) || autoStart);
+  const [navState, setNavState] = useState<'IDLE' | 'NAVIGATING' | 'PAUSED' | 'STOP_PAUSE' | 'COMPLETED'>(
+    shouldAutoStart ? 'NAVIGATING' : 'IDLE'
+  );
+  const [currentLegIndex, setCurrentLegIndex] = useState<number>(0);
+  const [legProgressPct, setLegProgressPct] = useState<number>(0);
+  const [overallProgressPct, setOverallProgressPct] = useState<number>(0);
+  const [distanceRemainingKm, setDistanceRemainingKm] = useState<number>(0);
+  const [etaMinutes, setEtaMinutes] = useState<number>(0);
+  const [currentLocationName, setCurrentLocationName] = useState<string>('Office');
+  const [nextDestinationName, setNextDestinationName] = useState<string>('Customer Pickup');
+  const [currentLegLabel, setCurrentLegLabel] = useState<string>('Office ➔ Customer Pickup');
+  const [statusMessage, setStatusMessage] = useState<string>('Ready to start full route navigation');
 
-  const animTimerRef = useRef<any>(null);
+  // Multi-Leg Route Data
+  const [routeLegs, setRouteLegs] = useState<any[]>([]);
+  const [routeNodes, setRouteNodes] = useState<any[]>([]);
+  const [completedNodeIds, setCompletedNodeIds] = useState<Set<string>>(new Set());
 
+  // Animation Tracking Refs (kept outside React render loop for 60fps performance)
+  const animProgressRef = useRef<{ legIdx: number; pointIdx: number; t: number }>({ legIdx: 0, pointIdx: 0, t: 0 });
+  const isNavigatingRef = useRef<boolean>(false);
+
+  // Load Google Maps JS SDK on mount
   useEffect(() => {
+    let isMounted = true;
+    loadGoogleMapsApi()
+      .then(() => {
+        if (isMounted) {
+          setGoogleMapsReady(true);
+          setApiKeyError(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Google Maps API Key error or fallback to Leaflet:', err);
+        if (isMounted) {
+          setApiKeyError(true);
+          setGoogleMapsReady(false);
+        }
+      });
+
     if ((window as any).L) {
       setLeafletReady(true);
-      return;
+    } else {
+      const interval = setInterval(() => {
+        if ((window as any).L) {
+          setLeafletReady(true);
+          clearInterval(interval);
+        }
+      }, 100);
+      return () => clearInterval(interval);
     }
-    const interval = setInterval(() => {
-      if ((window as any).L) {
-        setLeafletReady(true);
-        clearInterval(interval);
-      }
-    }, 100);
-    return () => clearInterval(interval);
+    return () => { isMounted = false; };
   }, []);
 
-  useEffect(() => {
-    if (!leafletReady || !mapContainerRef.current) return;
-    const L = (window as any).L;
-    if (!L) return;
-
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove();
-      mapInstanceRef.current = null;
-    }
-
-    const isHyd = (latStr: any, lngStr: any) => {
-      if (!latStr || !lngStr) return false;
-      const lat = parseFloat(String(latStr));
-      const lng = parseFloat(String(lngStr));
-      return (lat > 17.0 && lat < 17.8 && lng > 78.0 && lng < 78.8);
+  // Normalize 5-Node Locations Sequence from Visit Schedule Plan
+  const normalizedNodes = useMemo(() => {
+    if (!plan) return [];
+    const isHyd = (latVal: any, lngVal: any) => {
+      const lat = parseFloat(String(latVal || '').replace(/[^0-9.-]/g, ''));
+      const lng = parseFloat(String(lngVal || '').replace(/[^0-9.-]/g, ''));
+      return !isNaN(lat) && !isNaN(lng) && lat > 17.0 && lat < 17.8 && lng > 78.0 && lng < 78.8;
     };
 
-    // 1. Pickup Coords
-    let pLat = 22.720500;
-    let pLng = 88.485000;
-    if (plan.pickupLat && plan.pickupLng && !isHyd(plan.pickupLat, plan.pickupLng)) {
-      const parsedLat = parseFloat(String(plan.pickupLat).replace(/[^0-9.-]/g, ''));
-      const parsedLng = parseFloat(String(plan.pickupLng).replace(/[^0-9.-]/g, ''));
-      if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
-        pLat = parsedLat;
-        pLng = parsedLng;
-      }
+    // Node 1: Office (Driver/HQ Start Point)
+    let offLat = 22.720000;
+    let offLng = 88.480000;
+    if (plan.officeLat && plan.officeLng && !isHyd(plan.officeLat, plan.officeLng)) {
+      const lat = parseFloat(String(plan.officeLat).replace(/[^0-9.-]/g, ''));
+      const lng = parseFloat(String(plan.officeLng).replace(/[^0-9.-]/g, ''));
+      if (!isNaN(lat) && !isNaN(lng)) { offLat = lat; offLng = lng; }
     }
+    const officeNode = {
+      id: 'node-office',
+      nodeType: 'OFFICE',
+      title: plan.officeName || 'HQ Office',
+      subtitle: 'Office / Driver Starting Location',
+      address: plan.officeAddress || 'Swaramayi Real Estate HQ, Station Road, Barasat, Kolkata - 700124',
+      lat: offLat,
+      lng: offLng,
+      icon: '🏢',
+      badgeBg: '#1e293b',
+      badgeColor: '#38bdf8',
+      markerColor: '#0284c7'
+    };
 
-    // 2. Project Site Coords
-    const stops = plan.stops || [];
-    const stopPoints = stops.map((s: any, idx: number) => {
-      let sLat = 22.722361 + (idx + 1) * 0.008;
-      let sLng = 88.493403 + (idx + 1) * 0.005;
+    // Node 2: Customer Pickup Point
+    let pickLat = 22.720500;
+    let pickLng = 88.485000;
+    if (plan.pickupLat && plan.pickupLng && !isHyd(plan.pickupLat, plan.pickupLng)) {
+      const lat = parseFloat(String(plan.pickupLat).replace(/[^0-9.-]/g, ''));
+      const lng = parseFloat(String(plan.pickupLng).replace(/[^0-9.-]/g, ''));
+      if (!isNaN(lat) && !isNaN(lng)) { pickLat = lat; pickLng = lng; }
+    }
+    const pickupNode = {
+      id: 'node-pickup',
+      nodeType: 'PICKUP',
+      title: plan.customerName ? `${plan.customerName} (Pickup)` : 'Customer Pickup',
+      subtitle: `Customer: ${plan.customerName || 'Homebuyer'} (${plan.mobile || plan.customerNumber || 'N/A'})`,
+      address: plan.pickupAddress || 'Barasat Banamalipur, Kolkata, West Bengal - 700124',
+      lat: pickLat,
+      lng: pickLng,
+      icon: '🟢',
+      badgeBg: '#14532d',
+      badgeColor: '#4ade80',
+      markerColor: '#22c55e'
+    };
+
+    // Node 3..N: Dynamic Project / Property Locations
+    const stops = Array.isArray(plan.stops) && plan.stops.length > 0 ? plan.stops : [
+      { stopId: 'stop-1', propertyTitle: 'DHRITI APARTMENT', propertyCode: 'SRM-PROP-101', address: 'Barasat Champadali, Kolkata - 700124', latitude: 22.7230, longitude: 88.4910 }
+    ];
+
+    const projectNodes = stops.map((s: any, idx: number) => {
+      let pLat = 22.722361 + (idx + 1) * 0.007;
+      let pLng = 88.493403 + (idx + 1) * 0.004;
       if (s.latitude && s.longitude && !isHyd(s.latitude, s.longitude)) {
-        const parsedLat = parseFloat(String(s.latitude).replace(/[^0-9.-]/g, ''));
-        const parsedLng = parseFloat(String(s.longitude).replace(/[^0-9.-]/g, ''));
-        if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
-          sLat = parsedLat;
-          sLng = parsedLng;
-        }
+        const lat = parseFloat(String(s.latitude).replace(/[^0-9.-]/g, ''));
+        const lng = parseFloat(String(s.longitude).replace(/[^0-9.-]/g, ''));
+        if (!isNaN(lat) && !isNaN(lng)) { pLat = lat; pLng = lng; }
       }
-      return { 
-        lat: sLat, 
-        lng: sLng, 
-        projectNum: idx + 1,
-        title: s.propertyTitle || s.locality || `Project ${idx + 1}`, 
-        address: s.address || s.locality || 'Project Location', 
-        idx 
+      return {
+        id: `node-project-${s.stopId || idx + 1}`,
+        nodeType: 'PROJECT',
+        title: s.propertyTitle || s.locality || `Project ${idx + 1}`,
+        subtitle: `Property Code: ${s.propertyCode || s.propertyId || 'SRM-PROP'}`,
+        address: s.address || s.locality || 'Barasat Real Estate Site',
+        lat: pLat,
+        lng: pLng,
+        icon: '🔵',
+        badgeBg: '#0f172a',
+        badgeColor: '#38bdf8',
+        markerColor: '#0284c7',
+        stopIndex: idx
       };
     });
 
-    // 3. Drop Coords
-    let dLat = 22.725000;
-    let dLng = 88.498000;
+    // Node Last: Customer Drop Point
+    let dropLat = 22.725000;
+    let dropLng = 88.498000;
     if (plan.dropLat && plan.dropLng && !isHyd(plan.dropLat, plan.dropLng)) {
-      const parsedLat = parseFloat(String(plan.dropLat).replace(/[^0-9.-]/g, ''));
-      const parsedLng = parseFloat(String(plan.dropLng).replace(/[^0-9.-]/g, ''));
-      if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
-        dLat = parsedLat;
-        dLng = parsedLng;
-      }
+      const lat = parseFloat(String(plan.dropLat).replace(/[^0-9.-]/g, ''));
+      const lng = parseFloat(String(plan.dropLng).replace(/[^0-9.-]/g, ''));
+      if (!isNaN(lat) && !isNaN(lng)) { dropLat = lat; dropLng = lng; }
     }
-
-    const routePoints = [
-      { 
-        type: 'pickup', 
-        lat: pLat, 
-        lng: pLng, 
-        badgeLabel: '🟢 CUSTOMER PICKUP POINT', 
-        title: 'Customer Pickup Point',
-        address: plan.pickupAddress || 'Barasat Banamalipur, Kolkata, West Bengal - 700124' 
-      },
-      ...stopPoints.map((s: any) => ({ 
-        type: 'project', 
-        lat: s.lat, 
-        lng: s.lng, 
-        badgeLabel: `🏢 PROJECT ${s.projectNum}: ${s.title}`, 
-        title: `Project ${s.projectNum}: ${s.title}`,
-        address: s.address 
-      })),
-      { 
-        type: 'drop', 
-        lat: dLat, 
-        lng: dLng, 
-        badgeLabel: '🔴 CUSTOMER DROP POINT', 
-        title: 'Customer Drop Point',
-        address: plan.dropAddress || 'Barasat Chapadali Bus Terminus Hub, Kolkata, West Bengal - 700124' 
-      }
-    ];
-
-    // Interpolation for Live Car Navigation
-    const getBearing = (lat1: number, lng1: number, lat2: number, lng2: number) => {
-      const dLng = (lng2 - lng1) * Math.PI / 180;
-      const lat1Rad = lat1 * Math.PI / 180;
-      const lat2Rad = lat2 * Math.PI / 180;
-      const y = Math.sin(dLng) * Math.cos(lat2Rad);
-      const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
-      return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    const dropNode = {
+      id: 'node-drop',
+      nodeType: 'DROP',
+      title: plan.customerName ? `${plan.customerName} (Drop)` : 'Customer Drop Point',
+      subtitle: `Customer: ${plan.customerName || 'Homebuyer'}`,
+      address: plan.dropAddress || 'Barasat Chapadali Bus Terminus Hub, Kolkata - 700124',
+      lat: dropLat,
+      lng: dropLng,
+      icon: '🔴',
+      badgeBg: '#7f1d1d',
+      badgeColor: '#f87171',
+      markerColor: '#ef4444'
     };
 
-    const interpSteps: any[] = [];
-    const totalLegs = routePoints.length - 1;
-    const stepsPerLeg = 60;
+    return [officeNode, pickupNode, ...projectNodes, dropNode];
+  }, [plan]);
 
-    for (let i = 0; i < totalLegs; i++) {
-      const p1 = routePoints[i];
-      const p2 = routePoints[i + 1];
-      const bearing = getBearing(p1.lat, p1.lng, p2.lat, p2.lng);
+  useEffect(() => {
+    setRouteNodes(normalizedNodes);
+    if (normalizedNodes.length > 1) {
+      setCurrentLocationName(normalizedNodes[0].title);
+      setNextDestinationName(normalizedNodes[1].title);
+      setCurrentLegLabel(`${normalizedNodes[0].title} ➔ ${normalizedNodes[1].title}`);
+    }
+  }, [normalizedNodes]);
 
-      for (let j = 0; j < stepsPerLeg; j++) {
-        const t = j / stepsPerLeg;
-        const lat = p1.lat + (p2.lat - p1.lat) * t;
-        const lng = p1.lng + (p2.lng - p1.lng) * t;
+  // Bearing / Heading Angle Calculation between two coordinates
+  const calculateBearing = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const phi1 = lat1 * Math.PI / 180;
+    const phi2 = lat2 * Math.PI / 180;
+    const y = Math.sin(dLng) * Math.cos(phi2);
+    const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLng);
+    const bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    return Math.round(bearing);
+  };
 
-        let turnNav = `⬆️ In 200m, continue straight on NH 112 towards ${p2.title}`;
-        if (j < 10) {
-          turnNav = `🟢 Depart ${p1.title} — Turn right onto KNC Rd`;
-        } else if (j > 50) {
-          turnNav = `🏁 Arriving at destination: ${p2.title}`;
-        } else if (j % 20 === 0) {
-          turnNav = `↗️ Turn left at Dakshin Para onto KNC Rd towards ${p2.address}`;
+  // Distance in KM using Haversine
+  const calculateHaversineKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Build Real Road Polyline & Legs using Google Directions API (multi-waypoint) or Fallback
+  useEffect(() => {
+    if (routeNodes.length < 2) return;
+
+    let isSubscribed = true;
+
+    const computeAllLegs = async () => {
+      const googleMaps = (window as any).google && (window as any).google.maps ? (window as any).google.maps : null;
+
+      if (googleMaps && googleMaps.DirectionsService) {
+        try {
+          const dirService = new googleMaps.DirectionsService();
+          const originNode = routeNodes[0];
+          const destNode = routeNodes[routeNodes.length - 1];
+          const waypoints = routeNodes.slice(1, routeNodes.length - 1).map((node: any) => ({
+            location: { lat: node.lat, lng: node.lng },
+            stopover: true
+          }));
+
+          const result: any = await new Promise((resolve) => {
+            dirService.route({
+              origin: { lat: originNode.lat, lng: originNode.lng },
+              destination: { lat: destNode.lat, lng: destNode.lng },
+              waypoints: waypoints,
+              travelMode: googleMaps.TravelMode.DRIVING
+            }, (res: any, status: string) => {
+              if (status === 'OK' && res && res.routes && res.routes[0]) {
+                resolve(res);
+              } else {
+                resolve(null);
+              }
+            });
+          });
+
+          if (isSubscribed && result && result.routes && result.routes[0]) {
+            const gLegs = result.routes[0].legs || [];
+            const computedLegs: any[] = [];
+            let totalDist = 0;
+            let totalDur = 0;
+
+            gLegs.forEach((gLeg: any, idx: number) => {
+              const fromNode = routeNodes[idx] || { title: `Node ${idx + 1}` };
+              const toNode = routeNodes[idx + 1] || { title: `Node ${idx + 2}` };
+              const distKm = gLeg.distance?.value ? Math.round((gLeg.distance.value / 1000) * 10) / 10 : calculateHaversineKm(fromNode.lat, fromNode.lng, toNode.lat, toNode.lng);
+              const durMin = gLeg.duration?.value ? Math.round(gLeg.duration.value / 60) : Math.round(distKm * 3);
+
+              const legPath = (gLeg.steps || []).flatMap((step: any) =>
+                (step.path || []).map((p: any) => ({ lat: p.lat(), lng: p.lng() }))
+              );
+
+              totalDist += distKm;
+              totalDur += durMin;
+
+              computedLegs.push({
+                legIndex: idx,
+                legId: `leg-${idx + 1}`,
+                fromNode,
+                toNode,
+                label: `LEG ${idx + 1}: ${fromNode.title} ➔ ${toNode.title}`,
+                path: legPath.length > 0 ? legPath : [{ lat: fromNode.lat, lng: fromNode.lng }, { lat: toNode.lat, lng: toNode.lng }],
+                distanceKm: Math.round(distKm * 10) / 10,
+                durationMin: durMin
+              });
+            });
+
+            setRouteLegs(computedLegs);
+            setDistanceRemainingKm(Math.round(totalDist * 10) / 10);
+            setEtaMinutes(totalDur);
+
+            // Render Google DirectionsRenderer with thick solid royal blue road polyline
+            if (googleMapRef.current) {
+              if (directionsRendererRef.current) {
+                directionsRendererRef.current.setMap(null);
+              }
+              const renderer = new googleMaps.DirectionsRenderer({
+                map: googleMapRef.current,
+                suppressMarkers: true,
+                polylineOptions: {
+                  strokeColor: '#2563eb', // Thick Solid Royal Blue Road Polyline matching Google Maps
+                  strokeOpacity: 0.95,
+                  strokeWeight: 8
+                }
+              });
+              renderer.setDirections(result);
+              directionsRendererRef.current = renderer;
+            }
+
+            return;
+          }
+        } catch (err) {
+          console.warn('Multi-waypoint Google Directions API failed, using fallback:', err);
+        }
+      }
+
+      // Fallback leg computation if Directions API is unavailable
+      const fallbackLegs: any[] = [];
+      let totalDistKm = 0;
+      let totalDurMin = 0;
+
+      for (let i = 0; i < routeNodes.length - 1; i++) {
+        const fromNode = routeNodes[i];
+        const toNode = routeNodes[i + 1];
+        const distanceKm = calculateHaversineKm(fromNode.lat, fromNode.lng, toNode.lat, toNode.lng);
+        const durationMin = Math.max(2, Math.round(distanceKm * 3));
+
+        const numSteps = 40;
+        const legPath: { lat: number; lng: number }[] = [];
+        for (let s = 0; s <= numSteps; s++) {
+          const t = s / numSteps;
+          const curveOffset = Math.sin(t * Math.PI) * 0.0015 * (i % 2 === 0 ? 1 : -1);
+          legPath.push({
+            lat: fromNode.lat + (toNode.lat - fromNode.lat) * t + curveOffset,
+            lng: fromNode.lng + (toNode.lng - fromNode.lng) * t
+          });
         }
 
-        interpSteps.push({
-          lat,
-          lng,
-          bearing,
-          turnNav,
-          legIndex: i + 1,
-          totalLegs,
-          progress: Math.round(((i * stepsPerLeg + j) / (totalLegs * stepsPerLeg)) * 100),
-          fromLabel: p1.title,
-          toLabel: p2.title
+        totalDistKm += distanceKm;
+        totalDurMin += durationMin;
+
+        fallbackLegs.push({
+          legIndex: i,
+          legId: `leg-${i + 1}`,
+          fromNode,
+          toNode,
+          label: `LEG ${i + 1}: ${fromNode.title} ➔ ${toNode.title}`,
+          path: legPath,
+          distanceKm: Math.round(distanceKm * 10) / 10,
+          durationMin
         });
       }
-    }
 
-    const lastPt = routePoints[routePoints.length - 1];
-    interpSteps.push({
-      lat: lastPt.lat,
-      lng: lastPt.lng,
-      bearing: 0,
-      turnNav: `🎉 Arrived at final destination: ${lastPt.title}`,
-      legIndex: totalLegs,
-      totalLegs,
-      progress: 100,
-      fromLabel: routePoints[routePoints.length - 2].title,
-      toLabel: lastPt.title
-    });
+      if (isSubscribed) {
+        setRouteLegs(fallbackLegs);
+        setDistanceRemainingKm(Math.round(totalDistKm * 10) / 10);
+        setEtaMinutes(totalDurMin);
+      }
+    };
 
-    setStepsList(interpSteps);
+    computeAllLegs();
 
-    const map = L.map(mapContainerRef.current, {
-      zoomControl: true,
-      scrollWheelZoom: true
-    }).setView([pLat, pLng], 13);
+    return () => { isSubscribed = false; };
+  }, [routeNodes, googleMapsReady]);
 
-    // Default to Real Google Maps Roadmap tiles
-    let tileUrl = 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
-    let tileAttr = '&copy; Google Maps | Swaramayi Real Estate CRM';
+  // Render & Synchronize Map Instance (Google Maps JS API or Leaflet Fallback)
+  useEffect(() => {
+    if (!mapContainerRef.current || routeNodes.length === 0) return;
 
-    if (mapLayer === 'google_satellite') {
-      tileUrl = 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
-    } else if (mapLayer === 'osm') {
-      tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-      tileAttr = '&copy; OpenStreetMap contributors | Swaramayi Real Estate CRM';
-    }
+    const maps = (window as any).google && (window as any).google.maps ? (window as any).google.maps : null;
+    const startNode = routeNodes[0];
 
-    L.tileLayer(tileUrl, {
-      maxZoom: 20,
-      attribution: tileAttr
-    }).addTo(map);
+    if (maps && !apiKeyError) {
+      // Initialize Google Maps JavaScript API
+      if (!googleMapRef.current) {
+        const mapOptions: any = {
+          center: { lat: startNode.lat, lng: startNode.lng },
+          zoom: 13,
+          mapTypeId: mapType === 'satellite' ? maps.MapTypeId.HYBRID : maps.MapTypeId.ROADMAP,
+          zoomControl: true,
+          streetViewControl: false,
+          mapTypeControl: false,
+          fullscreenControl: false
+        };
 
-    const bounds: any[] = [];
-    const polylineCoords: any[] = [];
-
-    routePoints.forEach((pt) => {
-      bounds.push([pt.lat, pt.lng]);
-      polylineCoords.push([pt.lat, pt.lng]);
-
-      let headerBg = '#0284c7';
-      let headerColor = '#38bdf8';
-      let coreColor = '#ffffff';
-
-      if (pt.type === 'pickup') {
-        headerBg = '#14532d';
-        headerColor = '#4ade80';
-        coreColor = '#22c55e';
-      } else if (pt.type === 'drop') {
-        headerBg = '#7f1d1d';
-        headerColor = '#f87171';
-        coreColor = '#ef4444';
+        const map = new maps.Map(mapContainerRef.current, mapOptions);
+        googleMapRef.current = map;
+      } else {
+        googleMapRef.current.setMapTypeId(mapType === 'satellite' ? maps.MapTypeId.HYBRID : maps.MapTypeId.ROADMAP);
       }
 
-      const googlePinUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pt.address || `${pt.lat},${pt.lng}`)}`;
+      const map = googleMapRef.current;
 
-      const customIcon = L.divIcon({
-        className: 'leaflet-route-leg-marker-wrapper',
+      // Clear existing markers & polylines
+      markersRef.current.forEach((m) => m.setMap && m.setMap(null));
+      polylinesRef.current.forEach((p) => p.setMap && p.setMap(null));
+      markersRef.current = [];
+      polylinesRef.current = [];
+
+      const bounds = new maps.LatLngBounds();
+
+      // Render Map Markers for Office, Pickup, Projects, Drop
+      routeNodes.forEach((node) => {
+        const pos = { lat: node.lat, lng: node.lng };
+        bounds.extend(pos);
+
+        const isCompleted = completedNodeIds.has(node.id);
+        const markerContent = document.createElement('div');
+        markerContent.className = 'custom-google-route-marker';
+        markerContent.innerHTML = `
+          <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); cursor: pointer; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));">
+            <div style="background: ${node.badgeBg}; color: ${node.badgeColor}; border: 2px solid ${isCompleted ? '#22c55e' : node.badgeColor}; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 900; white-space: nowrap; margin-bottom: 3px; display: flex; align-items: center; gap: 4px;">
+              <span>${isCompleted ? '✓' : node.icon}</span> ${node.title} ${isCompleted ? '(COMPLETED)' : ''}
+            </div>
+            <div style="width: 32px; height: 32px; background: ${isCompleted ? '#22c55e' : node.markerColor}; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; border: 3px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+              <div style="width: 10px; height: 10px; background: #ffffff; border-radius: 50%; transform: rotate(45deg);"></div>
+            </div>
+          </div>
+        `;
+
+        const marker = new maps.Marker({
+          position: pos,
+          map,
+          title: node.title,
+          icon: {
+            url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="14" fill="${encodeURIComponent(isCompleted ? '#22c55e' : node.markerColor)}" stroke="#ffffff" stroke-width="3"/>
+                <text x="18" y="23" font-size="14" text-anchor="middle" fill="#ffffff" font-weight="bold">${node.icon}</text>
+              </svg>
+            `)}`,
+            anchor: new maps.Point(18, 18)
+          }
+        });
+
+        const infoWindow = new maps.InfoWindow({
+          content: `
+            <div style="font-family: system-ui, sans-serif; padding: 6px; min-width: 220px; color: #0f172a;">
+              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                <span style="font-size: 16px;">${node.icon}</span>
+                <strong style="font-size: 13px; font-weight: 900;">${node.title}</strong>
+              </div>
+              <p style="margin: 0 0 4px 0; color: #475569; font-size: 11px;">${node.subtitle}</p>
+              <p style="margin: 0 0 8px 0; color: #64748b; font-size: 11px;">📍 ${node.address}</p>
+              <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(node.address || `${node.lat},${node.lng}`)}" target="_blank" style="display: inline-block; background: #0284c7; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-decoration: none;">
+                📍 Open in Google Maps
+              </a>
+            </div>
+          `
+        });
+
+        marker.addListener('click', () => infoWindow.open(map, marker));
+        markersRef.current.push(marker);
+      });
+
+      // Draw Road Polylines for each leg
+      routeLegs.forEach((leg, idx) => {
+        const polyline = new maps.Polyline({
+          path: leg.path,
+          geodesic: true,
+          strokeColor: idx < currentLegIndex ? '#22c55e' : (idx === currentLegIndex ? '#0284c7' : '#94a3b8'),
+          strokeOpacity: 0.85,
+          strokeWeight: 5,
+          map
+        });
+        polylinesRef.current.push(polyline);
+      });
+
+      // Create Animated Car Marker
+      const carPos = routeNodes[0];
+      const carSvgIcon = {
+        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+            <circle cx="24" cy="24" r="22" fill="#0f172a" stroke="#38bdf8" stroke-width="3"/>
+            <circle cx="24" cy="24" r="18" fill="#0284c7"/>
+            <text x="24" y="30" font-size="22" text-anchor="middle">🚗</text>
+          </svg>
+        `)}`,
+        anchor: new maps.Point(24, 24)
+      };
+
+      carMarkerRef.current = new maps.Marker({
+        position: { lat: carPos.lat, lng: carPos.lng },
+        map,
+        title: '🚗 Driver Vehicle',
+        icon: carSvgIcon,
+        zIndex: 9999
+      });
+
+      if (navState === 'IDLE' && !bounds.isEmpty()) {
+        map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
+      }
+
+    } else if (leafletReady) {
+      // Leaflet Fallback implementation when Google Maps API key is missing or offline
+      const L = (window as any).L;
+      if (!L) return;
+
+      if (leafletMapRef.current) {
+        leafletMapRef.current.remove();
+        leafletMapRef.current = null;
+      }
+
+      const map = L.map(mapContainerRef.current, { zoomControl: true }).setView([startNode.lat, startNode.lng], 13);
+      leafletMapRef.current = map;
+
+      const tileUrl = mapType === 'satellite'
+        ? 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
+        : 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+
+      L.tileLayer(tileUrl, { maxZoom: 19, attribution: '&copy; Google Maps Road Layer | Swaramayi CRM' }).addTo(map);
+
+      const bounds: any[] = [];
+      routeNodes.forEach((node) => {
+        bounds.push([node.lat, node.lng]);
+        const isCompleted = completedNodeIds.has(node.id);
+        const icon = L.divIcon({
+          className: 'leaflet-node-marker',
+          html: `
+            <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
+              <div style="background: ${node.badgeBg}; color: ${node.badgeColor}; border: 1.5px solid ${isCompleted ? '#22c55e' : node.badgeColor}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; white-space: nowrap; margin-bottom: 2px;">
+                ${isCompleted ? '✓' : node.icon} ${node.title}
+              </div>
+              <div style="width: 28px; height: 28px; background: ${isCompleted ? '#22c55e' : node.markerColor}; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid #ffffff;"></div>
+            </div>
+          `,
+          iconSize: [0, 0],
+          iconAnchor: [0, 0]
+        });
+
+        const marker = L.marker([node.lat, node.lng], { icon }).addTo(map);
+        marker.bindPopup(`<strong>${node.title}</strong><br/>${node.address}`);
+      });
+
+      routeLegs.forEach((leg, idx) => {
+        const coords = leg.path.map((p: any) => [p.lat, p.lng]);
+        L.polyline(coords, {
+          color: idx < currentLegIndex ? '#22c55e' : (idx === currentLegIndex ? '#0284c7' : '#94a3b8'),
+          weight: 5,
+          dashArray: '6, 6'
+        }).addTo(map);
+      });
+
+      const carIcon = L.divIcon({
+        className: 'leaflet-car-marker',
         html: `
-          <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); cursor: pointer; z-index: 1000;">
-            <div style="background: ${headerBg}; color: ${headerColor}; border: 2px solid ${headerColor}; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 900; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,0.5); margin-bottom: 3px;">
-              ${pt.badgeLabel}
-            </div>
-            <div style="width: 34px; height: 34px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; border: 3px solid #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.6);">
-              <div style="width: 12px; height: 12px; background: ${coreColor}; border-radius: 50%; transform: rotate(45deg); border: 2px solid #ffffff;"></div>
-            </div>
+          <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -50%);">
+            <div style="background: #0284c7; color: #ffffff; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; white-space: nowrap; margin-bottom: 2px;">🚗 CAR</div>
+            <div style="font-size: 24px;">🚗</div>
           </div>
         `,
         iconSize: [0, 0],
         iconAnchor: [0, 0]
       });
 
-      const marker = L.marker([pt.lat, pt.lng], { icon: customIcon }).addTo(map);
-      marker.bindPopup(`
-        <div style="font-family: system-ui, sans-serif; padding: 6px; min-width: 200px;">
-          <h4 style="margin: 0 0 4px 0; color: #0f172a; font-weight: 900; font-size: 13px;">${pt.title}</h4>
-          <p style="margin: 0 0 8px 0; color: #475569; font-size: 11px;">📍 ${pt.address}</p>
-          <a href="${googlePinUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #dc2626; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-decoration: none;">
-            📍 Open Red Pin Pointer on Google Maps
-          </a>
-        </div>
-      `);
-    });
+      carMarkerRef.current = L.marker([startNode.lat, startNode.lng], { icon: carIcon }).addTo(map);
 
-    if (polylineCoords.length > 1) {
-      L.polyline(polylineCoords, {
-        color: '#0284c7',
-        weight: 5,
-        opacity: 0.8,
-        dashArray: '8, 8'
-      }).addTo(map);
+      if (bounds.length > 0 && navState === 'IDLE') {
+        map.fitBounds(bounds, { padding: [40, 40] });
+      }
     }
+  }, [routeNodes, routeLegs, googleMapsReady, leafletReady, mapType, apiKeyError, completedNodeIds, currentLegIndex]);
 
-    // Polyline for driven path (live glowing green)
-    drivenPolylineRef.current = L.polyline([], {
-      color: '#22c55e',
-      weight: 6,
-      opacity: 0.95
-    }).addTo(map);
-
-    // Initial Car Marker at Pickup Location
-    const initCarIcon = L.divIcon({
-      className: 'leaflet-live-car-marker',
-      html: `
-        <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -50%); z-index: 2000;">
-          <div style="background: #0284c7; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; white-space: nowrap; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.8); margin-bottom: 3px; border: 1px solid #38bdf8;">
-            🚗 LIVE CAR NAV (READY)
-          </div>
-          <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #ffffff; box-shadow: 0 0 22px rgba(2, 132, 199, 0.9); font-size: 22px;">
-            🚘
-          </div>
-        </div>
-      `,
-      iconSize: [0, 0],
-      iconAnchor: [0, 0]
-    });
-
-    carMarkerRef.current = L.marker([pLat, pLng], { icon: initCarIcon }).addTo(map);
-
-    if (bounds.length > 0) {
-      map.fitBounds(bounds, { padding: [40, 40] });
-    }
-
-    mapInstanceRef.current = map;
-
-    // Trigger map layout resize once modal animation completes
-    const resizeTimer = setTimeout(() => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.invalidateSize();
-      }
-    }, 250);
-
-    return () => {
-      clearTimeout(resizeTimer);
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
-      if (animTimerRef.current) clearInterval(animTimerRef.current);
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, [plan, leafletReady, mapLayer]);
-
-  // Real-time device GPS watchPosition toggle handler
-  const toggleLiveDeviceGps = () => {
-    if (isLiveGpsActive) {
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
-      setIsLiveGpsActive(false);
-      setLiveGpsInfo(null);
-    } else {
-      if (!('geolocation' in navigator)) {
-        alert('Geolocation sensor is not supported by your browser.');
-        return;
-      }
-
-      setIsLiveGpsActive(true);
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        (pos) => {
-          const { latitude, longitude, speed, accuracy } = pos.coords;
-          const speedKmh = Math.round((speed || 0) * 3.6);
-          setLiveGpsInfo({ lat: latitude, lng: longitude, speed: speedKmh, accuracy: Math.round(accuracy) });
-
-          const L = (window as any).L;
-          if (L && mapInstanceRef.current) {
-            const map = mapInstanceRef.current;
-            const liveIcon = L.divIcon({
-              className: 'leaflet-realtime-driver-marker',
-              html: `
-                <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -50%); z-index: 9999;">
-                  <div style="background: #22c55e; color: #0f172a; border: 2px solid #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; white-space: nowrap; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.8); margin-bottom: 3px;">
-                    📡 REAL DRIVER GPS (${speedKmh} km/h | ±${Math.round(accuracy)}m)
-                  </div>
-                  <div style="width: 44px; height: 44px; background: linear-gradient(135deg, #22c55e 0%, #15803d 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #ffffff; box-shadow: 0 0 25px rgba(34, 197, 94, 0.9); font-size: 24px;">
-                    🚘
-                  </div>
-                </div>
-              `,
-              iconSize: [0, 0],
-              iconAnchor: [0, 0]
-            });
-
-            if (liveGpsMarkerRef.current) {
-              liveGpsMarkerRef.current.setLatLng([latitude, longitude]);
-              liveGpsMarkerRef.current.setIcon(liveIcon);
-            } else {
-              liveGpsMarkerRef.current = L.marker([latitude, longitude], { icon: liveIcon }).addTo(map);
-            }
-
-            map.panTo([latitude, longitude], { animate: true });
-          }
-        },
-        (err) => {
-          alert(`GPS Error: ${err.message}. Please allow Location Access in browser settings.`);
-          setIsLiveGpsActive(false);
-        },
-        { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
-      );
-    }
-  };
-
-  // Live Car Driving Simulation Effect
+  // High-Performance 60fps Car Movement Animation Loop (requestAnimationFrame)
   useEffect(() => {
-    if (!isDriving || stepsList.length === 0) {
-      if (animTimerRef.current) clearInterval(animTimerRef.current);
+    isNavigatingRef.current = navState === 'NAVIGATING';
+
+    if (navState !== 'NAVIGATING' || routeLegs.length === 0) {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
       return;
     }
 
-    const L = (window as any).L;
-    if (!L) return;
+    let lastFrameTime = performance.now();
 
-    const delay = Math.max(20, Math.floor(120 / speedMultiplier));
+    const animateStep = (now: number) => {
+      if (!isNavigatingRef.current) return;
 
-    animTimerRef.current = setInterval(() => {
-      setCurrentStepIdx((prev) => {
-        const next = prev + 1;
-        if (next >= stepsList.length) {
-          setIsDriving(false);
-          clearInterval(animTimerRef.current);
-          return stepsList.length - 1;
-        }
+      const dt = (now - lastFrameTime) / 1000;
+      lastFrameTime = now;
 
-        const step = stepsList[next];
-        if (step && mapInstanceRef.current) {
-          if (carMarkerRef.current) {
-            const carIcon = L.divIcon({
-              className: 'leaflet-live-car-marker',
-              html: `
-                <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -50%); z-index: 2000;">
-                  <div style="background: #0f172a; color: #38bdf8; border: 1.5px solid #38bdf8; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.7); margin-bottom: 3px;">
-                    🚘 LIVE NAV (${Math.round(35 * speedMultiplier)} km/h)
-                  </div>
-                  <div style="transform: rotate(${step.bearing}deg); transition: transform 0.1s ease;">
-                    <div style="width: 42px; height: 42px; background: linear-gradient(135deg, #22c55e 0%, #15803d 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #ffffff; box-shadow: 0 0 24px rgba(34, 197, 94, 0.9); font-size: 22px;">
-                      🚘
-                    </div>
-                  </div>
-                </div>
-              `,
-              iconSize: [0, 0],
-              iconAnchor: [0, 0]
-            });
-            carMarkerRef.current.setLatLng([step.lat, step.lng]);
-            carMarkerRef.current.setIcon(carIcon);
+      const { legIdx, pointIdx, t } = animProgressRef.current;
+      const activeLeg = routeLegs[legIdx];
+
+      if (!activeLeg || !activeLeg.path || activeLeg.path.length < 2) {
+        setNavState('COMPLETED');
+        setStatusMessage('🎉 Entire Visit Route Navigation Completed!');
+        return;
+      }
+
+      const p1 = activeLeg.path[pointIdx];
+      const p2 = activeLeg.path[pointIdx + 1] || p1;
+
+      // Speed interpolation step
+      const stepSpeed = 0.85; // Speed multiplier for smooth rendering
+      let newT = t + dt * stepSpeed;
+
+      if (newT >= 1) {
+        newT = 0;
+        const nextPointIdx = pointIdx + 1;
+
+        if (nextPointIdx >= activeLeg.path.length - 1) {
+          // Reached Destination of current leg!
+          const reachedNode = activeLeg.toNode;
+          setCompletedNodeIds((prev) => new Set(prev).add(reachedNode.id));
+
+          const nextLegIdx = legIdx + 1;
+
+          if (nextLegIdx >= routeLegs.length) {
+            // Entire multi-stop route completed
+            setNavState('COMPLETED');
+            setOverallProgressPct(100);
+            setLegProgressPct(100);
+            setDistanceRemainingKm(0);
+            setEtaMinutes(0);
+            setCurrentLocationName(reachedNode.title);
+            setNextDestinationName('Final Destination Reached');
+            setStatusMessage(`🎉 Arrived at Final Stop: ${reachedNode.title}! Route Completed.`);
+            return;
+          } else {
+            // Brief pause at current destination stop before starting next leg
+            setNavState('STOP_PAUSE');
+            setCurrentLegIndex(nextLegIdx);
+            animProgressRef.current = { legIdx: nextLegIdx, pointIdx: 0, t: 0 };
+
+            const nextLeg = routeLegs[nextLegIdx];
+            setCurrentLocationName(reachedNode.title);
+            setNextDestinationName(nextLeg.toNode.title);
+            setCurrentLegLabel(nextLeg.label);
+            setStatusMessage(`🏁 Arrived at ${reachedNode.title}. Pausing briefly before starting next leg...`);
+
+            // Zoom map camera toward reached destination
+            if (googleMapRef.current) {
+              googleMapRef.current.panTo({ lat: reachedNode.lat, lng: reachedNode.lng });
+              googleMapRef.current.setZoom(15);
+            } else if (leafletMapRef.current) {
+              leafletMapRef.current.panTo([reachedNode.lat, reachedNode.lng]);
+              leafletMapRef.current.setZoom(15);
+            }
+
+            // Auto-continue to next leg after 3-second pause
+            setTimeout(() => {
+              if (isNavigatingRef.current || true) {
+                setNavState('NAVIGATING');
+              }
+            }, 3000);
+
+            return;
           }
-
-          if (drivenPolylineRef.current) {
-            const trailCoords = stepsList.slice(0, next + 1).map((s: any) => [s.lat, s.lng]);
-            drivenPolylineRef.current.setLatLngs(trailCoords);
-          }
-
-          mapInstanceRef.current.panTo([step.lat, step.lng], { animate: true, duration: 0.1 });
+        } else {
+          animProgressRef.current = { legIdx, pointIdx: nextPointIdx, t: 0 };
         }
+      } else {
+        animProgressRef.current = { legIdx, pointIdx, t: newT };
+      }
 
-        return next;
-      });
-    }, delay);
+      // Interpolate exact car coordinates
+      const curP1 = activeLeg.path[animProgressRef.current.pointIdx];
+      const curP2 = activeLeg.path[animProgressRef.current.pointIdx + 1] || curP1;
+      const curT = animProgressRef.current.t;
+
+      const carLat = curP1.lat + (curP2.lat - curP1.lat) * curT;
+      const carLng = curP1.lng + (curP2.lng - curP1.lng) * curT;
+      const bearing = calculateBearing(curP1.lat, curP1.lng, curP2.lat, curP2.lng);
+
+      // Update Car Marker position & heading rotation on Map
+      if (googleMapRef.current && carMarkerRef.current) {
+        const carLatLng = { lat: carLat, lng: carLng };
+        carMarkerRef.current.setPosition(carLatLng);
+
+        if (autoRecenter) {
+          googleMapRef.current.panTo(carLatLng);
+        }
+      } else if (leafletMapRef.current && carMarkerRef.current) {
+        carMarkerRef.current.setLatLng([carLat, carLng]);
+        if (autoRecenter) {
+          leafletMapRef.current.panTo([carLat, carLng]);
+        }
+      }
+
+      // Update HUD metrics
+      const totalLegPoints = activeLeg.path.length;
+      const legPct = Math.round(((animProgressRef.current.pointIdx + curT) / totalLegPoints) * 100);
+      const overallPct = Math.round(((legIdx + (legPct / 100)) / routeLegs.length) * 100);
+
+      const remDist = Math.max(0.1, Math.round((activeLeg.distanceKm * (1 - legPct / 100)) * 10) / 10);
+      const remEta = Math.max(1, Math.round(activeLeg.durationMin * (1 - legPct / 100)));
+
+      setLegProgressPct(legPct);
+      setOverallProgressPct(overallPct);
+      setDistanceRemainingKm(remDist);
+      setEtaMinutes(remEta);
+      setStatusMessage(`🚗 Moving on real road towards ${activeLeg.toNode.title} (${remDist} km remaining)`);
+
+      animationFrameRef.current = requestAnimationFrame(animateStep);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animateStep);
 
     return () => {
-      if (animTimerRef.current) clearInterval(animTimerRef.current);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
     };
-  }, [isDriving, speedMultiplier, stepsList]);
+  }, [navState, routeLegs, autoRecenter]);
 
-  const currentStep = stepsList[currentStepIdx] || {};
+  // Navigation Control Actions
+  const handleStartNavigation = () => {
+    if (routeLegs.length === 0) return;
+    animProgressRef.current = { legIdx: 0, pointIdx: 0, t: 0 };
+    setCurrentLegIndex(0);
+    setCompletedNodeIds(new Set());
+    setNavState('NAVIGATING');
+    setCurrentLocationName(routeNodes[0].title);
+    setNextDestinationName(routeNodes[1].title);
+    setCurrentLegLabel(routeLegs[0].label);
+    setStatusMessage('🚀 Navigation Started! Car moving from Office on real roads.');
+  };
 
-  const launchGoogleMapsNav = () => {
-    const isCabNeeded = 
-      (plan?.transport || '').toLowerCase().includes('cab') ||
-      (plan?.transport || '').toLowerCase().includes('pick') ||
-      Boolean(plan?.pickupAddress || plan?.pickupLat);
+  const handlePauseNavigation = () => {
+    setNavState('PAUSED');
+    setStatusMessage('⏸️ Navigation Paused.');
+  };
 
-    const validStops = (plan?.stops || []).filter((s: any) => s && (s.latitude || s.longitude || s.address));
-    const projectCoords = validStops.map((s: any) => {
-      if (s.address && s.address.trim() && !s.address.toLowerCase().includes('hyderabad')) {
-        return encodeURIComponent(s.address.trim());
-      }
-      const lat = (s.latitude || '22.722361').replace(/[^0-9.-]/g, '');
-      const lng = (s.longitude || '88.493403').replace(/[^0-9.-]/g, '');
-      return `${lat},${lng}`;
-    });
+  const handleResumeNavigation = () => {
+    setNavState('NAVIGATING');
+    setStatusMessage('▶️ Navigation Resumed.');
+  };
 
-    const pickPt = plan.pickupAddress ? encodeURIComponent(plan.pickupAddress) : '22.720500,88.485000';
-    const dropPt = plan.dropAddress ? encodeURIComponent(plan.dropAddress) : '22.725000,88.498000';
+  const handleNextStop = () => {
+    if (currentLegIndex < routeLegs.length - 1) {
+      const nextLegIdx = currentLegIndex + 1;
+      const prevNode = routeLegs[currentLegIndex].toNode;
+      setCompletedNodeIds((prev) => new Set(prev).add(prevNode.id));
 
-    if (isCabNeeded) {
-      const waypointsStr = [pickPt, ...projectCoords].join('|');
-      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`, '_blank');
+      setCurrentLegIndex(nextLegIdx);
+      animProgressRef.current = { legIdx: nextLegIdx, pointIdx: 0, t: 0 };
+      const nextLeg = routeLegs[nextLegIdx];
+
+      setCurrentLocationName(nextLeg.fromNode.title);
+      setNextDestinationName(nextLeg.toNode.title);
+      setCurrentLegLabel(nextLeg.label);
+      setNavState('NAVIGATING');
+      setStatusMessage(`⏩ Skipping to Next Stop: ${nextLeg.toNode.title}`);
     } else {
-      if (projectCoords.length > 1) {
-        const dest = projectCoords[projectCoords.length - 1];
-        const waypointsStr = projectCoords.slice(0, projectCoords.length - 1).join('|');
-        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`, '_blank');
-      } else if (projectCoords.length === 1) {
-        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${projectCoords[0]}&travelmode=driving&dirflg=d`, '_blank');
+      setNavState('COMPLETED');
+      setOverallProgressPct(100);
+      setStatusMessage('🎉 All stops completed!');
+    }
+  };
+
+  const handleRecenterCar = () => {
+    setAutoRecenter(true);
+    const legIdx = animProgressRef.current.legIdx;
+    const ptIdx = animProgressRef.current.pointIdx;
+    const activeLeg = routeLegs[legIdx];
+
+    if (activeLeg && activeLeg.path[ptIdx]) {
+      const pt = activeLeg.path[ptIdx];
+      if (googleMapRef.current) {
+        googleMapRef.current.panTo({ lat: pt.lat, lng: pt.lng });
+        googleMapRef.current.setZoom(15);
+      } else if (leafletMapRef.current) {
+        leafletMapRef.current.panTo([pt.lat, pt.lng]);
+        leafletMapRef.current.setZoom(15);
       }
+    }
+  };
+
+  const toggleMapType = () => {
+    const nextType = mapType === 'roadmap' ? 'satellite' : 'roadmap';
+    setMapType(nextType);
+  };
+
+  const toggleFullscreen = () => {
+    if (!mapWrapperRef.current) return;
+    if (!document.fullscreenElement) {
+      mapWrapperRef.current.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {/* GOOGLE-STYLE TURN-BY-TURN NAV HUD BANNER */}
-      <div style={{ background: 'linear-gradient(135deg, #15803d 0%, #052e16 100%)', color: '#ffffff', borderRadius: '12px', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', boxShadow: '0 4px 14px rgba(0,0,0,0.4)', border: '1px solid #22c55e' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ background: '#22c55e', color: '#052e16', padding: '8px 12px', borderRadius: '8px', fontSize: '1.4rem', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            🚘
-          </div>
+    <div ref={mapWrapperRef} style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: isLight ? '#ffffff' : '#0f172a', padding: isFullscreen ? '20px' : '0', borderRadius: isFullscreen ? '0' : '14px' }}>
+
+      {/* API KEY CONFIGURATION BANNER NOTIFICATION */}
+      {apiKeyError && (
+        <div style={{ background: 'rgba(234, 179, 8, 0.15)', border: '1px solid #eab308', borderRadius: '10px', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#fef08a', fontSize: '0.78rem' }}>
+          <span>
+            ⚠️ <strong>Google Maps API Key Notice:</strong> Set <code style={{ color: '#38bdf8' }}>VITE_GOOGLE_MAPS_API_KEY</code> in <code style={{ color: '#38bdf8' }}>.env.development</code> to load 3D vector road map tiles and Directions API. Map is currently running in high-accuracy Google Road Overlay mode.
+          </span>
+          <a href="https://console.cloud.google.com/google/maps-apis/overview" target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8', fontWeight: '800', textDecoration: 'underline' }}>
+            Get Google Maps API Key ↗
+          </a>
+        </div>
+      )}
+
+      {/* LIVE CAR NAVIGATION HUD DISPLAY (REAL-TIME STATUS) */}
+      <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', border: '1.5px solid #0284c7', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 6px 18px rgba(0,0,0,0.25)' }}>
+        
+        {/* ROW 1: HEADER & ROUTE FLOW */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <span style={{ fontSize: '0.72rem', color: '#86efac', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              REAL LIVE CAR NAVIGATION • {isLiveGpsActive ? `📡 LIVE DEVICE GPS (${liveGpsInfo?.speed || 0} km/h)` : `${currentStep.progress || 0}% COMPLETED`}
-            </span>
-            <h4 style={{ fontSize: '0.95rem', fontWeight: '900', color: '#ffffff', margin: '2px 0 0 0' }}>
-              {isLiveGpsActive ? `📡 Real-Time Driver GPS Tracking Active (${liveGpsInfo ? `${liveGpsInfo.lat.toFixed(5)}, ${liveGpsInfo.lng.toFixed(5)} | ±${liveGpsInfo.accuracy}m` : 'Acquiring GPS Signal...'})` : (currentStep.turnNav || 'Ready to begin live car navigation simulation')}
-            </h4>
-            <span style={{ fontSize: '0.74rem', color: '#cbd5e1' }}>
-              En route: {currentStep.fromLabel || 'Customer Pickup'} ➡️ {currentStep.toLabel || 'Customer Drop'}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.2rem' }}>🚗</span>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: '900', color: '#ffffff', margin: 0 }}>
+                LIVE ROUTE NAVIGATION & CAR TRACKER
+              </h4>
+              <span style={{ background: navState === 'NAVIGATING' ? '#22c55e' : (navState === 'PAUSED' ? '#f59e0b' : '#0284c7'), color: '#ffffff', fontSize: '0.72rem', fontWeight: '900', padding: '2px 8px', borderRadius: '12px' }}>
+                {navState}
+              </span>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '3px 0 0 0' }}>
+              CURRENT ROUTE: <strong style={{ color: '#38bdf8' }}>Office ➔ Customer Pickup ➔ Projects ➔ Customer Drop</strong>
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block' }}>OVERALL PROGRESS</span>
+              <strong style={{ fontSize: '1.1rem', color: '#4ade80', fontWeight: '900' }}>{overallProgressPct}%</strong>
+            </div>
+            <div style={{ width: '90px', height: '8px', background: '#334155', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ width: `${overallProgressPct}%`, height: '100%', background: 'linear-gradient(90deg, #0284c7 0%, #22c55e 100%)', transition: 'width 0.2s ease' }} />
+            </div>
           </div>
         </div>
 
-        {/* PROMINENT START NAVIGATION BUTTON IN HUD */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button 
-            onClick={launchGoogleMapsNav}
-            style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 8px rgba(56, 189, 248, 0.4)' }}
-            title="Open turn-by-turn driving route on Google Maps"
-          >
-            ▶️ START GOOGLE MAPS NAV
-          </button>
+        {/* ROW 2: LIVE METRICS HUD (CURRENT LOCATION, NEXT STOP, DISTANCE, ETA) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px' }}>
           
-          <div style={{ width: '150px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#86efac', fontWeight: '800' }}>
-              <span>ETA: {Math.max(1, Math.round(25 * (1 - (currentStep.progress || 0) / 100)))} mins</span>
-              <span>{currentStep.progress || 0}%</span>
-            </div>
-            <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.2)', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ width: `${currentStep.progress || 0}%`, height: '100%', background: '#4ade80', transition: 'width 0.15s ease' }} />
-            </div>
+          <div style={{ background: '#0f172a', border: '1px solid #334155', padding: '8px 12px', borderRadius: '8px' }}>
+            <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', fontWeight: '700' }}>CURRENT LOCATION</span>
+            <strong style={{ fontSize: '0.85rem', color: '#ffffff', fontWeight: '800', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+              📍 {currentLocationName}
+            </strong>
           </div>
+
+          <div style={{ background: '#0f172a', border: '1px solid #334155', padding: '8px 12px', borderRadius: '8px' }}>
+            <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', fontWeight: '700' }}>NEXT DESTINATION</span>
+            <strong style={{ fontSize: '0.85rem', color: '#38bdf8', fontWeight: '800', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+              🎯 {nextDestinationName}
+            </strong>
+          </div>
+
+          <div style={{ background: '#0f172a', border: '1px solid #334155', padding: '8px 12px', borderRadius: '8px' }}>
+            <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', fontWeight: '700' }}>ACTIVE ROUTE LEG</span>
+            <strong style={{ fontSize: '0.78rem', color: '#fbbf24', fontWeight: '800', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+              {currentLegLabel}
+            </strong>
+          </div>
+
+          <div style={{ background: '#0f172a', border: '1px solid #334155', padding: '8px 12px', borderRadius: '8px' }}>
+            <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', fontWeight: '700' }}>DISTANCE REMAINING</span>
+            <strong style={{ fontSize: '0.95rem', color: '#4ade80', fontWeight: '900' }}>
+              📏 {distanceRemainingKm} km
+            </strong>
+          </div>
+
+          <div style={{ background: '#0f172a', border: '1px solid #334155', padding: '8px 12px', borderRadius: '8px' }}>
+            <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', fontWeight: '700' }}>ESTIMATED TIME (ETA)</span>
+            <strong style={{ fontSize: '0.95rem', color: '#38bdf8', fontWeight: '900' }}>
+              ⏰ {etaMinutes} mins
+            </strong>
+          </div>
+
         </div>
+
+        {/* STATUS MESSAGE FOOTER */}
+        <div style={{ background: 'rgba(2, 132, 199, 0.12)', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', color: '#38bdf8', fontWeight: '700', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{statusMessage}</span>
+          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Leg Progress: {legProgressPct}%</span>
+        </div>
+
       </div>
 
-      {/* MAP CANVAS & LAYER SWITCHER */}
-      <div style={{ position: 'relative', width: '100%', height: '400px', borderRadius: '14px', overflow: 'hidden', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', boxShadow: '0 4px 14px rgba(0,0,0,0.3)' }}>
-        {/* MAP LAYER SELECTOR FLOATING BADGE */}
-        <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 1000, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(6px)', padding: '4px 8px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', gap: '6px' }}>
-          <button 
-            onClick={() => setMapLayer('google_roadmap')}
-            style={{ background: mapLayer === 'google_roadmap' ? '#0284c7' : 'transparent', color: '#ffffff', border: 'none', padding: '3px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer' }}
+      {/* MAP CANVAS CONTAINER & CONTROLS OVERLAY */}
+      <div style={{ position: 'relative', width: '100%', height: isFullscreen ? '82vh' : '450px', borderRadius: '14px', overflow: 'hidden', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', boxShadow: '0 4px 14px rgba(0,0,0,0.3)' }}>
+        
+        {/* TOP RIGHT MAP VIEW TOGGLES */}
+        <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 1000, display: 'flex', gap: '6px', background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', padding: '4px 8px', borderRadius: '8px', border: '1px solid #334155' }}>
+          <button
+            onClick={toggleMapType}
+            style={{ background: mapType === 'satellite' ? '#0284c7' : 'transparent', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
           >
-            🗺️ Google Roadmap
+            {mapType === 'satellite' ? '🗺️ ROADMAP' : '🛰️ SATELLITE'}
           </button>
-          <button 
-            onClick={() => setMapLayer('google_satellite')}
-            style={{ background: mapLayer === 'google_satellite' ? '#0284c7' : 'transparent', color: '#ffffff', border: 'none', padding: '3px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer' }}
+          <button
+            onClick={toggleFullscreen}
+            style={{ background: isFullscreen ? '#0284c7' : 'transparent', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
           >
-            🛰️ Satellite
-          </button>
-          <button 
-            onClick={() => setMapLayer('osm')}
-            style={{ background: mapLayer === 'osm' ? '#0284c7' : 'transparent', color: '#ffffff', border: 'none', padding: '3px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer' }}
-          >
-            🌐 OSM
+            {isFullscreen ? '📉 EXIT FULLSCREEN' : '⛶ FULL SCREEN'}
           </button>
         </div>
 
+        {/* MAP CONTAINER REF */}
         <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+
       </div>
 
-      {/* LIVE NAVIGATION CONTROLS */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '10px 14px', flexWrap: 'wrap', gap: '10px' }}>
+      {/* NAVIGATION CONTROLS TOOLBAR PANEL */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '12px 16px', flexWrap: 'wrap', gap: '10px' }}>
+        
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <button 
-            onClick={toggleLiveDeviceGps}
-            style={{ background: isLiveGpsActive ? '#ef4444' : '#10b981', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)' }}
-            title="Track your vehicle's real live GPS coordinates using device GPS sensor"
-          >
-            {isLiveGpsActive ? '🔴 STOP REAL DEVICE GPS' : '📡 START REAL DEVICE GPS TRACKING'}
-          </button>
-
-          <button 
-            onClick={() => setIsDriving(!isDriving)}
-            style={{ background: isDriving ? '#ef4444' : '#22c55e', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)' }}
-          >
-            {isDriving ? '⏸️ PAUSE SIMULATION' : '🚘 START ROUTE SIMULATION'}
-          </button>
-
-          <button 
-            onClick={() => {
-              setIsDriving(false);
-              setCurrentStepIdx(0);
-            }}
-            style={{ background: '#334155', color: '#38bdf8', border: '1px solid #0284c7', padding: '8px 12px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.82rem' }}
-          >
-            🔄 RESET
-          </button>
-        </div>
-
-        {/* SPEED SELECTION */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>Car Speed:</span>
-          {[1, 2, 4].map((spd) => (
+          {navState === 'IDLE' || navState === 'COMPLETED' ? (
             <button
-              key={spd}
-              onClick={() => setSpeedMultiplier(spd)}
-              style={{ background: speedMultiplier === spd ? '#0284c7' : isLight ? '#e2e8f0' : '#1e293b', color: speedMultiplier === spd ? '#ffffff' : isLight ? '#0f172a' : '#cbd5e1', border: speedMultiplier === spd ? '1px solid #38bdf8' : '1px solid #334155', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '900', cursor: 'pointer' }}
+              onClick={handleStartNavigation}
+              style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '9px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 14px rgba(34, 197, 94, 0.4)' }}
             >
-              {spd}x
+              ▶️ START FULL ROUTE NAVIGATION
             </button>
-          ))}
+          ) : navState === 'NAVIGATING' ? (
+            <button
+              onClick={handlePauseNavigation}
+              style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '9px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              ⏸️ PAUSE
+            </button>
+          ) : (
+            <button
+              onClick={handleResumeNavigation}
+              style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '9px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              ▶️ RESUME
+            </button>
+          )}
+
+          <button
+            onClick={handleNextStop}
+            disabled={navState === 'IDLE' || navState === 'COMPLETED'}
+            style={{ background: isLight ? '#ffffff' : '#1e293b', color: (navState === 'IDLE' || navState === 'COMPLETED') ? '#64748b' : '#38bdf8', border: '1px solid #0284c7', padding: '9px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: (navState === 'IDLE' || navState === 'COMPLETED') ? 'not-allowed' : 'pointer' }}
+          >
+            ⏩ NEXT STOP
+          </button>
+
+          <button
+            onClick={handleRecenterCar}
+            style={{ background: autoRecenter ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: autoRecenter ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'), border: '1px solid #0284c7', padding: '9px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
+          >
+            🎯 RECENTER CAR
+          </button>
         </div>
+
+        {/* STATUS FOOTER BADGE */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>
+            Leg {currentLegIndex + 1} of {routeLegs.length || 1} • {routeNodes.length} Total Route Nodes
+          </span>
+        </div>
+
       </div>
+
     </div>
   );
 }
+
 
 function ScheduleVisitModalContent({
   isLight = false,
@@ -8612,51 +8970,67 @@ export default function App() {
 
         {/* 11 MAIN CATEGORIES NAV */}
         <nav style={{ padding: '16px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto' }}>
+          {/* 1. Main Dash Board */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('main_dashboard'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'main_dashboard' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'main_dashboard' ? '#38bdf8' : '#94a3b8', border: activeTab === 'main_dashboard' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <LayoutDashboard size={18} /> <span>Main Dash Board</span>
           </button>
+          {/* 2. Lead Management */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('lead_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'lead_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'lead_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'lead_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <UserPlus size={18} /> <span>Lead Management</span>
           </button>
+          {/* 3. Matching Management */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('matching_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'matching_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'matching_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'matching_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <Target size={18} /> <span>Matching Management</span>
           </button>
-          <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('property_sourcing_requests'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'property_sourcing_requests' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'property_sourcing_requests' ? '#38bdf8' : '#94a3b8', border: activeTab === 'property_sourcing_requests' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
-            <SearchCode size={18} /> <span>Property Sourcing Requests</span>
-          </button>
+          {/* 4. Customer Management */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('customer_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'customer_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'customer_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'customer_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <Users size={18} /> <span>Customer Management</span>
           </button>
+          {/* 5. Cost Sheet Sharing */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('cost_sheet_share'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'cost_sheet_share' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'cost_sheet_share' ? '#38bdf8' : '#94a3b8', border: activeTab === 'cost_sheet_share' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <Share2 size={18} /> <span>Cost Sheet Sharing</span>
           </button>
+          {/* 6. Visit Management */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('visit_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'visit_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'visit_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'visit_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <Compass size={18} /> <span>Visit Management</span>
           </button>
-          <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('project_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'project_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'project_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'project_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
-            <Building size={18} /> <span>Project Management</span>
-          </button>
+          {/* 7. Agreement Management */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('agreement_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'agreement_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'agreement_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'agreement_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <FileCheck size={18} /> <span>Agreement Management</span>
           </button>
+          {/* 8. Booking Management */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('booking_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'booking_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'booking_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'booking_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <BookmarkCheck size={18} /> <span>Booking Management</span>
           </button>
+          {/* 9. Billing Management */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('billing_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'billing_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'billing_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'billing_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <CreditCard size={18} /> <span>Billing Management</span>
           </button>
+          {/* 10. Project Management */}
+          <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('project_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'project_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'project_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'project_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
+            <Building size={18} /> <span>Project Management</span>
+          </button>
+          {/* 11. Property Sourcing Requests */}
+          <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('property_sourcing_requests'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'property_sourcing_requests' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'property_sourcing_requests' ? '#38bdf8' : '#94a3b8', border: activeTab === 'property_sourcing_requests' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
+            <SearchCode size={18} /> <span>Property Sourcing Requests</span>
+          </button>
+          {/* 12. Location Map */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('map_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'map_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'map_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'map_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <MapIcon size={18} /> <span>Location Map</span>
           </button>
+          {/* 13. Role and Management */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('role_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'role_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'role_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'role_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <UserCog size={18} /> <span>Role and Management</span>
           </button>
+          {/* 14. Profile */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('profile'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'profile' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'profile' ? '#38bdf8' : '#94a3b8', border: activeTab === 'profile' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <User size={18} /> <span>Profile</span>
           </button>
+          {/* 15. Recycle Bin */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('recycle_bin'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'recycle_bin' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'recycle_bin' ? '#38bdf8' : '#94a3b8', border: activeTab === 'recycle_bin' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <Trash2 size={18} /> <span>Recycle Bin</span>
           </button>
+          {/* 16. Go to Website */}
           <button 
             onClick={() => { 
               if (isMobile) setIsMobileSidebarOpen(false); 
@@ -8687,6 +9061,7 @@ export default function App() {
             </div>
             <ExternalLink size={14} style={{ opacity: 0.8 }} />
           </button>
+          {/* 17. Logout */}
           <button onClick={() => {
     if (isMobile) setIsMobileSidebarOpen(false);
     setIsLoggedIn(false);
@@ -16338,10 +16713,10 @@ export default function App() {
                       }
                     }
                   }}
-                  style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 8px rgba(34, 197, 94, 0.4)' }}
-                  title="Open Turn-by-Turn Car Navigation on Google Maps"
+                  style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  title="Launch turn-by-turn driving directions in external Google Maps App"
                 >
-                  ▶️ START NAVIGATION
+                  📲 Launch External Google Maps App
                 </button>
                 <X size={22} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowRouteMapModal(null)} />
               </div>
@@ -16350,7 +16725,24 @@ export default function App() {
             {/* ROUTE FLOW NODES */}
             <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
               
-              <div style={{ textAlign: 'center', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <div style={{ textAlign: 'center', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: '900' }}>🏢 START OFFICE</span>
+                <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '900', margin: 0 }}>HQ Office</h4>
+                <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>{showRouteMapModal.plan.officeAddress || 'Swaramayi HQ Barasat, Kolkata'}</span>
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(showRouteMapModal.plan.officeAddress || 'Swaramayi Real Estate HQ Barasat Kolkata West Bengal')}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', border: '1px solid #0284c7', padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800', textDecoration: 'none' }}
+                  title="View Office location on Google Maps"
+                >
+                  📍 View Office
+                </a>
+              </div>
+
+              <ArrowRight size={20} color="#0284c7" />
+
+              <div style={{ textAlign: 'center', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.7rem', color: '#4ade80', fontWeight: '900' }}>🟢 PICKUP</span>
                 <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '900', margin: 0 }}>Customer Pickup</h4>
                 <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>{showRouteMapModal.plan.pickupAddress || 'Barasat Banamalipur, Kolkata'}</span>

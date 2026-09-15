@@ -895,12 +895,10 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                       <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
                         <button 
                           onClick={() => {
-                            setShowRouteMapModal({ open: true, plan: currentPlan });
-                            const navUrl = getUniversalNavigationUrl(currentPlan);
-                            window.open(navUrl, '_blank');
+                            setShowRouteMapModal({ open: true, plan: currentPlan, autoStart: true });
                           }}
                           style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          title="Open Interactive Route Map & Google Maps Navigation (Pickup -> Project 1, Project 2... -> Drop)"
+                          title="Open In-App Interactive Google Road Map & Start Car Navigation"
                         >
                           🚀 START FULL ROUTE NAVIGATION ({totalStops} STOPS)
                         </button>

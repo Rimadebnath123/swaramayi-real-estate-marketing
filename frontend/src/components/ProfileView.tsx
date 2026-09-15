@@ -1,6 +1,7 @@
 import React from 'react';
 import {
-  User, Building, Briefcase, ShieldCheck, Edit3, Shield, CheckCircle2, Lock
+  User, Building, Briefcase, ShieldCheck, Edit3, Shield, CheckCircle2, Lock,
+  Camera, Upload, Trash2, Image as ImageIcon
 } from 'lucide-react';
 
 interface ProfileViewProps {
@@ -37,6 +38,46 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     manager_name: 'Self',
     is_active: true,
     user_status: 'ACTIVE'
+  };
+
+  const storageKey = `swaramayi_user_avatar_${currentUser.id || currentUser.username}`;
+  const [avatarUrl, setAvatarUrl] = React.useState<string | null>(() => localStorage.getItem(storageKey));
+  const [toastMsg, setToastMsg] = React.useState<string>('');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    const key = `swaramayi_user_avatar_${currentUser.id || currentUser.username}`;
+    setAvatarUrl(localStorage.getItem(key));
+  }, [currentUser.id, currentUser.username]);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size should be less than 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        const key = `swaramayi_user_avatar_${currentUser.id || currentUser.username}`;
+        localStorage.setItem(key, base64);
+        setAvatarUrl(base64);
+        setToastMsg('Profile logo updated successfully!');
+        window.dispatchEvent(new Event('swaramayi-avatar-updated'));
+        setTimeout(() => setToastMsg(''), 4000);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    const key = `swaramayi_user_avatar_${currentUser.id || currentUser.username}`;
+    localStorage.removeItem(key);
+    setAvatarUrl(null);
+    setToastMsg('Profile logo removed successfully.');
+    window.dispatchEvent(new Event('swaramayi-avatar-updated'));
+    setTimeout(() => setToastMsg(''), 4000);
   };
 
   const roleInfo = customRoles.find(r => {
@@ -120,14 +161,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     'Personal Performance Metrics'
   ];
 
+  const activeToast = profileToastMessage || toastMsg;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
+      {/* HIDDEN LOGO FILE INPUT */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleLogoUpload} 
+        accept="image/*" 
+        style={{ display: 'none' }} 
+      />
+
       {/* SUCCESS TOAST MESSAGE */}
-      {profileToastMessage && (
+      {activeToast && (
         <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', color: '#4ade80', borderRadius: '12px', padding: '14px 20px', fontWeight: '800', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <CheckCircle2 size={20} color="#22c55e" />
-          <span>{profileToastMessage}</span>
+          <span>{activeToast}</span>
         </div>
       )}
 
@@ -147,34 +199,83 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-          {/* AVATAR BADGE */}
+          {/* AVATAR BADGE WITH PROFILE LOGO SUPPORT */}
           <div style={{ position: 'relative' }}>
-            <div style={{
-              width: '90px',
-              height: '90px',
-              borderRadius: '24px',
-              background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              fontSize: '2.2rem',
-              fontWeight: '900',
-              boxShadow: '0 8px 20px rgba(2, 132, 199, 0.4)',
-              border: '3px solid #38bdf8'
-            }}>
-              {currentUser.full_name ? currentUser.full_name.split(' ').map((n: string) => n[0]).join('') : 'RV'}
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              title="Click to upload or change profile logo"
+              style={{
+                width: '95px',
+                height: '95px',
+                borderRadius: '24px',
+                background: avatarUrl ? '#0f172a' : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                fontSize: '2.2rem',
+                fontWeight: '900',
+                boxShadow: '0 8px 20px rgba(2, 132, 199, 0.4)',
+                border: '3px solid #38bdf8',
+                overflow: 'hidden',
+                cursor: 'pointer',
+                position: 'relative'
+              }}
+            >
+              {avatarUrl ? (
+                <img 
+                  src={avatarUrl} 
+                  alt="Profile Logo" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              ) : (
+                currentUser.full_name ? currentUser.full_name.split(' ').map((n: string) => n[0]).join('') : 'RV'
+              )}
+
+              {/* CAMERA OVERLAY ON HOVER */}
+              <div 
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(0, 0, 0, 0.55)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0,
+                  transition: 'opacity 0.2s ease',
+                  color: '#ffffff'
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
+              >
+                <Camera size={28} color="#ffffff" />
+              </div>
             </div>
-            <div style={{
-              position: 'absolute',
-              bottom: '-4px',
-              right: '-4px',
-              background: '#22c55e',
-              border: isLight ? '3px solid #ffffff' : '3px solid #0f172a',
-              width: '22px',
-              height: '22px',
-              borderRadius: '50%'
-            }} title="Active Now" />
+
+            {/* CAMERA BADGE OVERLAY BUTTON */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              title="Upload Profile Logo"
+              style={{
+                position: 'absolute',
+                bottom: '-4px',
+                right: '-4px',
+                background: '#0284c7',
+                color: '#ffffff',
+                border: isLight ? '3px solid #ffffff' : '3px solid #0f172a',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                padding: 0
+              }}
+            >
+              <Camera size={15} color="#ffffff" />
+            </button>
           </div>
 
           {/* USER INFO */}
@@ -226,7 +327,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
 
         {/* ACTION BUTTONS */}
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button 
             onClick={() => handleStartEditProfile(currentUser)}
             style={{

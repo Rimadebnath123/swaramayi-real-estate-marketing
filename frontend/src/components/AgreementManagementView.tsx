@@ -20,6 +20,10 @@ interface AgreementManagementViewProps {
   setSelectedAgreement: (val: any) => void;
   setShowFullContractModal: (val: boolean) => void;
   onRecycleItem?: (itemData: any) => void;
+  bookings?: any[];
+  setBookings?: React.Dispatch<React.SetStateAction<any[]>>;
+  syncAllToMongoDB?: (overrideData?: any) => Promise<void>;
+  setActiveTab?: (tab: string) => void;
 }
 
 export const AgreementManagementView: React.FC<AgreementManagementViewProps> = ({
@@ -41,8 +45,79 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
   setSelectedAgreement,
   setShowFullContractModal,
   onRecycleItem,
+  bookings = [],
+  setBookings,
+  syncAllToMongoDB,
+  setActiveTab
 }) => {
   const isSuperAdmin = !currentRole || currentRole.toUpperCase().includes('SUPER ADMIN') || currentRole.toUpperCase().includes('OWNER') || currentRole.toUpperCase().includes('ADMIN');
+
+  const handleStoreInBooking = (a: any) => {
+    const pva = a.pvaData || a;
+    const custName = a.party_name || pva.customerName || 'Customer';
+    const custMobile = a.party_contact || pva.customerMobile || '+91 78766 70000';
+    const rawTitle = a.title || pva.projectTitle || 'GAJAPATI APARTMENT';
+    const projName = rawTitle.includes('—') ? rawTitle.split('—')[1].trim() : rawTitle;
+    const custNum = pva.customerId || pva.customerNumber || a.customer_number || `SRM-CUS-2026-000${Date.now().toString().slice(-3)}`;
+    const bkgCode = `SRM-BKG-2026-000${(bookings?.length || 0) + 188}`;
+
+    const newBookingObj = {
+      id: `BKG-${Date.now()}`,
+      booking_code: bkgCode,
+      agreement_code: a.agreement_code || pva.projectVisitAgreementId || `SRM-PVA-2026-${Date.now().toString().slice(-6)}`,
+      customer_name: custName,
+      customer_number: custNum,
+      customer_mobile: custMobile,
+      project_name: projName,
+      developer_name: pva.developerName || 'Dhriti Builders & Developers',
+      property_title: projName,
+      tower_unit: pva.unitNumber || 'Tower A - Unit 302 (3BHK)',
+      agreement_value: '₹51,14,880',
+      agreement_value_num: 5114880,
+      token_amount: 100000,
+      payment_mode: 'Bank Transfer / NEFT',
+      payment_ref: `PVA-SIG-${pva.otpHashRef?.slice(-6) || '849201'}`,
+      booking_date: new Date().toISOString().split('T')[0],
+      sales_executive: pva.executiveName || 'Ramesh Pawar',
+      brokerage_rate: '2.0%',
+      brokerage_amount: 102297,
+      approval_status: 'APPROVED_LOCKED',
+      status: 'CONFIRMED'
+    };
+
+    if (setBookings) {
+      let alreadyExists = false;
+      setBookings((prev: any[]) => {
+        const exists = (prev || []).some((b: any) => 
+          (b.booking_code && b.booking_code === bkgCode) ||
+          (b.agreement_code && (b.agreement_code === a.agreement_code || b.agreement_code === pva.projectVisitAgreementId)) ||
+          (b.customer_name?.toLowerCase() === custName.toLowerCase() && b.project_name?.toLowerCase() === projName.toLowerCase())
+        );
+        if (exists) {
+          alreadyExists = true;
+          return prev;
+        }
+        const updated = [newBookingObj, ...(prev || [])];
+        try {
+          localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(updated));
+        } catch (err) {}
+        if (syncAllToMongoDB) {
+          syncAllToMongoDB({ bookings: updated });
+        }
+        return updated;
+      });
+
+      if (alreadyExists) {
+        alert(`ℹ️ Customer "${custName}" (${projName}) is already stored in Booking Management!`);
+      } else {
+        alert(`🎉 Customer "${custName}" data for ${projName} successfully stored into Booking Management!\n\nBooking Code: ${bkgCode}\nCustomer: ${custName} (${custMobile})\nAgreement Code: ${a.agreement_code || pva.projectVisitAgreementId}`);
+      }
+
+      if (setActiveTab) {
+        setActiveTab('booking_management');
+      }
+    }
+  };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
@@ -239,6 +314,16 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
                               style={{ background: agreementCategory === 'developer' ? '#16a34a' : '#0284c7', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
                             >
                               <Printer size={14} /> View Contract PDF
+                            </button>
+                          )}
+
+                          {agreementCategory === 'customer' && (
+                            <button 
+                              onClick={() => handleStoreInBooking(a)} 
+                              style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              title="Store customer and agreement details into Booking Management"
+                            >
+                              📌 Store in Booking
                             </button>
                           )}
 

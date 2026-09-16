@@ -19,6 +19,9 @@ interface BookingManagementViewProps {
   properties?: any[];
   syncAllToMongoDB?: (overrideData?: any) => Promise<void>;
   onRecycleItem?: (itemData: any) => void;
+  projectVisitAgreements?: any[];
+  agreements?: any[];
+  recycledItems?: any[];
 }
 
 export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
@@ -38,7 +41,10 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
   customers = [],
   properties = [],
   syncAllToMongoDB,
-  onRecycleItem
+  onRecycleItem,
+  projectVisitAgreements = [],
+  agreements = [],
+  recycledItems = []
 }) => {
   const isSuperAdmin = !currentRole || currentRole.toUpperCase().includes('SUPER ADMIN') || currentRole.toUpperCase().includes('OWNER') || currentRole.toUpperCase().includes('ADMIN');
 
@@ -286,18 +292,81 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
     alert(`🎉 PROPERTY UNIT REGISTRATION COMPLETED!\n\nBooking Code: ${b.booking_code}\nCustomer: ${custName} (${custNum})\nProperty: ${propTitle} (${b.tower_unit || 'Unit 302'})\nAgreement Value: ₹${Number(agreeVal).toLocaleString('en-IN')}\n\nGenerated Billing Invoices:\n1. 🏢 Developer Brokerage: ${generatedDeveloperInvoiceNumber}\n2. 👤 Customer Tax Invoice: ${generatedCustomerInvoiceNumber}\n\nNavigating to Billing Management.`);
   };
 
-  const registeredDoneBookings = (bookings || []).filter((b: any) => 
+  const allCombinedBookings = React.useMemo(() => {
+    const list = [...(bookings || [])];
+    const seenKeys = new Set<string>();
+
+    list.forEach(b => {
+      if (!b) return;
+      const key = `${(b.customer_name || '').toLowerCase().trim()}_${(b.project_name || '').toLowerCase().trim()}`;
+      seenKeys.add(key);
+      if (b.booking_code) seenKeys.add(b.booking_code.toLowerCase().trim());
+      if (b.agreement_code) seenKeys.add(b.agreement_code.toLowerCase().trim());
+    });
+
+    const recycledKeys = new Set<string>();
+    (recycledItems || []).forEach((r: any) => {
+      if (!r) return;
+      const orig = r.originalData || {};
+      const rName = (r.title || orig.name || orig.customer_name || orig.party_name || '').toLowerCase().trim();
+      if (rName) recycledKeys.add(rName);
+    });
+
+    (projectVisitAgreements || []).forEach((pva: any) => {
+      if (!pva) return;
+      const custName = pva.customerName || pva.party_name || 'Customer';
+      if (recycledKeys.has(custName.toLowerCase().trim())) return;
+
+      const projName = pva.projectTitle || pva.project_name || 'GAJAPATI APARTMENT';
+      const key = `${custName.toLowerCase().trim()}_${projName.toLowerCase().trim()}`;
+      const pvaCode = (pva.projectVisitAgreementId || '').toLowerCase().trim();
+
+      if (!seenKeys.has(key) && (!pvaCode || !seenKeys.has(pvaCode))) {
+        seenKeys.add(key);
+        if (pvaCode) seenKeys.add(pvaCode);
+
+        const bkgCode = `SRM-BKG-2026-000${list.length + 188}`;
+        list.push({
+          id: `BKG-PVA-${pva.projectVisitAgreementId || Date.now()}`,
+          booking_code: bkgCode,
+          agreement_code: pva.projectVisitAgreementId || `SRM-PVA-2026-000001`,
+          customer_name: custName,
+          customer_number: pva.customerId || pva.customerNumber || `SRM-CUS-2026-000189`,
+          customer_mobile: pva.customerMobile || '+91 78766 70000',
+          project_name: projName,
+          developer_name: pva.developerName || 'Dhriti Builders & Developers',
+          property_title: projName,
+          tower_unit: pva.unitNumber || 'Tower A - Unit 302 (3BHK)',
+          agreement_value: '₹51,14,880',
+          agreement_value_num: 5114880,
+          token_amount: 100000,
+          payment_mode: 'Bank Transfer / NEFT',
+          payment_ref: `PVA-SIG-${pva.otpHashRef?.slice(-6) || '849201'}`,
+          booking_date: pva.visitDate || new Date().toISOString().split('T')[0],
+          sales_executive: pva.executiveName || 'Ramesh Pawar',
+          brokerage_rate: '2.0%',
+          brokerage_amount: 102297,
+          approval_status: 'APPROVED_LOCKED',
+          status: 'CONFIRMED'
+        });
+      }
+    });
+
+    return list;
+  }, [bookings, projectVisitAgreements, recycledItems]);
+
+  const registeredDoneBookings = (allCombinedBookings || []).filter((b: any) => 
     b.approval_status === 'REGISTER_DONE' || 
     b.status === 'REGISTER_DONE' || 
     b.registered === true ||
     (invoices && invoices.some((inv: any) => inv.booking_code === b.booking_code || (b.customer_number && inv.customer_number === b.customer_number)))
   );
 
-  const pendingApprovalBookings = (bookings || []).filter((b: any) => 
+  const pendingApprovalBookings = (allCombinedBookings || []).filter((b: any) => 
     b.approval_status === 'APPROVED_LOCKED' && b.approval_status !== 'REGISTER_DONE' && !b.registered && !registeredDoneBookings.some((rb: any) => rb.booking_code === b.booking_code)
   );
 
-  const activePendingBookings = (bookings || []).filter((b: any) => 
+  const activePendingBookings = (allCombinedBookings || []).filter((b: any) => 
     !registeredDoneBookings.some((rb: any) => rb.booking_code === b.booking_code || (rb.id && b.id && rb.id === b.id))
   );
 

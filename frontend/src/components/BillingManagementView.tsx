@@ -821,7 +821,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                               payment_status: i.payment_status || 'UNPAID_PENDING',
                               payment_mode: i.payment_mode || '',
                               payment_ref: i.payment_ref || '',
-                              sales_executive: i.sales_executive || matchedCust?.assignedExecutive || 'Rajesh Varma'
+                              sales_executive: i.sales_executive || matchedCust?.assignedExecutive || 'Avishek Das'
                             });
                             setShowEditInvoiceModal(i);
                           }}

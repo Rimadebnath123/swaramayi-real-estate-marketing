@@ -3898,9 +3898,9 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
                 {/* SECTION 1: DEVELOPER IDENTIFICATION & CONTACTS */}
                 <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <h4 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                    🏢 DEVELOPER IDENTIFICATION & CONTACT CREDENTIALS
+                    🏢 DEVELOPER IDENTIFICATION & LEGAL CREDENTIALS
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(3, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(4, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Developer Name</span>
                       <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.95rem' }}>{viewPropertyModal.developer || 'Mr. JAYANTA GHOSH'}</strong>
@@ -3918,12 +3918,20 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
                       <strong style={{ color: '#38bdf8' }}>📞 {altDevMobile}</strong>
                     </div>
                     <div>
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>OTP Verification Protocol</span>
-                      <span style={{ background: '#22c55e', color: '#ffffff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800' }}>✓ 1-TIME OTP VERIFIED</span>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Developer Email Address</span>
+                      <strong style={{ color: '#a855f7', fontFamily: 'monospace' }}>{viewPropertyModal.developer_email || devObj?.email || `${(viewPropertyModal.developer || 'developer').toLowerCase().replace(/\s+/g, '')}@builder.com`}</strong>
                     </div>
                     <div>
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Project Posting ID</span>
-                      <strong style={{ color: '#a855f7', fontFamily: 'monospace' }}>{viewPropertyModal.project_posting_id || 'PRJ-POST-2026-8802'}</strong>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>WBRERA Registration ID</span>
+                      <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{viewPropertyModal.rera_id || devObj?.rera_id || 'WBRERA/P/NOR/2024/000842'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>HERA / Municipal Clearance</span>
+                      <strong style={{ color: '#4ade80', fontFamily: 'monospace' }}>{viewPropertyModal.hera_no || devObj?.hera_no || 'HERA-WB-2026-9901'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>OTP Verification Protocol</span>
+                      <span style={{ background: '#22c55e', color: '#ffffff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800' }}>✓ 1-TIME OTP VERIFIED</span>
                     </div>
                   </div>
                 </div>
@@ -3943,7 +3951,7 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
                       🗺️ Open Direct Google Maps View
                     </a>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(3, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(4, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Locality Hub / Sector</span>
                       <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.locality || 'PANIHATI SODEPUR'}</strong>
@@ -3956,6 +3964,10 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>GPS Longitude (Exact Map Long)</span>
                       <strong style={{ color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.92rem' }}>{viewPropertyModal.longitude || '88.400659'}</strong>
                     </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Full Physical Address</span>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.78rem' }}>{viewPropertyModal.full_address || viewPropertyModal.address || `${viewPropertyModal.locality || 'Jessore Road, Barasat'}, North 24 Parganas, Kolkata, West Bengal - 700124`}</strong>
+                    </div>
                   </div>
                 </div>
 
@@ -3964,7 +3976,7 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
                   <h4 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                     📐 PROPERTY SPECIFICATIONS, FLOORS & AREA METRICS
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Property Type</span>
                       <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.property_type || viewPropertyModal.type || 'Flat / Apartment'}</strong>
@@ -3982,8 +3994,12 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
                       <strong style={{ color: '#fbbf24', fontWeight: '900' }}>{superBuiltupDisp}</strong>
                     </div>
                     <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Tower / Block Name</span>
+                      <strong style={{ color: '#a855f7', fontWeight: '900' }}>{viewPropertyModal.tower_block || viewPropertyModal.tower || 'Tower A'}</strong>
+                    </div>
+                    <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Floor Number (Unit Floor)</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.floor_num || viewPropertyModal.floor_number || '4th Floor out of G+4 Floors'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.floor_num || viewPropertyModal.floor_number || '2nd Floor'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Total Floors in Building</span>
@@ -3992,6 +4008,10 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Facing Direction</span>
                       <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.facing || 'North Facing'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Furnishing Status</span>
+                      <strong style={{ color: '#38bdf8', fontWeight: '800' }}>{viewPropertyModal.furnishing || 'Semi-Furnished'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Possession Status</span>
@@ -4007,10 +4027,14 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
                   <h4 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#a855f7', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                     💰 FINANCIAL VALUATION, CAR PARKING & COST SHEET
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Total Inventory Final Price</span>
                       <strong style={{ color: '#4ade80', fontSize: '1.1rem', fontWeight: '900' }}>{viewPropertyModal.final_price || '₹34,23,000'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Rate Per Sq.Ft.</span>
+                      <strong style={{ color: '#38bdf8', fontWeight: '900' }}>{viewPropertyModal.price_sqft || '₹5,020/Sq.Ft.'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Parking Slot Allocation</span>
@@ -4044,6 +4068,53 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
                     </div>
                   </div>
                 </div>
+
+                {/* SECTION 5: 🌟 PROPERTY AMENITIES & COMMUNITY FACILITIES */}
+                <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #38bdf8', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                    🌟 PROPERTY AMENITIES & COMMUNITY FACILITIES
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {(() => {
+                      const amenitiesList = Array.isArray(viewPropertyModal.selected_amenities) && viewPropertyModal.selected_amenities.length > 0 
+                        ? viewPropertyModal.selected_amenities 
+                        : (Array.isArray(viewPropertyModal.amenities) && viewPropertyModal.amenities.length > 0 ? viewPropertyModal.amenities : ['🛗 Automatic Elevator / Lift', '🛡️ 24x7 Security Guard', '⚡ 100% Power Backup', '📹 CCTV Surveillance', '📞 Intercom Facility', '💧 Water Treatment Plant', '🧯 Fire Safety System', '🧘 Vastu Compliant', '🚗 Reserved Covered Parking', '🏋️ Gymnasium']);
+                      return amenitiesList.map((am: string, i: number) => (
+                        <span key={i} style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid #0284c7', color: isLight ? '#0369a1' : '#38bdf8', padding: '5px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800' }}>
+                          {am}
+                        </span>
+                      ));
+                    })()}
+                  </div>
+                </div>
+
+                {/* SECTION 6: 🔒 UNIT BOOKING & ALLOTMENT STATUS (IF BOOKED/SOLD) */}
+                {(() => {
+                  const st = (viewPropertyModal.status || '').toUpperCase();
+                  const isBooked = st.includes('BOOKED') || st.includes('SOLD') || st.includes('CONFIRMED');
+                  if (!isBooked) return null;
+                  return (
+                    <div style={{ background: 'rgba(234, 179, 8, 0.1)', border: '1.5px solid #eab308', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <h4 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        🔒 UNIT BOOKING & ALLOTMENT DETAILS
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(3, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
+                        <div>
+                          <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Unit Availability Status</span>
+                          <strong style={{ color: '#fbbf24', fontWeight: '900' }}>🔒 {st}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Booked Customer / Allottee</span>
+                          <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.booked_customer || viewPropertyModal.customer_name || 'Sumon Halder'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Associated Booking Code</span>
+                          <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{viewPropertyModal.booking_code || 'SRM-BKG-2026-000087'}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* SECTION 5: 🏢 UPLOADED BUILDING & EXTERIOR ELEVATION GALLERY (PROJECT NAME WISE) */}
                 <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #eab308', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>

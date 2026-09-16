@@ -47,7 +47,7 @@ export async function createBranch(req: AuthRequest, res: Response) {
     branch_name,
     city,
     address: address || `${city} Main Office`,
-    branch_manager_name: branch_manager_name || 'Rajesh Varma',
+    branch_manager_name: branch_manager_name || 'Avishek Das',
     created_at: new Date().toISOString().split('T')[0]
   };
 
@@ -313,3 +313,45 @@ export async function getFraudAlerts(req: AuthRequest, res: Response) {
     data: dbStore.data.security_alerts
   });
 }
+
+// 8. Delete & Sync Operations (Database & MongoDB Atlas)
+export async function deleteBranch(req: AuthRequest, res: Response) {
+  const { id } = req.params;
+  loadData();
+  dbStore.data.branches = (dbStore.data.branches || []).filter(b => b.id !== id && b.branch_name !== id);
+  saveData();
+  logAudit(req.user?.id || null, 'DELETE_BRANCH', 'ORGANIZATION', `Deleted branch ${id}`, req.ip);
+  return res.json({ status: 'SUCCESS', message: `Branch ${id} deleted successfully from database.` });
+}
+
+export async function deleteTeam(req: AuthRequest, res: Response) {
+  const { id } = req.params;
+  loadData();
+  dbStore.data.teams = (dbStore.data.teams || []).filter(t => t.id !== id && t.team_name !== id);
+  saveData();
+  logAudit(req.user?.id || null, 'DELETE_TEAM', 'ORGANIZATION', `Deleted team ${id}`, req.ip);
+  return res.json({ status: 'SUCCESS', message: `Team ${id} deleted successfully from database.` });
+}
+
+export async function deleteUser(req: AuthRequest, res: Response) {
+  const { id } = req.params;
+  if (id === 'USR-01' || id === 'admin') {
+    return res.status(400).json({ status: 'ERROR', message: 'Primary Super Admin user cannot be deleted.' });
+  }
+  loadData();
+  dbStore.data.users = (dbStore.data.users || []).filter(u => u.id !== id && u.username !== id && u.full_name !== id);
+  saveData();
+  logAudit(req.user?.id || null, 'DELETE_USER', 'SECURITY', `Deleted user ${id}`, req.ip);
+  return res.json({ status: 'SUCCESS', message: `User ${id} deleted successfully from database.` });
+}
+
+export async function syncSecurityData(req: AuthRequest, res: Response) {
+  const { branches, teams, users } = req.body;
+  loadData();
+  if (Array.isArray(branches)) dbStore.data.branches = branches;
+  if (Array.isArray(teams)) dbStore.data.teams = teams;
+  if (Array.isArray(users)) dbStore.data.users = users;
+  saveData();
+  return res.json({ status: 'SUCCESS', message: 'Security & Organization structure synced to database and MongoDB Atlas.' });
+}
+

@@ -39,6 +39,7 @@ interface CustomerManagementViewProps {
   setShowPvaDocumentModal: (val: any) => void;
   setShowViewIndividualCostSheetModal?: (val: any) => void;
   scheduledVisits?: any[];
+  setScheduledVisits?: React.Dispatch<React.SetStateAction<any[]>>;
   visitPlans?: any[];
   properties?: any[];
   setActiveTab?: (tab: string) => void;
@@ -47,6 +48,9 @@ interface CustomerManagementViewProps {
   users?: any[];
   syncAllToMongoDB?: (overrideData?: any) => void;
   onRecycleItem?: (itemData: any) => void;
+  recycledItems?: any[];
+  setMatchingRequestsQueue?: React.Dispatch<React.SetStateAction<any[]>>;
+  setIndividualCostSheets?: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
@@ -76,13 +80,16 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
   leadsList = [],
   setLeadsList,
   individualCostSheets = [],
+  setIndividualCostSheets,
   projectVisitAgreements = [],
   agreements = [],
   bookings = [],
   invoices = [],
   setInvoices,
   matchingRequestsQueue = [],
+  setMatchingRequestsQueue,
   scheduledVisits = [],
+  setScheduledVisits,
   visitPlans = [],
   properties = [],
   openIdDetailsModal,
@@ -95,6 +102,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
   setSearchQuery,
   users = [],
   syncAllToMongoDB,
+  recycledItems = []
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
@@ -269,8 +277,28 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
       return { keys, num, mob, name, id };
     };
 
+    // Pre-populate recycled keys so recycled items are NEVER auto-incorporated into Customer Management
+    const recycledKeys = new Set<string>();
+    (recycledItems || []).forEach((r: any) => {
+      if (!r) return;
+      const orig = r.originalData || {};
+      const rNum = (r.id || orig.customer_number || orig.customerNumber || orig.id || '').toString().toLowerCase().trim();
+      const rMob = (orig.mobile || orig.phone || '').toString().replace(/\D/g, '');
+      const rName = (r.title || orig.name || orig.full_name || orig.customer_name || '').toString().toLowerCase().trim();
+      const rId = (r.id || orig.id || orig._id || '').toString().toLowerCase().trim();
+
+      if (rNum) recycledKeys.add(`num:${rNum}`);
+      if (rMob && rMob.length >= 7) recycledKeys.add(`mob:${rMob.slice(-10)}`);
+      if (rId) recycledKeys.add(`id:${rId}`);
+
+      if (r.title && r.title.includes('(') && r.title.includes(')')) {
+        const extracted = r.title.split('(')[1].replace(')', '').trim().toLowerCase();
+        if (extracted) recycledKeys.add(`num:${extracted}`);
+      }
+    });
+
     const isDuplicate = (keys: string[]) => {
-      return keys.some(k => seenKeys.has(k));
+      return keys.some(k => seenKeys.has(k) || recycledKeys.has(k));
     };
 
     const registerKeys = (keys: string[]) => {
@@ -455,7 +483,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
     });
 
     return list;
-  }, [customers, individualCostSheets, leadsList, matchingRequestsQueue, scheduledVisits]);
+  }, [customers, individualCostSheets, leadsList, matchingRequestsQueue, scheduledVisits, recycledItems]);
 
   const getCustomerTransactionChainItems = (cust: any) => {
     const custNum = (cust?.customer_number || cust?.customer_id || cust?.id || '').toString().trim();
@@ -1148,7 +1176,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                   {[
                     { time: 'Today 11:30 AM', target: 'SRM-CUS-2026-000184 (Bishwajit Pandey)', action: 'COST_SHEET_DISPATCHED', exec: 'Priya Nair', details: 'Automated 12-page individual cost sheet emailed & whatsapped with OTP hash #CS88102', status: 'SUCCESS' },
                     { time: 'Today 10:15 AM', target: 'SRM-LEAD-2026-001245 (Avi Das)', action: 'QUALIFIED_STAGE_UPGRADE', exec: 'Abinash Roy', details: 'Lead score promoted to 98% (Ready to Move in Madhyamgram)', status: 'COMPLETED' },
-                    { time: 'Yesterday 04:45 PM', target: 'SRM-CUS-2026-000185 (Sumanth Varma)', action: 'SITE_VISIT_PVA_LOCKED', exec: 'Rajesh Varma', details: 'Pre-visit non-circumvention mandate digitally signed via OTP verification', status: 'VERIFIED' }
+                    { time: 'Yesterday 04:45 PM', target: 'SRM-CUS-2026-000185 (Sumanth Varma)', action: 'SITE_VISIT_PVA_LOCKED', exec: 'Avishek Das', details: 'Pre-visit non-circumvention mandate digitally signed via OTP verification', status: 'VERIFIED' }
                   ].map((evt, eIdx) => (
                     <tr key={eIdx} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
                       <td style={{ padding: '10px', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace' }}>{evt.time}</td>
@@ -1597,32 +1625,104 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                                       }
 
                                       if (setCustomers) {
-                                        setCustomers((prev: any[]) => (prev || []).filter((cust: any) => {
-                                          if (!cust) return false;
-                                          const cNum = (cust.customer_number || cust.customerNumber || '').toString().toLowerCase().trim();
-                                          const cMob = (cust.mobile || cust.phone || '').toString().replace(/\D/g, '');
-                                          const cName = (cust.name || cust.full_name || '').toString().toLowerCase().trim();
-                                          const cId = (cust.id || cust._id || '').toString().toLowerCase().trim();
+                                        setCustomers((prev: any[]) => {
+                                          const updated = (prev || []).filter((cust: any) => {
+                                            if (!cust) return false;
+                                            const cNum = (cust.customer_number || cust.customerNumber || '').toString().toLowerCase().trim();
+                                            const cMob = (cust.mobile || cust.phone || '').toString().replace(/\D/g, '');
+                                            const cName = (cust.name || cust.full_name || '').toString().toLowerCase().trim();
+                                            const cId = (cust.id || cust._id || '').toString().toLowerCase().trim();
 
-                                          if (targetId && cId && cId === targetId) return false;
-                                          if (targetCustNum && cNum && cNum === targetCustNum) return false;
-                                          if (targetMob && targetMob.length >= 7 && cMob && (cMob.endsWith(targetMob) || targetMob.endsWith(cMob))) return false;
-                                          if (targetName && cName && cName === targetName) return false;
+                                            if (targetId && cId && cId === targetId) return false;
+                                            if (targetCustNum && cNum && cNum === targetCustNum) return false;
+                                            if (targetMob && targetMob.length >= 7 && cMob && (cMob.endsWith(targetMob) || targetMob.endsWith(cMob))) return false;
+                                            if (targetName && cName && cName === targetName) return false;
+                                            return true;
+                                          });
+
+                                          try {
+                                            localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
+                                            localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
+                                          } catch (e) {}
+
+                                          if (syncAllToMongoDB) {
+                                            syncAllToMongoDB({ customers: updated });
+                                          }
+
+                                          return updated;
+                                        });
+                                      }
+                                      if (setLeadsList) {
+                                        setLeadsList((prev: any[]) => {
+                                          const updatedLeads = (prev || []).filter((l: any) => {
+                                            if (!l) return false;
+                                            const lNum = (l.customer_number || l.customer_id || l.lead_number || '').toString().toLowerCase().trim();
+                                            const lMob = (l.mobile || l.phone || '').toString().replace(/\D/g, '');
+                                            const lName = (l.customer_name || l.name || '').toString().toLowerCase().trim();
+                                            const lId = (l.id || '').toString().toLowerCase().trim();
+
+                                            if (targetId && lId && lId === targetId) return false;
+                                            if (targetCustNum && lNum && (lNum === targetCustNum || lNum.includes(targetCustNum))) return false;
+                                            if (targetMob && targetMob.length >= 7 && lMob && (lMob.endsWith(targetMob) || targetMob.endsWith(lMob))) return false;
+                                            if (targetName && lName && lName === targetName) return false;
+                                            return true;
+                                          });
+
+                                          try {
+                                            localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(updatedLeads));
+                                            localStorage.setItem('swaramayi_leads_v5_clean', JSON.stringify(updatedLeads));
+                                          } catch (e) {}
+
+                                          if (syncAllToMongoDB) {
+                                            syncAllToMongoDB({ leads: updatedLeads });
+                                          }
+
+                                          return updatedLeads;
+                                        });
+                                      }
+                                      if (setMatchingRequestsQueue) {
+                                        setMatchingRequestsQueue((prev: any[]) => (prev || []).filter((r: any) => {
+                                          if (!r) return false;
+                                          const rNum = (r.customerNumber || r.customerId || r.customer_number || '').toString().toLowerCase().trim();
+                                          const rMob = (r.mobile || r.phone || r.customerMobile || '').toString().replace(/\D/g, '');
+                                          const rName = (r.customerName || r.customer_name || r.name || '').toString().toLowerCase().trim();
+                                          const rId = (r.id || r.requestId || '').toString().toLowerCase().trim();
+
+                                          if (targetId && rId && rId === targetId) return false;
+                                          if (targetCustNum && rNum && (rNum === targetCustNum || rNum.includes(targetCustNum))) return false;
+                                          if (targetMob && targetMob.length >= 7 && rMob && (rMob.endsWith(targetMob) || targetMob.endsWith(rMob))) return false;
+                                          if (targetName && rName && rName === targetName) return false;
                                           return true;
                                         }));
                                       }
-                                      if (setLeadsList) {
-                                        setLeadsList((prev: any[]) => (prev || []).filter((l: any) => {
-                                          if (!l) return false;
-                                          const lNum = (l.customer_number || l.customer_id || l.lead_number || '').toString().toLowerCase().trim();
-                                          const lMob = (l.mobile || l.phone || '').toString().replace(/\D/g, '');
-                                          const lName = (l.customer_name || l.name || '').toString().toLowerCase().trim();
-                                          const lId = (l.id || '').toString().toLowerCase().trim();
+                                      if (setScheduledVisits) {
+                                        setScheduledVisits((prev: any[]) => (prev || []).filter((v: any) => {
+                                          if (!v) return false;
+                                          const vNum = (v.customerNumber || v.customer_number || v.customerId || '').toString().toLowerCase().trim();
+                                          const vMob = (v.mobile || v.phone || v.customerMobile || '').toString().replace(/\D/g, '');
+                                          const vName = (v.customerName || v.customer_name || v.name || '').toString().toLowerCase().trim();
+                                          const vId = (v.id || v.visitId || '').toString().toLowerCase().trim();
 
-                                          if (targetId && lId && lId === targetId) return false;
-                                          if (targetCustNum && lNum && (lNum === targetCustNum || lNum.includes(targetCustNum))) return false;
-                                          if (targetMob && targetMob.length >= 7 && lMob && (lMob.endsWith(targetMob) || targetMob.endsWith(lMob))) return false;
-                                          if (targetName && lName && lName === targetName) return false;
+                                          if (targetId && vId && vId === targetId) return false;
+                                          if (targetCustNum && vNum && (vNum === targetCustNum || vNum.includes(targetCustNum))) return false;
+                                          if (targetMob && targetMob.length >= 7 && vMob && (vMob.endsWith(targetMob) || targetMob.endsWith(vMob))) return false;
+                                          if (targetName && vName && vName === targetName) return false;
+                                          return true;
+                                        }));
+                                      }
+                                      if (setIndividualCostSheets) {
+                                        setIndividualCostSheets((prev: any[]) => (prev || []).filter((cs: any) => {
+                                          if (!cs) return false;
+                                          const snap = cs.customerSnapshot || {};
+                                          const csNum = (cs.customerNumber || cs.customerId || snap.customerNumber || snap.customerId || '').toString().toLowerCase().trim();
+                                          const csMob = (cs.mobile || cs.customerMobile || snap.mobile || '').toString().replace(/\D/g, '');
+                                          const csName = (cs.customerName || snap.customerName || cs.name || '').toString().toLowerCase().trim();
+                                          const csId = (cs.id || cs.costSheetId || '').toString().toLowerCase().trim();
+
+                                          if (targetId && csId && csId === targetId) return false;
+                                          if (targetCustNum && csNum && (csNum === targetCustNum || csNum.includes(targetCustNum))) return false;
+                                          if (targetMob && targetMob.length >= 7 && csMob && (csMob.endsWith(targetMob) || targetMob.endsWith(csMob))) return false;
+                                          if (targetName && csName && csName === targetName) return false;
                                           return true;
                                         }));
                                       }

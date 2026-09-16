@@ -53,6 +53,32 @@ const parseLatLng = (p: any) => {
   };
 };
 
+// Helper to safely format asking price with fallback to backend price fields
+const formatPropertyPrice = (p: any): string => {
+  if (!p) return '₹0';
+  if (p.final_price && p.final_price !== '₹0' && p.final_price !== '0') return p.final_price;
+  const rawNum = p.base_price || p.final_estimated_price || p.asking_price || p.price;
+  const num = typeof rawNum === 'number' ? rawNum : parseFloat(String(rawNum || '').replace(/[^0-9.]/g, ''));
+  if (!isNaN(num) && num > 0) return `₹${Math.round(num).toLocaleString('en-IN')}`;
+  return '₹0';
+};
+
+// Helper to safely format rate / sq.ft. with fallback to backend rate fields
+const formatPropertyRateSqft = (p: any): string => {
+  if (!p) return '₹0 / sq.ft.';
+  if (p.price_sqft && p.price_sqft !== '₹0 / sq.ft.' && p.price_sqft !== '0') return p.price_sqft;
+  const rawSqft = p.price_per_sqft || p.rate_sqft;
+  const numSqft = typeof rawSqft === 'number' ? rawSqft : parseFloat(String(rawSqft || '').replace(/[^0-9.]/g, ''));
+  if (!isNaN(numSqft) && numSqft > 0) return `₹${Math.round(numSqft).toLocaleString('en-IN')}/Sq.Ft.`;
+  const priceStr = formatPropertyPrice(p);
+  const priceNum = parseFloat(String(priceStr).replace(/[^0-9.]/g, ''));
+  const areaNum = parseFloat(String(p.super_builtup_area || p.carpet_area || p.areaSqft || p.built_up_area_sqft || '').replace(/[^0-9.]/g, ''));
+  if (!isNaN(priceNum) && priceNum > 0 && !isNaN(areaNum) && areaNum > 0) {
+    return `₹${Math.round(priceNum / areaNum).toLocaleString('en-IN')}/Sq.Ft.`;
+  }
+  return '₹0 / sq.ft.';
+};
+
 export const LocationMapView: React.FC<LocationMapViewProps> = ({
   currentRole,
   isLight,
@@ -544,7 +570,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
         borderRadius: '10px', 
         padding: '10px 16px', 
         display: 'flex', 
-        justify: 'space-between', 
+        justifyContent: 'space-between', 
         alignItems: 'center', 
         flexWrap: 'wrap', 
         gap: '8px' 
@@ -637,11 +663,11 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', background: isLight ? '#f8fafc' : '#0f172a', padding: '10px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
               <div>
                 <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Asking Price</span>
-                <span style={{ fontSize: '1.2rem', color: '#4ade80', fontWeight: '900' }}>{selectedProperty?.final_price || '₹0'}</span>
+                <span style={{ fontSize: '1.2rem', color: '#4ade80', fontWeight: '900' }}>{formatPropertyPrice(selectedProperty)}</span>
               </div>
               <div>
                 <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Rate / Sq.Ft.</span>
-                <span style={{ fontSize: '0.88rem', color: '#38bdf8', fontWeight: '800' }}>{selectedProperty?.price_sqft || '₹0 / sq.ft.'}</span>
+                <span style={{ fontSize: '0.88rem', color: '#38bdf8', fontWeight: '800' }}>{formatPropertyRateSqft(selectedProperty)}</span>
               </div>
             </div>
 
@@ -706,7 +732,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
                           padding: '10px 12px',
                           cursor: 'pointer',
                           display: 'flex',
-                          justify: 'space-between',
+                          justifyContent: 'space-between',
                           alignItems: 'center',
                           transition: 'all 0.15s ease'
                         }}
@@ -720,7 +746,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
                           <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
                             <span>📍 {p.locality || 'Location'}</span>
                             <span>•</span>
-                            <span style={{ color: '#4ade80', fontWeight: '700' }}>{p.final_price || ''}</span>
+                            <span style={{ color: '#4ade80', fontWeight: '700' }}>{formatPropertyPrice(p)}</span>
                           </div>
                         </div>
 

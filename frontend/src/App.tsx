@@ -3400,6 +3400,23 @@ export default function App() {
   }, [projectVisitAgreements]);
 
   useEffect(() => {
+    try {
+      const keys = Object.keys(localStorage);
+      for (const key of keys) {
+        if (key && key.startsWith('swaramayi_')) {
+          const val = localStorage.getItem(key);
+          if (val && /Rajesh V[ae]rma/i.test(val)) {
+            const cleaned = val.replace(/Rajesh V[ae]rma/gi, 'Avishek Das');
+            localStorage.setItem(key, cleaned);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error auto-sanitizing localStorage:', e);
+    }
+  }, []);
+
+  useEffect(() => {
     const handleBeforePrint = () => {
       document.querySelectorAll('.printable-gst-invoice, .printable-pva-card').forEach((el) => {
         el.scrollTop = 0;
@@ -4094,23 +4111,24 @@ export default function App() {
   // 1. Employee Directory (Strict Single Super Admin Master Store with LocalStorage Persistence)
   const [users, setUsers] = useState<any[]>(() => {
     try {
-      const saved = localStorage.getItem('swaramayi_users_v6');
+      const saved = localStorage.getItem('swaramayi_users_v7') || localStorage.getItem('swaramayi_users_v6');
       if (saved) {
-        const parsed = JSON.parse(saved);
+        const sanitized = saved.replace(/Rajesh V[ae]rma/gi, 'Avishek Das');
+        const parsed = JSON.parse(sanitized);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {
       console.error('Error reading users from localStorage:', e);
     }
     return [
-      { id: 'USR-01', username: 'Rajesh Varma (Super Admin)', full_name: 'Rajesh Varma', email: 'admin@swaramayi.com', password: 'Swaramayi@2026', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office', department: 'Executive Board', team_name: 'Core Management', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' },
-      { id: 'USR-02', username: 'Abinash Roy', full_name: 'Abinash Roy', email: 'abinsh@gmail.com', password: 'Swaramayi@2026', mobile: '+91 76970 98078', role: 'ADMIN', designation: 'System Administrator', branch_name: 'Kolkata Branch', department: 'General Management', team_name: 'Kolkata Expansion Team', manager_name: 'Rajesh Varma (Super Admin)', is_active: true, user_status: 'ACTIVE' }
+      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', password: 'Swaramayi@2026', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office', department: 'Executive Board', team_name: 'Core Management', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' },
+      { id: 'USR-02', username: 'Abinash Roy', full_name: 'Abinash Roy', email: 'abinsh@gmail.com', password: 'Swaramayi@2026', mobile: '+91 76970 98078', role: 'ADMIN', designation: 'System Administrator', branch_name: 'Kolkata Branch', department: 'General Management', team_name: 'Kolkata Expansion Team', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE' }
     ];
   });
 
   useEffect(() => {
     try {
-      localStorage.setItem('swaramayi_users_v6', JSON.stringify(users));
+      localStorage.setItem('swaramayi_users_v7', JSON.stringify(users));
     } catch (e) {
       console.error('Error saving users to localStorage:', e);
     }
@@ -4180,23 +4198,29 @@ export default function App() {
   const [editingBranchId, setEditingBranchId] = useState<string | null>(null);
   const [branches, setBranches] = useState<any[]>(() => {
     try {
-      const saved = localStorage.getItem('swaramayi_enterprise_branches_v8');
+      const saved = localStorage.getItem('swaramayi_enterprise_branches_v9') || localStorage.getItem('swaramayi_enterprise_branches_v8');
       if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        const sanitized = saved.replace(/Rajesh V[ae]rma/gi, 'Avishek Das');
+        const parsed = JSON.parse(sanitized);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((b: any) => ({
+            ...b,
+            manager_name: (b.manager_name || 'Avishek Das (Super Admin)').replace(/Rajesh V[ae]rma/gi, 'Avishek Das')
+          }));
+        }
       }
     } catch (e) {
       console.error('Error reading branches from localStorage:', e);
     }
     return [
-      { id: 'BR-01', branch_name: 'Head Office (Kolkata)', city: 'Kolkata', manager_name: 'Rajesh Varma (SUPER_ADMIN)', address: 'Camac Street, Kolkata - 700017', target_revenue: '₹15,00,00,000', teams: ['Corporate Leadership Squad'], created_at: '2026-01-15' },
-      { id: 'BR-02', branch_name: 'Kolkata Branch', city: 'Kolkata', manager_name: 'Rajesh Varma (SUPER_ADMIN)', address: 'Park Street, Kolkata - 700016', target_revenue: '₹5,00,00,000', teams: ['Kolkata Expansion Team'], created_at: '2026-03-10' }
+      { id: 'BR-01', branch_name: 'Head Office (Kolkata)', city: 'Kolkata', manager_name: 'Avishek Das (Super Admin)', address: 'Camac Street, Kolkata - 700017', target_revenue: '₹15,00,00,000', teams: ['Corporate Leadership Squad'], created_at: '2026-01-15' },
+      { id: 'BR-02', branch_name: 'Kolkata Branch', city: 'Kolkata', manager_name: 'Abinash Roy (Admin)', address: 'Park Street, Kolkata - 700016', target_revenue: '₹5,00,00,000', teams: ['Kolkata Expansion Team'], created_at: '2026-03-10' }
     ];
   });
 
   useEffect(() => {
     try {
-      localStorage.setItem('swaramayi_enterprise_branches_v8', JSON.stringify(branches));
+      localStorage.setItem('swaramayi_enterprise_branches_v9', JSON.stringify(branches));
     } catch (e) {
       console.error('Error saving branches to localStorage:', e);
     }
@@ -4206,25 +4230,31 @@ export default function App() {
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [teams, setTeams] = useState<any[]>(() => {
     try {
-      const saved = localStorage.getItem('swaramayi_enterprise_teams_v1');
+      const saved = localStorage.getItem('swaramayi_enterprise_teams_v2') || localStorage.getItem('swaramayi_enterprise_teams_v1');
       if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        const sanitized = saved.replace(/Rajesh V[ae]rma/gi, 'Avishek Das');
+        const parsed = JSON.parse(sanitized);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((t: any) => ({
+            ...t,
+            leader_name: (t.leader_name || 'Avishek Das (SUPER_ADMIN)').replace(/Rajesh V[ae]rma/gi, 'Avishek Das')
+          }));
+        }
       }
     } catch (e) {
       console.error('Error reading teams from localStorage:', e);
     }
     return [
-      { id: 'TEAM-01', team_name: 'Corporate Leadership Squad', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', leader_name: 'Rajesh Varma (SUPER_ADMIN)', monthly_target: '50 Property Units', created_at: '2026-01-15' },
+      { id: 'TEAM-01', team_name: 'Corporate Leadership Squad', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', leader_name: 'Avishek Das (SUPER_ADMIN)', monthly_target: '50 Property Units', created_at: '2026-01-15' },
       { id: 'TEAM-02', team_name: 'Kolkata Expansion Team', branch_name: 'Kolkata Branch', department: 'Sales Operations', leader_name: 'Abinash Roy (Admin)', monthly_target: '25 Property Units', created_at: '2026-03-10' },
-      { id: 'TEAM-03', team_name: 'General Operations Squad', branch_name: 'Head Office (Kolkata)', department: 'System Admin', leader_name: 'Rajesh Varma (SUPER_ADMIN)', monthly_target: '15 Property Units', created_at: '2026-04-01' },
+      { id: 'TEAM-03', team_name: 'General Operations Squad', branch_name: 'Head Office (Kolkata)', department: 'System Admin', leader_name: 'Avishek Das (SUPER_ADMIN)', monthly_target: '15 Property Units', created_at: '2026-04-01' },
       { id: 'TEAM-04', team_name: 'Kolkata Admin & Technical Squad', branch_name: 'Kolkata Branch', department: 'System Admin', leader_name: 'Abinash Roy (Admin)', monthly_target: '20 Property Units', created_at: '2026-08-27' }
     ];
   });
 
   useEffect(() => {
     try {
-      localStorage.setItem('swaramayi_enterprise_teams_v1', JSON.stringify(teams));
+      localStorage.setItem('swaramayi_enterprise_teams_v2', JSON.stringify(teams));
     } catch (e) {
       console.error('Error saving teams to localStorage:', e);
     }
@@ -4234,7 +4264,7 @@ export default function App() {
   const [approvalRequests, setApprovalRequests] = useState<any[]>([]);
 
   const [activeSessions, setActiveSessions] = useState([
-    { id: 'SES-01', user: 'Rajesh Varma (Super Admin)', role: 'SUPER_ADMIN', ip: '127.0.0.1 (Localhost)', device: 'Chrome / Windows 11', login_time: '27 Aug 09:00 AM', status: 'ACTIVE' },
+    { id: 'SES-01', user: 'Avishek Das (Super Admin)', role: 'SUPER_ADMIN', ip: '127.0.0.1 (Localhost)', device: 'Chrome / Windows 11', login_time: '27 Aug 09:00 AM', status: 'ACTIVE' },
     { id: 'SES-02', user: 'Abinash Roy (Admin)', role: 'ADMIN', ip: '127.0.0.1 (Localhost)', device: 'Chrome / Windows 11', login_time: '27 Aug 09:30 AM', status: 'ACTIVE' }
   ]);
 
@@ -4449,15 +4479,6 @@ export default function App() {
         !(c.mobile && c.mobile.includes('5777564356'))
       );
 
-      const hasAvishek = list.some((c: any) => 
-        (c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000189') ||
-        (c.name && c.name.toLowerCase().includes('avishek')) ||
-        (c.full_name && c.full_name.toLowerCase().includes('avishek')) ||
-        (c.mobile && c.mobile.includes('9432328947'))
-      );
-
-      if (!hasAvishek) list.unshift(defaultInitialCustomers[0]);
-
       return dedupeCustomerList(list);
     } catch (e) {
       console.error('Error reading customers from localStorage:', e);
@@ -4543,7 +4564,7 @@ export default function App() {
       id: itemData.id || `TRASH-${Date.now()}`,
       title: itemData.title,
       category: itemData.category,
-      deletedBy: `${currentRole === 'SUPER_ADMIN' ? 'Rajesh Varma (SUPER_ADMIN)' : currentRole}`,
+      deletedBy: `${currentRole === 'SUPER_ADMIN' ? 'Avishek Das (SUPER_ADMIN)' : currentRole}`,
       deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
       originalLocation: itemData.originalLocation,
       details: itemData.details || itemData.title,
@@ -5782,11 +5803,11 @@ export default function App() {
 
     // Fallback only if database users store is completely empty
     if (execMap.size === 0) {
-      execMap.set('Rajesh Varma', {
+      execMap.set('Avishek Das', {
         id: 'USR-01',
-        value: 'Rajesh Varma',
-        name: 'Rajesh Varma',
-        label: 'Rajesh Varma — SUPER ADMIN (Head Office)',
+        value: 'Avishek Das',
+        name: 'Avishek Das',
+        label: 'Avishek Das — SUPER ADMIN (Head Office)',
         designation: 'Super Admin'
       });
     }
@@ -6006,11 +6027,30 @@ export default function App() {
     };
 
 
+    let nextLeads: any[];
     if (existingLead) {
-      setLeadsList(prev => prev.map(l => (l.id === existingLead.id || l.lead_number === leadNum || l.customer_number === finalCustomerCode) ? newLeadObj : l));
+      nextLeads = leadsList.map(l => (l.id === existingLead.id || l.lead_number === leadNum || l.customer_number === finalCustomerCode) ? newLeadObj : l);
     } else {
-      setLeadsList(prev => [newLeadObj, ...prev]);
+      nextLeads = [newLeadObj, ...leadsList];
     }
+    setLeadsList(nextLeads);
+
+    setCustomers(prev => {
+      const cleanMob = (newCustObj.phone || '').replace(/[^0-9]/g, '');
+      const exists = (prev || []).some(c => (c.customer_number && c.customer_number === finalCustomerCode) || (cleanMob && cleanMob.length >= 7 && c.mobile && c.mobile.replace(/[^0-9]/g, '') === cleanMob));
+      let nextCusts: any[];
+      if (exists) {
+        nextCusts = (prev || []).map(c => (c.customer_number === finalCustomerCode || (cleanMob && cleanMob.length >= 7 && c.mobile && c.mobile.replace(/[^0-9]/g, '') === cleanMob)) ? { ...c, ...newCustObj } : c);
+      } else {
+        nextCusts = [newCustObj, ...(prev || [])];
+      }
+      try {
+        localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(nextCusts));
+        localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(nextCusts));
+      } catch (e) {}
+      syncAllToMongoDB({ customers: nextCusts, leads: nextLeads });
+      return nextCusts;
+    });
 
     // Create or Update System Call Notification Alert for NO_RESPONSE and CALL_BACK_LATER
     if (disp === 'NO_RESPONSE' || disp === 'CALL_BACK_LATER') {
@@ -6225,10 +6265,12 @@ export default function App() {
 
     setCustomers(updatedCusts);
     try {
+      localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updatedCusts));
       localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updatedCusts));
     } catch (err) {
       console.error('Error saving draft customer to localStorage', err);
     }
+    syncAllToMongoDB({ customers: updatedCusts, leads: updatedLeads });
 
     alert(`💾 QUALIFICATION DRAFT SAVED SUCCESSFULLY!\n\n• Lead ID: ${leadNum}\n• Customer ID: ${finalCustomerCode}\n• Customer Name: ${custName}\n• Progress Saved: Step ${leadIntakeStep} of 9\n• Status: DRAFT / QUALIFICATION IN PROGRESS\n\nYour progress has been permanently saved to the Central Lead Vault. You can click "Resume Qualification" on this lead card anytime to continue right where you left off!`);
 
@@ -6588,6 +6630,33 @@ export default function App() {
                 updated.developer = devVal;
                 updated.developer_name = devVal;
 
+                // Normalize final_price string representation
+                const rawPriceVal = p.final_price || p.base_price || p.final_estimated_price || p.asking_price || p.price;
+                if (!updated.final_price || updated.final_price === '₹0' || updated.final_price === '0') {
+                  const numPrice = typeof rawPriceVal === 'number' ? rawPriceVal : parseFloat(String(rawPriceVal || '').replace(/[^0-9.]/g, ''));
+                  if (!isNaN(numPrice) && numPrice > 0) {
+                    updated.final_price = `₹${Math.round(numPrice).toLocaleString('en-IN')}`;
+                  } else {
+                    updated.final_price = '₹0';
+                  }
+                }
+
+                // Normalize price_sqft string representation
+                const rawSqftVal = p.price_sqft || p.price_per_sqft || p.rate_sqft;
+                if (!updated.price_sqft || updated.price_sqft === '₹0 / sq.ft.' || updated.price_sqft === '0') {
+                  const numSqft = typeof rawSqftVal === 'number' ? rawSqft : parseFloat(String(rawSqft || '').replace(/[^0-9.]/g, ''));
+                  if (!isNaN(numSqft) && numSqft > 0) {
+                    updated.price_sqft = `₹${Math.round(numSqft).toLocaleString('en-IN')}/Sq.Ft.`;
+                  } else if (updated.final_price && updated.final_price !== '₹0') {
+                    const pNum = parseFloat(String(updated.final_price).replace(/[^0-9.]/g, ''));
+                    const areaNum = parseFloat(String(p.super_builtup_area || p.carpet_area || p.areaSqft || p.built_up_area_sqft || '').replace(/[^0-9.]/g, ''));
+                    if (!isNaN(pNum) && !isNaN(areaNum) && areaNum > 0) {
+                      updated.price_sqft = `₹${Math.round(pNum / areaNum).toLocaleString('en-IN')}/Sq.Ft.`;
+                    }
+                  }
+                }
+                if (!updated.price_sqft) updated.price_sqft = '₹0 / sq.ft.';
+
                 if (p.project_id && p.project_id.startsWith('SRM-DEV-')) {
                   const fixedCode = (titleVal || '').toLowerCase().includes('shibalay') ? 'SRM-PROJ-2026-000087' :
                                     (titleVal || '').toLowerCase().includes('gajapati') ? 'SRM-PROJ-2026-000088' :
@@ -6605,34 +6674,26 @@ export default function App() {
                 localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(sanitizedProps));
               } catch (e) {}
             }
-            if (Array.isArray(mData.customers)) {
-              let mergedCusts = mData.customers.filter((c: any) => 
-                !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000190') &&
-                !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
-                !(c.name && c.name.toLowerCase().includes('sunil')) &&
-                !(c.full_name && c.full_name.toLowerCase().includes('sunil')) &&
-                !(c.email && c.email.toLowerCase().includes('sunil.verma@gmail.com')) &&
-                !(c.mobile && c.mobile.includes('5777564356'))
-              );
+            if (Array.isArray(mData.customers) && mData.customers.length > 0) {
+              setCustomers(prev => {
+                const combined = [...mData.customers, ...(prev || [])].filter((c: any) => 
+                  c &&
+                  !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000190') &&
+                  !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
+                  !(c.name && c.name.toLowerCase().includes('sunil')) &&
+                  !(c.full_name && c.full_name.toLowerCase().includes('sunil')) &&
+                  !(c.email && c.email.toLowerCase().includes('sunil.verma@gmail.com')) &&
+                  !(c.mobile && c.mobile.includes('5777564356'))
+                );
 
-              const hasAvishek = mergedCusts.some((c: any) => 
-                (c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000189') ||
-                (c.name && c.name.toLowerCase().includes('avishek')) ||
-                (c.full_name && c.full_name.toLowerCase().includes('avishek')) ||
-                (c.mobile && c.mobile.includes('9432328947'))
-              );
+                const cleanDeduped = dedupeCustomerList(combined);
+                try {
+                  localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
+                  localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
+                } catch (e) {}
 
-              if (!hasAvishek) mergedCusts.unshift(defaultInitialCustomers[0]);
-
-              const cleanDeduped = dedupeCustomerList(mergedCusts);
-              setCustomers(cleanDeduped);
-              try {
-                localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
-              } catch (e) {}
-
-              if (mData.customers.length !== cleanDeduped.length) {
-                syncAllToMongoDB({ customers: cleanDeduped });
-              }
+                return cleanDeduped;
+              });
             }
             if (Array.isArray(mData.leads)) {
               setLeadsList(mData.leads);
@@ -7367,7 +7428,7 @@ export default function App() {
   };
 
   // Forms
-  const [newUserForm, setNewUserForm] = useState({ username: '', full_name: '', email: '', password: '', mobile: '', role: 'SALES_EXEC', branch_name: 'Kolkata Branch', department: 'Sales Operations', team_name: 'Kolkata Expansion Team', manager_name: 'Rajesh Varma (Super Admin)' });
+  const [newUserForm, setNewUserForm] = useState({ username: '', full_name: '', email: '', password: '', mobile: '', role: 'SALES_EXEC', branch_name: 'Kolkata Branch', department: 'Sales Operations', team_name: 'Kolkata Expansion Team', manager_name: 'Avishek Das (Super Admin)' });
   const [showUserModalPassword, setShowUserModalPassword] = useState<boolean>(false);
   const [editingUser, setEditingUser] = useState<any | null>(null);
 
@@ -7471,7 +7532,7 @@ export default function App() {
   const [newBranchForm, setNewBranchForm] = useState({
     branch_name: '',
     city: 'Kolkata',
-    manager_name: 'Rajesh Varma (Super Admin)',
+    manager_name: 'Avishek Das (Super Admin)',
     address: '',
     target_revenue: '₹5,00,00,000',
     assigned_teams: 'Corporate Leadership Squad'
@@ -7481,7 +7542,7 @@ export default function App() {
     team_name: '',
     branch_name: 'Head Office (Kolkata)',
     department: 'Sales',
-    leader_name: 'Rajesh Varma (Super Admin)',
+    leader_name: 'Avishek Das (Super Admin)',
     monthly_target: '15 Property Units'
   });
   const [propForm, setPropForm] = useState({ title: '', base_price: '', developer: 'Aparna Constructions', configuration: '3BHK' });
@@ -7817,13 +7878,28 @@ export default function App() {
   };
 
   const handleDeleteUser = (id: string, username?: string) => {
-    const targetUser = users.find(u => u.id === id);
+    const targetUser = users.find(u => u.id === id || u.username === username || u.full_name === username);
     const displayName = username || targetUser?.full_name || targetUser?.username || id;
+    if (id === 'USR-01' || username === 'admin') {
+      alert('⚠️ Primary Super Admin user cannot be deleted.');
+      return;
+    }
     if (window.confirm(`Are you sure you want to delete User "${displayName}"?`)) {
-      const updatedUsers = users.filter(u => u.id !== id);
-      setUsers(updatedUsers);
-      syncAllToMongoDB({ users: updatedUsers });
-      alert(`🗑️ User "${displayName}" deleted successfully from MongoDB Atlas!`);
+      const updated = users.filter(u => u.id !== id && u.username !== displayName && u.full_name !== displayName);
+      setUsers(updated);
+      try {
+        localStorage.setItem('swaramayi_users_v7', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+
+      const host = window.location.hostname || 'localhost';
+      fetch(`http://${host}:5000/api/v1/security/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
+        .catch(() => fetch(`/api/v1/security/users/${encodeURIComponent(id)}`, { method: 'DELETE' }))
+        .catch(err => console.error('Delete User DB Sync Error:', err));
+
+      syncAllToMongoDB({ users: updated });
+      alert(`🗑️ User "${displayName}" deleted successfully from system & database.`);
     }
   };
 
@@ -7859,7 +7935,7 @@ export default function App() {
       branch_name: 'Kolkata Branch',
       department: 'Sales Operations',
       team_name: 'Kolkata Expansion Team',
-      manager_name: 'Rajesh Varma (Super Admin)',
+      manager_name: 'Avishek Das (Super Admin)',
       permissions: initialPerms
     });
     setShowUserModalPassword(false);
@@ -7939,7 +8015,7 @@ export default function App() {
 
     setShowBranchModal(false);
     setEditingBranchId(null);
-    setNewBranchForm({ branch_name: '', city: 'Kolkata', manager_name: 'Rajesh Varma (Super Admin)', address: '', target_revenue: '₹5,00,00,000', assigned_teams: 'Corporate Leadership Squad' });
+    setNewBranchForm({ branch_name: '', city: 'Kolkata', manager_name: 'Avishek Das (Super Admin)', address: '', target_revenue: '₹5,00,00,000', assigned_teams: 'Corporate Leadership Squad' });
   };
 
   const handleOpenEditBranchModal = (b: any) => {
@@ -7947,7 +8023,7 @@ export default function App() {
     setNewBranchForm({
       branch_name: b.branch_name || '',
       city: b.city || 'Kolkata',
-      manager_name: b.manager_name || 'Rajesh Varma (Super Admin)',
+      manager_name: b.manager_name || 'Avishek Das (Super Admin)',
       address: b.address || '',
       target_revenue: b.target_revenue || '₹5,00,00,000',
       assigned_teams: Array.isArray(b.teams) ? b.teams.join(', ') : (b.teams || 'Corporate Leadership Squad')
@@ -7970,13 +8046,29 @@ export default function App() {
   const handleDeleteBranch = (branchId: string, branchName: string) => {
     const assignedUsers = users.filter(u => u.branch_name === branchName);
     if (assignedUsers.length > 0) {
-      alert(`⚠️ Cannot delete branch "${branchName}" because ${assignedUsers.length} employee(s) are assigned to it. Reassign them first.`);
-      return;
+      if (!window.confirm(`⚠️ ${assignedUsers.length} employee(s) are assigned to branch "${branchName}". Do you still want to delete this branch?`)) {
+        return;
+      }
+    } else {
+      if (!window.confirm(`Are you sure you want to delete Enterprise Branch "${branchName}"?`)) {
+        return;
+      }
     }
-    if (window.confirm(`Are you sure you want to delete Enterprise Branch "${branchName}"?`)) {
-      setBranches(prev => prev.filter(b => b.id !== branchId));
-      alert(`🗑️ Branch "${branchName}" removed from Company Hierarchy.`);
+    const updated = branches.filter(b => b.id !== branchId && b.branch_name !== branchName);
+    setBranches(updated);
+    try {
+      localStorage.setItem('swaramayi_enterprise_branches_v9', JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
     }
+
+    const host = window.location.hostname || 'localhost';
+    fetch(`http://${host}:5000/api/v1/security/branches/${encodeURIComponent(branchId)}`, { method: 'DELETE' })
+      .catch(() => fetch(`/api/v1/security/branches/${encodeURIComponent(branchId)}`, { method: 'DELETE' }))
+      .catch(err => console.error('Delete Branch DB Sync Error:', err));
+
+    syncAllToMongoDB({ branches: updated });
+    alert(`🗑️ Branch "${branchName}" removed from Company Hierarchy and Database.`);
   };
 
   const handleCreateTeamSubmit = (e: React.FormEvent) => {
@@ -8025,13 +8117,32 @@ export default function App() {
 
     setShowTeamModal(false);
     setEditingTeamId(null);
-    setNewTeamForm({ team_name: '', branch_name: 'Head Office (Kolkata)', department: 'Sales Operations', leader_name: 'Rajesh Varma (Super Admin)', monthly_target: '15 Property Units' });
+    setNewTeamForm({ team_name: '', branch_name: 'Head Office (Kolkata)', department: 'Sales Operations', leader_name: 'Avishek Das (Super Admin)', monthly_target: '15 Property Units' });
   };
 
   const handleDeleteTeam = (teamId: string, teamName: string) => {
     if (window.confirm(`Are you sure you want to delete Team Squad "${teamName}"?`)) {
-      setTeams(prev => prev.filter(t => t.id !== teamId));
-      alert(`🗑️ Team "${teamName}" removed successfully.`);
+      const updatedTeams = teams.filter(t => t.id !== teamId && t.team_name !== teamName);
+      setTeams(updatedTeams);
+      try {
+        localStorage.setItem('swaramayi_enterprise_teams_v2', JSON.stringify(updatedTeams));
+      } catch (e) {
+        console.error(e);
+      }
+
+      const updatedBranches = branches.map(b => ({
+        ...b,
+        teams: Array.isArray(b.teams) ? b.teams.filter((tn: string) => tn !== teamName) : b.teams
+      }));
+      setBranches(updatedBranches);
+
+      const host = window.location.hostname || 'localhost';
+      fetch(`http://${host}:5000/api/v1/security/teams/${encodeURIComponent(teamId)}`, { method: 'DELETE' })
+        .catch(() => fetch(`/api/v1/security/teams/${encodeURIComponent(teamId)}`, { method: 'DELETE' }))
+        .catch(err => console.error('Delete Team DB Sync Error:', err));
+
+      syncAllToMongoDB({ teams: updatedTeams, branches: updatedBranches });
+      alert(`🗑️ Team "${teamName}" removed successfully from system & database.`);
     }
   };
 
@@ -8083,36 +8194,64 @@ export default function App() {
     }
     setShowUserModal(false);
     setEditingUser(null);
-    setNewUserForm({ username: '', full_name: '', email: '', password: '', mobile: '', role: customRoles[0]?.key || 'SUPER_ADMIN', branch_name: 'Kolkata Branch', department: 'Sales Operations', team_name: 'Kolkata Expansion Team', manager_name: 'Rajesh Varma (Super Admin)', permissions: { perm_view: true, perm_create: true, perm_edit: true, perm_delete: false, perm_export: true, perm_approve: false, perm_price_change: false, perm_brokerage: false } });
+    setNewUserForm({ username: '', full_name: '', email: '', password: '', mobile: '', role: customRoles[0]?.key || 'SUPER_ADMIN', branch_name: 'Kolkata Branch', department: 'Sales Operations', team_name: 'Kolkata Expansion Team', manager_name: 'Avishek Das (Super Admin)', permissions: { perm_view: true, perm_create: true, perm_edit: true, perm_delete: false, perm_export: true, perm_approve: false, perm_price_change: false, perm_brokerage: false } });
   };
 
   const handleCreateCustomerSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const newCustNumber = newCustomerForm.customer_number || generateNextCustomerCode();
+    const custName = newCustomerForm.name || 'New Customer Master';
     const newC = {
       id: `CUS-${Date.now()}`,
       customer_number: newCustNumber,
-      name: newCustomerForm.name || 'New Customer Master',
-      mobile: newCustomerForm.mobile || '+91 98490 12345',
+      name: custName,
+      full_name: custName,
+      phone: newCustomerForm.mobile || newCustomerForm.phone || '+91 98490 12345',
+      mobile: newCustomerForm.mobile || newCustomerForm.phone || '+91 98490 12345',
+      whatsapp: newCustomerForm.whatsapp || newCustomerForm.mobile || '+91 98490 12345',
       email: newCustomerForm.email || 'customer@example.com',
-      budget: newCustomerForm.budget,
-      preferredArea: newCustomerForm.preferredArea,
-      configuration: newCustomerForm.configuration,
-      priority: newCustomerForm.priority as any,
-      score: newCustomerForm.priority === 'HOT' ? 88 : 72
+      city: newCustomerForm.city || 'Kolkata',
+      locality: newCustomerForm.locality || newCustomerForm.preferredArea || 'Kolkata',
+      address: newCustomerForm.address || newCustomerForm.locality || 'Kolkata',
+      pincode: newCustomerForm.pincode || '700001',
+      source: newCustomerForm.lead_source || 'Direct Intake',
+      lead_source: newCustomerForm.lead_source || 'Direct Intake',
+      investment_purpose: newCustomerForm.investment_purpose || 'BUY / OUTRIGHT PURCHASE',
+      property_type: newCustomerForm.property_type || 'Flat / Apartment',
+      configuration: newCustomerForm.configuration || '2BHK',
+      preferredArea: newCustomerForm.preferredArea || 'Kolkata',
+      budget: newCustomerForm.budget || `₹${newCustomerForm.budget_min || '40'} - ₹${newCustomerForm.budget_max || '80'} Lakhs`,
+      budget_min: newCustomerForm.budget_min || '40',
+      budget_max: newCustomerForm.budget_max || '80',
+      priority: (newCustomerForm.priority || 'HOT') as any,
+      score: newCustomerForm.priority === 'HOT' ? 88 : 72,
+      assigned_employee_id: newCustomerForm.assigned_employee_id || 'Avishek Das',
+      assigned_employee_name: newCustomerForm.assigned_employee_id || 'Avishek Das',
+      created_at: new Date().toLocaleString(),
+      updated_at: new Date().toLocaleString()
     };
+
     setCustomers(prev => {
       const cleanMobile = (newCustomerForm.mobile || '').replace(/\D/g, '');
-      const exists = prev.some(c => (c.customer_number && c.customer_number === newCustNumber) || (cleanMobile && cleanMobile.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMobile));
+      const exists = (prev || []).some(c => (c.customer_number && c.customer_number === newCustNumber) || (cleanMobile && cleanMobile.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMobile));
+      let updated: any[];
       if (exists) {
-        return prev.map(c => ((c.customer_number === newCustNumber || (cleanMobile && cleanMobile.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMobile)) ? { ...c, ...newC } : c));
+        updated = (prev || []).map(c => ((c.customer_number === newCustNumber || (cleanMobile && cleanMobile.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMobile)) ? { ...c, ...newC } : c));
+      } else {
+        updated = [newC, ...(prev || [])];
       }
-      return [newC, ...prev];
+      try {
+        localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
+        localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
+      } catch (err) {}
+      syncAllToMongoDB({ customers: updated });
+      return updated;
     });
+
     setShowAddCustomerModal(false);
     setShowCustomerModal(false);
     setShowLeadModal(false);
-    alert(`👤 Customer Master ${newCustNumber} created successfully!`);
+    alert(`👤 Customer Master ${newCustNumber} created & synced successfully to Database!`);
   };
 
   const handleCreatePropertySubmit = (e: React.FormEvent) => {
@@ -8395,7 +8534,7 @@ export default function App() {
   };
 
   const handleRespondApproval = (reqId: string, action: 'APPROVED' | 'REJECTED') => {
-    setApprovalRequests(approvalRequests.map(r => r.id === reqId ? { ...r, status: action, approved_by: 'Rajesh Varma (Super Admin)' } : r));
+    setApprovalRequests(approvalRequests.map(r => r.id === reqId ? { ...r, status: action, approved_by: 'Avishek Das (Super Admin)' } : r));
     alert(`⚖️ Request ${reqId} set to ${action}!`);
   };
 
@@ -10867,6 +11006,10 @@ export default function App() {
               setBillingInvoiceCategory={setBillingInvoiceCategory}
               setSearchQuery={setSearchQuery}
               onRecycleItem={handleRecycleItem}
+              recycledItems={recycledItems}
+              setMatchingRequestsQueue={setMatchingRequestsQueue}
+              setScheduledVisits={setScheduledVisits}
+              setIndividualCostSheets={setIndividualCostSheets}
             />
           )}
 
@@ -11113,6 +11256,10 @@ export default function App() {
               setSelectedAgreement={setSelectedAgreement}
               setShowFullContractModal={setShowFullContractModal}
               onRecycleItem={handleRecycleItem}
+              bookings={bookings}
+              setBookings={setBookings}
+              syncAllToMongoDB={syncAllToMongoDB}
+              setActiveTab={setActiveTab}
             />
           )}
 
@@ -11136,6 +11283,9 @@ export default function App() {
               properties={properties}
               syncAllToMongoDB={syncAllToMongoDB}
               onRecycleItem={handleRecycleItem}
+              projectVisitAgreements={projectVisitAgreements}
+              agreements={agreements}
+              recycledItems={recycledItems}
             />
           )}
 
@@ -11960,7 +12110,7 @@ export default function App() {
                   Provision user credentials, login security, role assignment, and organizational hierarchy.
                 </p>
               </div>
-              <X size={22} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => { setShowUserModal(false); setEditingUser(null); setNewUserForm({ username: '', full_name: '', email: '', password: '', mobile: '', role: 'SALES_EXEC', branch_name: 'Kolkata Branch', department: 'Sales Operations', team_name: 'Kolkata Expansion Team', manager_name: 'Rajesh Varma (Super Admin)', permissions: { perm_view: true, perm_create: true, perm_edit: true, perm_delete: false, perm_export: true, perm_approve: false, perm_price_change: false, perm_brokerage: false } }); }} title="Close Modal" />
+              <X size={22} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => { setShowUserModal(false); setEditingUser(null); setNewUserForm({ username: '', full_name: '', email: '', password: '', mobile: '', role: 'SALES_EXEC', branch_name: 'Kolkata Branch', department: 'Sales Operations', team_name: 'Kolkata Expansion Team', manager_name: 'Avishek Das (Super Admin)', permissions: { perm_view: true, perm_create: true, perm_edit: true, perm_delete: false, perm_export: true, perm_approve: false, perm_price_change: false, perm_brokerage: false } }); }} title="Close Modal" />
             </div>
 
             {/* AUTO-GENERATED TRACKING ID CARD */}
@@ -12149,7 +12299,7 @@ export default function App() {
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Reporting Manager *</label>
                     <select value={newUserForm.manager_name} onChange={(e) => setNewUserForm({ ...newUserForm, manager_name: e.target.value })} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}>
-                      {currentRole === 'SUPER_ADMIN' && <option value="Rajesh Varma (Super Admin)">Rajesh Varma (Super Admin)</option>}
+                      {currentRole === 'SUPER_ADMIN' && <option value="Avishek Das (Super Admin)">Avishek Das (Super Admin)</option>}
                       {users
                         .filter(u => u.id !== 'USR-01' && (currentRole === 'SUPER_ADMIN' || (u.role !== 'SUPER_ADMIN' && u.role !== 'OWNER')))
                         .map((u, i) => (

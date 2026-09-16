@@ -32,7 +32,7 @@ interface RoleManagementViewProps {
   approvalRequests: any[];
   setApprovalRequests?: React.Dispatch<React.SetStateAction<any[]>>;
   handleOpenEditUserModal: (user: any) => void;
-  handleDeleteUser: (id: string) => void;
+  handleDeleteUser: (id: string, username?: string) => void;
   handleOpenEditBranchModal: (branch: any) => void;
   handleDeleteBranch?: (branchId: string, branchName: string) => void;
   handleOpenEditTeamModal: (team: any) => void;
@@ -178,21 +178,16 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
   };
 
   const defaultUsersList = React.useMemo(() => [
-    { id: 'USR-01', username: 'Rajesh Varma (Super Admin)', full_name: 'Rajesh Varma', email: 'admin@swaramayi.com', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-01' },
-    { id: 'USR-02', username: 'punita.roy', full_name: 'Punita Roy', email: 'punita.roy@swaramayi.com', mobile: '+91 90513 22932', role: 'SALES_EXEC', branch_name: 'Kolkata Branch', department: 'Sales Management', team_name: 'Kolkata Expansion Team', manager_name: 'Rajesh Varma (Super Admin)', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-15' },
-    { id: 'USR-03', username: 'abinash.roy', full_name: 'Abinash Roy', email: 'abinash.roy@swaramayi.com', mobile: '+91 76970 90078', role: 'ADMIN', branch_name: 'Kolkata Branch', department: 'Residential Sales', team_name: 'Kolkata Admin & Technical Squad', manager_name: 'Rajesh Varma (Super Admin)', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-15' }
+    { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-01' },
+    { id: 'USR-02', username: 'punita.roy', full_name: 'Punita Roy', email: 'punita.roy@swaramayi.com', mobile: '+91 90513 22932', role: 'SALES_EXEC', branch_name: 'Kolkata Branch', department: 'Sales Management', team_name: 'Kolkata Expansion Team', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-15' },
+    { id: 'USR-03', username: 'abinash.roy', full_name: 'Abinash Roy', email: 'abinash.roy@swaramayi.com', mobile: '+91 76970 90078', role: 'ADMIN', branch_name: 'Kolkata Branch', department: 'Residential Sales', team_name: 'Kolkata Admin & Technical Squad', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-15' }
   ], []);
 
   const safeUsers = React.useMemo(() => {
-    const userMap = new Map();
-    defaultUsersList.forEach(u => userMap.set(u.id, u));
-    (users || []).forEach((u: any) => {
-      if (u && (u.id || u.username)) {
-        const key = u.id || u.username;
-        userMap.set(key, { ...userMap.get(key), ...u });
-      }
-    });
-    return Array.from(userMap.values());
+    if (Array.isArray(users)) {
+      return users;
+    }
+    return defaultUsersList;
   }, [users, defaultUsersList]);
 
   // Dynamic Property Advisors list derived strictly from active CRM staff and safe users
@@ -234,20 +229,23 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       const uNameLower = String(u.full_name || u.username || '').toLowerCase();
       userMap.set(u.id || uNameLower, u);
     });
-    fallbackAdvisors.forEach((fa: any) => {
-      const faNameLower = fa.full_name.toLowerCase();
-      let exists = false;
-      for (const existing of userMap.values()) {
-        const exName = String(existing.full_name || existing.username || '').toLowerCase();
-        if (exName.includes(faNameLower) || faNameLower.includes(exName) || existing.id === fa.id) {
-          exists = true;
-          break;
+
+    if (!Array.isArray(users) || users.length === 0) {
+      fallbackAdvisors.forEach((fa: any) => {
+        const faNameLower = fa.full_name.toLowerCase();
+        let exists = false;
+        for (const existing of userMap.values()) {
+          const exName = String(existing.full_name || existing.username || '').toLowerCase();
+          if (exName.includes(faNameLower) || faNameLower.includes(exName) || existing.id === fa.id) {
+            exists = true;
+            break;
+          }
         }
-      }
-      if (!exists) {
-        userMap.set(fa.id, fa);
-      }
-    });
+        if (!exists) {
+          userMap.set(fa.id, fa);
+        }
+      });
+    }
 
     const staffList = Array.from(userMap.values());
 
@@ -496,17 +494,17 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
 
   const handleApproveRequest = (reqId: string, requestCode: string) => {
     if (setApprovalRequests) {
-      setApprovalRequests((prev: any[]) => prev.map(r => r.id === reqId ? { ...r, status: 'APPROVED', approved_by: 'Rajesh Varma (Super Admin)' } : r));
+      setApprovalRequests((prev: any[]) => prev.map(r => r.id === reqId ? { ...r, status: 'APPROVED', approved_by: 'Avishek Das (Super Admin)' } : r));
     }
-    setLocalApprovals((prev: any[]) => prev.map(r => r.id === reqId ? { ...r, status: 'APPROVED', approved_by: 'Rajesh Varma (Super Admin)' } : r));
+    setLocalApprovals((prev: any[]) => prev.map(r => r.id === reqId ? { ...r, status: 'APPROVED', approved_by: 'Avishek Das (Super Admin)' } : r));
     alert(`✅ Maker-Checker Governance: Request ${requestCode} has been APPROVED! Changes applied.`);
   };
 
   const handleRejectRequest = (reqId: string, requestCode: string) => {
     if (setApprovalRequests) {
-      setApprovalRequests((prev: any[]) => prev.map(r => r.id === reqId ? { ...r, status: 'REJECTED', approved_by: 'Rajesh Varma (Super Admin)' } : r));
+      setApprovalRequests((prev: any[]) => prev.map(r => r.id === reqId ? { ...r, status: 'REJECTED', approved_by: 'Avishek Das (Super Admin)' } : r));
     }
-    setLocalApprovals((prev: any[]) => prev.map(r => r.id === reqId ? { ...r, status: 'REJECTED', approved_by: 'Rajesh Varma (Super Admin)' } : r));
+    setLocalApprovals((prev: any[]) => prev.map(r => r.id === reqId ? { ...r, status: 'REJECTED', approved_by: 'Avishek Das (Super Admin)' } : r));
     alert(`❌ Maker-Checker Governance: Request ${requestCode} has been REJECTED & CANCELLED.`);
   };
 
@@ -1139,7 +1137,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                       </td>
 
                       <td style={{ padding: '10px 14px', color: isLight ? '#334155' : '#cbd5e1', fontSize: '0.8rem', fontWeight: '700' }}>
-                        {u.manager_name || 'Rajesh Varma (Super Admin)'}
+                        {u.manager_name || 'Avishek Das (Super Admin)'}
                       </td>
 
                       <td style={{ padding: '10px 14px', textAlign: 'center' }}>
@@ -1162,7 +1160,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                               <Edit3 size={13} />
                             </button>
                           )}
-                          {canDelete && u.role !== 'SUPER_ADMIN' && u.id !== 'USR-01' && (
+                          {canDelete && u.id !== 'USR-01' && (
                             <button
                               onClick={() => handleDeleteUser(u.id, u.full_name || u.username)}
                               style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem' }}
@@ -1230,34 +1228,32 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                 <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(3, 1fr)', gap: '12px', background: isLight ? '#f8fafc' : '#0f172a', padding: '14px', borderRadius: '10px' }}>
                   <div>
                     <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>BRANCH MANAGER</span>
-                    <strong style={{ display: 'block', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', marginTop: '2px' }}>{b.manager_name || 'Rajesh Varma (Super Admin)'}</strong>
+                    <strong style={{ display: 'block', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', marginTop: '2px' }}>{(b.manager_name || 'Avishek Das (Super Admin)').replace(/Rajesh V[ae]rma/gi, 'Avishek Das')}</strong>
                   </div>
                   <div>
                     <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>TARGET REVENUE</span>
                     <strong style={{ display: 'block', color: '#22c55e', fontSize: '0.85rem', marginTop: '2px' }}>{b.target_revenue || '₹5,00,00,000'}</strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>ASSIGNED TEAMS</span>
-                    <strong style={{ display: 'block', color: '#38bdf8', fontSize: '0.85rem', marginTop: '2px' }}>{assignedTeams.length} Teams Squads</strong>
+                    <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>ASSIGNED SQUADS</span>
+                    <strong style={{ display: 'block', color: '#38bdf8', fontSize: '0.85rem', marginTop: '2px' }}>{assignedTeams.length} Squads Active</strong>
                   </div>
                 </div>
 
-                {/* ASSIGNED TEAMS BADGES */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', paddingTop: '10px' }}>
+                <div style={{ background: isLight ? '#f8fafc' : '#0f172a', padding: '12px 14px', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <span style={{ fontSize: '0.72rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8' }}>🎯 Assigned Teams & Squads:</span>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {assignedTeams.length > 0 ? (
-                      assignedTeams.map((team: any) => (
-                        <span key={team.id} style={{ background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '3px 9px', borderRadius: '6px', fontSize: '0.76rem', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <Users size={12} /> {team.team_name}
+                      assignedTeams.map((t: any) => (
+                        <span key={t.id} style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          🎯 {t.team_name}
                         </span>
                       ))
                     ) : (
-                      <span style={{ fontSize: '0.76rem', color: isLight ? '#94a3b8' : '#64748b', italic: 'true' }}>No teams assigned yet</span>
+                      <span style={{ fontSize: '0.75rem', color: isLight ? '#94a3b8' : '#64748b', fontStyle: 'italic' }}>No teams assigned to this branch office.</span>
                     )}
                   </div>
                 </div>
-
               </div>
             );
           })}
@@ -1267,58 +1263,62 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       {/* SUB-TAB 4: TEAMS & SQUADS */}
       {activeRoleSubTab === 'sales_teams_squads' && (
         <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 768 ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
-          {safeTeams.map((t: any) => (
-            <div key={t.id} style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
-                    🎯 {t.team_name}
-                  </h3>
-                  <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', margin: '4px 0 0 0' }}>
-                    Branch: <strong style={{ color: '#38bdf8' }}>{t.branch_name}</strong> • Dept: <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{t.department}</strong>
-                  </p>
-                </div>
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  {isSuperAdmin && (
-                    <button
-                      onClick={() => handleOpenEditTeamModal(t)}
-                      style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <Edit3 size={14} /> Edit Team
-                    </button>
-                  )}
-                  {canDelete && (
-                    <button
-                      onClick={() => {
-                        if (handleDeleteTeam) {
-                          handleDeleteTeam(t.id, t.team_name);
-                        } else {
-                          if (window.confirm(`Are you sure you want to delete Team Squad "${t.team_name}"?`)) {
-                            alert(`🗑️ Team "${t.team_name}" removed successfully.`);
+          {safeTeams.map((t: any, idx: number) => {
+            const teamId = t.id || `TEAM-0${idx + 1}`;
+            const teamName = t.team_name || t.name || 'Sales Team';
+            return (
+              <div key={teamId} style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
+                      🎯 {teamName}
+                    </h3>
+                    <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', margin: '4px 0 0 0' }}>
+                      Branch: <strong style={{ color: '#38bdf8' }}>{t.branch_name}</strong> • Dept: <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{t.department}</strong>
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() => handleOpenEditTeamModal(t)}
+                        style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Edit3 size={14} /> Edit Team
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => {
+                          if (handleDeleteTeam) {
+                            handleDeleteTeam(teamId, teamName);
+                          } else {
+                            if (window.confirm(`Are you sure you want to delete Team Squad "${teamName}"?`)) {
+                              alert(`🗑️ Team "${teamName}" removed successfully.`);
+                            }
                           }
-                        }
-                      }}
-                      style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                      title="Delete Team Squad"
-                    >
-                      <Trash2 size={14} /> Delete
-                    </button>
-                  )}
+                        }}
+                        style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        title="Delete Team Squad"
+                      >
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: isLight ? '#f8fafc' : '#0f172a', padding: '14px', borderRadius: '10px' }}>
-                <div>
-                  <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>TEAM LEAD</span>
-                  <strong style={{ display: 'block', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', marginTop: '2px' }}>{t.leader_name || 'Abinash Roy (Admin)'}</strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>MONTHLY TARGET</span>
-                  <strong style={{ display: 'block', color: '#f59e0b', fontSize: '0.85rem', marginTop: '2px' }}>{t.monthly_target || '15 Property Units'}</strong>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: isLight ? '#f8fafc' : '#0f172a', padding: '14px', borderRadius: '10px' }}>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>TEAM LEAD</span>
+                    <strong style={{ display: 'block', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', marginTop: '2px' }}>{(t.leader_name || 'Abinash Roy (Admin)').replace(/Rajesh V[ae]rma/gi, 'Avishek Das')}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>MONTHLY TARGET</span>
+                    <strong style={{ display: 'block', color: '#f59e0b', fontSize: '0.85rem', marginTop: '2px' }}>{t.monthly_target || '15 Property Units'}</strong>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

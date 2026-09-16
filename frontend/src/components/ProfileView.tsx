@@ -27,9 +27,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 }) => {
   const currentUser = users.find(u => u.role === currentRole || (currentRole === 'SUPER_ADMIN' && (u.id === 'USR-01' || u.role === 'SUPER_ADMIN'))) || users.find(u => u.role === currentRole) || users[0] || {
     id: 'USR-01',
-    username: 'Rajesh Varma (Owner)',
-    full_name: 'Rajesh Varma',
-    email: 'rajesh.varma@swaramayi.com',
+    username: 'Avishek Das (Owner)',
+    full_name: 'Avishek Das',
+    email: 'avishek.das@swaramayi.com',
     mobile: '+91 98490 00001',
     role: 'SUPER_ADMIN',
     branch_name: 'Head Office',
@@ -444,7 +444,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
             <div>
               <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', textTransform: 'uppercase' }}>Reporting Manager</span>
-              <span style={{ display: 'block', color: '#4ade80', fontWeight: '800', marginTop: '2px' }}>{currentUser.manager_name || 'Rajesh Varma (Super Admin)'}</span>
+              <span style={{ display: 'block', color: '#4ade80', fontWeight: '800', marginTop: '2px' }}>{currentUser.manager_name || 'Avishek Das (Super Admin)'}</span>
             </div>
             <div>
               <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', textTransform: 'uppercase' }}>Direct Reports Managed</span>

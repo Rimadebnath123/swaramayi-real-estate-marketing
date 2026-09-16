@@ -18,7 +18,7 @@ export function seedDatabase() {
       { id: 'TEAM-B', name: 'Kolkata Expansion Team', leader_id: 'USR-03', branch_id: 'BR-KOL-02' }
     ],
     users: [
-      { id: 'USR-01', username: 'admin', full_name: 'Rajesh Varma (Super Admin)', role: 'SUPER_ADMIN', email: 'admin@swaramayi.com', mobile: '+91 98490 00001', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', is_active: true }
+      { id: 'USR-01', username: 'admin', full_name: 'Avishek Das (Super Admin)', role: 'SUPER_ADMIN', email: 'admin@swaramayi.com', mobile: '+91 98490 00001', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', is_active: true }
     ],
     customers: [
       {
@@ -396,7 +396,7 @@ export function seedDatabase() {
       { id: 'UNIT-103', unit_code: 'SRM-UNIT-2026-000003', property_id: 'PROP-03', project_name: 'Prestige High Fields', tower_block: 'Tower C', floor: 3, unit_number: 'C-305', configuration: '2BHK', area_sqft: 1100, facing: 'East', base_price: 6000000, final_price: 6000000, status: 'BOOKED', customer_name: 'Anand Kumar' }
     ],
     property_price_history: [
-      { id: 'PH-01', property_id: 'PROP-01', previous_price: 8800000, new_price: 8400000, changed_by: 'Rajesh Varma (Owner)', changed_at: '2026-08-16T10:00:00.000Z', reason: 'Developer Price Drop promo for monsoon offer' }
+      { id: 'PH-01', property_id: 'PROP-01', previous_price: 8800000, new_price: 8400000, changed_by: 'Avishek Das (Owner)', changed_at: '2026-08-16T10:00:00.000Z', reason: 'Developer Price Drop promo for monsoon offer' }
     ],
     property_shares: [
       { id: 'SHR-01', property_id: 'PROP-01', customer_id: 'CUST-01', employee_id: 'USR-05', employee_name: 'Priya Nair', channel: 'WhatsApp', shared_at: '2026-08-16T11:45:00.000Z' }
@@ -613,7 +613,7 @@ export function seedDatabase() {
       { id: 'REQ-01', request_code: 'SRM-REQ-2026-000101', request_type: 'LEAD_TRANSFER', record_id: 'SRM-CUS-2026-000184 (Rohan Deshmukh)', requested_by_name: 'Priya Nair (Sales Exec)', requested_at: '2026-08-17T10:00:00.000Z', old_value: 'Priya Nair', new_value: 'Rahul Sharma (TL)', reason: 'Customer requested high-ticket villa negotiation assistance.', status: 'PENDING' }
     ],
     active_sessions: [
-      { id: 'SES-01', user_id: 'USR-01', username: 'Rajesh Varma (Owner)', role: 'SUPER_ADMIN', ip_address: '127.0.0.1 (Localhost)', device_info: 'Chrome / Windows 11', login_time: '2026-08-17T09:00:00.000Z', last_active: '2026-08-17T16:30:00.000Z', status: 'ACTIVE' }
+      { id: 'SES-01', user_id: 'USR-01', username: 'Avishek Das (Owner)', role: 'SUPER_ADMIN', ip_address: '127.0.0.1 (Localhost)', device_info: 'Chrome / Windows 11', login_time: '2026-08-17T09:00:00.000Z', last_active: '2026-08-17T16:30:00.000Z', status: 'ACTIVE' }
     ],
     system_settings: { is_lockdown_active: 'false' },
     sequences: { customer_seq: 188, property_seq: 424, unit_seq: 103, lead_seq: 1249, recommendation_seq: 101, site_visit_seq: 502, booking_seq: 201, brokerage_seq: 102, agreement_seq: 301, invoice_seq: 401, approval_seq: 101 }

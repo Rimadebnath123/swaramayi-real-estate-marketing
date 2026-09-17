@@ -261,6 +261,10 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
   const [sourcingReasonInput, setSourcingReasonInput] = useState<string>('');
   const [sourcingError, setSourcingError] = useState<string>('');
 
+  // RESPONSIVE VIEW MODE TOGGLES (DEFAULT TO CARDS ON MOBILE & TABLET FOR 100% VISIBILITY)
+  const [vaultViewMode, setVaultViewMode] = useState<'cards' | 'table'>(windowWidth <= 1024 ? 'cards' : 'table');
+  const [matchedPropViewMode, setMatchedPropViewMode] = useState<'cards' | 'table'>(windowWidth <= 1024 ? 'cards' : 'table');
+
   // HANDLE CONFIRM MOVE TO PROPERTY SOURCING REQUEST DESK
   const handleConfirmMoveToSourcing = () => {
     if (!sourcingModalRequest) return;
@@ -491,33 +495,43 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '20px' }}>
-        <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: windowWidth <= 640 ? '16px' : '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: windowWidth <= 640 ? '12px' : '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '20px' }}>
+        <div style={{ flex: 1, minWidth: windowWidth <= 480 ? '100%' : '260px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>SMART AI PROPERTY MATCHING & INVENTORY ENGINE</h2>
+            <h2 style={{ fontSize: windowWidth <= 480 ? '1.05rem' : windowWidth <= 768 ? '1.25rem' : '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>SMART AI PROPERTY MATCHING & INVENTORY ENGINE</h2>
           </div>
-          <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
+          <p style={{ fontSize: windowWidth <= 640 ? '0.74rem' : '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px', marginBottom: 0 }}>
             5-Factor Multivariate Matching (Location 25%, Budget 25%, BHK 20%, Type 15%, Facing 15%) • Inventory Matrix • Portfolio Dispatcher
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button onClick={() => alert(`⚡ Recalculated live AI property match ranker for ${selectedCust.name}!`)} style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto' }}>
+          <button onClick={() => alert(`⚡ Recalculated live AI property match ranker for ${selectedCust.name}!`)} style={{ width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: 'center', background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Zap size={15} /> ⚡ Run Real-Time AI Matcher
           </button>
         </div>
       </div>
 
-      {/* 3 SUB-TABS NAVIGATION FOR MATCHING MANAGEMENT */}
-      <div style={{ display: 'flex', gap: '10px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', flexWrap: 'wrap' }}>
-        <button onClick={() => setActiveMatchingSubTab('ai_matching_engine')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeMatchingSubTab === 'ai_matching_engine' ? '#0284c7' : '#1e293b', color: activeMatchingSubTab === 'ai_matching_engine' ? '#ffffff' : '#94a3b8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+      {/* 3 SUB-TABS NAVIGATION FOR MATCHING MANAGEMENT (HORIZONTALLY SCROLLABLE ON MOBILE & TABLET) */}
+      <div style={{ 
+        display: 'flex', 
+        gap: '8px', 
+        borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', 
+        paddingBottom: '12px', 
+        overflowX: 'auto', 
+        flexWrap: 'nowrap', 
+        WebkitOverflowScrolling: 'touch', 
+        scrollbarWidth: 'thin',
+        msOverflowStyle: 'none'
+      }}>
+        <button onClick={() => setActiveMatchingSubTab('ai_matching_engine')} style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: windowWidth <= 640 ? '8px 12px' : '8px 16px', borderRadius: '8px', fontSize: windowWidth <= 640 ? '0.78rem' : '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeMatchingSubTab === 'ai_matching_engine' ? '#0284c7' : '#1e293b', color: activeMatchingSubTab === 'ai_matching_engine' ? '#ffffff' : '#94a3b8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
           🤖 Smart AI Property Matcher
         </button>
-        <button onClick={() => setActiveMatchingSubTab('req_inventory_matrix')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeMatchingSubTab === 'req_inventory_matrix' ? '#0284c7' : '#1e293b', color: activeMatchingSubTab === 'req_inventory_matrix' ? '#ffffff' : '#94a3b8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+        <button onClick={() => setActiveMatchingSubTab('req_inventory_matrix')} style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: windowWidth <= 640 ? '8px 12px' : '8px 16px', borderRadius: '8px', fontSize: windowWidth <= 640 ? '0.78rem' : '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeMatchingSubTab === 'req_inventory_matrix' ? '#0284c7' : '#1e293b', color: activeMatchingSubTab === 'req_inventory_matrix' ? '#ffffff' : '#94a3b8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
           📋 Requirement vs Inventory Matrix
         </button>
-        <button onClick={() => setActiveMatchingSubTab('portfolio_dispatcher')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeMatchingSubTab === 'portfolio_dispatcher' ? '#0284c7' : '#1e293b', color: activeMatchingSubTab === 'portfolio_dispatcher' ? '#ffffff' : '#94a3b8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+        <button onClick={() => setActiveMatchingSubTab('portfolio_dispatcher')} style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: windowWidth <= 640 ? '8px 12px' : '8px 16px', borderRadius: '8px', fontSize: windowWidth <= 640 ? '0.78rem' : '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeMatchingSubTab === 'portfolio_dispatcher' ? '#0284c7' : '#1e293b', color: activeMatchingSubTab === 'portfolio_dispatcher' ? '#ffffff' : '#94a3b8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
           📤 Match Portfolio Dispatcher
         </button>
       </div>
@@ -687,219 +701,397 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
           {/* TOP MATCHING DASHBOARD KPI CARDS (SECTION 19) */}
-          <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : windowWidth <= 1024 ? 'repeat(4, 1fr)' : 'repeat(7, 1fr)', gap: '10px' }}>
-            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '12px 10px', borderRadius: '10px', textAlign: 'center' }}>
-              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>MATCHING REQUESTS</span>
-              <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8', marginTop: '2px' }}>{allMatchingRequests.length}</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? 'repeat(2, 1fr)' : windowWidth <= 820 ? 'repeat(3, 1fr)' : windowWidth <= 1200 ? 'repeat(4, 1fr)' : 'repeat(7, 1fr)', gap: '10px' }}>
+            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
+              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>MATCHING REQUESTS</span>
+              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#38bdf8', marginTop: '2px', margin: 0 }}>{allMatchingRequests.length}</h4>
             </div>
-            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '12px 10px', borderRadius: '10px', textAlign: 'center' }}>
-              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>PENDING</span>
-              <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#fbbf24', marginTop: '2px' }}>{pendingRequests.length}</h4>
+            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
+              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>PENDING</span>
+              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#fbbf24', marginTop: '2px', margin: 0 }}>{pendingRequests.length}</h4>
             </div>
-            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '12px 10px', borderRadius: '10px', textAlign: 'center' }}>
-              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>IN PROGRESS</span>
-              <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8', marginTop: '2px' }}>{allMatchingRequests.filter(r => r.status === 'IN_PROGRESS').length}</h4>
+            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
+              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>IN PROGRESS</span>
+              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#38bdf8', marginTop: '2px', margin: 0 }}>{allMatchingRequests.filter(r => r.status === 'IN_PROGRESS').length}</h4>
             </div>
-            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '12px 10px', borderRadius: '10px', textAlign: 'center' }}>
-              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>MATCHED</span>
-              <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#4ade80', marginTop: '2px' }}>{allMatchingRequests.filter(r => r.status === 'MATCHED' || (r.score && r.score >= 80)).length}</h4>
+            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
+              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>MATCHED</span>
+              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#4ade80', marginTop: '2px', margin: 0 }}>{allMatchingRequests.filter(r => r.status === 'MATCHED' || (r.score && r.score >= 80)).length}</h4>
             </div>
-            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '12px 10px', borderRadius: '10px', textAlign: 'center' }}>
-              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>SELECTED</span>
-              <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#4ade80', marginTop: '2px' }}>{allMatchingRequests.filter(r => r.status === 'SELECTED' || r.selectedCount > 0).length}</h4>
+            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
+              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>SELECTED</span>
+              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#4ade80', marginTop: '2px', margin: 0 }}>{allMatchingRequests.filter(r => r.status === 'SELECTED' || r.selectedCount > 0).length}</h4>
             </div>
-            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '12px 10px', borderRadius: '10px', textAlign: 'center' }}>
-              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>SHARED WITH CUS</span>
-              <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8', marginTop: '2px' }}>{costSheetShares.length}</h4>
+            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
+              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>SHARED WITH CUS</span>
+              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#38bdf8', marginTop: '2px', margin: 0 }}>{costSheetShares.length}</h4>
             </div>
-            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '12px 10px', borderRadius: '10px', textAlign: 'center' }}>
-              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>SITE VISIT REQ</span>
-              <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#22c55e', marginTop: '2px' }}>{scheduledVisits.length}</h4>
+            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
+              <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>SITE VISIT REQ</span>
+              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#22c55e', marginTop: '2px', margin: 0 }}>{scheduledVisits.length}</h4>
             </div>
           </div>
 
           {/* INBOUND MATCHING REQUESTS SNAPSHOT VAULT (SECTION 20) */}
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>📥 INBOUND MATCHING REQUESTS SNAPSHOT VAULT ({allMatchingRequests.length})</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h3 style={{ fontSize: windowWidth <= 480 ? '0.92rem' : windowWidth <= 640 ? '1rem' : '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>📥 INBOUND MATCHING REQUESTS SNAPSHOT VAULT ({allMatchingRequests.length})</h3>
                 <span style={{ background: '#22c55e', color: '#ffffff', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: '900' }}>QUALIFIED HANDOFF ACTIVE</span>
               </div>
 
-              {/* VAULT FILTER TOGGLE BUTTONS */}
-              <div style={{ display: 'flex', gap: '8px' }}>
+              {/* VIEW MODE TOGGLE & VAULT FILTER TOGGLE BUTTONS */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', width: windowWidth <= 640 ? '100%' : 'auto' }}>
+                {/* VIEW MODE TOGGLE (CARDS vs TABLE) */}
+                <div style={{ display: 'flex', gap: '2px', background: isLight ? '#f1f5f9' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '20px', padding: '2px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setVaultViewMode('cards')}
+                    style={{
+                      background: vaultViewMode === 'cards' ? '#0284c7' : 'transparent',
+                      color: vaultViewMode === 'cards' ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'),
+                      border: 'none',
+                      padding: '4px 10px',
+                      borderRadius: '18px',
+                      fontWeight: '800',
+                      fontSize: '0.72rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📱 Cards
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVaultViewMode('table')}
+                    style={{
+                      background: vaultViewMode === 'table' ? '#0284c7' : 'transparent',
+                      color: vaultViewMode === 'table' ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'),
+                      border: 'none',
+                      padding: '4px 10px',
+                      borderRadius: '18px',
+                      fontWeight: '800',
+                      fontSize: '0.72rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📋 Table
+                  </button>
+                </div>
+
                 <button 
                   onClick={() => setMatchingVaultFilter('PENDING_ONLY')}
                   style={{ 
+                    flex: windowWidth <= 640 ? '1' : 'none',
+                    textAlign: 'center',
                     background: matchingVaultFilter === 'PENDING_ONLY' ? '#fbbf24' : '#0f172a', 
                     color: matchingVaultFilter === 'PENDING_ONLY' ? '#0f172a' : '#94a3b8', 
                     border: '1px solid #fbbf24', 
-                    padding: '4px 12px', 
+                    padding: windowWidth <= 640 ? '6px 10px' : '4px 12px', 
                     borderRadius: '20px', 
                     fontWeight: '900', 
-                    fontSize: '0.75rem', 
+                    fontSize: windowWidth <= 640 ? '0.7rem' : '0.75rem', 
                     cursor: 'pointer' 
                   }}
                 >
-                  ⚡ PENDING COST SHEETS ONLY ({pendingRequests.length})
+                  ⚡ PENDING ({pendingRequests.length})
                 </button>
                 <button 
                   onClick={() => setMatchingVaultFilter('ALL')}
                   style={{ 
+                    flex: windowWidth <= 640 ? '1' : 'none',
+                    textAlign: 'center',
                     background: matchingVaultFilter === 'ALL' ? '#0284c7' : '#0f172a', 
                     color: matchingVaultFilter === 'ALL' ? '#ffffff' : '#94a3b8', 
                     border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', 
-                    padding: '4px 12px', 
+                    padding: windowWidth <= 640 ? '6px 10px' : '4px 12px', 
                     borderRadius: '20px', 
                     fontWeight: '900', 
-                    fontSize: '0.75rem', 
+                    fontSize: windowWidth <= 640 ? '0.7rem' : '0.75rem', 
                     cursor: 'pointer' 
                   }}
                 >
-                  📋 ALL MATCHING REQUESTS ({allMatchingRequests.length})
+                  📋 ALL ({allMatchingRequests.length})
                 </button>
               </div>
             </div>
 
-            <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                <thead>
-                  <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                    <th style={{ padding: '10px' }}>Matching ID & Date</th>
-                    <th style={{ padding: '10px' }}>Customer & Contact</th>
-                    <th style={{ padding: '10px' }}>Customer ID</th>
-                    <th style={{ padding: '10px' }}>Structured Requirement</th>
-                    <th style={{ padding: '10px' }}>Budget</th>
-                    <th style={{ padding: '10px' }}>Cost Sheet Status</th>
-                    <th style={{ padding: '10px', textAlign: 'center' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allMatchingRequests
-                    .filter(req => (matchingVaultFilter === 'ALL' || (!req.costSheetId && req.status !== 'COST_SHEET_CREATED')) && matchesSearchQuery(req, searchQuery || matchingSearchQuery))
-                    .map((req) => {
-                      const isCostSheetCreated = !!req.costSheetId;
-                      return (
-                        <tr key={req.requestId} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: selectedMatchingId === req.requestId ? 'rgba(2, 132, 199, 0.15)' : 'transparent' }}>
-                          <td style={{ padding: '10px' }}>
+            {/* CONDITIONAL RENDER: RESPONSIVE CARDS VIEW vs FULL TABLE VIEW */}
+            {vaultViewMode === 'cards' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {allMatchingRequests
+                  .filter(req => (matchingVaultFilter === 'ALL' || (!req.costSheetId && req.status !== 'COST_SHEET_CREATED')) && matchesSearchQuery(req, searchQuery || matchingSearchQuery))
+                  .map((req) => {
+                    const isCostSheetCreated = !!req.costSheetId;
+                    const isSelected = selectedMatchingId === req.requestId;
+                    return (
+                      <div 
+                        key={req.requestId} 
+                        style={{ 
+                          background: isLight ? '#f8fafc' : '#0f172a', 
+                          border: isSelected ? '2px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), 
+                          borderRadius: '12px', 
+                          padding: '14px', 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '12px',
+                          boxShadow: isSelected ? '0 4px 14px rgba(2, 132, 199, 0.25)' : 'none'
+                        }}
+                      >
+                        {/* CARD TOP INFO HEADER */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                             <span 
                               onClick={() => openIdDetailsModal(req.requestId, 'MATCHING_ID')}
-                              style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', cursor: 'pointer', textDecoration: 'underline', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '2px 8px', borderRadius: '6px', display: 'inline-block' }}
+                              style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', cursor: 'pointer', textDecoration: 'underline', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '2px 8px', borderRadius: '6px' }}
                               title="Click to view full Matching Request details"
                             >
                               🎯 {req.requestId}
                             </span>
-                            <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px', display: 'block' }}>{req.date}</span>
-                          </td>
-                          <td style={{ padding: '10px' }}>
-                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{req.customerName}</strong>
-                            <br /><span style={{ fontSize: '0.72rem', color: '#4ade80' }}>{req.mobile}</span>
-                            {(req.handoffNote || (req.notes && req.notes.includes('[Shifted'))) && (
-                              <div style={{ marginTop: '4px', background: 'rgba(251, 191, 36, 0.15)', border: '1px solid #fbbf24', borderRadius: '4px', padding: '3px 6px', fontSize: '0.7rem', color: '#fbbf24', fontWeight: '800', width: 'fit-content' }}>
-                                📌 Shift Note: {req.handoffNote || (req.notes?.split('\n').pop() || '')}
-                              </div>
-                            )}
-                          </td>
-                          <td style={{ padding: '10px' }}>
                             <span 
                               onClick={() => openIdDetailsModal(req.customerNumber, 'CUSTOMER_ID')}
-                              style={{ fontFamily: 'monospace', color: '#4ade80', fontWeight: '900', cursor: 'pointer', textDecoration: 'underline', background: 'rgba(34, 197, 94, 0.12)', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '2px 8px', borderRadius: '6px', display: 'inline-block' }}
+                              style={{ fontFamily: 'monospace', color: '#4ade80', fontWeight: '900', cursor: 'pointer', textDecoration: 'underline', background: 'rgba(34, 197, 94, 0.12)', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '2px 8px', borderRadius: '6px' }}
                               title="Click to view full Customer details"
                             >
                               🆔 {req.customerNumber}
                             </span>
-                          </td>
-                          <td style={{ padding: '10px' }}>
+                            <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>{req.date}</span>
+                          </div>
+
+                          {/* COST SHEET STATUS BADGE */}
+                          {isCostSheetCreated ? (
+                            <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', border: '1px solid #22c55e', padding: '3px 10px', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem' }}>
+                              🟢 COST SHEET CREATED ({req.costSheetId})
+                            </span>
+                          ) : (
+                            <span style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', border: '1px solid #fbbf24', padding: '3px 10px', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem' }}>
+                              ⚡ PENDING (NO COST SHEET ID)
+                            </span>
+                          )}
+                        </div>
+
+                        {/* CARD CONTENT GRID */}
+                        <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px', fontSize: '0.82rem' }}>
+                          <div>
+                            <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Customer Name & Contact:</span>
+                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.92rem' }}>{req.customerName}</strong>
+                            <span style={{ color: '#4ade80', display: 'block', fontSize: '0.76rem', fontWeight: '800', fontFamily: 'monospace' }}>{req.mobile}</span>
+                          </div>
+
+                          <div>
+                            <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Requirement & Location:</span>
                             <span style={{ color: '#fbbf24', fontWeight: '800' }}>{req.configuration} {req.propertyType}</span>
-                            {(req.propertyCode || req.propCode) && (
-                              <div style={{ marginTop: '2px', marginBottom: '2px' }}>
-                                <span style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid #0284c7', color: '#38bdf8', fontSize: '0.72rem', fontWeight: '900', padding: '2px 7px', borderRadius: '4px', fontFamily: 'monospace', display: 'inline-block' }}>
-                                  🏢 Property Code: {req.propertyCode || req.propCode}
-                                </span>
-                              </div>
-                            )}
                             <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>{req.preferredArea} (Radius: {req.radiusKm || 10} KM)</span>
-                          </td>
-                          <td style={{ padding: '10px', color: '#4ade80', fontWeight: '900' }}>
-                            {req.budget}
-                          </td>
-                          <td style={{ padding: '10px' }}>
-                            {isCostSheetCreated ? (
-                              <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', border: '1px solid #22c55e', padding: '2px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem', display: 'inline-block' }}>
-                                🟢 COST SHEET CREATED ({req.costSheetId})
+                          </div>
+
+                          <div>
+                            <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Target Budget:</span>
+                            <strong style={{ color: '#4ade80', fontSize: '0.92rem' }}>{req.budget}</strong>
+                          </div>
+                        </div>
+
+                        {/* SHIFT NOTE BANNER */}
+                        {(req.handoffNote || (req.notes && req.notes.includes('[Shifted'))) && (
+                          <div style={{ background: 'rgba(251, 191, 36, 0.15)', border: '1px solid #fbbf24', borderRadius: '4px', padding: '4px 8px', fontSize: '0.72rem', color: '#fbbf24', fontWeight: '800' }}>
+                            📌 Shift Note: {req.handoffNote || (req.notes?.split('\n').pop() || '')}
+                          </div>
+                        )}
+
+                        {/* ACTION BUTTONS ROW - 100% VISIBLE ON SCREEN WITH ZERO CLIPPING */}
+                        <div style={{ borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                          {isCostSheetCreated ? (
+                            <button 
+                              onClick={() => {
+                                setActiveTab('cost_sheet_share');
+                                setActiveCostSheetShareSubTab('individual_cost_sheets');
+                                setSearchQuery(req.costSheetId || req.customerNumber);
+                              }} 
+                              style={{ flex: '1 1 100%', justifyContent: 'center', background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              📋 View in Cost Sheet Sharing →
+                            </button>
+                          ) : (
+                            <>
+                              <button 
+                                onClick={() => {
+                                  setSelectedMatchingId(req.requestId);
+                                  const cust = customers.find(c => c.customer_number === req.customerNumber || c.name === req.customerName);
+                                  if (cust) setSelectedCust(cust);
+                                  setSourcingModalRequest(req);
+                                  setSourcingReasonInput('');
+                                  setSourcingError('');
+                                }} 
+                                style={{ flex: windowWidth <= 1024 ? '1 1 150px' : '1', minWidth: windowWidth <= 640 ? '100%' : '140px', justifyContent: 'center', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)' }}
+                              >
+                                📦 Property Sourcing Request
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setSelectedMatchingId(req.requestId);
+                                  const cust = customers.find(c => c.customer_number === req.customerNumber || c.name === req.customerName);
+                                  if (cust) setSelectedCust(cust);
+                                  alert(`⚡ Running automated inventory matcher for ${req.customerName} (${req.requestId})`);
+                                }} 
+                                style={{ flex: windowWidth <= 1024 ? '1 1 110px' : 'none', minWidth: windowWidth <= 640 ? '100%' : '100px', justifyContent: 'center', background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                Run Matcher
+                              </button>
+                            </>
+                          )}
+                          {isStrictSuperAdmin && (
+                            <button
+                              onClick={() => handleDeleteMatchingRequest(req)}
+                              title={`Delete / Remove ${req.customerName || req.requestId}`}
+                              style={{ flex: windowWidth <= 1024 ? '1 1 80px' : 'none', minWidth: windowWidth <= 640 ? '100%' : '80px', justifyContent: 'center', background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <Trash2 size={13} /> Delete
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            ) : (
+              <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'thin' }}>
+                <table style={{ width: '100%', minWidth: '1000px', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                      <th style={{ padding: '10px 12px', whiteSpace: 'nowrap', minWidth: '140px' }}>Matching ID & Date</th>
+                      <th style={{ padding: '10px 12px', whiteSpace: 'nowrap', minWidth: '140px' }}>Customer & Contact</th>
+                      <th style={{ padding: '10px 12px', whiteSpace: 'nowrap', minWidth: '130px' }}>Customer ID</th>
+                      <th style={{ padding: '10px 12px', whiteSpace: 'nowrap', minWidth: '170px' }}>Structured Requirement</th>
+                      <th style={{ padding: '10px 12px', whiteSpace: 'nowrap', minWidth: '110px' }}>Budget</th>
+                      <th style={{ padding: '10px 12px', whiteSpace: 'nowrap', minWidth: '160px' }}>Cost Sheet Status</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap', minWidth: '240px' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allMatchingRequests
+                      .filter(req => (matchingVaultFilter === 'ALL' || (!req.costSheetId && req.status !== 'COST_SHEET_CREATED')) && matchesSearchQuery(req, searchQuery || matchingSearchQuery))
+                      .map((req) => {
+                        const isCostSheetCreated = !!req.costSheetId;
+                        return (
+                          <tr key={req.requestId} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: selectedMatchingId === req.requestId ? 'rgba(2, 132, 199, 0.15)' : 'transparent' }}>
+                            <td style={{ padding: '10px' }}>
+                              <span 
+                                onClick={() => openIdDetailsModal(req.requestId, 'MATCHING_ID')}
+                                style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', cursor: 'pointer', textDecoration: 'underline', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '2px 8px', borderRadius: '6px', display: 'inline-block' }}
+                                title="Click to view full Matching Request details"
+                              >
+                                🎯 {req.requestId}
                               </span>
-                            ) : (
-                              <span style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', border: '1px solid #fbbf24', padding: '2px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem', display: 'inline-block' }}>
-                                ⚡ PENDING (NO COST SHEET ID)
+                              <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px', display: 'block' }}>{req.date}</span>
+                            </td>
+                            <td style={{ padding: '10px' }}>
+                              <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{req.customerName}</strong>
+                              <br /><span style={{ fontSize: '0.72rem', color: '#4ade80' }}>{req.mobile}</span>
+                              {(req.handoffNote || (req.notes && req.notes.includes('[Shifted'))) && (
+                                <div style={{ marginTop: '4px', background: 'rgba(251, 191, 36, 0.15)', border: '1px solid #fbbf24', borderRadius: '4px', padding: '3px 6px', fontSize: '0.7rem', color: '#fbbf24', fontWeight: '800', width: 'fit-content' }}>
+                                  📌 Shift Note: {req.handoffNote || (req.notes?.split('\n').pop() || '')}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ padding: '10px' }}>
+                              <span 
+                                onClick={() => openIdDetailsModal(req.customerNumber, 'CUSTOMER_ID')}
+                                style={{ fontFamily: 'monospace', color: '#4ade80', fontWeight: '900', cursor: 'pointer', textDecoration: 'underline', background: 'rgba(34, 197, 94, 0.12)', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '2px 8px', borderRadius: '6px', display: 'inline-block' }}
+                                title="Click to view full Customer details"
+                              >
+                                🆔 {req.customerNumber}
                               </span>
-                            )}
-                          </td>
-                          <td style={{ padding: '10px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+                            </td>
+                            <td style={{ padding: '10px' }}>
+                              <span style={{ color: '#fbbf24', fontWeight: '800' }}>{req.configuration} {req.propertyType}</span>
+                              {(req.propertyCode || req.propCode) && (
+                                <div style={{ marginTop: '2px', marginBottom: '2px' }}>
+                                  <span style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid #0284c7', color: '#38bdf8', fontSize: '0.72rem', fontWeight: '900', padding: '2px 7px', borderRadius: '4px', fontFamily: 'monospace', display: 'inline-block' }}>
+                                    🏢 Property Code: {req.propertyCode || req.propCode}
+                                  </span>
+                                </div>
+                              )}
+                              <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>{req.preferredArea} (Radius: {req.radiusKm || 10} KM)</span>
+                            </td>
+                            <td style={{ padding: '10px', color: '#4ade80', fontWeight: '900' }}>
+                              {req.budget}
+                            </td>
+                            <td style={{ padding: '10px' }}>
                               {isCostSheetCreated ? (
-                                <button 
-                                  onClick={() => {
-                                    setActiveTab('cost_sheet_share');
-                                    setActiveCostSheetShareSubTab('individual_cost_sheets');
-                                    setSearchQuery(req.costSheetId || req.customerNumber);
-                                  }} 
-                                  style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                >
-                                  📋 View in Cost Sheet Sharing →
-                                </button>
+                                <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', border: '1px solid #22c55e', padding: '2px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem', display: 'inline-block' }}>
+                                  🟢 COST SHEET CREATED ({req.costSheetId})
+                                </span>
                               ) : (
-                                <>
+                                <span style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', border: '1px solid #fbbf24', padding: '2px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem', display: 'inline-block' }}>
+                                  ⚡ PENDING (NO COST SHEET ID)
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ padding: '10px', textAlign: 'center' }}>
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+                                {isCostSheetCreated ? (
                                   <button 
                                     onClick={() => {
-                                      setSelectedMatchingId(req.requestId);
-                                      const cust = customers.find(c => c.customer_number === req.customerNumber || c.name === req.customerName);
-                                      if (cust) setSelectedCust(cust);
-                                      setSourcingModalRequest(req);
-                                      setSourcingReasonInput('');
-                                      setSourcingError('');
+                                      setActiveTab('cost_sheet_share');
+                                      setActiveCostSheetShareSubTab('individual_cost_sheets');
+                                      setSearchQuery(req.costSheetId || req.customerNumber);
                                     }} 
-                                    style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)' }}
+                                    style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                   >
-                                    📦 Property Sourcing Request
+                                    📋 View in Cost Sheet Sharing →
                                   </button>
-                                  <button 
-                                    onClick={() => {
-                                      setSelectedMatchingId(req.requestId);
-                                      alert(`⚡ Running automated inventory matcher for ${req.customerName} (${req.requestId})`);
-                                    }} 
-                                    style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer' }}
+                                ) : (
+                                  <>
+                                    <button 
+                                      onClick={() => {
+                                        setSelectedMatchingId(req.requestId);
+                                        const cust = customers.find(c => c.customer_number === req.customerNumber || c.name === req.customerName);
+                                        if (cust) setSelectedCust(cust);
+                                        setSourcingModalRequest(req);
+                                        setSourcingReasonInput('');
+                                        setSourcingError('');
+                                      }} 
+                                      style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)' }}
+                                    >
+                                      📦 Property Sourcing Request
+                                    </button>
+                                    <button 
+                                      onClick={() => {
+                                        setSelectedMatchingId(req.requestId);
+                                        alert(`⚡ Running automated inventory matcher for ${req.customerName} (${req.requestId})`);
+                                      }} 
+                                      style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer' }}
+                                    >
+                                      Run Matcher
+                                    </button>
+                                  </>
+                                )}
+                                {isStrictSuperAdmin && (
+                                  <button
+                                    onClick={() => handleDeleteMatchingRequest(req)}
+                                    title={`Delete / Remove ${req.customerName || req.requestId}`}
+                                    style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                   >
-                                    Run Matcher
+                                    <Trash2 size={13} /> Delete
                                   </button>
-                                </>
-                              )}
-                              {isStrictSuperAdmin && (
-                                <button
-                                  onClick={() => handleDeleteMatchingRequest(req)}
-                                  title={`Delete / Remove ${req.customerName || req.requestId}`}
-                                  style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                >
-                                  <Trash2 size={13} /> Delete
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* PRIMARY SEARCH MATCHING REQUEST BAR (SECTION 1 & 31) */}
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <Zap size={22} color="#38bdf8" />
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>SEARCH MATCHING REQUEST</h3>
-                  <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
+                  <h3 style={{ fontSize: windowWidth <= 480 ? '1.05rem' : '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>SEARCH MATCHING REQUEST</h3>
+                  <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px', marginBottom: 0 }}>
                     Primary Operational ID: Select or enter Matching Request ID (e.g. SRM-MAT-2026-000421).
                   </p>
                 </div>
@@ -915,7 +1107,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     if (cust) setSelectedCust(cust);
                   }
                 }} 
-                style={{ background: isLight ? '#f8fafc' : '#0f172a', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '8px 14px', fontSize: '0.85rem', fontWeight: '800' }}
+                style={{ width: windowWidth <= 1100 ? '100%' : 'auto', maxWidth: '100%', background: isLight ? '#f8fafc' : '#0f172a', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '8px 14px', fontSize: '0.85rem', fontWeight: '800' }}
               >
                 <option value="">-- Select a Matching Request to Open Workspace --</option>
                 {allMatchingRequests
@@ -929,7 +1121,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             </div>
 
             {/* SEARCH INPUT BAR */}
-            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px' }}>
+            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 640 ? '12px' : '16px' }}>
               <label style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: '900', display: 'block', marginBottom: '4px' }}>🔍 Search Matching Request (Primary ID: SRM-MAT-2026-000421):</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '6px', padding: '6px 10px' }}>
                 <Search size={15} color="#38bdf8" />
@@ -964,32 +1156,32 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             {activeMatchingReq && (
               <>
                 {/* MATCHING REQUEST HEADER (SECTION 2 & 21) */}
-                <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', fontSize: '0.82rem' }}>
+                <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 640 ? '12px' : '16px', display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', fontSize: '0.82rem' }}>
                   <div>
                     <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', textTransform: 'uppercase', fontWeight: '800' }}>PRIMARY MATCHING ID</span>
-                    <h4 style={{ fontSize: '1rem', fontWeight: '900', color: '#38bdf8', fontFamily: 'monospace' }}>{activeMatchingReq.requestId}</h4>
+                    <h4 style={{ fontSize: '1rem', fontWeight: '900', color: '#38bdf8', fontFamily: 'monospace', margin: 0 }}>{activeMatchingReq.requestId}</h4>
                     <span style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: '800' }}>● MATCHING WORKSPACE ACTIVE</span>
                   </div>
                   <div>
                     <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', textTransform: 'uppercase', fontWeight: '800' }}>CUSTOMER IDENTITY</span>
-                    <h4 style={{ fontSize: '0.95rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>{activeMatchingReq.customerName}</h4>
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>{activeMatchingReq.customerName}</h4>
                     <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'monospace' }}>{activeMatchingReq.customerNumber} ({activeMatchingReq.mobile})</span>
                   </div>
                   <div>
                     <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', textTransform: 'uppercase', fontWeight: '800' }}>LINKED REQ & LEAD IDs</span>
-                    <h4 style={{ fontSize: '0.82rem', fontWeight: '800', color: '#fbbf24', fontFamily: 'monospace' }}>{activeMatchingReq.requirementId || 'SRM-REQ-2026-000094'}</h4>
+                    <h4 style={{ fontSize: '0.82rem', fontWeight: '800', color: '#fbbf24', fontFamily: 'monospace', margin: 0 }}>{activeMatchingReq.requirementId || 'SRM-REQ-2026-000094'}</h4>
                     <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace' }}>{activeMatchingReq.leadId || 'SRM-LEAD-2026-000184'}</span>
                   </div>
                   <div>
                     <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', textTransform: 'uppercase', fontWeight: '800' }}>CREATED BY & STATUS</span>
-                    <h4 style={{ fontSize: '0.82rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{activeMatchingReq.assignedExecutive || 'Priya Nair (Sales Exec)'}</h4>
+                    <h4 style={{ fontSize: '0.82rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>{activeMatchingReq.assignedExecutive || 'Priya Nair (Sales Exec)'}</h4>
                     <span style={{ background: activeMatchingReq.status === 'COST_SHEET_CREATED' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)', color: activeMatchingReq.status === 'COST_SHEET_CREATED' ? '#4ade80' : '#fbbf24', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '900' }}>{activeMatchingReq.status}</span>
                   </div>
                 </div>
 
                 {/* COST SHEET CREATED & TRANSFERRED NOTIFICATION BANNER */}
                 {(activeMatchingReq.status === 'COST_SHEET_CREATED' || activeMatchingReq.costSheetId) && (
-                  <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', borderRadius: '12px', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', borderRadius: '12px', padding: windowWidth <= 640 ? '12px' : '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                     <div>
                       <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '0.92rem', margin: 0 }}>
                         🟢 COST SHEET CREATED & TRANSFERRED TO COST SHEET SHARING
@@ -1004,7 +1196,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                         setActiveCostSheetShareSubTab('individual_cost_sheets');
                         setSearchQuery(activeMatchingReq.costSheetId || activeMatchingReq.customerNumber);
                       }} 
-                      style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      style={{ width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: 'center', background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
                       📋 Open in Cost Sheet Sharing →
                     </button>
@@ -1012,13 +1204,13 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                 )}
 
                 {/* LOCKED CUSTOMER REQUIREMENT SNAPSHOT (SECTION 3 & 24) */}
-                <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 640 ? '12px' : '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                     <span style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: '900' }}>🔒 LOCKED CUSTOMER REQUIREMENT SNAPSHOT FOR {activeMatchingReq.requestId}</span>
                     <span style={{ background: '#334155', color: '#fbbf24', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800' }}>REQUIREMENT VERSION: {activeMatchingReq.version || 'SNAPSHOT V1'}</span>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', gap: '10px', fontSize: '0.8rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? 'repeat(1, 1fr)' : windowWidth <= 768 ? 'repeat(2, 1fr)' : windowWidth <= 1024 ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', gap: '10px', fontSize: '0.8rem' }}>
                     <div><span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Target Property Code:</span> <strong style={{ color: '#38bdf8', fontFamily: 'monospace', display: 'block', fontWeight: '900' }}>{activeMatchingReq.propertyCode || activeMatchingReq.propCode || 'N/A (Open Re-Rank Search)'}</strong></div>
                     <div><span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Property Type:</span> <strong style={{ color: isLight ? '#0f172a' : '#ffffff', display: 'block' }}>{activeMatchingReq.propertyType || 'Apartment / Flat'}</strong></div>
                     <div><span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>BHK Config:</span> <strong style={{ color: '#fbbf24', display: 'block' }}>{activeMatchingReq.configuration || '3 BHK'}</strong></div>
@@ -1027,15 +1219,23 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     <div><span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Possession & Facing:</span> <strong style={{ color: isLight ? '#0f172a' : '#ffffff', display: 'block' }}>{activeMatchingReq.possessionStatus || 'Ready to Move'} | {activeMatchingReq.facing || 'East Facing'}</strong></div>
                   </div>
 
-                  {/* RUN MATCHER & DELETE BUTTONS (SECTION 4) */}
-                  <div style={{ borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '10px', display: 'flex', justifyContent: 'flex-end', gap: '8px', flexWrap: 'wrap' }}>
+                  {/* RUN MATCHER & DELETE BUTTONS (SECTION 4) - FULLY RESPONSIVE 1 ROW */}
+                  <div style={{ borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '10px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                     {isStrictSuperAdmin && (
-                      <button onClick={() => handleDeleteMatchingRequest(activeMatchingReq)} style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Trash2 size={15} /> 🗑️ DELETE / REMOVE REQUEST ({activeMatchingReq.requestId})
+                      <button 
+                        onClick={() => handleDeleteMatchingRequest(activeMatchingReq)} 
+                        title={`Delete Matching Request ${activeMatchingReq.requestId}`}
+                        style={{ flex: '1 1 auto', minWidth: windowWidth <= 480 ? '100%' : '130px', justifyContent: 'center', background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '8px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.78rem' : '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', boxSizing: 'border-box' }}
+                      >
+                        <Trash2 size={14} /> 🗑️ {windowWidth <= 640 ? 'Delete Request' : `Delete Request (${activeMatchingReq.requestId})`}
                       </button>
                     )}
-                    <button onClick={() => alert(`⚡ Executed real-time property matching engine for ${activeMatchingReq.requestId} snapshot!`)} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Zap size={15} /> ⚡ RUN / RE-RUN MATCHER FOR {activeMatchingReq.requestId}
+                    <button 
+                      onClick={() => alert(`⚡ Executed real-time property matching engine for ${activeMatchingReq.requestId} snapshot!`)} 
+                      title={`Run property matcher engine for ${activeMatchingReq.requestId}`}
+                      style={{ flex: '1 1 auto', minWidth: windowWidth <= 480 ? '100%' : '140px', justifyContent: 'center', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '8px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.78rem' : '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', boxSizing: 'border-box' }}
+                    >
+                      <Zap size={14} /> ⚡ {windowWidth <= 640 ? 'Run Matcher' : `Run Matcher (${activeMatchingReq.requestId})`}
                     </button>
                   </div>
                 </div>
@@ -1091,33 +1291,76 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
 
           {/* IF NO MATCHING REQUEST IS SELECTED, SHOW CLEAN PROMPT; OTHERWISE SHOW MATCHED PROPERTIES & DISPATCHER */}
           {!activeMatchingReq ? (
-            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', borderRadius: '16px', padding: '40px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Zap size={24} color="#38bdf8" />
+            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '20px 14px' : windowWidth <= 1100 ? '28px 18px' : '40px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+              <div style={{ width: windowWidth <= 640 ? '40px' : '48px', height: windowWidth <= 640 ? '40px' : '48px', borderRadius: '50%', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Zap size={windowWidth <= 640 ? 20 : 24} color="#38bdf8" />
               </div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
+              <h3 style={{ fontSize: windowWidth <= 640 ? '0.98rem' : windowWidth <= 1100 ? '1.05rem' : '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
                 No Matching Request Workspace Active
               </h3>
-              <p style={{ fontSize: '0.85rem', color: isLight ? '#64748b' : '#94a3b8', maxWidth: '540px', margin: 0 }}>
+              <p style={{ fontSize: windowWidth <= 1100 ? '0.8rem' : '0.85rem', color: isLight ? '#64748b' : '#94a3b8', maxWidth: '560px', margin: 0, lineHeight: '1.5' }}>
                 Click <strong style={{ color: '#0284c7' }}>"📂 Open Workspace"</strong> or <strong style={{ color: '#22c55e' }}>"Run Matcher"</strong> on any request in the <strong style={{ color: '#22c55e' }}>Inbound Vault above</strong>, or choose a Matching ID from the search bar to inspect customer requirements and matched properties.
               </p>
             </div>
           ) : (
             <>
               {/* MATCHED PROPERTIES RESULTS & TABLE (SECTION 5, 7, 8, 9) */}
-              <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                   <div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>🎯 MATCHED PROPERTIES FOR {activeMatchingReq.requestId} ({activeMatchingReq.customerName})</h3>
-                    <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8' }}>{properties.length} Total Inventory Properties • AI Matching & Manual Lookup Active (Already used property codes are excluded from new suggestions)</p>
+                    <h3 style={{ fontSize: windowWidth <= 480 ? '0.95rem' : '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>🎯 MATCHED PROPERTIES FOR {activeMatchingReq.requestId} ({activeMatchingReq.customerName})</h3>
+                    <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px', marginBottom: 0 }}>{properties.length} Total Inventory Properties • AI Matching & Manual Lookup Active (Already used property codes are excluded from new suggestions)</p>
                   </div>
-                  <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '4px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: '900', border: '1px solid #22c55e' }}>
-                    {selectedPropertyIds.length} PROPERTIES SELECTED
-                  </span>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {/* VIEW MODE TOGGLE (CARDS vs TABLE) FOR MATCHED PROPERTIES */}
+                    <div style={{ display: 'flex', gap: '2px', background: isLight ? '#f1f5f9' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '20px', padding: '2px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setMatchedPropViewMode('cards')}
+                        style={{
+                          background: matchedPropViewMode === 'cards' ? '#0284c7' : 'transparent',
+                          color: matchedPropViewMode === 'cards' ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'),
+                          border: 'none',
+                          borderRadius: '16px',
+                          padding: '4px 10px',
+                          fontSize: '0.72rem',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        📱 Cards {windowWidth <= 1024 && <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>(Rec.)</span>}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMatchedPropViewMode('table')}
+                        style={{
+                          background: matchedPropViewMode === 'table' ? '#0284c7' : 'transparent',
+                          color: matchedPropViewMode === 'table' ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'),
+                          border: 'none',
+                          borderRadius: '16px',
+                          padding: '4px 10px',
+                          fontSize: '0.72rem',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        📋 Table
+                      </button>
+                    </div>
+                    <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '4px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: '900', border: '1px solid #22c55e' }}>
+                      {selectedPropertyIds.length} PROPERTIES SELECTED
+                    </span>
+                  </div>
                 </div>
 
             {/* MANUAL PROPERTY SEARCH & MATCH SELECTION CONTROL PANEL */}
-            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '12px', padding: windowWidth <= 640 ? '12px' : '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <span style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   🔍 MANUAL PROPERTY SEARCH & DIRECT SELECTION (SEARCH BY PROPERTY ID / CODE / NAME)
@@ -1129,7 +1372,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {/* Search Input Bar */}
-                <div style={{ flex: 1, minWidth: '280px', display: 'flex', alignItems: 'center', gap: '8px', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '8px', padding: '8px 12px' }}>
+                <div style={{ flex: 1, minWidth: windowWidth <= 480 ? '100%' : '240px', display: 'flex', alignItems: 'center', gap: '8px', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '8px', padding: '8px 12px' }}>
                   <Search size={16} color="#38bdf8" />
                   <input 
                     type="text" 
@@ -1175,7 +1418,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                           setPropertySearchQuery(selectedCode);
                         }
                       }}
-                      style={{ background: isLight ? '#ffffff' : '#1e293b', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '8px 12px', fontSize: '0.82rem', fontWeight: '800', maxWidth: '320px' }}
+                      style={{ width: windowWidth <= 640 ? '100%' : 'auto', maxWidth: windowWidth <= 640 ? '100%' : '320px', background: isLight ? '#ffffff' : '#1e293b', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '8px 12px', fontSize: '0.82rem', fontWeight: '800' }}
                     >
                       <option value="">-- Or Quick Select Property Code --</option>
                       {properties.map(p => {
@@ -1232,162 +1475,166 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                       alert(`❌ No property found matching search query "${propertySearchQuery}". Please check the Property ID.`);
                     }
                   }}
-                  style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                  style={{ width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: 'center', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
                 >
                   ➕ Add / Select Property
                 </button>
               </div>
             </div>
 
-            <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                <thead>
-                  <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Select</th>
-                    <th style={{ padding: '12px' }}>Property Code & Title</th>
-                    <th style={{ padding: '12px' }}>Locality & Project</th>
-                    <th style={{ padding: '12px' }}>BHK & Area</th>
-                    <th style={{ padding: '12px' }}>Final Price</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Match Score</th>
-                    <th style={{ padding: '12px' }}>Match Explanation (Why Matched)</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Cost Sheet Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const fallbackInventory = [
-                      {
-                        id: 'PROP-BARASAT-001',
-                        property_code: 'SRM-PROP-2026-000426',
-                        title: '1 Properties (BARASAT, BANAMALIPUR, BARASAT NEAR ECO HOSPITAL)',
-                        locality: 'Barasat / Banamalipur',
-                        project: 'TILOTTAMA APPARTMENT',
-                        developer: 'Swaramayi Partner Developer',
-                        configuration: '3BHK',
-                        type: 'Flat / Apartment (New / Builder)',
-                        facing: 'East Facing (Poorva)',
-                        possession_status: 'Ready to Move',
-                        final_price: '₹51,14,880',
-                        base_price: '₹48,00,000',
-                        area_sqft: '1450 SqFt'
-                      },
-                      {
-                        id: 'PROP-KONDAPUR-002',
-                        property_code: 'SRM-PROP-2026-000427',
-                        title: 'Aparna Zenon Luxury 3BHK Flat',
-                        locality: 'Kondapur / Gachibowli',
-                        project: 'Aparna Zenon',
-                        developer: 'Aparna Constructions',
-                        configuration: '3BHK',
-                        type: 'Flat / Apartment (New / Builder)',
-                        facing: 'North-East Facing',
-                        possession_status: 'Under Construction',
-                        final_price: '₹84,00,000',
-                        base_price: '₹78,00,000',
-                        area_sqft: '1680 SqFt'
-                      }
-                    ];
+            {(() => {
+              const fallbackInventory = [
+                {
+                  id: 'PROP-BARASAT-001',
+                  property_code: 'SRM-PROP-2026-000426',
+                  title: '1 Properties (BARASAT, BANAMALIPUR, BARASAT NEAR ECO HOSPITAL)',
+                  locality: 'Barasat / Banamalipur',
+                  project: 'TILOTTAMA APPARTMENT',
+                  developer: 'Swaramayi Partner Developer',
+                  configuration: '3BHK',
+                  type: 'Flat / Apartment (New / Builder)',
+                  facing: 'East Facing (Poorva)',
+                  possession_status: 'Ready to Move',
+                  final_price: '₹51,14,880',
+                  base_price: '₹48,00,000',
+                  area_sqft: '1450 SqFt'
+                },
+                {
+                  id: 'PROP-KONDAPUR-002',
+                  property_code: 'SRM-PROP-2026-000427',
+                  title: 'Aparna Zenon Luxury 3BHK Flat',
+                  locality: 'Kondapur / Gachibowli',
+                  project: 'Aparna Zenon',
+                  developer: 'Aparna Constructions',
+                  configuration: '3BHK',
+                  type: 'Flat / Apartment (New / Builder)',
+                  facing: 'North-East Facing',
+                  possession_status: 'Under Construction',
+                  final_price: '₹84,00,000',
+                  base_price: '₹78,00,000',
+                  area_sqft: '1680 SqFt'
+                }
+              ];
 
-                    let displayProps = [...(properties || [])];
-                    if (displayProps.length === 0) displayProps = fallbackInventory;
-                    if (!displayProps.some(p => p.property_code === 'SRM-PROP-2026-000426')) {
-                      displayProps.unshift(fallbackInventory[0]);
-                    }
+              let displayProps = [...(properties || [])];
+              if (displayProps.length === 0) displayProps = fallbackInventory;
+              if (!displayProps.some(p => p.property_code === 'SRM-PROP-2026-000426')) {
+                displayProps.unshift(fallbackInventory[0]);
+              }
 
-                    const activeCustUsedProps = activeMatchingReq
-                      ? getCustomerUsedPropertyCodes(
-                          activeMatchingReq.customerNumber || activeMatchingReq.customerId,
-                          activeMatchingReq.customerName || activeMatchingReq.name,
-                          activeMatchingReq.mobile,
-                          individualCostSheets,
-                          costSheetShares,
-                          scheduledVisits
-                        )
-                      : [];
-                    const activeCustUsedCodesSet = new Set(activeCustUsedProps.map(p => (p.propertyCode || '').toString().trim().toUpperCase()));
+              const activeCustUsedProps = activeMatchingReq
+                ? getCustomerUsedPropertyCodes(
+                    activeMatchingReq.customerNumber || activeMatchingReq.customerId,
+                    activeMatchingReq.customerName || activeMatchingReq.name,
+                    activeMatchingReq.mobile,
+                    individualCostSheets,
+                    costSheetShares,
+                    scheduledVisits
+                  )
+                : [];
+              const activeCustUsedCodesSet = new Set(activeCustUsedProps.map(p => (p.propertyCode || '').toString().trim().toUpperCase()));
 
-                    return displayProps
-                      .map(p => {
-                        const currentMatchingCust = {
-                          ...selectedCust,
-                          name: activeMatchingReq.customerName,
-                          customer_number: activeMatchingReq.customerNumber,
-                          budget: activeMatchingReq.budget,
-                          preferredArea: activeMatchingReq.preferredArea,
-                          configuration: activeMatchingReq.configuration
-                        };
-                        const res = calculatePropertyMatchScore(currentMatchingCust, p);
-                        let matchVal = res.total;
-                        const targetPCode = activeMatchingReq.propertyCode || activeMatchingReq.propCode;
-                        if (targetPCode && p.property_code === targetPCode) {
-                          matchVal = Math.max(matchVal, 96);
-                        }
-                        return { ...p, matchTotal: matchVal, breakdown: res.breakdown };
-                      })
-                    .filter(p => {
-                      if (!propertySearchQuery.trim()) return true;
-                      const q = propertySearchQuery.trim().toLowerCase();
-                      return (p.property_code || '').toString().toLowerCase().includes(q) ||
-                        (p.title || '').toString().toLowerCase().includes(q) ||
-                        (p.locality || '').toString().toLowerCase().includes(q) ||
-                        (p.developer || '').toString().toLowerCase().includes(q) ||
-                        (p.configuration || '').toString().toLowerCase().includes(q);
-                    })
-                    .sort((a, b) => {
-                      const aIsUsed = activeCustUsedCodesSet.has((a.property_code || '').toString().trim().toUpperCase());
-                      const bIsUsed = activeCustUsedCodesSet.has((b.property_code || '').toString().trim().toUpperCase());
-                      if (!aIsUsed && bIsUsed) return -1;
-                      if (aIsUsed && !bIsUsed) return 1;
+              const matchedPropsList = displayProps
+                .map(p => {
+                  const currentMatchingCust = {
+                    ...selectedCust,
+                    name: activeMatchingReq.customerName,
+                    customer_number: activeMatchingReq.customerNumber,
+                    budget: activeMatchingReq.budget,
+                    preferredArea: activeMatchingReq.preferredArea,
+                    configuration: activeMatchingReq.configuration
+                  };
+                  const res = calculatePropertyMatchScore(currentMatchingCust, p);
+                  let matchVal = res.total;
+                  const targetPCode = activeMatchingReq.propertyCode || activeMatchingReq.propCode;
+                  if (targetPCode && p.property_code === targetPCode) {
+                    matchVal = Math.max(matchVal, 96);
+                  }
+                  return { ...p, matchTotal: matchVal, breakdown: res.breakdown };
+                })
+                .filter(p => {
+                  if (!propertySearchQuery.trim()) return true;
+                  const q = propertySearchQuery.trim().toLowerCase();
+                  return (p.property_code || '').toString().toLowerCase().includes(q) ||
+                    (p.title || '').toString().toLowerCase().includes(q) ||
+                    (p.locality || '').toString().toLowerCase().includes(q) ||
+                    (p.developer || '').toString().toLowerCase().includes(q) ||
+                    (p.configuration || '').toString().toLowerCase().includes(q);
+                })
+                .sort((a, b) => {
+                  const aIsUsed = activeCustUsedCodesSet.has((a.property_code || '').toString().trim().toUpperCase());
+                  const bIsUsed = activeCustUsedCodesSet.has((b.property_code || '').toString().trim().toUpperCase());
+                  if (!aIsUsed && bIsUsed) return -1;
+                  if (aIsUsed && !bIsUsed) return 1;
 
-                      const aIsSelected = selectedPropertyIds.includes(a.property_code);
-                      const bIsSelected = selectedPropertyIds.includes(b.property_code);
-                      if (aIsSelected && !bIsSelected) return -1;
-                      if (!aIsSelected && bIsSelected) return 1;
-                      return b.matchTotal - a.matchTotal;
-                    })
-                    .map((p) => {
+                  const aIsSelected = selectedPropertyIds.includes(a.property_code);
+                  const bIsSelected = selectedPropertyIds.includes(b.property_code);
+                  if (aIsSelected && !bIsSelected) return -1;
+                  if (!aIsSelected && bIsSelected) return 1;
+                  return b.matchTotal - a.matchTotal;
+                });
+
+              if (matchedPropsList.length === 0) {
+                return (
+                  <div style={{ padding: '30px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
+                    No matched inventory properties found matching search query "{propertySearchQuery}".
+                  </div>
+                );
+              }
+
+              if (matchedPropViewMode === 'cards') {
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {matchedPropsList.map((p) => {
                       const pct = p.matchTotal;
                       const isChecked = selectedPropertyIds.includes(p.property_code);
                       const isUsedInCostSheet = activeCustUsedCodesSet.has((p.property_code || '').toString().trim().toUpperCase());
                       const usedObj = activeCustUsedProps.find(up => up.propertyCode.toUpperCase() === (p.property_code || '').toString().trim().toUpperCase());
+                      const st = getDynamicPropertyStatus(p);
 
                       return (
-                        <tr key={p.id} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: isUsedInCostSheet ? 'rgba(239, 68, 68, 0.08)' : isChecked ? 'rgba(2, 132, 199, 0.15)' : 'transparent' }}>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>
-                            <input 
-                              type="checkbox" 
-                              checked={isChecked} 
-                              disabled={isUsedInCostSheet}
-                              title={isUsedInCostSheet ? "Property code already used for a Cost Sheet for this customer (Excluded)" : ""}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedPropertyIds([...selectedPropertyIds, p.property_code]);
-                                } else {
-                                  setSelectedPropertyIds(selectedPropertyIds.filter(id => id !== p.property_code));
-                                }
-                              }} 
-                              style={{ width: '18px', height: '18px', cursor: isUsedInCostSheet ? 'not-allowed' : 'pointer', opacity: isUsedInCostSheet ? 0.5 : 1 }} 
-                            />
-                          </td>
-                          <td style={{ padding: '12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                              <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.78rem' }}>{p.property_code}</span>
-                              {(() => {
-                                const st = getDynamicPropertyStatus(p);
-                                return (
-                                  <span style={{ 
-                                    background: st.bg, 
-                                    color: st.color, 
-                                    border: `1px solid ${st.border}`, 
-                                    padding: '1px 6px', 
-                                    borderRadius: '4px', 
-                                    fontSize: '0.65rem', 
-                                    fontWeight: '900' 
-                                  }}>
-                                    {st.label}
-                                  </span>
-                                );
-                              })()}
+                        <div 
+                          key={p.id || p.property_code} 
+                          style={{
+                            background: isUsedInCostSheet 
+                              ? (isLight ? 'rgba(239, 68, 68, 0.05)' : 'rgba(239, 68, 68, 0.1)') 
+                              : isChecked 
+                              ? (isLight ? 'rgba(2, 132, 199, 0.08)' : 'rgba(2, 132, 199, 0.18)') 
+                              : (isLight ? '#f8fafc' : '#0f172a'),
+                            border: isUsedInCostSheet 
+                              ? '1.5px solid #ef4444' 
+                              : isChecked 
+                              ? '2px solid #0284c7' 
+                              : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                            borderRadius: '14px',
+                            padding: windowWidth <= 640 ? '14px' : '18px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px',
+                            boxShadow: isChecked ? '0 4px 14px rgba(2, 132, 199, 0.15)' : 'none'
+                          }}
+                        >
+                          {/* CARD TOP ROW: CHECKBOX + CODE + STATUS BADGES + MATCH SCORE */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={isChecked} 
+                                disabled={isUsedInCostSheet}
+                                title={isUsedInCostSheet ? "Property code already used for a Cost Sheet for this customer (Excluded)" : ""}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedPropertyIds([...selectedPropertyIds, p.property_code]);
+                                  } else {
+                                    setSelectedPropertyIds(selectedPropertyIds.filter(id => id !== p.property_code));
+                                  }
+                                }} 
+                                style={{ width: '20px', height: '20px', cursor: isUsedInCostSheet ? 'not-allowed' : 'pointer', opacity: isUsedInCostSheet ? 0.5 : 1 }} 
+                              />
+                              <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.9rem' }}>{p.property_code}</span>
+                              <span style={{ background: st.bg, color: st.color, border: `1px solid ${st.border}`, padding: '1px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '900' }}>
+                                {st.label}
+                              </span>
                               {isChecked && (
                                 <span style={{ background: '#0284c7', color: '#ffffff', padding: '1px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '900' }}>
                                   📌 SELECTED
@@ -1395,72 +1642,71 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                               )}
                               {isUsedInCostSheet && (
                                 <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid #ef4444', padding: '1px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '900' }}>
-                                  🚫 COST SHEET ALREADY CREATED (EXCLUDED)
+                                  🚫 EXCLUDED
                                 </span>
                               )}
                             </div>
-                            <h4 style={{ fontSize: '0.88rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', marginTop: '2px' }}>{p.title}</h4>
-                            <span style={{ fontSize: '0.68rem', color: '#a855f7', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid #a855f7', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
-                              🏢 {p.property_type || p.type || 'Flat / Apartment'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px' }}>
-                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{p.locality}</strong>
-                            <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>{p.developer}</span>
-                          </td>
-                          <td style={{ padding: '12px' }}>
-                            <span style={{ color: '#fbbf24', fontWeight: '800' }}>{p.configuration}</span>
-                            <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>{p.carpet_area}</span>
-                          </td>
-                          <td style={{ padding: '12px', color: '#4ade80', fontWeight: '900', fontSize: '0.95rem' }}>
-                            {p.final_price}
-                          </td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>
-                            <span style={{ background: pct >= 85 ? 'rgba(34, 197, 94, 0.2)' : pct >= 70 ? 'rgba(234, 179, 8, 0.2)' : 'rgba(239, 68, 68, 0.2)', color: pct >= 85 ? '#4ade80' : pct >= 70 ? '#fbbf24' : '#ef4444', padding: '4px 10px', borderRadius: '20px', fontWeight: '900', fontSize: '0.8rem' }}>
+
+                            <span style={{ background: pct >= 85 ? 'rgba(34, 197, 94, 0.2)' : pct >= 70 ? 'rgba(234, 179, 8, 0.2)' : 'rgba(239, 68, 68, 0.2)', color: pct >= 85 ? '#4ade80' : pct >= 70 ? '#fbbf24' : '#ef4444', padding: '4px 10px', borderRadius: '20px', fontWeight: '900', fontSize: '0.8rem', border: `1px solid ${pct >= 85 ? '#22c55e' : pct >= 70 ? '#eab308' : '#ef4444'}` }}>
                               {pct >= 85 ? '🔥' : pct >= 70 ? '⚡' : '❄️'} {pct}% MATCH
                             </span>
-                          </td>
-                          <td style={{ padding: '12px' }}>
-                            {/* MATCH EXPLANATION (ALL 7 CRITERIA BREAKDOWN WITH ACHIEVED%/MAX% MATCH FORMATTING) */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ background: pct >= 85 ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' : pct >= 70 ? 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#ffffff', padding: '3px 10px', borderRadius: '12px', fontWeight: '900', fontSize: '0.78rem', boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
-                                  🎯 {pct}% / 100% OVERALL MATCH
-                                </span>
-                                <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>
-                                  {pct >= 85 ? 'High Precision 7-Criteria Match' : pct >= 70 ? 'Good Compatibility' : 'Partial Criteria Match'}
-                                </span>
-                              </div>
+                          </div>
 
-                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', fontSize: '0.68rem' }}>
-                                <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.bud === 25 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.bud === 25 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                  {p.breakdown.bud === 25 ? '✓' : '✗'} Budget Range ({p.breakdown.bud}%/25% match)
-                                </span>
-                                <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.loc >= 15 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.loc >= 15 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                  ✓ Location ({p.breakdown.loc}%/20% match)
-                                </span>
-                                <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.bhk >= 12 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.bhk >= 12 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                  ✓ BHK Config ({p.breakdown.bhk}%/15% match)
-                                </span>
-                                <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.sqft >= 10 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.sqft >= 10 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                  ✓ Sq.Ft Area ({p.breakdown.sqft}%/15% match)
-                                </span>
-                                <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.possession_facing >= 7 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.possession_facing >= 7 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                  ✓ Possession & Facing ({p.breakdown.possession_facing}%/10% match)
-                                </span>
-                                <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.floor_pref >= 4 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.floor_pref >= 4 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                  ✓ Floor Preference ({p.breakdown.floor_pref}%/5% match)
-                                </span>
-                                <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.type >= 4 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.type >= 4 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                  ✓ Category Type ({p.breakdown.type}%/5% match)
-                                </span>
-                                <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.condition >= 3 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.condition >= 3 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                  ✓ Condition ({p.breakdown.condition}%/5% match)
-                                </span>
-                              </div>
+                          {/* PROPERTY TITLE & DETAILS GRID */}
+                          <div>
+                            <h4 style={{ fontSize: '0.95rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>{p.title}</h4>
+                            <span style={{ fontSize: '0.7rem', color: '#a855f7', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid #a855f7', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '4px' }}>
+                              🏢 {p.property_type || p.type || 'Flat / Apartment'}
+                            </span>
+                          </div>
+
+                          {/* METRICS GRID */}
+                          <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? '1fr' : 'repeat(2, 1fr)', gap: '8px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '10px', fontSize: '0.78rem' }}>
+                            <div>
+                              <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Locality & Developer:</span>
+                              <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{p.locality}</strong>
+                              <div style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>{p.developer}</div>
                             </div>
-                          </td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <div>
+                              <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Config & Area:</span>
+                              <strong style={{ color: '#fbbf24' }}>{p.configuration}</strong>
+                              <div style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>{p.carpet_area || p.area_sqft}</div>
+                            </div>
+                            <div style={{ gridColumn: windowWidth <= 480 ? '1' : 'span 2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '6px', marginTop: '2px' }}>
+                              <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.72rem' }}>Final Pricing:</span>
+                              <strong style={{ color: '#4ade80', fontSize: '1rem', fontWeight: '900' }}>{p.final_price}</strong>
+                            </div>
+                          </div>
+
+                          {/* MATCH EXPLANATION (CRITERIA BADGES) */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>
+                              🎯 High Precision 7-Criteria Match Explanation:
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', fontSize: '0.68rem' }}>
+                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.bud === 25 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.bud === 25 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
+                                {p.breakdown.bud === 25 ? '✓' : '✗'} Budget ({p.breakdown.bud}%/25%)
+                              </span>
+                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.loc >= 15 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.loc >= 15 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
+                                ✓ Location ({p.breakdown.loc}%/20%)
+                              </span>
+                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.bhk >= 12 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.bhk >= 12 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
+                                ✓ BHK ({p.breakdown.bhk}%/15%)
+                              </span>
+                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.sqft >= 10 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.sqft >= 10 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
+                                ✓ SqFt ({p.breakdown.sqft}%/15%)
+                              </span>
+                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.possession_facing >= 7 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.possession_facing >= 7 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
+                                ✓ Possession & Facing ({p.breakdown.possession_facing}%/10%)
+                              </span>
+                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.floor_pref >= 4 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.floor_pref >= 4 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
+                                ✓ Floor ({p.breakdown.floor_pref}%/5%)
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* CARD BOTTOM ACTION BUTTON */}
+                          <div style={{ borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
                             {isUsedInCostSheet ? (
                               <button 
                                 onClick={() => {
@@ -1468,36 +1714,196 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                                   setActiveCostSheetShareSubTab('individual_cost_sheets');
                                   setSearchQuery(usedObj?.costSheetId || p.property_code);
                                 }} 
-                                style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', border: '1px solid #eab308', padding: '6px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                                style={{ width: '100%', justifyContent: 'center', background: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', border: '1px solid #eab308', padding: '10px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                               >
                                 🔒 Cost Sheet Created ({usedObj?.costSheetId || 'View'}) →
                               </button>
                             ) : (
                               <button 
                                 onClick={() => handleRowLevelCreateCostSheet(p)} 
-                                style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: '1px solid #38bdf8', padding: '6px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                                style={{ width: '100%', justifyContent: 'center', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: '1px solid #38bdf8', padding: '10px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 3px 10px rgba(2, 132, 199, 0.3)' }}
                               >
                                 📄 Create Cost Sheet ID
                               </button>
                             )}
-                          </td>
-                        </tr>
+                          </div>
+                        </div>
                       );
-                    })
-                  })()}
-                </tbody>
-              </table>
-            </div>
+                    })}
+                  </div>
+                );
+              }
+
+              return (
+                <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                  <table style={{ width: '100%', minWidth: '950px', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <thead>
+                      <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                        <th style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>Select</th>
+                        <th style={{ padding: '12px', whiteSpace: 'nowrap' }}>Property Code & Title</th>
+                        <th style={{ padding: '12px', whiteSpace: 'nowrap' }}>Locality & Project</th>
+                        <th style={{ padding: '12px', whiteSpace: 'nowrap' }}>BHK & Area</th>
+                        <th style={{ padding: '12px', whiteSpace: 'nowrap' }}>Final Price</th>
+                        <th style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>Match Score</th>
+                        <th style={{ padding: '12px', whiteSpace: 'nowrap', minWidth: '280px' }}>Match Explanation (Why Matched)</th>
+                        <th style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap', minWidth: '180px' }}>Cost Sheet Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {matchedPropsList.map((p) => {
+                        const pct = p.matchTotal;
+                        const isChecked = selectedPropertyIds.includes(p.property_code);
+                        const isUsedInCostSheet = activeCustUsedCodesSet.has((p.property_code || '').toString().trim().toUpperCase());
+                        const usedObj = activeCustUsedProps.find(up => up.propertyCode.toUpperCase() === (p.property_code || '').toString().trim().toUpperCase());
+
+                        return (
+                          <tr key={p.id} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: isUsedInCostSheet ? 'rgba(239, 68, 68, 0.08)' : isChecked ? 'rgba(2, 132, 199, 0.15)' : 'transparent' }}>
+                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={isChecked} 
+                                disabled={isUsedInCostSheet}
+                                title={isUsedInCostSheet ? "Property code already used for a Cost Sheet for this customer (Excluded)" : ""}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedPropertyIds([...selectedPropertyIds, p.property_code]);
+                                  } else {
+                                    setSelectedPropertyIds(selectedPropertyIds.filter(id => id !== p.property_code));
+                                  }
+                                }} 
+                                style={{ width: '18px', height: '18px', cursor: isUsedInCostSheet ? 'not-allowed' : 'pointer', opacity: isUsedInCostSheet ? 0.5 : 1 }} 
+                              />
+                            </td>
+                            <td style={{ padding: '12px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.78rem' }}>{p.property_code}</span>
+                                {(() => {
+                                  const st = getDynamicPropertyStatus(p);
+                                  return (
+                                    <span style={{ 
+                                      background: st.bg, 
+                                      color: st.color, 
+                                      border: `1px solid ${st.border}`, 
+                                      padding: '1px 6px', 
+                                      borderRadius: '4px', 
+                                      fontSize: '0.65rem', 
+                                      fontWeight: '900' 
+                                    }}>
+                                      {st.label}
+                                    </span>
+                                  );
+                                })()}
+                                {isChecked && (
+                                  <span style={{ background: '#0284c7', color: '#ffffff', padding: '1px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '900' }}>
+                                    📌 SELECTED
+                                  </span>
+                                )}
+                                {isUsedInCostSheet && (
+                                  <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid #ef4444', padding: '1px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '900' }}>
+                                    🚫 COST SHEET ALREADY CREATED (EXCLUDED)
+                                  </span>
+                                )}
+                              </div>
+                              <h4 style={{ fontSize: '0.88rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', marginTop: '2px' }}>{p.title}</h4>
+                              <span style={{ fontSize: '0.68rem', color: '#a855f7', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid #a855f7', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
+                                🏢 {p.property_type || p.type || 'Flat / Apartment'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px' }}>
+                              <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{p.locality}</strong>
+                              <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>{p.developer}</span>
+                            </td>
+                            <td style={{ padding: '12px' }}>
+                              <span style={{ color: '#fbbf24', fontWeight: '800' }}>{p.configuration}</span>
+                              <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>{p.carpet_area}</span>
+                            </td>
+                            <td style={{ padding: '12px', color: '#4ade80', fontWeight: '900', fontSize: '0.95rem' }}>
+                              {p.final_price}
+                            </td>
+                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                              <span style={{ background: pct >= 85 ? 'rgba(34, 197, 94, 0.2)' : pct >= 70 ? 'rgba(234, 179, 8, 0.2)' : 'rgba(239, 68, 68, 0.2)', color: pct >= 85 ? '#4ade80' : pct >= 70 ? '#fbbf24' : '#ef4444', padding: '4px 10px', borderRadius: '20px', fontWeight: '900', fontSize: '0.8rem' }}>
+                                {pct >= 85 ? '🔥' : pct >= 70 ? '⚡' : '❄️'} {pct}% MATCH
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px' }}>
+                              {/* MATCH EXPLANATION (ALL 7 CRITERIA BREAKDOWN WITH ACHIEVED%/MAX% MATCH FORMATTING) */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ background: pct >= 85 ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' : pct >= 70 ? 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#ffffff', padding: '3px 10px', borderRadius: '12px', fontWeight: '900', fontSize: '0.78rem', boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
+                                    🎯 {pct}% / 100% OVERALL MATCH
+                                  </span>
+                                  <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>
+                                    {pct >= 85 ? 'High Precision 7-Criteria Match' : pct >= 70 ? 'Good Compatibility' : 'Partial Criteria Match'}
+                                  </span>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', fontSize: '0.68rem' }}>
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.bud === 25 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.bud === 25 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
+                                    {p.breakdown.bud === 25 ? '✓' : '✗'} Budget Range ({p.breakdown.bud}%/25% match)
+                                  </span>
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.loc >= 15 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.loc >= 15 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
+                                    ✓ Location ({p.breakdown.loc}%/20% match)
+                                  </span>
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.bhk >= 12 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.bhk >= 12 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
+                                    ✓ BHK Config ({p.breakdown.bhk}%/15% match)
+                                  </span>
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.sqft >= 10 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.sqft >= 10 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
+                                    ✓ Sq.Ft Area ({p.breakdown.sqft}%/15% match)
+                                  </span>
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.possession_facing >= 7 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.possession_facing >= 7 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
+                                    ✓ Possession & Facing ({p.breakdown.possession_facing}%/10% match)
+                                  </span>
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.floor_pref >= 4 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.floor_pref >= 4 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
+                                    ✓ Floor Preference ({p.breakdown.floor_pref}%/5% match)
+                                  </span>
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.type >= 4 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.type >= 4 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
+                                    ✓ Category Type ({p.breakdown.type}%/5% match)
+                                  </span>
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.condition >= 3 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.condition >= 3 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
+                                    ✓ Condition ({p.breakdown.condition}%/5% match)
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                              {isUsedInCostSheet ? (
+                                <button 
+                                  onClick={() => {
+                                    setActiveTab('cost_sheet_share');
+                                    setActiveCostSheetShareSubTab('individual_cost_sheets');
+                                    setSearchQuery(usedObj?.costSheetId || p.property_code);
+                                  }} 
+                                  style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', border: '1px solid #eab308', padding: '6px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                                >
+                                  🔒 Cost Sheet Created ({usedObj?.costSheetId || 'View'}) →
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => handleRowLevelCreateCostSheet(p)} 
+                                  style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: '1px solid #38bdf8', padding: '6px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                                >
+                                  📄 Create Cost Sheet ID
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
 
           {/* FIXED SELECTED PROPERTY SUMMARY PANEL & DISPATCHER */}
-          <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '2px solid #0284c7', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', position: 'sticky', bottom: '10px', zIndex: 100, boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
+          <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '2px solid #0284c7', borderRadius: '16px', padding: windowWidth <= 640 ? '12px 14px' : '20px', display: 'flex', flexDirection: 'column', gap: '14px', position: 'sticky', bottom: windowWidth <= 640 ? '5px' : '10px', zIndex: 100, boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: '900', textTransform: 'uppercase' }}>
                   📌 PROPERTY SELECTION WORKSPACE & DISPATCHER
                 </span>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '2px' }}>
+                <h3 style={{ fontSize: windowWidth <= 480 ? '0.95rem' : windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '2px', margin: 0 }}>
                   {selectedPropertyIds.length} PROPERTIES SELECTED FOR {activeMatchingReq.customerName.toUpperCase()} ({activeMatchingReq.requestId})
                 </h3>
               </div>
@@ -1538,7 +1944,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     handleBulkCreateCostSheets();
                   }
                 }} 
-                style={{ background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)', color: '#0f172a', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: '900', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(251, 191, 36, 0.4)' }}
+                style={{ width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: 'center', background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)', color: '#0f172a', border: 'none', padding: windowWidth <= 640 ? '10px 14px' : '12px 24px', borderRadius: '10px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.8rem' : '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(251, 191, 36, 0.4)' }}
               >
                 📄 CREATE INDIVIDUAL COST SHEETS ({selectedPropertyIds.length} SELECTED) & SEND TO SHARING
               </button>
@@ -1553,9 +1959,9 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
 
       {/* SUB-TAB 2: REQUIREMENT VS INVENTORY MATRIX */}
       {activeMatchingSubTab === 'req_inventory_matrix' && (
-        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '16px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>📋 Customer Requirements vs Stock Inventory Availability Matrix</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? 'repeat(1, 1fr)' : windowWidth <= 768 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px' }}>
             {['Kondapur', 'Gachibowli', 'Financial District', 'Hitec City'].map((loc, i) => (
               <div key={i} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '16px', borderRadius: '12px' }}>
                 <h4 style={{ color: '#38bdf8', fontWeight: '800' }}>📍 {loc} Sector</h4>
@@ -1569,13 +1975,13 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
 
       {/* SUB-TAB 3: PORTFOLIO DISPATCHER */}
       {activeMatchingSubTab === 'portfolio_dispatcher' && (
-        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '16px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>📤 Multi-Channel Property Recommendation Portfolio Dispatcher</h3>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button onClick={() => alert(`📲 WhatsApp Portfolio dispatched to ${selectedCust.name} (${selectedCust.mobile})`)} style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button onClick={() => alert(`📲 WhatsApp Portfolio dispatched to ${selectedCust.name} (${selectedCust.mobile})`)} style={{ flex: windowWidth <= 640 ? '1' : 'none', justifyContent: 'center', display: 'flex', alignItems: 'center', background: '#22c55e', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
               📲 Dispatch via WhatsApp
             </button>
-            <button onClick={() => alert(`📧 Email Portfolio dispatched to ${selectedCust.email}`)} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
+            <button onClick={() => alert(`📧 Email Portfolio dispatched to ${selectedCust.email}`)} style={{ flex: windowWidth <= 640 ? '1' : 'none', justifyContent: 'center', display: 'flex', alignItems: 'center', background: '#0284c7', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
               📧 Dispatch via Email
             </button>
           </div>
@@ -1584,8 +1990,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
 
       {/* PROPERTY SOURCING REQUEST MESSAGE CONTAINER MODAL */}
       {sourcingModalRequest && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', borderRadius: '16px', width: '100%', maxWidth: '580px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', borderRadius: '16px', width: '100%', maxWidth: '580px', padding: windowWidth <= 640 ? '16px' : '24px', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)' }}>
             
             {/* MODAL HEADER */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px' }}>
@@ -1594,7 +2000,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                   <SearchCode size={22} color="#38bdf8" />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
+                  <h3 style={{ fontSize: windowWidth <= 480 ? '1rem' : '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
                     MOVE CUSTOMER TO PROPERTY SOURCING REQUEST
                   </h3>
                   <span style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8' }}>
@@ -1615,7 +2021,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                   {sourcingModalRequest.requestId}
                 </span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.78rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? '1fr' : '1fr 1fr', gap: '8px', fontSize: '0.78rem' }}>
                 <div><span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Customer ID:</span> <strong style={{ color: '#4ade80', fontFamily: 'monospace' }}>{sourcingModalRequest.customerNumber}</strong></div>
                 <div><span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Mobile Phone:</span> <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{sourcingModalRequest.mobile || sourcingModalRequest.customerPhone || 'N/A'}</strong></div>
                 <div><span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Requirement:</span> <strong style={{ color: '#fbbf24' }}>{sourcingModalRequest.configuration} {sourcingModalRequest.propertyCategory || 'Flat'}</strong></div>
@@ -1659,18 +2065,18 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             </div>
 
             {/* MODAL ACTION BUTTONS */}
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '6px' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '6px', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={() => { setSourcingModalRequest(null); setSourcingError(''); }}
-                style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}
+                style={{ flex: windowWidth <= 480 ? '1' : 'none', background: '#334155', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => handleConfirmMoveToSourcing()}
-                style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)' }}
+                style={{ flex: windowWidth <= 480 ? '1' : 'none', justifyContent: 'center', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)' }}
               >
                 🚀 Confirm & Send to Property Sourcing Desk
               </button>

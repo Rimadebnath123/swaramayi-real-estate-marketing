@@ -91,33 +91,33 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
   }, [uniqueLeadsList]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: windowWidth <= 640 ? '12px' : '20px' }}>
       
       {/* ADVANCED LEAD MANAGEMENT HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: windowWidth <= 640 ? '10px' : '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: windowWidth <= 640 ? '12px' : '16px', padding: windowWidth <= 640 ? '12px' : '20px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>ADVANCED LEAD MANAGEMENT & FOLLOW-UP CONTROL SYSTEM</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h2 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : windowWidth <= 1024 ? '1.2rem' : '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>ADVANCED LEAD MANAGEMENT & FOLLOW-UP CONTROL SYSTEM</h2>
           </div>
-          <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
+          <p style={{ fontSize: windowWidth <= 640 ? '0.72rem' : '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
             Single Central Lead Database • Permanent Unique Lead ID (SRM-LEAD-2026-XXXXXX) • Enforced Call Dispositions & Next Action Controls
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button onClick={() => setLeadViewMode(leadViewMode === 'pipeline' ? 'inbox' : 'pipeline')} style={{ background: leadViewMode === 'pipeline' ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), color: leadViewMode === 'pipeline' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: leadViewMode === 'pipeline' ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.2)' }}>
+        <div style={{ display: 'flex', gap: windowWidth <= 640 ? '6px' : '8px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto' }}>
+          <button onClick={() => setLeadViewMode(leadViewMode === 'pipeline' ? 'inbox' : 'pipeline')} style={{ background: leadViewMode === 'pipeline' ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), color: leadViewMode === 'pipeline' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: leadViewMode === 'pipeline' ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), padding: windowWidth <= 640 ? '6px 10px' : '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.73rem' : '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', flex: windowWidth <= 640 ? '1 1 calc(50% - 6px)' : 'initial', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.2)' }}>
             <GitMerge size={15} color={leadViewMode === 'pipeline' ? '#ffffff' : (isLight ? '#0284c7' : '#38bdf8')} /> {leadViewMode === 'pipeline' ? '📋 Back to Central Inbox' : '🗺️ Lead Workflow Pipeline'}
           </button>
-          <button onClick={() => setLeadViewMode(leadViewMode === 'calendar' ? 'inbox' : 'calendar')} style={{ background: leadViewMode === 'calendar' ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), color: leadViewMode === 'calendar' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: leadViewMode === 'calendar' ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button onClick={() => setLeadViewMode(leadViewMode === 'calendar' ? 'inbox' : 'calendar')} style={{ background: leadViewMode === 'calendar' ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), color: leadViewMode === 'calendar' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: leadViewMode === 'calendar' ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), padding: windowWidth <= 640 ? '6px 10px' : '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: windowWidth <= 640 ? '0.73rem' : '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', flex: windowWidth <= 640 ? '1 1 calc(50% - 6px)' : 'initial' }}>
             <Calendar size={15} color={leadViewMode === 'calendar' ? '#ffffff' : (isLight ? '#0284c7' : 'currentColor')} /> {leadViewMode === 'calendar' ? '📋 Back to Central Inbox' : '📅 Follow-Up Calendar'}
           </button>
-          <button onClick={() => setLeadViewMode(leadViewMode === 'analytics' ? 'inbox' : 'analytics')} style={{ background: leadViewMode === 'analytics' ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), color: leadViewMode === 'analytics' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: leadViewMode === 'analytics' ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button onClick={() => setLeadViewMode(leadViewMode === 'analytics' ? 'inbox' : 'analytics')} style={{ background: leadViewMode === 'analytics' ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), color: leadViewMode === 'analytics' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: leadViewMode === 'analytics' ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), padding: windowWidth <= 640 ? '6px 10px' : '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: windowWidth <= 640 ? '0.73rem' : '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', flex: windowWidth <= 640 ? '1 1 calc(50% - 6px)' : 'initial' }}>
             <Sparkles size={15} color={leadViewMode === 'analytics' ? '#ffffff' : (isLight ? '#0284c7' : 'currentColor')} /> {leadViewMode === 'analytics' ? '📋 Back to Central Inbox' : '📊 Lead & Performance Analytics'}
           </button>
-          <button onClick={() => setShowBulkUploadModal ? setShowBulkUploadModal(true) : null} style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '1px solid #0284c7', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.15)' }}>
+          <button onClick={() => setShowBulkUploadModal ? setShowBulkUploadModal(true) : null} style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '1px solid #0284c7', padding: windowWidth <= 640 ? '6px 10px' : '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.73rem' : '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', flex: windowWidth <= 640 ? '1 1 calc(50% - 6px)' : 'initial', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.15)' }}>
             <FileSpreadsheet size={15} color="#0284c7" /> 📁 BULK UPLOAD LEADS
           </button>
-          <button onClick={() => handleOpenLeadModal ? handleOpenLeadModal() : setShowLeadModal(true)} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)' }}>
+          <button onClick={() => handleOpenLeadModal ? handleOpenLeadModal() : setShowLeadModal(true)} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: windowWidth <= 640 ? '6px 12px' : '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.75rem' : '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', flex: windowWidth <= 640 ? '1 1 100%' : 'initial', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)' }}>
             <UserPlus size={16} /> + CREATE NEW LEAD
           </button>
         </div>
@@ -127,7 +127,7 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
       {/* 11 CENTRAL INBOX VIEW TABS */}
       {leadViewMode === 'inbox' && (
         <>
-          <div style={{ display: 'flex', gap: '6px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '10px', overflowX: 'auto', flexWrap: 'nowrap' }}>
+          <div style={{ display: 'flex', gap: windowWidth <= 640 ? '4px' : '6px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '10px', overflowX: 'auto', flexWrap: 'nowrap', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'thin', maxWidth: '100%' }}>
             {[
               { id: 'all', label: 'All Leads', count: activeVaultLeadsList.length, color: '#38bdf8' },
               { id: 'unassigned', label: 'New & Unassigned', count: activeVaultLeadsList.filter(l => !l.assigned_employee_id || l.assigned_employee_id === 'Unassigned').length, color: '#a855f7' },
@@ -148,9 +148,9 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                 key={tab.id}
                 onClick={() => setLeadInboxTab(tab.id)}
                 style={{
-                  padding: '8px 12px',
+                  padding: windowWidth <= 640 ? '6px 10px' : '8px 12px',
                   borderRadius: '8px',
-                  fontSize: '0.78rem',
+                  fontSize: windowWidth <= 640 ? '0.72rem' : '0.78rem',
                   fontWeight: '800',
                   whiteSpace: 'nowrap',
                   cursor: 'pointer',
@@ -159,7 +159,8 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                   border: leadInboxTab === tab.id ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  flexShrink: 0
                 }}
               >
                 <span>{tab.label}</span>
@@ -171,53 +172,53 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
           </div>
 
           {/* UNIVERSAL SEARCH & ADVANCED FILTERS TOOLBAR */}
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '300px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '8px', padding: '6px 12px', width: '100%' }}>
-                <Search size={16} color="#38bdf8" />
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 640 ? '10px' : '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: windowWidth <= 640 ? '10px' : '14px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: windowWidth <= 640 ? '100%' : '260px', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '8px', padding: windowWidth <= 640 ? '5px 10px' : '6px 12px', width: '100%' }}>
+                <Search size={16} color="#38bdf8" style={{ flexShrink: 0 }} />
                 <input
                   type="text"
-                  placeholder="🔍 Universal Lead Search (Lead ID: SRM-LEAD-2026-000001, Name, Phone, Email, Location...)"
+                  placeholder={windowWidth <= 640 ? "🔍 Search Lead ID, Name, Phone..." : "🔍 Universal Lead Search (Lead ID: SRM-LEAD-2026-000001, Name, Phone, Email, Location...)"}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ background: 'transparent', border: 'none', color: isLight ? '#0f172a' : '#ffffff', outline: 'none', fontSize: '0.82rem', width: '100%', fontWeight: '700' }}
+                  style={{ background: 'transparent', border: 'none', color: isLight ? '#0f172a' : '#ffffff', outline: 'none', fontSize: windowWidth <= 640 ? '0.75rem' : '0.82rem', width: '100%', fontWeight: '700' }}
                 />
                 {searchQuery && (
-                  <X size={14} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setSearchQuery('')} title="Clear Search" />
+                  <X size={14} color="#94a3b8" style={{ cursor: 'pointer', flexShrink: 0 }} onClick={() => setSearchQuery('')} title="Clear Search" />
                 )}
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>Source:</span>
-                <select value={leadSourceFilter} onChange={(e) => setLeadSourceFilter(e.target.value)} style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '6px 10px', fontSize: '0.78rem', fontWeight: '700' }}>
-                  <option value="ALL">All Sources</option>
-                  <option value="Facebook">Facebook Ads</option>
-                  <option value="Google Ads">Google Ads</option>
-                  <option value="Website">Website</option>
-                  <option value="Walk-in">Walk-in</option>
-                  <option value="Referral">Referral</option>
-                  <option value="Developer">Developer Reference</option>
+            <div style={{ display: 'flex', alignItems: 'center', gap: windowWidth <= 640 ? '8px' : '10px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: windowWidth <= 640 ? 'space-between' : 'flex-start' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: windowWidth <= 640 ? '1' : 'initial' }}>
+                <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', whiteSpace: 'nowrap' }}>Source:</span>
+                <select value={leadSourceFilter} onChange={(e) => setLeadSourceFilter(e.target.value)} style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: windowWidth <= 640 ? '4px 6px' : '6px 10px', fontSize: windowWidth <= 640 ? '0.72rem' : '0.78rem', fontWeight: '700', width: windowWidth <= 640 ? '100%' : 'auto' }}>
+                  <option value="ALL" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>All Sources</option>
+                  <option value="Facebook" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>Facebook Ads</option>
+                  <option value="Google Ads" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>Google Ads</option>
+                  <option value="Website" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>Website</option>
+                  <option value="Walk-in" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>Walk-in</option>
+                  <option value="Referral" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>Referral</option>
+                  <option value="Developer" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>Developer Reference</option>
                 </select>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>Priority:</span>
-                <select value={leadPriorityFilter} onChange={(e) => setLeadPriorityFilter(e.target.value)} style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '6px 10px', fontSize: '0.78rem', fontWeight: '700' }}>
-                  <option value="ALL">All Priorities</option>
-                  <option value="HOT">🔥 HOT</option>
-                  <option value="WARM">⚡ WARM</option>
-                  <option value="COLD">❄️ COLD</option>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: windowWidth <= 640 ? '1' : 'initial' }}>
+                <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', whiteSpace: 'nowrap' }}>Priority:</span>
+                <select value={leadPriorityFilter} onChange={(e) => setLeadPriorityFilter(e.target.value)} style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: windowWidth <= 640 ? '4px 6px' : '6px 10px', fontSize: windowWidth <= 640 ? '0.72rem' : '0.78rem', fontWeight: '700', width: windowWidth <= 640 ? '100%' : 'auto' }}>
+                  <option value="ALL" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>All Priorities</option>
+                  <option value="HOT" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>🔥 HOT</option>
+                  <option value="WARM" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>⚡ WARM</option>
+                  <option value="COLD" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>❄️ COLD</option>
                 </select>
               </div>
             </div>
           </div>
 
           {/* CENTRAL LEAD MASTER TABLE */}
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: windowWidth <= 640 ? '12px' : '16px', padding: windowWidth <= 640 ? '12px' : '20px', display: 'flex', flexDirection: 'column', gap: windowWidth <= 640 ? '10px' : '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: windowWidth <= 640 ? 'flex-start' : 'center', flexDirection: windowWidth <= 640 ? 'column' : 'row', gap: windowWidth <= 640 ? '4px' : '0' }}>
+              <h3 style={{ fontSize: windowWidth <= 640 ? '0.9rem' : '1.05rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
                 📋 Central Lead Master Vault ({(leadInboxTab === 'matching' ? uniqueLeadsList : activeVaultLeadsList).filter(l => {
                   if (leadInboxTab === 'unassigned') return !l.assigned_employee_id || l.assigned_employee_id === 'Unassigned';
                   if (leadInboxTab === 'my_leads') return l.assigned_employee_id === 'USR-07' || l.assigned_employee_name?.includes('Priya');
@@ -478,17 +479,17 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
 
       {/* FOLLOW-UP CALENDAR SUB-VIEW */}
       {leadViewMode === 'calendar' && (
-        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: windowWidth <= 640 ? '12px' : '16px', padding: windowWidth <= 640 ? '12px' : '24px', display: 'flex', flexDirection: 'column', gap: windowWidth <= 640 ? '12px' : '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>📅 INTERACTIVE FOLLOW-UP & CALLBACK CALENDAR</h3>
-              <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8' }}>Scheduled callbacks, client meetings, and property site visits for the current month.</p>
+              <h3 style={{ fontSize: windowWidth <= 640 ? '0.95rem' : '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>📅 INTERACTIVE FOLLOW-UP & CALLBACK CALENDAR</h3>
+              <p style={{ fontSize: windowWidth <= 640 ? '0.72rem' : '0.8rem', color: isLight ? '#64748b' : '#94a3b8' }}>Scheduled callbacks, client meetings, and property site visits for the current month.</p>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : windowWidth <= 1024 ? 'repeat(4, 1fr)' : 'repeat(7, 1fr)', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? 'repeat(2, 1fr)' : windowWidth <= 768 ? 'repeat(4, 1fr)' : 'repeat(7, 1fr)', gap: windowWidth <= 640 ? '6px' : '10px' }}>
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-              <div key={d} style={{ background: isLight ? '#f8fafc' : '#0f172a', color: '#38bdf8', padding: '10px', borderRadius: '8px', textAlign: 'center', fontWeight: '900', fontSize: '0.8rem' }}>
+              <div key={d} style={{ background: isLight ? '#f8fafc' : '#0f172a', color: '#38bdf8', padding: windowWidth <= 640 ? '6px' : '10px', borderRadius: '8px', textAlign: 'center', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.72rem' : '0.8rem' }}>
                 {d}
               </div>
             ))}
@@ -498,8 +499,8 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
               const dayLeads = uniqueLeadsList.filter(l => l.next_followup && l.next_followup.startsWith(dayStr));
 
               return (
-                <div key={day} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: day === 24 || day === 25 ? '2px solid #0284c7' : '1px solid #334155', borderRadius: '10px', padding: '10px', minHeight: '90px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: '900', color: day === 24 ? '#38bdf8' : '#ffffff' }}>Day {day}</span>
+                <div key={day} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: day === 24 || day === 25 ? '2px solid #0284c7' : '1px solid #334155', borderRadius: '10px', padding: windowWidth <= 640 ? '6px' : '10px', minHeight: windowWidth <= 640 ? '65px' : '90px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontSize: windowWidth <= 640 ? '0.75rem' : '0.85rem', fontWeight: '900', color: day === 24 ? '#38bdf8' : '#ffffff' }}>Day {day}</span>
 
                   {dayLeads.map((dl, idx) => (
                     <div
@@ -521,19 +522,19 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
 
       {/* LEAD ANALYTICS & SOURCE PERFORMANCE SUB-VIEW */}
       {leadViewMode === 'analytics' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>📊 LEAD SOURCE PERFORMANCE & CONVERSION ANALYTICS</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: windowWidth <= 640 ? '12px' : '20px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: windowWidth <= 640 ? '12px' : '16px', padding: windowWidth <= 640 ? '12px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <h3 style={{ fontSize: windowWidth <= 640 ? '0.95rem' : '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>📊 LEAD SOURCE PERFORMANCE & CONVERSION ANALYTICS</h3>
             <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: windowWidth <= 640 ? '0.75rem' : '0.82rem' }}>
                 <thead>
                   <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                    <th style={{ padding: '10px' }}>Lead Source</th>
-                    <th style={{ padding: '10px' }}>Total Ingested Leads</th>
-                    <th style={{ padding: '10px' }}>Interested Leads</th>
-                    <th style={{ padding: '10px' }}>Site Visits Done</th>
-                    <th style={{ padding: '10px' }}>Confirmed Bookings</th>
-                    <th style={{ padding: '10px' }}>Conversion Rate</th>
+                    <th style={{ padding: windowWidth <= 640 ? '8px' : '10px' }}>Lead Source</th>
+                    <th style={{ padding: windowWidth <= 640 ? '8px' : '10px' }}>Total Ingested Leads</th>
+                    <th style={{ padding: windowWidth <= 640 ? '8px' : '10px' }}>Interested Leads</th>
+                    <th style={{ padding: windowWidth <= 640 ? '8px' : '10px' }}>Site Visits Done</th>
+                    <th style={{ padding: windowWidth <= 640 ? '8px' : '10px' }}>Confirmed Bookings</th>
+                    <th style={{ padding: windowWidth <= 640 ? '8px' : '10px' }}>Conversion Rate</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -545,12 +546,12 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                     { src: 'Referral', total: 24, interested: 20, visits: 18, bookings: 9, pct: '37.5%' }
                   ].map((row, idx) => (
                     <tr key={idx} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-                      <td style={{ padding: '10px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{row.src}</td>
-                      <td style={{ padding: '10px', color: '#38bdf8', fontWeight: '800' }}>{row.total}</td>
-                      <td style={{ padding: '10px', color: '#fbbf24', fontWeight: '800' }}>{row.interested}</td>
-                      <td style={{ padding: '10px', color: '#c084fc', fontWeight: '800' }}>{row.visits}</td>
-                      <td style={{ padding: '10px', color: '#4ade80', fontWeight: '800' }}>{row.bookings}</td>
-                      <td style={{ padding: '10px', color: '#4ade80', fontWeight: '900' }}>{row.pct}</td>
+                      <td style={{ padding: windowWidth <= 640 ? '8px' : '10px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{row.src}</td>
+                      <td style={{ padding: windowWidth <= 640 ? '8px' : '10px', color: '#38bdf8', fontWeight: '800' }}>{row.total}</td>
+                      <td style={{ padding: windowWidth <= 640 ? '8px' : '10px', color: '#fbbf24', fontWeight: '800' }}>{row.interested}</td>
+                      <td style={{ padding: windowWidth <= 640 ? '8px' : '10px', color: '#c084fc', fontWeight: '800' }}>{row.visits}</td>
+                      <td style={{ padding: windowWidth <= 640 ? '8px' : '10px', color: '#4ade80', fontWeight: '800' }}>{row.bookings}</td>
+                      <td style={{ padding: windowWidth <= 640 ? '8px' : '10px', color: '#4ade80', fontWeight: '900' }}>{row.pct}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -562,21 +563,21 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
 
       {/* VIEW MODE 4: INTERACTIVE WORKFLOW PIPELINE DIAGRAM */}
       {leadViewMode === 'pipeline' && (
-        <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '2px solid #0284c7', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+        <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '2px solid #0284c7', borderRadius: windowWidth <= 640 ? '12px' : '16px', padding: windowWidth <= 640 ? '12px' : '24px', display: 'flex', flexDirection: 'column', gap: windowWidth <= 640 ? '12px' : '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
           
           {/* HEADER */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: windowWidth <= 640 ? 'flex-start' : 'center', flexDirection: windowWidth <= 640 ? 'column' : 'row', gap: windowWidth <= 640 ? '10px' : '14px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <GitMerge size={22} color="#38bdf8" />
-                <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>ENTERPRISE LEAD WORKFLOW & CONVERSION PIPELINE</h3>
-                <span style={{ background: '#0284c7', color: '#ffffff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '900' }}>LIVE PIPELINE ARCHITECTURE</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <GitMerge size={20} color="#38bdf8" />
+                <h3 style={{ fontSize: windowWidth <= 640 ? '0.95rem' : '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>ENTERPRISE LEAD WORKFLOW & CONVERSION PIPELINE</h3>
+                <span style={{ background: '#0284c7', color: '#ffffff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '900' }}>LIVE PIPELINE ARCHITECTURE</span>
               </div>
-              <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
+              <p style={{ fontSize: windowWidth <= 640 ? '0.72rem' : '0.78rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
                 Interactive visual node diagram tracing every lead from Central Inbox to Final Booking Confirmation. Click any node to filter the Central Inbox table.
               </p>
             </div>
-            <button onClick={() => setLeadViewMode('inbox')} style={{ background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.8rem' }}>
+            <button onClick={() => setLeadViewMode('inbox')} style={{ background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.78rem', width: windowWidth <= 640 ? '100%' : 'auto' }}>
               📋 Return to Central Inbox Table
             </button>
           </div>

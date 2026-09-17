@@ -4,7 +4,7 @@ import SEO from '../../components/Common/SEO';
 import Breadcrumbs from '../../components/Common/Breadcrumbs';
 import PropertyCard from '../../components/PropertyCard/PropertyCard';
 import { locationService } from '../../services/locationService';
-import { MapPin, Bus, GraduationCap, Hospital, ShoppingBag, ArrowRight } from 'lucide-react';
+import { MapPin, Bus, GraduationCap, Building2 as Hospital, ShoppingBag, ArrowRight } from 'lucide-react';
 
 export default function LocationDetails() {
   const { slug } = useParams();

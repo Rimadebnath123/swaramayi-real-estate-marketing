@@ -9678,7 +9678,7 @@ export default function App() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
               
               {/* TOP BI CONTROL HEADER & ROLE CONTEXT BADGE */}
-              <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: isLight ? '0 4px 16px rgba(0,0,0,0.04)' : 'none' }}>
+              <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '12px' : '20px', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: isLight ? '0 4px 16px rgba(0,0,0,0.04)' : 'none', boxSizing: 'border-box', maxWidth: '100%', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -9687,7 +9687,7 @@ export default function App() {
                         alt="Swaramayi Logo" 
                         style={{ height: '42px', objectFit: 'contain', background: '#ffffff', padding: '4px 10px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.2)' }} 
                       />
-                      <h2 style={{ fontSize: '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>SWARAMAYI REAL ESTATE MARKETING</h2>
+                      <h2 style={{ fontSize: windowWidth <= 640 ? '1.15rem' : '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>SWARAMAYI REAL ESTATE MARKETING</h2>
                     </div>
                     <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
                       Role View: <strong style={{ color: '#0284c7' }}>{currentRole}</strong> • Scope: <strong style={{ color: '#16a34a' }}>ALL DATA DRILL-DOWN ENABLED</strong> • Updated: Real-time Live Records
@@ -9715,51 +9715,56 @@ export default function App() {
                 </div>
 
                 {/* GLOBAL DASHBOARD FILTERS TOOLBAR */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '14px', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Calendar size={15} color={isLight ? '#64748b' : '#94a3b8'} />
-                    <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>Date Range:</span>
-                    <select value={dateFilter} onChange={(e: any) => setDateFilter(e.target.value)} style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '5px 10px', fontSize: '0.8rem', fontWeight: '700' }}>
-                      <option value="today">Today</option>
-                      <option value="yesterday">Yesterday</option>
-                      <option value="this_week">This Week</option>
-                      <option value="last_week">Last Week</option>
-                      <option value="this_month">This Month</option>
-                      <option value="last_month">Last Month</option>
-                      <option value="this_quarter">This Quarter</option>
-                      <option value="this_year">This Year</option>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: windowWidth <= 640 ? '6px' : '8px', alignItems: 'center', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '10px', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', width: windowWidth <= 640 ? 'fit-content' : '100%', maxWidth: windowWidth <= 640 ? '300px' : '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '3px 8px' : '4px 8px', borderRadius: '6px', boxSizing: 'border-box' }}>
+                    <Calendar size={13} color={isLight ? '#64748b' : '#94a3b8'} style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: windowWidth <= 640 ? '0.68rem' : '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', whiteSpace: 'nowrap', flexShrink: 0 }}>Date Range:</span>
+                    <select value={dateFilter} onChange={(e: any) => setDateFilter(e.target.value)} style={{ background: 'transparent', color: isLight ? '#0f172a' : '#ffffff', border: 'none', fontSize: windowWidth <= 640 ? '0.7rem' : '0.75rem', fontWeight: '700', flex: '1', minWidth: '0', cursor: 'pointer', outline: 'none', padding: '1px 0' }}>
+                      <option value="today" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>Today</option>
+                      <option value="yesterday" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>Yesterday</option>
+                      <option value="this_week" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>This Week</option>
+                      <option value="last_week" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>Last Week</option>
+                      <option value="this_month" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>This Month</option>
+                      <option value="last_month" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>Last Month</option>
+                      <option value="this_quarter" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>This Quarter</option>
+                      <option value="this_year" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>This Year</option>
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Building size={15} color={isLight ? '#64748b' : '#94a3b8'} />
-                    <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>Branch:</span>
-                    <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '5px 10px', fontSize: '0.8rem', fontWeight: '700' }}>
-                      <option value="ALL">All Branches</option>
-                      <option value="Head Office">Head Office (Hyderabad)</option>
-                      {branches.map((b, i) => (
-                        <option key={i} value={b.branch_name}>{b.branch_name}</option>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', width: windowWidth <= 640 ? 'fit-content' : '100%', maxWidth: windowWidth <= 640 ? '300px' : '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '3px 8px' : '4px 8px', borderRadius: '6px', boxSizing: 'border-box' }}>
+                    <Building size={13} color={isLight ? '#64748b' : '#94a3b8'} style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: windowWidth <= 640 ? '0.68rem' : '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', whiteSpace: 'nowrap', flexShrink: 0 }}>Branch:</span>
+                    <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} style={{ background: 'transparent', color: isLight ? '#0f172a' : '#ffffff', border: 'none', fontSize: windowWidth <= 640 ? '0.7rem' : '0.75rem', fontWeight: '700', flex: '1', minWidth: '0', cursor: 'pointer', outline: 'none', padding: '1px 0' }}>
+                      <option value="ALL" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>All Branches</option>
+                      {branches.map((b: any, i: number) => (
+                        <option key={b.id || i} value={b.branch_name} style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>{b.branch_name}</option>
                       ))}
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Users size={15} color={isLight ? '#64748b' : '#94a3b8'} />
-                    <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>Team:</span>
-                    <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '5px 10px', fontSize: '0.8rem', fontWeight: '700' }}>
-                      <option value="ALL">All Teams</option>
-                      <option value="Sales Team Alpha">Sales Team Alpha</option>
-                      <option value="Sales Team Bravo">Sales Team Bravo</option>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', width: windowWidth <= 640 ? 'fit-content' : '100%', maxWidth: windowWidth <= 640 ? '300px' : '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '3px 8px' : '4px 8px', borderRadius: '6px', boxSizing: 'border-box' }}>
+                    <Users size={13} color={isLight ? '#64748b' : '#94a3b8'} style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: windowWidth <= 640 ? '0.68rem' : '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', whiteSpace: 'nowrap', flexShrink: 0 }}>Team:</span>
+                    <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} style={{ background: 'transparent', color: isLight ? '#0f172a' : '#ffffff', border: 'none', fontSize: windowWidth <= 640 ? '0.7rem' : '0.75rem', fontWeight: '700', flex: '1', minWidth: '0', cursor: 'pointer', outline: 'none', padding: '1px 0' }}>
+                      <option value="ALL" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>All Teams</option>
+                      {teams.map((t: any, i: number) => {
+                        const tName = typeof t === 'string' ? t : (t.team_name || t.name);
+                        return (
+                          <option key={t.id || i} value={tName} style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>
+                            {tName}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <UserCheck size={15} color={isLight ? '#64748b' : '#94a3b8'} />
-                    <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>Salesperson:</span>
-                    <select value={salespersonFilter} onChange={(e) => setSalespersonFilter(e.target.value)} style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '5px 10px', fontSize: '0.8rem', fontWeight: '700' }}>
-                      <option value="ALL">All Salespeople</option>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', width: windowWidth <= 640 ? 'fit-content' : '100%', maxWidth: windowWidth <= 640 ? '300px' : '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '3px 8px' : '4px 8px', borderRadius: '6px', boxSizing: 'border-box' }}>
+                    <UserCheck size={13} color={isLight ? '#64748b' : '#94a3b8'} style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: windowWidth <= 640 ? '0.68rem' : '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', whiteSpace: 'nowrap', flexShrink: 0 }}>Salesperson:</span>
+                    <select value={salespersonFilter} onChange={(e) => setSalespersonFilter(e.target.value)} style={{ background: 'transparent', color: isLight ? '#0f172a' : '#ffffff', border: 'none', fontSize: windowWidth <= 640 ? '0.7rem' : '0.75rem', fontWeight: '700', flex: '1', minWidth: '0', cursor: 'pointer', outline: 'none', padding: '1px 0' }}>
+                      <option value="ALL" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>All Salespeople</option>
                       {dynamicSalesExecutives.map((exec: any) => (
-                        <option key={exec.id || exec.name} value={exec.name}>
+                        <option key={exec.id || exec.name} value={exec.name} style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff' }}>
                           {exec.name} ({exec.designation?.split(' ')[0] || 'Executive'})
                         </option>
                       ))}
@@ -10319,13 +10324,13 @@ export default function App() {
                               </div>
                             ) : (
                               waitingCustomers.slice(0, 3).map((c, i) => (
-                                <div key={c.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isLight ? '#ffffff' : '#1e293b', padding: '8px 12px', borderRadius: '6px', fontSize: '0.78rem' }}>
+                                <div key={c.id || i} style={{ display: 'flex', flexDirection: windowWidth <= 640 ? 'column' : 'row', justifyContent: 'space-between', alignItems: windowWidth <= 640 ? 'flex-start' : 'center', gap: '8px', background: isLight ? '#ffffff' : '#1e293b', padding: '10px 12px', borderRadius: '6px', fontSize: '0.78rem' }}>
                                   <div>
                                     <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{c.name}</strong> <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>({c.requirements || `${c.configuration || '3 BHK'} • ${c.locality || 'Location'}`})</span>
                                     <br /><span style={{ color: '#4ade80', fontWeight: '700' }}>{properties.length} Matched Properties Available</span>
                                   </div>
-                                  <button onClick={() => alert(`Sending property matches to ${c.name} (${c.mobile || c.phone || 'Customer'})...`)} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.72rem' }}>
-                                    Send Properties
+                                  <button onClick={() => alert(`Sending property matches to ${c.name} (${c.mobile || c.phone || 'Customer'})...`)} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem', width: windowWidth <= 640 ? '100%' : 'auto', textAlign: 'center' }}>
+                                    Send Recommendations
                                   </button>
                                 </div>
                               ))
@@ -10402,69 +10407,108 @@ export default function App() {
                           </h3>
                           <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8' }}>Categorized follow-up actions with instant WhatsApp and Calling triggers.</p>
                         </div>
-                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                          <button onClick={() => setFollowupSubTab('overdue')} style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', background: followupSubTab === 'overdue' ? '#ef4444' : (isLight ? '#f1f5f9' : '#0f172a'), color: followupSubTab === 'overdue' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: followupSubTab === 'overdue' ? 'none' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), cursor: 'pointer' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : 'repeat(4, auto)', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto' }}>
+                          <button onClick={() => setFollowupSubTab('overdue')} style={{ padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', background: followupSubTab === 'overdue' ? '#ef4444' : (isLight ? '#f1f5f9' : '#0f172a'), color: followupSubTab === 'overdue' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: followupSubTab === 'overdue' ? 'none' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), cursor: 'pointer', textAlign: 'center' }}>
                             OVERDUE ({overdueList.length})
                           </button>
-                          <button onClick={() => setFollowupSubTab('today')} style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', background: followupSubTab === 'today' ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), color: followupSubTab === 'today' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: followupSubTab === 'today' ? 'none' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), cursor: 'pointer' }}>
+                          <button onClick={() => setFollowupSubTab('today')} style={{ padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', background: followupSubTab === 'today' ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), color: followupSubTab === 'today' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: followupSubTab === 'today' ? 'none' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), cursor: 'pointer', textAlign: 'center' }}>
                             DUE TODAY ({todayList.length})
                           </button>
-                          <button onClick={() => setFollowupSubTab('tomorrow')} style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', background: followupSubTab === 'tomorrow' ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), color: followupSubTab === 'tomorrow' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: followupSubTab === 'tomorrow' ? 'none' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), cursor: 'pointer' }}>
+                          <button onClick={() => setFollowupSubTab('tomorrow')} style={{ padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', background: followupSubTab === 'tomorrow' ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), color: followupSubTab === 'tomorrow' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: followupSubTab === 'tomorrow' ? 'none' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), cursor: 'pointer', textAlign: 'center' }}>
                             DUE TOMORROW ({tomorrowList.length})
                           </button>
-                          <button onClick={() => setFollowupSubTab('upcoming')} style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', background: followupSubTab === 'upcoming' ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), color: followupSubTab === 'upcoming' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: followupSubTab === 'upcoming' ? 'none' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), cursor: 'pointer' }}>
+                          <button onClick={() => setFollowupSubTab('upcoming')} style={{ padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', background: followupSubTab === 'upcoming' ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), color: followupSubTab === 'upcoming' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: followupSubTab === 'upcoming' ? 'none' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), cursor: 'pointer', textAlign: 'center' }}>
                             UPCOMING ({upcomingList.length})
                           </button>
                         </div>
                       </div>
 
-                      <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                          <thead>
-                            <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                              <th style={{ padding: '10px' }}>Customer</th>
-                              <th style={{ padding: '10px' }}>Salesperson</th>
-                              <th style={{ padding: '10px' }}>Last Property Sent</th>
-                              <th style={{ padding: '10px' }}>Customer Response</th>
-                              <th style={{ padding: '10px' }}>Next Follow-up</th>
-                              <th style={{ padding: '10px', textAlign: 'center' }}>Quick Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {activeFollowupRows.length > 0 ? (
-                              activeFollowupRows.map((c, i) => (
-                                <tr key={c.id || c.customer_number || i} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-                                  <td style={{ padding: '10px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
-                                    {c.name} <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '400' }}>({c.phone || c.mobile || 'N/A'})</span>
-                                  </td>
-                                  <td style={{ padding: '10px', color: '#38bdf8' }}>{c.assigned_salesperson || c.assigned_to || 'Unassigned'}</td>
-                                  <td style={{ padding: '10px' }}>{c.preferred_project || c.matchedProperty || (properties.length > 0 ? properties[0]?.title : 'Master Stock')}</td>
-                                  <td style={{ padding: '10px', color: '#fbbf24' }}>{c.notes || c.customerResponse || 'Follow-up Scheduled'}</td>
-                                  <td style={{ padding: '10px' }}>
-                                    <span style={{ background: followupSubTab === 'overdue' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(56, 189, 248, 0.2)', color: followupSubTab === 'overdue' ? '#ef4444' : '#38bdf8', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', fontSize: '0.72rem' }}>
-                                      {c.next_followup || followupSubTab.toUpperCase()}
-                                    </span>
-                                  </td>
-                                  <td style={{ padding: '10px', textAlign: 'center' }}>
-                                    <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                                      <a href={`tel:${c.phone || c.mobile || ''}`} style={{ background: '#22c55e', color: '#ffffff', textDecoration: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800' }}>Call</a>
-                                      <a href={`https://api.whatsapp.com/send?phone=${(c.phone || c.mobile || '').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ background: '#25d366', color: isLight ? '#0f172a' : '#ffffff', textDecoration: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800' }}>WhatsApp</a>
-                                    </div>
+                      {windowWidth <= 768 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {activeFollowupRows.length > 0 ? (
+                            activeFollowupRows.map((c, i) => (
+                              <div key={c.id || c.customer_number || i} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px' }}>
+                                  <div>
+                                    <strong style={{ fontSize: '0.88rem', color: isLight ? '#0f172a' : '#ffffff', display: 'block' }}>{c.name}</strong>
+                                    <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>📞 {c.phone || c.mobile || 'N/A'}</span>
+                                  </div>
+                                  <span style={{ background: followupSubTab === 'overdue' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(56, 189, 248, 0.2)', color: followupSubTab === 'overdue' ? '#ef4444' : '#38bdf8', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '0.72rem' }}>
+                                    {c.next_followup || followupSubTab.toUpperCase()}
+                                  </span>
+                                </div>
+
+                                <div style={{ fontSize: '0.78rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', background: isLight ? '#ffffff' : '#1e293b', padding: '8px', borderRadius: '8px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                  <div><span style={{ color: '#64748b' }}>Salesperson:</span> <strong style={{ color: '#38bdf8', display: 'block' }}>{c.assigned_salesperson || c.assigned_to || 'Unassigned'}</strong></div>
+                                  <div><span style={{ color: '#64748b' }}>Property:</span> <strong style={{ color: isLight ? '#0f172a' : '#e2e8f0', display: 'block' }}>{c.preferred_project || c.matchedProperty || (properties.length > 0 ? properties[0]?.title : 'Master Stock')}</strong></div>
+                                </div>
+
+                                {(c.notes || c.customerResponse) && (
+                                  <div style={{ fontSize: '0.75rem', color: '#fbbf24', background: isLight ? '#fefce8' : '#1e293b', border: isLight ? '1px solid #fef08a' : '1px solid #334155', padding: '6px 8px', borderRadius: '6px' }}>
+                                    💬 {c.notes || c.customerResponse}
+                                  </div>
+                                )}
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                                  <a href={`tel:${c.phone || c.mobile || ''}`} style={{ background: '#22c55e', color: '#ffffff', textDecoration: 'none', padding: '8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', textAlign: 'center', display: 'block' }}>📞 Call</a>
+                                  <a href={`https://api.whatsapp.com/send?phone=${(c.phone || c.mobile || '').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ background: '#25d366', color: '#ffffff', textDecoration: 'none', padding: '8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', textAlign: 'center', display: 'block' }}>💬 WhatsApp</a>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div style={{ padding: '20px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.85rem', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px' }}>
+                              🟢 <strong>No Follow-up Tasks in {followupSubTab.toUpperCase()} Category</strong>.
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                            <thead>
+                              <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                                <th style={{ padding: '10px' }}>Customer</th>
+                                <th style={{ padding: '10px' }}>Salesperson</th>
+                                <th style={{ padding: '10px' }}>Last Property Sent</th>
+                                <th style={{ padding: '10px' }}>Customer Response</th>
+                                <th style={{ padding: '10px' }}>Next Follow-up</th>
+                                <th style={{ padding: '10px', textAlign: 'center' }}>Quick Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {activeFollowupRows.length > 0 ? (
+                                activeFollowupRows.map((c, i) => (
+                                  <tr key={c.id || c.customer_number || i} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+                                    <td style={{ padding: '10px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
+                                      {c.name} <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '400' }}>({c.phone || c.mobile || 'N/A'})</span>
+                                    </td>
+                                    <td style={{ padding: '10px', color: '#38bdf8' }}>{c.assigned_salesperson || c.assigned_to || 'Unassigned'}</td>
+                                    <td style={{ padding: '10px' }}>{c.preferred_project || c.matchedProperty || (properties.length > 0 ? properties[0]?.title : 'Master Stock')}</td>
+                                    <td style={{ padding: '10px', color: '#fbbf24' }}>{c.notes || c.customerResponse || 'Follow-up Scheduled'}</td>
+                                    <td style={{ padding: '10px' }}>
+                                      <span style={{ background: followupSubTab === 'overdue' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(56, 189, 248, 0.2)', color: followupSubTab === 'overdue' ? '#ef4444' : '#38bdf8', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', fontSize: '0.72rem' }}>
+                                        {c.next_followup || followupSubTab.toUpperCase()}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '10px', textAlign: 'center' }}>
+                                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                                        <a href={`tel:${c.phone || c.mobile || ''}`} style={{ background: '#22c55e', color: '#ffffff', textDecoration: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800' }}>Call</a>
+                                        <a href={`https://api.whatsapp.com/send?phone=${(c.phone || c.mobile || '').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ background: '#25d366', color: isLight ? '#0f172a' : '#ffffff', textDecoration: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800' }}>WhatsApp</a>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.85rem' }}>
+                                    🟢 <strong>No Follow-up Tasks in {followupSubTab.toUpperCase()} Category</strong>. Click "+ Add Customer" or schedule new follow-ups.
                                   </td>
                                 </tr>
-                              ))
-                            ) : (
-                              <tr>
-                                <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.85rem' }}>
-                                  🟢 <strong>No Follow-up Tasks in {followupSubTab.toUpperCase()} Category</strong>. Click "+ Add Customer" or schedule new follow-ups.
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
-
                   </div>
                 );
               })()}
@@ -10497,44 +10541,92 @@ export default function App() {
                       <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Award size={18} color="#4ade80" /> SALESPERSON PERFORMANCE MATRIX
                       </h3>
-                      <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                          <thead>
-                            <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                              <th style={{ padding: '8px' }}>Salesperson</th>
-                              <th style={{ padding: '8px' }}>Leads</th>
-                              <th style={{ padding: '8px' }}>Qualified</th>
-                              <th style={{ padding: '8px' }}>Matches</th>
-                              <th style={{ padding: '8px' }}>Visits</th>
-                              <th style={{ padding: '8px' }}>Bookings</th>
-                              <th style={{ padding: '8px' }}>Brokerage</th>
-                              <th style={{ padding: '8px' }}>Conv %</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {salesData.length > 0 ? (
-                              salesData.map((sp, i) => (
-                                <tr key={i} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-                                  <td style={{ padding: '8px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{sp.name}</td>
-                                  <td style={{ padding: '8px' }}>{sp.leads}</td>
-                                  <td style={{ padding: '8px' }}>{sp.qual}</td>
-                                  <td style={{ padding: '8px' }}>{sp.match}</td>
-                                  <td style={{ padding: '8px', color: '#38bdf8' }}>{sp.visit}</td>
-                                  <td style={{ padding: '8px', color: '#4ade80', fontWeight: '800' }}>{sp.bkg}</td>
-                                  <td style={{ padding: '8px', color: '#4ade80', fontWeight: '800' }}>{sp.brk}</td>
-                                  <td style={{ padding: '8px', color: '#fbbf24', fontWeight: '800' }}>{sp.conv}</td>
-                                </tr>
-                              ))
-                            ) : (
-                              <tr>
-                                <td colSpan={8} style={{ padding: '16px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
-                                  No salesperson performance data available.
-                                </td>
+                      {windowWidth <= 768 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {salesData.length > 0 ? (
+                            salesData.map((sp, i) => (
+                              <div key={i} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <strong style={{ fontSize: '0.88rem', color: isLight ? '#0f172a' : '#ffffff' }}>👤 {sp.name}</strong>
+                                  <span style={{ background: 'rgba(251, 191, 36, 0.2)', color: '#fbbf24', padding: '2px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '0.72rem' }}>
+                                    Conv: {sp.conv}
+                                  </span>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', fontSize: '0.75rem', textAlign: 'center' }}>
+                                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Leads</span>
+                                    <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{sp.leads}</strong>
+                                  </div>
+                                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Qualified</span>
+                                    <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{sp.qual}</strong>
+                                  </div>
+                                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Matches</span>
+                                    <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{sp.match}</strong>
+                                  </div>
+                                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Visits</span>
+                                    <strong style={{ color: '#38bdf8' }}>{sp.visit}</strong>
+                                  </div>
+                                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Bookings</span>
+                                    <strong style={{ color: '#4ade80' }}>{sp.bkg}</strong>
+                                  </div>
+                                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Brokerage</span>
+                                    <strong style={{ color: '#4ade80' }}>{sp.brk}</strong>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div style={{ padding: '16px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.8rem' }}>
+                              No salesperson performance data available.
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                            <thead>
+                              <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                                <th style={{ padding: '8px' }}>Salesperson</th>
+                                <th style={{ padding: '8px' }}>Leads</th>
+                                <th style={{ padding: '8px' }}>Qualified</th>
+                                <th style={{ padding: '8px' }}>Matches</th>
+                                <th style={{ padding: '8px' }}>Visits</th>
+                                <th style={{ padding: '8px' }}>Bookings</th>
+                                <th style={{ padding: '8px' }}>Brokerage</th>
+                                <th style={{ padding: '8px' }}>Conv %</th>
                               </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                            </thead>
+                            <tbody>
+                              {salesData.length > 0 ? (
+                                salesData.map((sp, i) => (
+                                  <tr key={i} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+                                    <td style={{ padding: '8px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{sp.name}</td>
+                                    <td style={{ padding: '8px' }}>{sp.leads}</td>
+                                    <td style={{ padding: '8px' }}>{sp.qual}</td>
+                                    <td style={{ padding: '8px' }}>{sp.match}</td>
+                                    <td style={{ padding: '8px', color: '#38bdf8' }}>{sp.visit}</td>
+                                    <td style={{ padding: '8px', color: '#4ade80', fontWeight: '800' }}>{sp.bkg}</td>
+                                    <td style={{ padding: '8px', color: '#4ade80', fontWeight: '800' }}>{sp.brk}</td>
+                                    <td style={{ padding: '8px', color: '#fbbf24', fontWeight: '800' }}>{sp.conv}</td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td colSpan={8} style={{ padding: '16px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
+                                    No salesperson performance data available.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
@@ -10599,38 +10691,72 @@ export default function App() {
                       <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Building2 size={18} color="#38bdf8" /> DEVELOPER PERFORMANCE RANKING
                       </h3>
-                      <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                          <thead>
-                            <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                              <th style={{ padding: '8px' }}>Developer</th>
-                              <th style={{ padding: '8px' }}>Stock</th>
-                              <th style={{ padding: '8px' }}>Visits</th>
-                              <th style={{ padding: '8px' }}>Bookings</th>
-                              <th style={{ padding: '8px' }}>Brokerage</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {devData.length > 0 ? (
-                              devData.map((d, i) => (
-                                <tr key={i} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-                                  <td style={{ padding: '8px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{d.dev}</td>
-                                  <td style={{ padding: '8px' }}>{d.stock}</td>
-                                  <td style={{ padding: '8px' }}>{d.visits}</td>
-                                  <td style={{ padding: '8px', color: '#4ade80', fontWeight: '800' }}>{d.bkg}</td>
-                                  <td style={{ padding: '8px', color: '#4ade80', fontWeight: '800' }}>{d.brk}</td>
-                                </tr>
-                              ))
-                            ) : (
-                              <tr>
-                                <td colSpan={5} style={{ padding: '16px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
-                                  No developers in inventory.
-                                </td>
+                      {windowWidth <= 768 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {devData.length > 0 ? (
+                            devData.map((d, i) => (
+                              <div key={i} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <strong style={{ fontSize: '0.88rem', color: isLight ? '#0f172a' : '#ffffff' }}>🏢 {d.dev}</strong>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', fontSize: '0.75rem', textAlign: 'center' }}>
+                                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Stock</span>
+                                    <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{d.stock}</strong>
+                                  </div>
+                                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Visits</span>
+                                    <strong style={{ color: '#38bdf8' }}>{d.visits}</strong>
+                                  </div>
+                                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Bookings</span>
+                                    <strong style={{ color: '#4ade80' }}>{d.bkg}</strong>
+                                  </div>
+                                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Brokerage</span>
+                                    <strong style={{ color: '#4ade80' }}>{d.brk}</strong>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div style={{ padding: '16px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.8rem' }}>
+                              No developers in inventory.
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                            <thead>
+                              <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                                <th style={{ padding: '8px' }}>Developer</th>
+                                <th style={{ padding: '8px' }}>Stock</th>
+                                <th style={{ padding: '8px' }}>Visits</th>
+                                <th style={{ padding: '8px' }}>Bookings</th>
+                                <th style={{ padding: '8px' }}>Brokerage</th>
                               </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                            </thead>
+                            <tbody>
+                              {devData.length > 0 ? (
+                                devData.map((d, i) => (
+                                  <tr key={i} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+                                    <td style={{ padding: '8px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{d.dev}</td>
+                                    <td style={{ padding: '8px' }}>{d.stock}</td>
+                                    <td style={{ padding: '8px' }}>{d.visits}</td>
+                                    <td style={{ padding: '8px', color: '#4ade80', fontWeight: '800' }}>{d.bkg}</td>
+                                    <td style={{ padding: '8px', color: '#4ade80', fontWeight: '800' }}>{d.brk}</td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td colSpan={5} style={{ padding: '16px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
+                                    No developers in inventory.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
@@ -10662,32 +10788,65 @@ export default function App() {
                       <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <DollarSign size={18} color="#4ade80" /> MARKETING CAMPAIGN ROI TRACKER
                       </h3>
-                      <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                          <thead>
-                            <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                              <th style={{ padding: '8px' }}>Channel</th>
-                              <th style={{ padding: '8px' }}>Spend</th>
-                              <th style={{ padding: '8px' }}>Leads</th>
-                              <th style={{ padding: '8px' }}>Bookings</th>
-                              <th style={{ padding: '8px' }}>Brokerage</th>
-                              <th style={{ padding: '8px' }}>ROI</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {campaignData.map((m, i) => (
-                              <tr key={i} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-                                <td style={{ padding: '8px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{m.ch}</td>
-                                <td style={{ padding: '8px' }}>{m.spend}</td>
-                                <td style={{ padding: '8px' }}>{m.leads}</td>
-                                <td style={{ padding: '8px', color: '#4ade80' }}>{m.bkg}</td>
-                                <td style={{ padding: '8px', color: '#4ade80', fontWeight: '800' }}>{m.brk}</td>
-                                <td style={{ padding: '8px', color: '#fbbf24', fontWeight: '800' }}>{m.roi}</td>
+                      {windowWidth <= 768 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {campaignData.map((m, i) => (
+                            <div key={i} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <strong style={{ fontSize: '0.88rem', color: isLight ? '#0f172a' : '#ffffff' }}>📢 {m.ch}</strong>
+                                <span style={{ background: 'rgba(251, 191, 36, 0.2)', color: '#fbbf24', padding: '2px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '0.72rem' }}>
+                                  ROI: {m.roi}
+                                </span>
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', fontSize: '0.75rem', textAlign: 'center' }}>
+                                <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                  <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Spend</span>
+                                  <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{m.spend}</strong>
+                                </div>
+                                <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                  <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Leads</span>
+                                  <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{m.leads}</strong>
+                                </div>
+                                <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                  <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Bookings</span>
+                                  <strong style={{ color: '#4ade80' }}>{m.bkg}</strong>
+                                </div>
+                                <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '6px', borderRadius: '6px', border: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                                  <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Brokerage</span>
+                                  <strong style={{ color: '#4ade80' }}>{m.brk}</strong>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                            <thead>
+                              <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                                <th style={{ padding: '8px' }}>Channel</th>
+                                <th style={{ padding: '8px' }}>Spend</th>
+                                <th style={{ padding: '8px' }}>Leads</th>
+                                <th style={{ padding: '8px' }}>Bookings</th>
+                                <th style={{ padding: '8px' }}>Brokerage</th>
+                                <th style={{ padding: '8px' }}>ROI</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                            </thead>
+                            <tbody>
+                              {campaignData.map((m, i) => (
+                                <tr key={i} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+                                  <td style={{ padding: '8px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{m.ch}</td>
+                                  <td style={{ padding: '8px' }}>{m.spend}</td>
+                                  <td style={{ padding: '8px' }}>{m.leads}</td>
+                                  <td style={{ padding: '8px', color: '#4ade80' }}>{m.bkg}</td>
+                                  <td style={{ padding: '8px', color: '#4ade80', fontWeight: '800' }}>{m.brk}</td>
+                                  <td style={{ padding: '8px', color: '#fbbf24', fontWeight: '800' }}>{m.roi}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
@@ -10775,13 +10934,13 @@ export default function App() {
 
                       <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 1024 ? '1fr' : 'repeat(2, 1fr)', gap: '12px' }}>
                         {priorityActions.map((act, i) => (
-                          <div key={i} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                          <div key={i} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '14px', borderRadius: '10px', display: 'flex', flexDirection: windowWidth <= 640 ? 'column' : 'row', justifyContent: 'space-between', alignItems: windowWidth <= 640 ? 'stretch' : 'center', gap: '12px' }}>
                             <div>
                               <span style={{ background: act.priority === 'CRITICAL' ? 'rgba(239,68,68,0.2)' : act.priority === 'HIGH' ? 'rgba(245,158,11,0.2)' : 'rgba(56,189,248,0.2)', color: act.priority === 'CRITICAL' ? '#ef4444' : act.priority === 'HIGH' ? '#fbbf24' : '#38bdf8', padding: '2px 6px', borderRadius: '4px', fontWeight: '900', fontSize: '0.65rem' }}>{act.priority}</span>
                               <h4 style={{ fontSize: '0.85rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', marginTop: '4px' }}>{act.title}</h4>
                               <p style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>{act.desc}</p>
                             </div>
-                            <button onClick={act.onClick} style={{ background: act.priority === 'CRITICAL' ? '#ef4444' : '#0284c7', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '800', fontSize: '0.72rem', cursor: 'pointer', flexShrink: 0 }}>
+                            <button onClick={act.onClick} style={{ background: act.priority === 'CRITICAL' ? '#ef4444' : '#0284c7', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0, width: windowWidth <= 640 ? '100%' : 'auto', textAlign: 'center' }}>
                               {act.action}
                             </button>
                           </div>
@@ -13136,14 +13295,14 @@ export default function App() {
 
       {/* 10-STEP ENTERPRISE LEAD INTAKE & QUALIFICATION WIZARD MODAL */}
       {(showLeadModal || showAddCustomerModal) && (
-        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(15, 23, 42, 0.5)' : 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #0284c7', width: '94vw', maxWidth: '920px', maxHeight: '92vh', borderRadius: '18px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', boxShadow: isLight ? '0 20px 40px rgba(0,0,0,0.12)' : '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(15, 23, 42, 0.5)' : 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: windowWidth <= 640 ? '8px' : '20px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #0284c7', width: windowWidth <= 640 ? '98vw' : '94vw', maxWidth: '920px', maxHeight: windowWidth <= 640 ? '95vh' : '92vh', borderRadius: windowWidth <= 640 ? '12px' : '18px', padding: windowWidth <= 640 ? '14px' : '28px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', boxShadow: isLight ? '0 20px 40px rgba(0,0,0,0.12)' : '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
             
             {/* WIZARD HEADER & PROGRESS INDICATOR */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>🚀 9-STEP ENTERPRISE LEAD INTAKE & QUALIFICATION WIZARD</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <h3 style={{ fontSize: windowWidth <= 640 ? '1rem' : '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>🚀 9-STEP ENTERPRISE LEAD INTAKE & QUALIFICATION WIZARD</h3>
                   <span style={{ background: '#0284c7', color: '#ffffff', padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800' }}>
                     STEP {leadIntakeStep} OF 9
                   </span>
@@ -13174,8 +13333,21 @@ export default function App() {
               ))}
             </div>
 
-            {/* STEP STEPPER TAB STRIP */}
-            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
+            {/* STEP STEPPER TAB STRIP (HORIZONTALLY SCROLLABLE WITH FULL TEXT) */}
+            <div 
+              className="table-responsive-wrapper"
+              style={{ 
+                display: 'flex', 
+                gap: '8px', 
+                overflowX: 'auto', 
+                flexWrap: 'nowrap', 
+                paddingBottom: '8px', 
+                borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'thin',
+                msOverflowStyle: 'none'
+              }}
+            >
               {[
                 { s: 1, label: '1. Lead Source' },
                 { s: 2, label: '2. Identity & Contact' },
@@ -13192,15 +13364,20 @@ export default function App() {
                   type="button" 
                   onClick={() => setLeadIntakeStep(item.s)} 
                   style={{ 
-                    padding: '6px 10px', 
-                    borderRadius: '6px', 
-                    fontSize: '0.72rem', 
+                    flexShrink: 0,
+                    padding: '8px 14px', 
+                    borderRadius: '8px', 
+                    fontSize: '0.78rem', 
                     fontWeight: '800', 
                     cursor: 'pointer', 
                     whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     background: leadIntakeStep === item.s ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), 
                     color: leadIntakeStep === item.s ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'), 
-                    border: leadIntakeStep === item.s ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155') 
+                    border: leadIntakeStep === item.s ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   {item.label}
@@ -13272,7 +13449,7 @@ export default function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <h4 style={{ color: '#38bdf8', fontWeight: '900', fontSize: '1rem' }}>Step 1: Lead Source Attribution & Marketing Details</h4>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Lead Source *</label>
                     <select value={newCustomerForm.lead_source} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, lead_source: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}>
@@ -13316,7 +13493,7 @@ export default function App() {
                   <label style={{ fontSize: '0.78rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', display: 'block' }}>
                     📞 Initial Customer Engagement & Call Disposition Status *
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(4, 1fr)', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '8px' }}>
                     <button 
                       type="button" 
                       onClick={() => setNewLeadForm({ ...newLeadForm, call_disposition: 'CONNECTED_INTERESTED' })} 
@@ -13408,7 +13585,7 @@ export default function App() {
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Customer Full Name *</label>
                     <input type="text" value={newCustomerForm.name} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, name: e.target.value })} placeholder="e.g. Sumanth Varma" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
@@ -13459,7 +13636,7 @@ export default function App() {
                       </span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
                       <div>
                         <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
                           📅 Next Follow-Up Date *
@@ -13502,7 +13679,7 @@ export default function App() {
                   </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '12px' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                       <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>WhatsApp Number</label>
@@ -13538,7 +13715,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>City</label>
                     <input type="text" value={newCustomerForm.city} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, city: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} />
@@ -13559,7 +13736,7 @@ export default function App() {
             {leadIntakeStep === 3 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <h4 style={{ color: '#38bdf8', fontWeight: '900', fontSize: '1rem' }}>Step 3: Property Purchase Purpose & Category Type</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Property Transaction Purpose *</label>
                     <select value={newCustomerForm.investment_purpose} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, investment_purpose: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '900', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}>
@@ -13571,7 +13748,7 @@ export default function App() {
                     </select>
                   </div>
 
-                  <div style={{ gridColumn: 'span 2' }}>
+                  <div style={{ gridColumn: windowWidth <= 640 ? 'span 1' : 'span 2' }}>
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
                       Property Category Type (Multi-Select Allowed - Click Checkboxes to Select Multiple) *
                     </label>
@@ -13630,7 +13807,7 @@ export default function App() {
             {leadIntakeStep === 4 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <h4 style={{ color: '#38bdf8', fontWeight: '900', fontSize: '1rem' }}>Step 4: Required BHK Configuration, Condition & Floor Preference</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>BHK Configuration *</label>
                     <select value={newCustomerForm.configuration} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, configuration: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#fbbf24', fontWeight: '900', padding: '10px', borderRadius: '6px', fontSize: '0.85rem' }}>
@@ -13657,7 +13834,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
                   <div>
                     <MultiSelectFloorSelector
                       isLight={isLight}
@@ -13685,7 +13862,7 @@ export default function App() {
             {leadIntakeStep === 5 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <h4 style={{ color: '#38bdf8', fontWeight: '900', fontSize: '1rem' }}>Step 5: Location Requirements, Secondary Localities & Map Radius</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Primary Preferred Locality *</label>
                     <input type="text" value={newCustomerForm.preferredArea} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, preferredArea: e.target.value })} placeholder="e.g. Kondapur / Gachibowli or Madhyamgram" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
@@ -13696,7 +13873,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Maximum Map Radius Distance (KM)</label>
                     <select value={newCustomerForm.radius_km} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, radius_km: Number(e.target.value) })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontWeight: '900', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}>
@@ -13770,14 +13947,14 @@ export default function App() {
                     ))}
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '12px' }}>
                     
                     {/* MINIMUM BUDGET (WRITABLE AMOUNT + UNIT DROPDOWN: Cr / Lakh / Thousand) */}
                     <div>
                       <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
                         Minimum Budget Limit *
                       </label>
-                      <div style={{ display: 'flex', gap: '6px' }}>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         <input
                           type="text"
                           value={(() => {
@@ -13795,7 +13972,7 @@ export default function App() {
                             setNewCustomerForm({ ...newCustomerForm, budget_min: formatted });
                           }}
                           placeholder="e.g. 1.20 or 50"
-                          style={{ flex: 1, background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '900', padding: '9px 12px', borderRadius: '8px', fontSize: '0.88rem' }}
+                          style={{ flex: 1, minWidth: '100px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '900', padding: '9px 12px', borderRadius: '8px', fontSize: '0.88rem' }}
                           required
                         />
                         <select
@@ -13812,7 +13989,7 @@ export default function App() {
                             const formatted = `₹${currentAmt} ${newUnit}`;
                             setNewCustomerForm({ ...newCustomerForm, budget_min: formatted });
                           }}
-                          style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #0284c7', color: '#38bdf8', fontWeight: '900', padding: '9px 8px', borderRadius: '8px', fontSize: '0.82rem', width: '125px' }}
+                          style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #0284c7', color: '#38bdf8', fontWeight: '900', padding: '9px 8px', borderRadius: '8px', fontSize: '0.82rem', width: windowWidth <= 480 ? '100%' : '125px' }}
                         >
                           <option value="Crore">Crore (Cr)</option>
                           <option value="Lakh">Lakh (Lakhs)</option>
@@ -13826,7 +14003,7 @@ export default function App() {
                       <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
                         Maximum Budget Limit *
                       </label>
-                      <div style={{ display: 'flex', gap: '6px' }}>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         <input
                           type="text"
                           value={(() => {
@@ -13844,7 +14021,7 @@ export default function App() {
                             setNewCustomerForm({ ...newCustomerForm, budget_max: formatted });
                           }}
                           placeholder="e.g. 1.80 or 75"
-                          style={{ flex: 1, background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '900', padding: '9px 12px', borderRadius: '8px', fontSize: '0.88rem' }}
+                          style={{ flex: 1, minWidth: '100px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '900', padding: '9px 12px', borderRadius: '8px', fontSize: '0.88rem' }}
                           required
                         />
                         <select
@@ -13861,7 +14038,7 @@ export default function App() {
                             const formatted = `₹${currentAmt} ${newUnit}`;
                             setNewCustomerForm({ ...newCustomerForm, budget_max: formatted });
                           }}
-                          style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #0284c7', color: '#38bdf8', fontWeight: '900', padding: '9px 8px', borderRadius: '8px', fontSize: '0.82rem', width: '125px' }}
+                          style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #0284c7', color: '#38bdf8', fontWeight: '900', padding: '9px 8px', borderRadius: '8px', fontSize: '0.82rem', width: windowWidth <= 480 ? '100%' : '125px' }}
                         >
                           <option value="Crore">Crore (Cr)</option>
                           <option value="Lakh">Lakh (Lakhs)</option>
@@ -13919,7 +14096,7 @@ export default function App() {
                     ))}
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '12px' }}>
                     {/* MIN AREA SELECTOR OR TYPE */}
                     <div>
                       <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Min Area Dimension *</label>
@@ -14150,7 +14327,7 @@ export default function App() {
             {leadIntakeStep === 8 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <h4 style={{ color: '#38bdf8', fontWeight: '900', fontSize: '1rem' }}>Step 8: Home Loan Readiness, Possession Timeline & Channel Partner Brokerage Terms</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Bank Loan Required *</label>
                     <select value={newCustomerForm.loan_required} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, loan_required: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontWeight: '900', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}>
@@ -14179,7 +14356,7 @@ export default function App() {
 
                 {/* AGREED BROKERAGE CHARGE SECTION */}
                 <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #22c55e', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                     <label style={{ fontSize: '0.85rem', color: '#22c55e', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       💰 Agreed Channel Partner Brokerage Charge & Billing Terms *
                     </label>
@@ -14188,7 +14365,7 @@ export default function App() {
                     </span>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
                     <div>
                       <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Agreed Brokerage Rate (%) *</label>
                       <select 
@@ -14270,7 +14447,7 @@ export default function App() {
 
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1.5px solid ${badgeColor}`, borderRadius: '12px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1.5px solid ${badgeColor}`, borderRadius: '12px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                     <div>
                       <span style={{ fontSize: '0.75rem', color: badgeColor, fontWeight: '900' }}>REQUIREMENT COMPLETENESS AUDIT SCORE</span>
                       <h2 style={{ fontSize: '1.8rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '2px' }}>{dynamicScore}% COMPLETE</h2>
@@ -14301,7 +14478,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px' }}>
                       {auditChecklist.map(item => (
                         <div 
                           key={item.key}
@@ -14350,7 +14527,7 @@ export default function App() {
                     </div>
                   </div>
 
-                <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', fontSize: '0.82rem' }}>
+                <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: '12px', fontSize: '0.82rem' }}>
                   <div>
                     <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Customer Name:</span>
                     <strong style={{ display: 'block', color: isLight ? '#0f172a' : '#ffffff' }}>{newCustomerForm.name || 'Sumanth Varma'}</strong>
@@ -14415,8 +14592,8 @@ export default function App() {
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                  <button type="button" onClick={() => setLeadIntakeStep(8)} style={{ flex: 1, background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
+                  <button type="button" onClick={() => setLeadIntakeStep(8)} style={{ flex: 1, minWidth: '140px', background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
                     ← Back to Step 8
                   </button>
                   <button 
@@ -14657,7 +14834,7 @@ export default function App() {
                       setActiveTab('matching_management');
                       alert(`🎉 INGESTED & UPDATED LEAD SUCCESSFULLY!\n\n• Lead ID: ${leadNum}\n• Customer ID: ${finalCustomerCode}\n• Matching ID: ${reqId}\n• Dynamic Audit Score: ${dynamicScore}%\n• Assigned CRM Executive: ${newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)'}\n${isDuplicateDetected ? '\n⚠️ DUPLICATE MATCH DETECTED: Pre-existing lead/customer profile updated in place (No duplicate record created)!\n' : ''}\nNavigating to Matching Management Engine...`);
                     }}
-                    style={{ flex: 2, background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '900', fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                    style={{ flex: 2, minWidth: '220px', background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '900', fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
                     🚀 GENERATE MATCHING ID & SEND TO MATCHING MANAGEMENT
                   </button>
@@ -14668,11 +14845,11 @@ export default function App() {
 
             {/* STEP NAVIGATION BUTTONS (FOR STEPS 1 TO 8) */}
             {leadIntakeStep < 9 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '16px', flexWrap: 'wrap' }}>
                 <button type="button" disabled={leadIntakeStep === 1} onClick={() => setLeadIntakeStep(Math.max(1, leadIntakeStep - 1))} style={{ background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', opacity: leadIntakeStep === 1 ? 0.5 : 1 }}>
                   ← Previous
                 </button>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button 
                     type="button" 
                     onClick={handleSaveQualificationDraft} 
@@ -16036,14 +16213,12 @@ export default function App() {
                     🏠 PROPERTY & UNIT SPECIFICATIONS
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem' }}>
-                    <div><span style={{ color: '#64748b' }}>Property Title:</span> <strong style={{ color: '#0f172a', fontSize: '0.88rem' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.propertyTitle}</strong></div>
                     <div><span style={{ color: '#64748b' }}>Property Category Type:</span> <strong style={{ color: '#a855f7', fontWeight: '800' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.property_type || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.propertyType || showViewIndividualCostSheetModal.costSheet.property_type || 'Flat / Apartment'}</strong></div>
                     <div><span style={{ color: '#64748b' }}>Property Code:</span> <strong style={{ color: '#0369a1', fontFamily: 'monospace' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.propertyCode}</strong></div>
-                    <div><span style={{ color: '#64748b' }}>Project & Developer:</span> <strong style={{ color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.projectName} ({showViewIndividualCostSheetModal.costSheet.propertySnapshot?.developerName})</strong></div>
                     <div><span style={{ color: '#64748b' }}>Tower / Floor / Unit:</span> <strong style={{ color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.tower}, {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.floor}, Unit {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.unitNumber}</strong></div>
                     <div><span style={{ color: '#64748b' }}>Carpet Area:</span> <strong style={{ color: '#d97706', fontWeight: '800' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.carpetArea}</strong></div>
                     <div><span style={{ color: '#64748b' }}>Facing & Possession:</span> <strong style={{ color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.facing} • {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.possessionStatus}</strong></div>
-                    <div><span style={{ color: '#64748b' }}>GPS Coordinates:</span> <strong style={{ color: '#0369a1', fontFamily: 'monospace' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.latitude}, {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.longitude}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Locality Hub / Sector:</span> <strong style={{ color: '#0369a1' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.localityHub || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.locality || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.city || 'Barasat, Kolkata'}</strong></div>
                   </div>
                 </div>
 
@@ -16118,7 +16293,7 @@ export default function App() {
                      showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.discountStr !== 'N/A' && 
                      showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.discountStr !== '₹0' && (
                       <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#fef2f2' }}>
-                        <td style={{ padding: '10px 14px', fontWeight: '800', color: '#dc2626' }}>8. Manager Approved Special Discount</td>
+                        <td style={{ padding: '10px 14px', fontWeight: '800', color: '#dc2626' }}>Special Manager Approved Discount</td>
                         <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: '#dc2626' }}>- {showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.discountStr}</td>
                       </tr>
                     )}
@@ -16130,16 +16305,24 @@ export default function App() {
                       </td>
                     </tr>
                     <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={{ padding: '10px 14px', color: '#475569' }}>9. Goods & Services Tax (GST)</td>
+                      <td style={{ padding: '10px 14px', color: '#475569' }}>8. Goods & Services Tax (GST)</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.gstStr}</td>
                     </tr>
                     <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#fafafa' }}>
-                      <td style={{ padding: '10px 14px', color: '#475569' }}>10. Stamp Duty Charges</td>
+                      <td style={{ padding: '10px 14px', color: '#475569' }}>9. Stamp Duty Charges</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.stampDutyStr}</td>
                     </tr>
                     <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={{ padding: '10px 14px', color: '#475569' }}>11. Registration & Property Transfer Fee</td>
+                      <td style={{ padding: '10px 14px', color: '#475569' }}>10. Registration & Property Transfer Fee</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.registrationStr}</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#fafafa' }}>
+                      <td style={{ padding: '10px 14px', color: '#475569' }}>11. Lawyer / Legal Verification Charges</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#0f172a' }}>
+                        {showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.lawyerStr || 
+                         showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.legalStr || 
+                         (showViewIndividualCostSheetModal.costSheet.pricingSnapshot?.lawyerCharge ? formatIndianRupees(showViewIndividualCostSheetModal.costSheet.pricingSnapshot.lawyerCharge) : 'Included in Legal Charges')}
+                      </td>
                     </tr>
                     <tr style={{ background: '#f0fdf4', borderTop: '3px solid #16a34a' }}>
                       <td style={{ padding: '14px', fontWeight: '900', fontSize: '1.05rem', color: '#15803d' }}>
@@ -17224,7 +17407,7 @@ export default function App() {
             </div>
 
             {/* 13 DRAWER TABS */}
-            <div style={{ display: 'flex', gap: '6px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '10px', overflowX: 'auto' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '10px' }}>
               {['OVERVIEW', 'CUSTOMER', 'REQUIREMENT', 'FOLLOW-UP', 'CALL HISTORY', 'PROPERTY MATCHING', 'COST SHEETS', 'VISITS', 'AGREEMENT', 'BOOKING', 'TIMELINE'].map(t => (
                 <button
                   key={t}
@@ -17235,6 +17418,7 @@ export default function App() {
                     fontSize: '0.75rem',
                     fontWeight: '800',
                     cursor: 'pointer',
+                    whiteSpace: 'nowrap',
                     background: showLead360Drawer.tab === t ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'),
                     color: showLead360Drawer.tab === t ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'),
                     border: showLead360Drawer.tab === t ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155')

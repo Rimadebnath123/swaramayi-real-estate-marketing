@@ -41,6 +41,32 @@ body {
   background: #475569;
 }
 
+/* Dedicated Sleek & Visible Scrollbar for Modals */
+.custom-modal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #0284c7 #0f172a;
+}
+
+.custom-modal-scrollbar::-webkit-scrollbar {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+.custom-modal-scrollbar::-webkit-scrollbar-track {
+  background: #0f172a !important;
+  border-radius: 6px !important;
+}
+
+.custom-modal-scrollbar::-webkit-scrollbar-thumb {
+  background: #0284c7 !important;
+  border: 2px solid #0f172a !important;
+  border-radius: 6px !important;
+}
+
+.custom-modal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #38bdf8 !important;
+}
+
 /* Utilities */
 .glass-panel {
   background: rgba(15, 23, 42, 0.75);

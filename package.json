@@ -9,8 +9,14 @@
   ],
   "scripts": {
     "install:all": "npm install --prefix frontend && npm install --prefix website-frontend && npm install --prefix backend",
+    "dev": "npx concurrently \"npm run dev:backend\" \"npm run dev:crm\" \"npm run dev:website\"",
+    "dev:all": "npx concurrently \"npm run dev:backend\" \"npm run dev:crm\" \"npm run dev:website\"",
     "dev:crm": "npm run dev --prefix frontend",
     "dev:website": "npm run dev --prefix website-frontend",
-    "dev:backend": "npm run dev --prefix backend"
+    "dev:backend": "npm run dev --prefix backend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend && npm run build --prefix website-frontend",
+    "build:backend": "npm run build --prefix backend",
+    "build:crm": "npm run build --prefix frontend",
+    "build:website": "npm run build --prefix website-frontend"
   }
 }

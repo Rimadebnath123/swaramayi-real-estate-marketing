@@ -1897,40 +1897,75 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
           </div>
 
           {/* FIXED SELECTED PROPERTY SUMMARY PANEL & DISPATCHER */}
-          <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '2px solid #0284c7', borderRadius: '16px', padding: windowWidth <= 640 ? '12px 14px' : '20px', display: 'flex', flexDirection: 'column', gap: '14px', position: 'sticky', bottom: windowWidth <= 640 ? '5px' : '10px', zIndex: 100, boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: '900', textTransform: 'uppercase' }}>
+          <div style={{ 
+            background: isLight ? 'rgba(248, 250, 252, 0.96)' : 'rgba(15, 23, 42, 0.96)', 
+            backdropFilter: 'blur(12px)',
+            border: '2px solid #0284c7', 
+            borderRadius: '16px', 
+            padding: windowWidth <= 640 ? '12px 14px' : windowWidth <= 1024 ? '14px 18px' : '20px', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: windowWidth <= 1024 ? '10px' : '14px', 
+            position: 'sticky', 
+            bottom: windowWidth <= 640 ? '5px' : '10px', 
+            zIndex: 100, 
+            boxShadow: '0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(2, 132, 199, 0.25)',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ flex: 1, minWidth: windowWidth <= 480 ? '100%' : '240px' }}>
+                <span style={{ fontSize: windowWidth <= 640 ? '0.68rem' : '0.72rem', color: '#38bdf8', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   📌 PROPERTY SELECTION WORKSPACE & DISPATCHER
                 </span>
-                <h3 style={{ fontSize: windowWidth <= 480 ? '0.95rem' : windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '2px', margin: 0 }}>
-                  {selectedPropertyIds.length} PROPERTIES SELECTED FOR {activeMatchingReq.customerName.toUpperCase()} ({activeMatchingReq.requestId})
+                <h3 style={{ 
+                  fontSize: windowWidth <= 480 ? '0.9rem' : windowWidth <= 768 ? '0.98rem' : windowWidth <= 1024 ? '1.05rem' : '1.2rem', 
+                  fontWeight: '900', 
+                  color: isLight ? '#0f172a' : '#ffffff', 
+                  marginTop: '2px', 
+                  margin: 0,
+                  lineHeight: '1.35',
+                  wordBreak: 'break-word'
+                }}>
+                  {selectedPropertyIds.length} {selectedPropertyIds.length === 1 ? 'PROPERTY' : 'PROPERTIES'} SELECTED FOR {activeMatchingReq.customerName.toUpperCase()} ({activeMatchingReq.requestId})
                 </h3>
               </div>
 
-              <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '4px 12px', borderRadius: '20px', fontWeight: '900', fontSize: '0.78rem', border: '1px solid #22c55e' }}>
-                ✓ {selectedPropertyIds.length} PROPERTIES READY TO DISPATCH
+              <span style={{ 
+                background: 'rgba(34, 197, 94, 0.2)', 
+                color: '#4ade80', 
+                padding: windowWidth <= 640 ? '3px 10px' : '4px 12px', 
+                borderRadius: '20px', 
+                fontWeight: '900', 
+                fontSize: windowWidth <= 640 ? '0.72rem' : '0.78rem', 
+                border: '1px solid #22c55e',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
+              }}>
+                ✓ {selectedPropertyIds.length} READY TO DISPATCH
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: windowWidth <= 640 ? '6px' : '10px', flexWrap: 'wrap', alignItems: 'center', maxWidth: '100%', overflowX: 'auto' }}>
               {selectedPropertyIds.length === 0 ? (
-                <span style={{ fontSize: '0.82rem', color: isLight ? '#64748b' : '#94a3b8', fontStyle: 'italic', padding: '6px 0' }}>
+                <span style={{ fontSize: windowWidth <= 640 ? '0.78rem' : '0.82rem', color: isLight ? '#64748b' : '#94a3b8', fontStyle: 'italic', padding: '4px 0' }}>
                   No properties selected yet. Select property checkboxes above or click "Add/Select Property" to add properties to workspace.
                 </span>
               ) : (
                 selectedPropertyIds.map((code, idx) => (
-                  <div key={idx} style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '6px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
+                  <div key={idx} style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '4px 10px' : '6px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: windowWidth <= 640 ? '0.75rem' : '0.8rem', flexShrink: 0 }}>
                     <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900' }}>{code}</span>
-                    <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}>{properties.find(p => p.property_code === code)?.title || code}</span>
-                    <X size={14} color="#ef4444" style={{ cursor: 'pointer' }} onClick={() => setSelectedPropertyIds(selectedPropertyIds.filter(id => id !== code))} />
+                    <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', maxWidth: windowWidth <= 1024 ? '180px' : '260px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {properties.find(p => p.property_code === code)?.title || code}
+                    </span>
+                    <X size={14} color="#ef4444" style={{ cursor: 'pointer', flexShrink: 0 }} onClick={() => setSelectedPropertyIds(selectedPropertyIds.filter(id => id !== code))} />
                   </div>
                 ))
               )}
             </div>
 
             {/* SELECTION ACTION BUTTON - ONE PROPERTY = ONE COST SHEET */}
-            <div style={{ borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '12px', display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <div style={{ borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: windowWidth <= 1024 ? '10px' : '12px', display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <button 
                 onClick={() => {
                   if (selectedPropertyIds.length === 0) {
@@ -1944,12 +1979,28 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     handleBulkCreateCostSheets();
                   }
                 }} 
-                style={{ width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: 'center', background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)', color: '#0f172a', border: 'none', padding: windowWidth <= 640 ? '10px 14px' : '12px 24px', borderRadius: '10px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.8rem' : '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(251, 191, 36, 0.4)' }}
+                style={{ 
+                  width: windowWidth <= 1024 ? '100%' : 'auto', 
+                  justifyContent: 'center', 
+                  background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)', 
+                  color: '#0f172a', 
+                  border: 'none', 
+                  padding: windowWidth <= 640 ? '10px 14px' : windowWidth <= 1024 ? '11px 18px' : '12px 24px', 
+                  borderRadius: '10px', 
+                  fontWeight: '900', 
+                  fontSize: windowWidth <= 640 ? '0.78rem' : windowWidth <= 1024 ? '0.84rem' : '0.9rem', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  boxShadow: '0 4px 14px rgba(251, 191, 36, 0.4)',
+                  textAlign: 'center'
+                }}
               >
                 📄 CREATE INDIVIDUAL COST SHEETS ({selectedPropertyIds.length} SELECTED) & SEND TO SHARING
               </button>
-              </div>
             </div>
+          </div>
           </>
         )}
 

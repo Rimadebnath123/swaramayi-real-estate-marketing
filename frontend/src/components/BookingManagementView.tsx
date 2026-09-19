@@ -376,16 +376,16 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
       {/* CATEGORY HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <BookmarkCheck size={24} color="#38bdf8" /> Property Unit Booking Management & Token Vault
+          <h2 style={{ fontSize: windowWidth <= 640 ? '1.1rem' : '1.4rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <BookmarkCheck size={windowWidth <= 640 ? 20 : 24} color="#38bdf8" /> Property Unit Booking Management & Token Vault
           </h2>
-          <p style={{ fontSize: '0.85rem', color: isLight ? '#64748b' : '#94a3b8' }}>Register new property unit bookings, lock units, record token advances, manage manager approvals, and issue Allotment Letters.</p>
+          <p style={{ fontSize: windowWidth <= 640 ? '0.78rem' : '0.85rem', color: isLight ? '#64748b' : '#94a3b8' }}>Register new property unit bookings, lock units, record token advances, manage manager approvals, and issue Allotment Letters.</p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', width: windowWidth <= 640 ? '100%' : 'auto' }}>
           <button 
             onClick={() => setShowNewBookingModal(true)}
-            style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)' }}
+            style={{ width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: 'center', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)' }}
           >
             <BookmarkCheck size={16} /> + Register New Unit Booking
           </button>
@@ -410,12 +410,14 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
               }
             }}
             style={{
+              flex: windowWidth <= 640 ? '1 1 100%' : '1 1 auto',
               padding: '10px 18px',
               borderRadius: '8px',
               border: 'none',
               cursor: 'pointer',
               fontSize: '0.85rem',
               fontWeight: '800',
+              textAlign: 'center',
               background: activeBookingSubTab === tab.id ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : (isLight ? '#f1f5f9' : '#0f172a'),
               color: activeBookingSubTab === tab.id ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'),
               boxShadow: activeBookingSubTab === tab.id ? '0 4px 12px rgba(2, 132, 199, 0.3)' : 'none'
@@ -428,7 +430,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
 
       {/* SUB-TAB 1: ALL BOOKINGS VAULT */}
       {activeBookingSubTab === 'all_bookings' && (
-        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '12px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
             <div>
               <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>📋 Master Property Unit Booking Vault</h3>
@@ -606,11 +608,11 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
 
       {/* MODAL: EDIT BOOKING DETAILS */}
       {showEditBookingModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #38bdf8', borderRadius: '16px', width: '100%', maxWidth: '650px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: windowWidth <= 640 ? '8px' : '20px' }}>
+          <div className="custom-modal-scrollbar" style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #38bdf8', borderRadius: '16px', width: windowWidth <= 640 ? '98vw' : windowWidth <= 1024 ? '95vw' : '650px', maxWidth: '96vw', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px' }}>
               <div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Edit3 size={20} color="#38bdf8" /> Edit Property Unit Booking ({showEditBookingModal.booking_code})
                 </h3>
                 <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8' }}>Update customer booking parameters, property details, and locked financial values.</p>
@@ -619,7 +621,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
             </div>
 
             <form onSubmit={handleSaveEditBooking} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Customer Name *</label>
                   <input type="text" value={editBookingForm.customer_name || ''} onChange={(e) => setEditBookingForm({ ...editBookingForm, customer_name: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
@@ -630,7 +632,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Project Name *</label>
                   <input type="text" value={editBookingForm.project_name || ''} onChange={(e) => setEditBookingForm({ ...editBookingForm, project_name: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
@@ -646,7 +648,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
                 <input type="text" value={editBookingForm.tower_unit || ''} onChange={(e) => setEditBookingForm({ ...editBookingForm, tower_unit: e.target.value })} placeholder="e.g. Block A - Unit 302" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Total Agreement Value (₹) *</label>
                   <input type="number" value={editBookingForm.agreement_value_input || ''} onChange={(e) => setEditBookingForm({ ...editBookingForm, agreement_value_input: e.target.value })} placeholder="5114880" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
@@ -657,7 +659,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Payment Mode *</label>
                   <select value={editBookingForm.payment_mode || 'UPI / Online Bank Transfer'} onChange={(e) => setEditBookingForm({ ...editBookingForm, payment_mode: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}>
@@ -674,7 +676,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Sales Executive</label>
                   <input type="text" value={editBookingForm.sales_executive || ''} onChange={(e) => setEditBookingForm({ ...editBookingForm, sales_executive: e.target.value })} placeholder="Ramesh Pawar" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} />

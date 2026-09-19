@@ -109,6 +109,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
   const isSuperAdmin = isStrictSuperAdmin || roleUpper.includes('ADMIN');
 
   const [selectedTransactionPdf, setSelectedTransactionPdf] = useState<any | null>(null);
+  const [vaultViewMode, setVaultViewMode] = useState<'cards' | 'table'>(windowWidth <= 1024 ? 'cards' : 'table');
 
   const salesExecOptions = React.useMemo(() => {
     if (users && Array.isArray(users) && users.length > 0) {
@@ -1079,18 +1080,18 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
       {/* SYSTEM HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '16px 20px' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>CUSTOMER MANAGEMENT</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: windowWidth <= 640 ? '12px' : '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '12px 14px' : '16px 20px' }}>
+        <h2 style={{ fontSize: windowWidth <= 480 ? '1.05rem' : windowWidth <= 640 ? '1.15rem' : '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>CUSTOMER MANAGEMENT</h2>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button onClick={() => setShowCreateShareModal(true)} style={{ background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)', color: '#0f172a', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(56, 189, 248, 0.3)' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto' }}>
+          <button onClick={() => setShowCreateShareModal(true)} style={{ width: windowWidth <= 480 ? '100%' : 'auto', justifyContent: 'center', background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)', color: '#0f172a', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.78rem' : '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(56, 189, 248, 0.3)' }}>
             <Plus size={15} color="#0f172a" /> + Create Details against Customer ID
           </button>
-          <button onClick={handleOpenAddCustomerModal} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button onClick={handleOpenAddCustomerModal} style={{ width: windowWidth <= 480 ? '100%' : 'auto', justifyContent: 'center', background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: windowWidth <= 640 ? '0.78rem' : '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <UserPlus size={15} /> + Add Customer Master
           </button>
           {isStrictSuperAdmin && (
-            <button onClick={handleDeleteAllCurrentInside} style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button onClick={handleDeleteAllCurrentInside} style={{ width: windowWidth <= 480 ? '100%' : 'auto', justifyContent: 'center', background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.78rem' : '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Trash2 size={15} color="#ffffff" /> 🗑️ Delete All Current Inside
             </button>
           )}
@@ -1128,22 +1129,22 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                 }
               }
             }} 
-            style={{ background: isLight ? '#ffffff' : '#1e293b', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ width: windowWidth <= 480 ? '100%' : 'auto', justifyContent: 'center', background: isLight ? '#ffffff' : '#1e293b', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: windowWidth <= 640 ? '0.78rem' : '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <Search size={15} /> Duplicate Scanner
           </button>
         </div>
       </div>
 
-      {/* 3 SUB-TABS NAVIGATION FOR CUSTOMER MANAGEMENT */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', flexWrap: 'wrap' }}>
-        <button onClick={() => setActiveCustomerSubTab('customer_master_vault')} style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: '800', cursor: 'pointer', background: activeCustomerSubTab === 'customer_master_vault' ? '#0284c7' : '#1e293b', color: activeCustomerSubTab === 'customer_master_vault' ? '#ffffff' : '#94a3b8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+      {/* 3 SUB-TABS NAVIGATION FOR CUSTOMER MANAGEMENT (HORIZONTALLY SCROLLABLE ON MOBILE & TABLET) */}
+      <div style={{ display: 'flex', gap: '8px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', flexWrap: 'nowrap', overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
+        <button onClick={() => setActiveCustomerSubTab('customer_master_vault')} style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: windowWidth <= 640 ? '6px 12px' : '8px 14px', borderRadius: '8px', fontSize: windowWidth <= 640 ? '0.78rem' : '0.82rem', fontWeight: '800', cursor: 'pointer', background: activeCustomerSubTab === 'customer_master_vault' ? '#0284c7' : '#1e293b', color: activeCustomerSubTab === 'customer_master_vault' ? '#ffffff' : '#94a3b8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
           👥 Customer Master Vault ({allActiveCustomers.length})
         </button>
-        <button onClick={() => setActiveCustomerSubTab('customer_360_profile')} style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: '800', cursor: 'pointer', background: activeCustomerSubTab === 'customer_360_profile' ? '#0284c7' : '#1e293b', color: activeCustomerSubTab === 'customer_360_profile' ? '#ffffff' : '#94a3b8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+        <button onClick={() => setActiveCustomerSubTab('customer_360_profile')} style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: windowWidth <= 640 ? '6px 12px' : '8px 14px', borderRadius: '8px', fontSize: windowWidth <= 640 ? '0.78rem' : '0.82rem', fontWeight: '800', cursor: 'pointer', background: activeCustomerSubTab === 'customer_360_profile' ? '#0284c7' : '#1e293b', color: activeCustomerSubTab === 'customer_360_profile' ? '#ffffff' : '#94a3b8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
           🔍 Customer 360° Profile
         </button>
-        <button onClick={() => setActiveCustomerSubTab('anti_leakage_engine')} style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: '800', cursor: 'pointer', background: activeCustomerSubTab === 'anti_leakage_engine' ? '#ef4444' : '#1e293b', color: activeCustomerSubTab === 'anti_leakage_engine' ? '#ffffff' : '#94a3b8', border: '1px solid #ef4444' }}>
+        <button onClick={() => setActiveCustomerSubTab('anti_leakage_engine')} style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: windowWidth <= 640 ? '6px 12px' : '8px 14px', borderRadius: '8px', fontSize: windowWidth <= 640 ? '0.78rem' : '0.82rem', fontWeight: '800', cursor: 'pointer', background: activeCustomerSubTab === 'anti_leakage_engine' ? '#ef4444' : '#1e293b', color: activeCustomerSubTab === 'anti_leakage_engine' ? '#ffffff' : '#94a3b8', border: '1px solid #ef4444' }}>
           🚨 Anti-Leakage Detection
         </button>
       </div>
@@ -1152,24 +1153,24 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
       {activeCustomerSubTab === 'sales_journey_funnel' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* CLICKABLE EVENT TIMELINE TABLE WITH AUDIT LOGS */}
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>📜 AUDIT TRAIL & JOURNEY ACTIVITY TIMELINE</h3>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <h3 style={{ fontSize: windowWidth <= 640 ? '1rem' : '1.1rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>📜 AUDIT TRAIL & JOURNEY ACTIVITY TIMELINE</h3>
               <span style={{ fontSize: '0.75rem', color: '#38bdf8', background: 'rgba(56, 189, 248, 0.15)', padding: '4px 10px', borderRadius: '20px', fontWeight: '800' }}>
                 12 Executed Audit Events
               </span>
             </div>
 
             <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <table style={{ width: '100%', minWidth: '750px', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                 <thead>
                   <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                    <th style={{ padding: '10px' }}>Timestamp</th>
-                    <th style={{ padding: '10px' }}>Customer / Lead</th>
-                    <th style={{ padding: '10px' }}>Action & Lifecycle Stage</th>
-                    <th style={{ padding: '10px' }}>Sales Executive</th>
-                    <th style={{ padding: '10px' }}>Audit Details</th>
-                    <th style={{ padding: '10px', textAlign: 'center' }}>Status</th>
+                    <th style={{ padding: '10px', whiteSpace: 'nowrap' }}>Timestamp</th>
+                    <th style={{ padding: '10px', whiteSpace: 'nowrap' }}>Customer / Lead</th>
+                    <th style={{ padding: '10px', whiteSpace: 'nowrap' }}>Action & Lifecycle Stage</th>
+                    <th style={{ padding: '10px', whiteSpace: 'nowrap' }}>Sales Executive</th>
+                    <th style={{ padding: '10px', whiteSpace: 'nowrap' }}>Audit Details</th>
+                    <th style={{ padding: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1179,16 +1180,16 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                     { time: 'Yesterday 04:45 PM', target: 'SRM-CUS-2026-000185 (Sumanth Varma)', action: 'SITE_VISIT_PVA_LOCKED', exec: 'Avishek Das', details: 'Pre-visit non-circumvention mandate digitally signed via OTP verification', status: 'VERIFIED' }
                   ].map((evt, eIdx) => (
                     <tr key={eIdx} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-                      <td style={{ padding: '10px', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace' }}>{evt.time}</td>
+                      <td style={{ padding: '10px', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{evt.time}</td>
                       <td style={{ padding: '10px', fontWeight: '700', color: isLight ? '#0f172a' : '#ffffff' }}>{evt.target}</td>
                       <td style={{ padding: '10px' }}>
                         <span style={{ background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800' }}>
                           {evt.action}
                         </span>
                       </td>
-                      <td style={{ padding: '10px', color: '#fbbf24', fontWeight: '800' }}>{evt.exec}</td>
+                      <td style={{ padding: '10px', color: '#fbbf24', fontWeight: '800', whiteSpace: 'nowrap' }}>{evt.exec}</td>
                       <td style={{ padding: '10px', color: isLight ? '#475569' : '#cbd5e1' }}>{evt.details}</td>
-                      <td style={{ padding: '10px', textAlign: 'center' }}>
+                      <td style={{ padding: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: '900' }}>
                           ● {evt.status}
                         </span>
@@ -1204,16 +1205,57 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
 
       {/* SUB-TAB 1: CUSTOMER MASTER VAULT */}
       {activeCustomerSubTab === 'customer_master_vault' && (
-        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : windowWidth <= 1024 ? '18px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>👥 Central Customer Master Registry</h3>
-              <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8' }}>Company-owned customer records with permanent Customer Tracking IDs (SRM-CUS).</p>
+              <h3 style={{ fontSize: windowWidth <= 640 ? '1rem' : '1.1rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>👥 Central Customer Master Registry</h3>
+              <p style={{ fontSize: windowWidth <= 640 ? '0.75rem' : '0.8rem', color: isLight ? '#64748b' : '#94a3b8', margin: '2px 0 0 0' }}>Company-owned customer records with permanent Customer Tracking IDs (SRM-CUS).</p>
+            </div>
+            {/* VIEW MODE TOGGLE (CARDS vs TABLE) */}
+            <div style={{ display: 'flex', gap: '2px', background: isLight ? '#f1f5f9' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '20px', padding: '2px' }}>
+              <button
+                type="button"
+                onClick={() => setVaultViewMode('cards')}
+                style={{
+                  background: vaultViewMode === 'cards' ? '#0284c7' : 'transparent',
+                  color: vaultViewMode === 'cards' ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'),
+                  border: 'none',
+                  borderRadius: '16px',
+                  padding: '4px 10px',
+                  fontSize: '0.72rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                📱 Cards {windowWidth <= 1024 && <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>(Rec.)</span>}
+              </button>
+              <button
+                type="button"
+                onClick={() => setVaultViewMode('table')}
+                style={{
+                  background: vaultViewMode === 'table' ? '#0284c7' : 'transparent',
+                  color: vaultViewMode === 'table' ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'),
+                  border: 'none',
+                  borderRadius: '16px',
+                  padding: '4px 10px',
+                  fontSize: '0.72rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                📋 Table
+              </button>
             </div>
           </div>
 
           {/* INTERACTIVE SEARCH & MULTI-CRITERIA FILTER BAR */}
-          <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 640 ? '12px' : '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px' }}>
               <div>
                 <label style={{ fontSize: '0.75rem', color: isLight ? '#475569' : '#cbd5e1', fontWeight: '800', display: 'block', marginBottom: '4px' }}>🔍 Search Name / Phone / Code</label>
@@ -1260,7 +1302,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
               </div>
               <div>
                 <label style={{ fontSize: '0.75rem', color: isLight ? '#475569' : '#cbd5e1', fontWeight: '800', display: 'block', marginBottom: '4px' }}>🔥 Source & Priority</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 380 ? '1fr' : '1fr 1fr', gap: '6px' }}>
                   <select 
                     value={custSourceFilter} 
                     onChange={(e) => setCustSourceFilter(e.target.value)} 
@@ -1400,56 +1442,352 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
               };
             };
 
+            const filteredCustomers = allActiveCustomers.filter(c => {
+              const q = custSearchQuery.trim().toLowerCase();
+              const matchesQ = !q || 
+                c.name.toLowerCase().includes(q) || 
+                (c.mobile && c.mobile.includes(q)) || 
+                (c.email && c.email.toLowerCase().includes(q)) || 
+                (c.customer_number && c.customer_number.toLowerCase().includes(q)) ||
+                (c.leadData?.lead_number && c.leadData.lead_number.toLowerCase().includes(q));
+
+              // Locality Filter
+              const matchesLoc = filterLocality === 'ALL' || (c.preferredArea && c.preferredArea.toLowerCase().includes(filterLocality.toLowerCase()));
+
+              // Priority Filter
+              const matchesPrio = filterPriority === 'ALL' || c.priority === filterPriority;
+
+              // Source Filter
+              const src = c.source || c.leadData?.source || '';
+              const matchesSrc = custSourceFilter === 'ALL' || src.toLowerCase().includes(custSourceFilter.toLowerCase());
+
+              // Stage Filter Helper
+              const progression = resolveCustomerProgression(c);
+              let matchesStage = true;
+
+              if (custStageFilter !== 'ALL') {
+                if (custStageFilter === 'COST_SHEET') matchesStage = !!progression.matchingCostSheet;
+                else if (custStageFilter === 'VISIT') matchesStage = !!progression.matchingPva || !!progression.matchingVisit;
+                else if (custStageFilter === 'BOOKING') matchesStage = !!progression.matchingBooking;
+                else if (custStageFilter === 'AGREEMENT') matchesStage = !!progression.matchingAgreement;
+                else if (custStageFilter === 'BILLING') matchesStage = !!progression.matchingInvoice;
+                else if (custStageFilter === 'CONTRACT') matchesStage = !!progression.matchingAgreement || !!progression.matchingBooking;
+              }
+
+              return matchesQ && matchesLoc && matchesPrio && matchesSrc && matchesStage;
+            });
+
+            if (filteredCustomers.length === 0) {
+              return (
+                <div style={{ padding: '30px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.9rem' }}>
+                  No customer records found matching your search query / filters.
+                </div>
+              );
+            }
+
+            const handleDeleteCustomerAction = (c: any) => {
+              if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete customer record ${c.customer_number || c.id} (${c.name})? It will be moved to Recycle Bin.`)) {
+                const targetCustNum = (c.customer_number || c.customerNumber || '').toString().toLowerCase().trim();
+                const targetMob = (c.mobile || c.phone || '').toString().replace(/\D/g, '');
+                const targetName = (c.name || c.full_name || '').toString().toLowerCase().trim();
+                const targetId = (c.id || c._id || '').toString().toLowerCase().trim();
+
+                if (onRecycleItem) {
+                  onRecycleItem({
+                    id: c.id || c.customer_number || `CUS-${Date.now()}`,
+                    title: `Customer - ${c.name || 'Client'} (${c.customer_number || c.id})`,
+                    category: 'Customer',
+                    originalLocation: 'Customer Management Vault',
+                    details: `Mobile: ${c.mobile || 'N/A'}, Locality: ${c.locality || 'N/A'}`,
+                    originalData: c
+                  });
+                }
+
+                if (setCustomers) {
+                  setCustomers((prev: any[]) => {
+                    const updated = (prev || []).filter((cust: any) => {
+                      if (!cust) return false;
+                      const cNum = (cust.customer_number || cust.customerNumber || '').toString().toLowerCase().trim();
+                      const cMob = (cust.mobile || cust.phone || '').toString().replace(/\D/g, '');
+                      const cName = (cust.name || cust.full_name || '').toString().toLowerCase().trim();
+                      const cId = (cust.id || cust._id || '').toString().toLowerCase().trim();
+
+                      if (targetId && cId && cId === targetId) return false;
+                      if (targetCustNum && cNum && cNum === targetCustNum) return false;
+                      if (targetMob && targetMob.length >= 7 && cMob && (cMob.endsWith(targetMob) || targetMob.endsWith(cMob))) return false;
+                      if (targetName && cName && cName === targetName) return false;
+                      return true;
+                    });
+
+                    try {
+                      localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
+                      localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
+                    } catch (e) {}
+
+                    if (syncAllToMongoDB) {
+                      syncAllToMongoDB({ customers: updated });
+                    }
+
+                    return updated;
+                  });
+                }
+                if (setLeadsList) {
+                  setLeadsList((prev: any[]) => {
+                    const updatedLeads = (prev || []).filter((l: any) => {
+                      if (!l) return false;
+                      const lNum = (l.customer_number || l.customer_id || l.lead_number || '').toString().toLowerCase().trim();
+                      const lMob = (l.mobile || l.phone || '').toString().replace(/\D/g, '');
+                      const lName = (l.customer_name || l.name || '').toString().toLowerCase().trim();
+                      const lId = (l.id || '').toString().toLowerCase().trim();
+
+                      if (targetId && lId && lId === targetId) return false;
+                      if (targetCustNum && lNum && (lNum === targetCustNum || lNum.includes(targetCustNum))) return false;
+                      if (targetMob && targetMob.length >= 7 && lMob && (lMob.endsWith(targetMob) || targetMob.endsWith(lMob))) return false;
+                      if (targetName && lName && lName === targetName) return false;
+                      return true;
+                    });
+
+                    try {
+                      localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(updatedLeads));
+                      localStorage.setItem('swaramayi_leads_v5_clean', JSON.stringify(updatedLeads));
+                    } catch (e) {}
+
+                    if (syncAllToMongoDB) {
+                      syncAllToMongoDB({ leads: updatedLeads });
+                    }
+
+                    return updatedLeads;
+                  });
+                }
+                if (setMatchingRequestsQueue) {
+                  setMatchingRequestsQueue((prev: any[]) => (prev || []).filter((r: any) => {
+                    if (!r) return false;
+                    const rNum = (r.customerNumber || r.customerId || r.customer_number || '').toString().toLowerCase().trim();
+                    const rMob = (r.mobile || r.phone || r.customerMobile || '').toString().replace(/\D/g, '');
+                    const rName = (r.customerName || r.customer_name || r.name || '').toString().toLowerCase().trim();
+                    const rId = (r.id || r.requestId || '').toString().toLowerCase().trim();
+
+                    if (targetId && rId && rId === targetId) return false;
+                    if (targetCustNum && rNum && (rNum === targetCustNum || rNum.includes(targetCustNum))) return false;
+                    if (targetMob && targetMob.length >= 7 && rMob && (rMob.endsWith(targetMob) || targetMob.endsWith(rMob))) return false;
+                    if (targetName && rName && rName === targetName) return false;
+                    return true;
+                  }));
+                }
+                if (setScheduledVisits) {
+                  setScheduledVisits((prev: any[]) => (prev || []).filter((v: any) => {
+                    if (!v) return false;
+                    const vNum = (v.customerNumber || v.customer_number || v.customerId || '').toString().toLowerCase().trim();
+                    const vMob = (v.mobile || v.phone || v.customerMobile || '').toString().replace(/\D/g, '');
+                    const vName = (v.customerName || v.customer_name || v.name || '').toString().toLowerCase().trim();
+                    const vId = (v.id || v.visitId || '').toString().toLowerCase().trim();
+
+                    if (targetId && vId && vId === targetId) return false;
+                    if (targetCustNum && vNum && (vNum === targetCustNum || vNum.includes(targetCustNum))) return false;
+                    if (targetMob && targetMob.length >= 7 && vMob && (vMob.endsWith(targetMob) || targetMob.endsWith(vMob))) return false;
+                    if (targetName && vName && vName === targetName) return false;
+                    return true;
+                  }));
+                }
+                if (setIndividualCostSheets) {
+                  setIndividualCostSheets((prev: any[]) => (prev || []).filter((cs: any) => {
+                    if (!cs) return false;
+                    const snap = cs.customerSnapshot || {};
+                    const csNum = (cs.customerNumber || cs.customerId || snap.customerNumber || snap.customerId || '').toString().toLowerCase().trim();
+                    const csMob = (cs.mobile || cs.customerMobile || snap.mobile || '').toString().replace(/\D/g, '');
+                    const csName = (cs.customerName || snap.customerName || cs.name || '').toString().toLowerCase().trim();
+                    const csId = (cs.id || cs.costSheetId || '').toString().toLowerCase().trim();
+
+                    if (targetId && csId && csId === targetId) return false;
+                    if (targetCustNum && csNum && (csNum === targetCustNum || csNum.includes(targetCustNum))) return false;
+                    if (targetMob && targetMob.length >= 7 && csMob && (csMob.endsWith(targetMob) || targetMob.endsWith(csMob))) return false;
+                    if (targetName && csName && csName === targetName) return false;
+                    return true;
+                  }));
+                }
+                alert(`🗑️ Customer record ${c.customer_number || c.name} moved to Recycle Bin.`);
+              }
+            };
+
+            if (vaultViewMode === 'cards') {
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {filteredCustomers.map(c => {
+                    const matchingLead = leadsList.find(l => (l.customer_number && l.customer_number === c.customer_number) || (l.mobile && c.mobile && l.mobile.replace(/\D/g, '') === c.mobile.replace(/\D/g, ''))) || c.leadData;
+                    const {
+                      matchingText,
+                      matchingCostSheet,
+                      matchingPva,
+                      matchingVisit,
+                      matchingBooking,
+                      matchingAgreement,
+                      matchingInvoice
+                    } = resolveCustomerProgression(c);
+
+                    return (
+                      <div key={c.id} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '14px', padding: windowWidth <= 640 ? '14px' : '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {/* CARD HEADER ROW */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span 
+                              onClick={() => openIdDetailsModal(c.customer_number, 'CUSTOMER_ID')}
+                              style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', cursor: 'pointer', textDecoration: 'underline', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.85rem' }}
+                              title="Click to view full Customer details"
+                            >
+                              🆔 {c.customer_number}
+                            </span>
+                            {matchingLead && (
+                              <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '2px 6px', borderRadius: '4px' }}>
+                                📋 {matchingLead.lead_number}
+                              </span>
+                            )}
+                          </div>
+
+                          <span style={{ background: c.priority === 'HOT' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)', color: c.priority === 'HOT' ? '#ef4444' : '#fbbf24', padding: '4px 10px', borderRadius: '20px', fontWeight: '900', fontSize: '0.75rem' }}>
+                            🔥 {c.priority || 'HOT'} ({c.score || 88}/100)
+                          </span>
+                        </div>
+
+                        {/* NAME & CONTACT */}
+                        <div>
+                          <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '1rem', fontWeight: '900' }}>{c.name}</strong>
+                          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', marginTop: '2px' }}>
+                            <span style={{ fontSize: '0.78rem', color: '#4ade80', fontFamily: 'monospace', fontWeight: '700' }}>📞 {maskPhone(c.mobile)}</span>
+                            {c.email && (
+                              <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>✉️ {c.email}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* LEAD INGESTION INFO */}
+                        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800', alignSelf: 'flex-start' }}>
+                            📢 Source: {c.source || matchingLead?.source || 'Lead Ingestion'}
+                          </span>
+                          <div style={{ color: isLight ? '#475569' : '#cbd5e1', fontWeight: '700' }}>
+                            📍 Locality: {c.preferredArea || matchingLead?.preferred_location || 'N/A'} • <span style={{ color: '#4ade80' }}>💰 Budget: {c.budget || '70L - 85L'}</span>
+                          </div>
+                        </div>
+
+                        {/* STAGE PROGRESSION LIST */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem' }}>
+                          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '4px', padding: '4px 8px', color: '#38bdf8', fontWeight: '800' }}>
+                            🎯 Matching: {matchingText}
+                          </div>
+
+                          {matchingCostSheet ? (
+                            <div 
+                              onClick={() => handleViewCostSheetPdf(c, matchingCostSheet)}
+                              style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', borderRadius: '4px', padding: '4px 8px', color: '#4ade80', fontWeight: '800', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                              title="Click to View / Print Cost Sheet PDF"
+                            >
+                              <span>📄 Cost Sheet: Shared ({matchingCostSheet.costSheetId || matchingCostSheet.id})</span>
+                              <span style={{ background: '#0284c7', color: '#ffffff', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '900' }}>📄 PDF</span>
+                            </div>
+                          ) : (
+                            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', borderRadius: '4px', padding: '4px 8px', color: isLight ? '#94a3b8' : '#64748b', fontWeight: '700' }}>
+                              ⏳ Cost Sheet: Not Created Yet
+                            </div>
+                          )}
+
+                          {matchingPva ? (
+                            <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', borderRadius: '4px', padding: '4px 8px', color: '#4ade80', fontWeight: '800' }}>
+                              🚗 Site Visit: PVA OTP Verified ({matchingPva.projectVisitAgreementId || matchingPva.id || matchingPva.agreement_code || 'SRM-PVA-2026-000001'})
+                            </div>
+                          ) : matchingVisit ? (
+                            <div style={{ background: matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? 'rgba(34, 197, 94, 0.15)' : 'rgba(56, 189, 248, 0.15)', border: matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? '1px solid #22c55e' : '1px solid #0284c7', borderRadius: '4px', padding: '4px 8px', color: matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? '#4ade80' : '#38bdf8', fontWeight: '800' }}>
+                              🚗 Site Visit: {matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? 'OTP Verified' : 'Scheduled'} ({matchingVisit.visitId || matchingVisit.id || 'SRM-VS-2026-000087'})
+                            </div>
+                          ) : (
+                            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', borderRadius: '4px', padding: '4px 8px', color: isLight ? '#94a3b8' : '#64748b', fontWeight: '700' }}>
+                              ⏳ Site Visit: Pending
+                            </div>
+                          )}
+
+                          {matchingBooking ? (
+                            <div style={{ background: 'rgba(234, 179, 8, 0.15)', border: '1px solid #f59e0b', borderRadius: '4px', padding: '4px 8px', color: '#fbbf24', fontWeight: '900' }}>
+                              🏆 Booking: Confirmed ({matchingBooking.booking_code || matchingBooking.booking_id || matchingBooking.id})
+                            </div>
+                          ) : (
+                            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', borderRadius: '4px', padding: '4px 8px', color: isLight ? '#94a3b8' : '#64748b', fontWeight: '700' }}>
+                              ⏳ Booking: Pending
+                            </div>
+                          )}
+
+                          {matchingAgreement ? (
+                            <div style={{ background: 'rgba(168, 85, 247, 0.15)', border: '1px solid #a855f7', borderRadius: '4px', padding: '4px 8px', color: '#c084fc', fontWeight: '900' }}>
+                              📜 Agreement: Active ({matchingAgreement.agreement_code || matchingAgreement.projectVisitAgreementId || matchingAgreement.agreement_id || matchingAgreement.id})
+                            </div>
+                          ) : (
+                            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', borderRadius: '4px', padding: '4px 8px', color: isLight ? '#94a3b8' : '#64748b', fontWeight: '700' }}>
+                              ⏳ Agreement: Pending
+                            </div>
+                          )}
+
+                          {matchingInvoice ? (
+                            <div 
+                              onClick={() => {
+                                const isDev = (matchingInvoice.invoice_category || matchingInvoice.invoice_type) === 'DEVELOPER' || 
+                                              (matchingInvoice.invoice_number && matchingInvoice.invoice_number.startsWith('SRM-DEV-INV-'));
+                                if (setBillingInvoiceCategory) {
+                                  setBillingInvoiceCategory(isDev ? 'DEVELOPER' : 'CUSTOMER');
+                                }
+                                if (setSearchQuery) {
+                                  setSearchQuery(matchingInvoice.invoice_number || c.name || c.customer_number);
+                                }
+                                if (setActiveTab) {
+                                  setActiveTab('billing_management');
+                                }
+                              }}
+                              style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', borderRadius: '4px', padding: '4px 8px', color: '#4ade80', fontWeight: '900', cursor: 'pointer' }}
+                              title="Click to view this invoice in Billing Management"
+                            >
+                              💳 Billing: Invoice Generated ({matchingInvoice.invoice_number || matchingInvoice.invoice_id || matchingInvoice.id}) ↗
+                            </div>
+                          ) : (
+                            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', borderRadius: '4px', padding: '4px 8px', color: isLight ? '#94a3b8' : '#64748b', fontWeight: '700' }}>
+                              ⏳ Billing: Pending
+                            </div>
+                          )}
+                        </div>
+
+                        {/* CARD ACTIONS */}
+                        <div style={{ borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          <button onClick={() => { setSelectedCust(c); setActiveCustomerSubTab('customer_360_profile'); }} style={{ flex: 1, minWidth: '80px', justifyContent: 'center', background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}>360° View</button>
+                          <button onClick={() => handleStartEditCustomer(c)} style={{ flex: 1, minWidth: '70px', justifyContent: 'center', background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}>Edit</button>
+                          <button onClick={() => alert(`🔄 Initiated Transfer Request for Customer ${c.customer_number}`)} style={{ flex: 1, minWidth: '80px', justifyContent: 'center', background: isLight ? '#ffffff' : '#1e293b', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}>Transfer</button>
+                          {isSuperAdmin && (
+                            <button 
+                              onClick={() => handleDeleteCustomerAction(c)}
+                              style={{ flex: 1, minWidth: '70px', justifyContent: 'center', background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              title="Permanently delete customer record"
+                            >
+                              🗑️ Delete
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            }
+
             return (
               <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                  <th style={{ padding: '12px' }}>Customer Tracking ID</th>
-                  <th style={{ padding: '12px' }}>Full Name & Contact</th>
-                  <th style={{ padding: '12px' }}>Lead Ingestion Info</th>
-                  <th style={{ padding: '12px' }}>Stage Progression (Matching, Cost Sheet, Visit, Booking, Agreement, Billing)</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Priority & Score</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {allActiveCustomers
-                  .filter(c => {
-                      const q = custSearchQuery.trim().toLowerCase();
-                      const matchesQ = !q || 
-                        c.name.toLowerCase().includes(q) || 
-                        (c.mobile && c.mobile.includes(q)) || 
-                        (c.email && c.email.toLowerCase().includes(q)) || 
-                        (c.customer_number && c.customer_number.toLowerCase().includes(q)) ||
-                        (c.leadData?.lead_number && c.leadData.lead_number.toLowerCase().includes(q));
-
-                      // Locality Filter
-                      const matchesLoc = filterLocality === 'ALL' || (c.preferredArea && c.preferredArea.toLowerCase().includes(filterLocality.toLowerCase()));
-
-                      // Priority Filter
-                      const matchesPrio = filterPriority === 'ALL' || c.priority === filterPriority;
-
-                      // Source Filter
-                      const src = c.source || c.leadData?.source || '';
-                      const matchesSrc = custSourceFilter === 'ALL' || src.toLowerCase().includes(custSourceFilter.toLowerCase());
-
-                      // Stage Filter Helper
-                      const progression = resolveCustomerProgression(c);
-                      let matchesStage = true;
-
-                      if (custStageFilter !== 'ALL') {
-                        if (custStageFilter === 'COST_SHEET') matchesStage = !!progression.matchingCostSheet;
-                        else if (custStageFilter === 'VISIT') matchesStage = !!progression.matchingPva || !!progression.matchingVisit;
-                        else if (custStageFilter === 'BOOKING') matchesStage = !!progression.matchingBooking;
-                        else if (custStageFilter === 'AGREEMENT') matchesStage = !!progression.matchingAgreement;
-                        else if (custStageFilter === 'BILLING') matchesStage = !!progression.matchingInvoice;
-                        else if (custStageFilter === 'CONTRACT') matchesStage = !!progression.matchingAgreement || !!progression.matchingBooking;
-                      }
-
-                      return matchesQ && matchesLoc && matchesPrio && matchesSrc && matchesStage;
-                    })
-                    .map(c => {
+                <table style={{ width: '100%', minWidth: '980px', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                      <th style={{ padding: '12px', whiteSpace: 'nowrap', minWidth: '130px' }}>Customer Tracking ID</th>
+                      <th style={{ padding: '12px', whiteSpace: 'nowrap', minWidth: '170px' }}>Full Name & Contact</th>
+                      <th style={{ padding: '12px', whiteSpace: 'nowrap', minWidth: '180px' }}>Lead Ingestion Info</th>
+                      <th style={{ padding: '12px', whiteSpace: 'nowrap', minWidth: '280px' }}>Stage Progression (Matching, Cost Sheet, Visit, Booking, Agreement, Billing)</th>
+                      <th style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap', minWidth: '120px' }}>Priority & Score</th>
+                      <th style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap', minWidth: '220px' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCustomers.map(c => {
                       const matchingLead = leadsList.find(l => (l.customer_number && l.customer_number === c.customer_number) || (l.mobile && c.mobile && l.mobile.replace(/\D/g, '') === c.mobile.replace(/\D/g, ''))) || c.leadData;
                       const {
                         matchingText,
@@ -1594,141 +1932,19 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                           </td>
 
                           <td style={{ padding: '12px', textAlign: 'center' }}>
-                            <span style={{ background: c.priority === 'HOT' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)', color: c.priority === 'HOT' ? '#ef4444' : '#fbbf24', padding: '4px 10px', borderRadius: '20px', fontWeight: '900', fontSize: '0.75rem', display: 'inline-block' }}>
+                            <span style={{ background: c.priority === 'HOT' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)', color: c.priority === 'HOT' ? '#ef4444' : '#fbbf24', padding: '4px 10px', borderRadius: '20px', fontWeight: '900', fontSize: '0.75rem', display: 'inline-block', whiteSpace: 'nowrap' }}>
                               🔥 {c.priority || 'HOT'} ({c.score || 88}/100)
                             </span>
                           </td>
 
                           <td style={{ padding: '12px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
                               <button onClick={() => { setSelectedCust(c); setActiveCustomerSubTab('customer_360_profile'); }} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }}>360° View</button>
                               <button onClick={() => handleStartEditCustomer(c)} style={{ background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }}>Edit</button>
                               <button onClick={() => alert(`🔄 Initiated Transfer Request for Customer ${c.customer_number}`)} style={{ background: isLight ? '#ffffff' : '#1e293b', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }}>Transfer</button>
                               {isSuperAdmin && (
                                 <button 
-                                  onClick={() => {
-                                    if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete customer record ${c.customer_number || c.id} (${c.name})? It will be moved to Recycle Bin.`)) {
-                                      const targetCustNum = (c.customer_number || c.customerNumber || '').toString().toLowerCase().trim();
-                                      const targetMob = (c.mobile || c.phone || '').toString().replace(/\D/g, '');
-                                      const targetName = (c.name || c.full_name || '').toString().toLowerCase().trim();
-                                      const targetId = (c.id || c._id || '').toString().toLowerCase().trim();
-
-                                      if (onRecycleItem) {
-                                        onRecycleItem({
-                                          id: c.id || c.customer_number || `CUS-${Date.now()}`,
-                                          title: `Customer - ${c.name || 'Client'} (${c.customer_number || c.id})`,
-                                          category: 'Customer',
-                                          originalLocation: 'Customer Management Vault',
-                                          details: `Mobile: ${c.mobile || 'N/A'}, Locality: ${c.locality || 'N/A'}`,
-                                          originalData: c
-                                        });
-                                      }
-
-                                      if (setCustomers) {
-                                        setCustomers((prev: any[]) => {
-                                          const updated = (prev || []).filter((cust: any) => {
-                                            if (!cust) return false;
-                                            const cNum = (cust.customer_number || cust.customerNumber || '').toString().toLowerCase().trim();
-                                            const cMob = (cust.mobile || cust.phone || '').toString().replace(/\D/g, '');
-                                            const cName = (cust.name || cust.full_name || '').toString().toLowerCase().trim();
-                                            const cId = (cust.id || cust._id || '').toString().toLowerCase().trim();
-
-                                            if (targetId && cId && cId === targetId) return false;
-                                            if (targetCustNum && cNum && cNum === targetCustNum) return false;
-                                            if (targetMob && targetMob.length >= 7 && cMob && (cMob.endsWith(targetMob) || targetMob.endsWith(cMob))) return false;
-                                            if (targetName && cName && cName === targetName) return false;
-                                            return true;
-                                          });
-
-                                          try {
-                                            localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
-                                            localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
-                                          } catch (e) {}
-
-                                          if (syncAllToMongoDB) {
-                                            syncAllToMongoDB({ customers: updated });
-                                          }
-
-                                          return updated;
-                                        });
-                                      }
-                                      if (setLeadsList) {
-                                        setLeadsList((prev: any[]) => {
-                                          const updatedLeads = (prev || []).filter((l: any) => {
-                                            if (!l) return false;
-                                            const lNum = (l.customer_number || l.customer_id || l.lead_number || '').toString().toLowerCase().trim();
-                                            const lMob = (l.mobile || l.phone || '').toString().replace(/\D/g, '');
-                                            const lName = (l.customer_name || l.name || '').toString().toLowerCase().trim();
-                                            const lId = (l.id || '').toString().toLowerCase().trim();
-
-                                            if (targetId && lId && lId === targetId) return false;
-                                            if (targetCustNum && lNum && (lNum === targetCustNum || lNum.includes(targetCustNum))) return false;
-                                            if (targetMob && targetMob.length >= 7 && lMob && (lMob.endsWith(targetMob) || targetMob.endsWith(lMob))) return false;
-                                            if (targetName && lName && lName === targetName) return false;
-                                            return true;
-                                          });
-
-                                          try {
-                                            localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(updatedLeads));
-                                            localStorage.setItem('swaramayi_leads_v5_clean', JSON.stringify(updatedLeads));
-                                          } catch (e) {}
-
-                                          if (syncAllToMongoDB) {
-                                            syncAllToMongoDB({ leads: updatedLeads });
-                                          }
-
-                                          return updatedLeads;
-                                        });
-                                      }
-                                      if (setMatchingRequestsQueue) {
-                                        setMatchingRequestsQueue((prev: any[]) => (prev || []).filter((r: any) => {
-                                          if (!r) return false;
-                                          const rNum = (r.customerNumber || r.customerId || r.customer_number || '').toString().toLowerCase().trim();
-                                          const rMob = (r.mobile || r.phone || r.customerMobile || '').toString().replace(/\D/g, '');
-                                          const rName = (r.customerName || r.customer_name || r.name || '').toString().toLowerCase().trim();
-                                          const rId = (r.id || r.requestId || '').toString().toLowerCase().trim();
-
-                                          if (targetId && rId && rId === targetId) return false;
-                                          if (targetCustNum && rNum && (rNum === targetCustNum || rNum.includes(targetCustNum))) return false;
-                                          if (targetMob && targetMob.length >= 7 && rMob && (rMob.endsWith(targetMob) || targetMob.endsWith(rMob))) return false;
-                                          if (targetName && rName && rName === targetName) return false;
-                                          return true;
-                                        }));
-                                      }
-                                      if (setScheduledVisits) {
-                                        setScheduledVisits((prev: any[]) => (prev || []).filter((v: any) => {
-                                          if (!v) return false;
-                                          const vNum = (v.customerNumber || v.customer_number || v.customerId || '').toString().toLowerCase().trim();
-                                          const vMob = (v.mobile || v.phone || v.customerMobile || '').toString().replace(/\D/g, '');
-                                          const vName = (v.customerName || v.customer_name || v.name || '').toString().toLowerCase().trim();
-                                          const vId = (v.id || v.visitId || '').toString().toLowerCase().trim();
-
-                                          if (targetId && vId && vId === targetId) return false;
-                                          if (targetCustNum && vNum && (vNum === targetCustNum || vNum.includes(targetCustNum))) return false;
-                                          if (targetMob && targetMob.length >= 7 && vMob && (vMob.endsWith(targetMob) || targetMob.endsWith(vMob))) return false;
-                                          if (targetName && vName && vName === targetName) return false;
-                                          return true;
-                                        }));
-                                      }
-                                      if (setIndividualCostSheets) {
-                                        setIndividualCostSheets((prev: any[]) => (prev || []).filter((cs: any) => {
-                                          if (!cs) return false;
-                                          const snap = cs.customerSnapshot || {};
-                                          const csNum = (cs.customerNumber || cs.customerId || snap.customerNumber || snap.customerId || '').toString().toLowerCase().trim();
-                                          const csMob = (cs.mobile || cs.customerMobile || snap.mobile || '').toString().replace(/\D/g, '');
-                                          const csName = (cs.customerName || snap.customerName || cs.name || '').toString().toLowerCase().trim();
-                                          const csId = (cs.id || cs.costSheetId || '').toString().toLowerCase().trim();
-
-                                          if (targetId && csId && csId === targetId) return false;
-                                          if (targetCustNum && csNum && (csNum === targetCustNum || csNum.includes(targetCustNum))) return false;
-                                          if (targetMob && targetMob.length >= 7 && csMob && (csMob.endsWith(targetMob) || targetMob.endsWith(csMob))) return false;
-                                          if (targetName && csName && csName === targetName) return false;
-                                          return true;
-                                        }));
-                                      }
-                                      alert(`🗑️ Customer record ${c.customer_number || c.name} moved to Recycle Bin.`);
-                                    }
-                                  }}
+                                  onClick={() => handleDeleteCustomerAction(c)}
                                   style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }}
                                   title="Permanently delete customer record"
                                 >
@@ -1740,9 +1956,9 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                         </tr>
                       );
                     })}
-              </tbody>
-            </table>
-          </div>
+                  </tbody>
+                </table>
+              </div>
             );
           })()}
         </div>

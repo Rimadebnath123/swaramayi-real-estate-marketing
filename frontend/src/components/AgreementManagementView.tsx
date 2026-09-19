@@ -4,6 +4,7 @@ import { ShieldCheck, Building, UserCheck, AlertTriangle, Printer } from 'lucide
 interface AgreementManagementViewProps {
   currentRole?: string;
   isLight: boolean;
+  windowWidth?: number;
   agreementCategory: string;
   setAgreementCategory: (cat: string) => void;
   visitPlans: any[];
@@ -29,6 +30,7 @@ interface AgreementManagementViewProps {
 export const AgreementManagementView: React.FC<AgreementManagementViewProps> = ({
   currentRole,
   isLight,
+  windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200,
   agreementCategory,
   setAgreementCategory,
   visitPlans = [],
@@ -120,10 +122,10 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
   };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: windowWidth <= 640 ? '10px' : '12px' }}>
         <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>Legal Agreements Vault & Corporate Tie-Ups</h2>
-          <p style={{ fontSize: '0.85rem', color: isLight ? '#64748b' : '#94a3b8' }}>Manage Customer Site Visit Non-Circumvention Agreements and Project-Wise Developer Channel Partner MOUs.</p>
+          <h2 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.4rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>Legal Agreements Vault & Corporate Tie-Ups</h2>
+          <p style={{ fontSize: windowWidth <= 640 ? '0.74rem' : '0.85rem', color: isLight ? '#64748b' : '#94a3b8', margin: '4px 0 0 0' }}>Manage Customer Site Visit Non-Circumvention Agreements and Project-Wise Developer Channel Partner MOUs.</p>
         </div>
         
         {agreementCategory === 'customer' ? (
@@ -150,14 +152,14 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
               };
               setShowPvaVerificationModal({ open: true, plan, stop });
             }}
-            style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)' }}
+            style={{ width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: 'center', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: windowWidth <= 640 ? '8px 12px' : '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.76rem' : '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)' }}
           >
             <ShieldCheck size={16} /> + Create Agreement via Customer OTP Verification
           </button>
         ) : (
           <button 
             onClick={() => setShowCreateDevAgreementModal(true)}
-            style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)' }}
+            style={{ width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: 'center', background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: windowWidth <= 640 ? '8px 12px' : '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.76rem' : '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)' }}
           >
             <Building size={16} /> + Create Agreement with Project wise Developer
           </button>
@@ -165,15 +167,17 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
       </div>
 
       {/* CATEGORY SELECTOR TABS */}
-      <div style={{ display: 'flex', gap: '10px', borderBottom: isLight ? '2px solid #e2e8f0' : '2px solid #334155', paddingBottom: '12px' }}>
+      <div style={{ display: 'flex', gap: windowWidth <= 640 ? '6px' : '10px', borderBottom: isLight ? '2px solid #e2e8f0' : '2px solid #334155', paddingBottom: '12px', flexWrap: 'wrap' }}>
         <button 
           onClick={() => setAgreementCategory('customer')}
           style={{
-            padding: '10px 20px',
+            flex: windowWidth <= 640 ? '1 1 100%' : '1 1 auto',
+            justifyContent: 'center',
+            padding: windowWidth <= 640 ? '8px 12px' : '10px 20px',
             borderRadius: '8px',
             border: 'none',
             cursor: 'pointer',
-            fontSize: '0.88rem',
+            fontSize: windowWidth <= 640 ? '0.78rem' : '0.88rem',
             fontWeight: '800',
             background: agreementCategory === 'customer' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : (isLight ? '#f1f5f9' : '#0f172a'),
             color: agreementCategory === 'customer' ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'),
@@ -189,11 +193,13 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
         <button 
           onClick={() => setAgreementCategory('developer')}
           style={{
-            padding: '10px 20px',
+            flex: windowWidth <= 640 ? '1 1 100%' : '1 1 auto',
+            justifyContent: 'center',
+            padding: windowWidth <= 640 ? '8px 12px' : '10px 20px',
             borderRadius: '8px',
             border: 'none',
             cursor: 'pointer',
-            fontSize: '0.88rem',
+            fontSize: windowWidth <= 640 ? '0.78rem' : '0.88rem',
             fontWeight: '800',
             background: agreementCategory === 'developer' ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : (isLight ? '#f1f5f9' : '#0f172a'),
             color: agreementCategory === 'developer' ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'),
@@ -208,27 +214,27 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
       </div>
 
       {/* ANTI-BYPASS COMPANY INTRODUCTION WARNING BANNER */}
-      <div style={{ background: 'rgba(245, 158, 11, 0.15)', border: '2px solid #f59e0b', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <AlertTriangle size={28} color="#f59e0b" />
+      <div style={{ background: 'rgba(245, 158, 11, 0.15)', border: '2px solid #f59e0b', borderRadius: '12px', padding: windowWidth <= 640 ? '12px' : '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: windowWidth <= 640 ? '8px' : '12px' }}>
+          <AlertTriangle size={windowWidth <= 640 ? 22 : 28} color="#f59e0b" style={{ flexShrink: 0 }} />
           <div>
-            <h4 style={{ color: '#fbbf24', fontWeight: '900', fontSize: '0.95rem' }}>
+            <h4 style={{ color: '#fbbf24', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.85rem' : '0.95rem', margin: 0 }}>
               ⚠️ EXISTING COMPANY INTRODUCTION RECORDS DETECTED ({projectVisitAgreements.length} ACTIVE PVA CONTRACTS)
             </h4>
-            <p style={{ color: isLight ? '#0f172a' : '#cbd5e1', fontSize: '0.8rem', marginTop: '2px' }}>
+            <p style={{ color: isLight ? '#0f172a' : '#cbd5e1', fontSize: windowWidth <= 640 ? '0.72rem' : '0.8rem', margin: '4px 0 0 0' }}>
               Automatic Anti-Bypass Check: All buyer bookings & contracts are cross-referenced with Project Visit Agreements (SRM-PVA-XXXXXX) to protect company brokerage rights.
             </p>
           </div>
         </div>
         <button 
           onClick={() => setShowDeveloperIntroductionReportModal(true)}
-          style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer' }}
+          style={{ width: windowWidth <= 640 ? '100%' : 'auto', textAlign: 'center', background: '#f59e0b', color: '#0f172a', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer' }}
         >
           🛡️ AUDIT INTRODUCTION RECORDS
         </button>
       </div>
 
-      <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '24px' }}>
+      <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 640 ? '12px' : '24px' }}>
         <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>

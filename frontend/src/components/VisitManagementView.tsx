@@ -268,47 +268,55 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: windowWidth <= 640 ? '10px' : '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: windowWidth <= 640 ? '12px' : '16px', padding: windowWidth <= 640 ? '12px' : '20px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>SITE VISIT SCHEDULING, OTP & GEOFENCE VERIFICATION SYSTEM</h2>
-            <span style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800' }}>VISIT ENGINE ACTIVE</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <h2 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>SITE VISIT SCHEDULING, OTP & GEOFENCE VERIFICATION SYSTEM</h2>
+            <span style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: '800' }}>VISIT ENGINE ACTIVE</span>
           </div>
-          <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
+          <p style={{ fontSize: windowWidth <= 640 ? '0.74rem' : '0.8rem', color: isLight ? '#64748b' : '#94a3b8', margin: '4px 0 0 0' }}>
             Conflict-Free Executive Scheduling • 6-Digit Mobile OTP Verification • GPS Geofence Radius Audit • 5-Star Customer Feedback
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button onClick={() => setShowScheduleVisitModal && setShowScheduleVisitModal({ open: true, costSheet: (individualCostSheets && individualCostSheets[0]) || null })} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto' }}>
+          <button onClick={() => setShowScheduleVisitModal && setShowScheduleVisitModal({ open: true, costSheet: (individualCostSheets && individualCostSheets[0]) || null })} style={{ width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: 'center', background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Plus size={15} /> + Schedule Site Visit
           </button>
         </div>
       </div>
 
       {/* 7 SUB-TABS NAVIGATION FOR VISIT MANAGEMENT */}
-      <div style={{ display: 'flex', gap: '10px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', flexWrap: 'wrap' }}>
-        <button onClick={() => setActiveVisitSubTab('visit_route_planner')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '900', cursor: 'pointer', background: activeVisitSubTab === 'visit_route_planner' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeVisitSubTab === 'visit_route_planner' ? '#ffffff' : '#38bdf8', border: '1px solid #0284c7' }}>
-          🗺️ Multi-Property Route Planner & Auto Navigation
-        </button>
-        <button onClick={() => setActiveVisitSubTab('visit_scheduler')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeVisitSubTab === 'visit_scheduler' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeVisitSubTab === 'visit_scheduler' ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-          📅 Single Site Visit Scheduler
-        </button>
-        <button onClick={() => setActiveVisitSubTab('visit_otp_checkin')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeVisitSubTab === 'visit_otp_checkin' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeVisitSubTab === 'visit_otp_checkin' ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-          🔐 OTP Verification & Check-In
-        </button>
-        <button onClick={() => setActiveVisitSubTab('visit_feedback')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeVisitSubTab === 'visit_feedback' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeVisitSubTab === 'visit_feedback' ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-          ⭐ Structured 5-Star Feedback
-        </button>
-        <button onClick={() => setActiveVisitSubTab('visit_analytics')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeVisitSubTab === 'visit_analytics' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeVisitSubTab === 'visit_analytics' ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-          📊 Visit Conversion Analytics
-        </button>
-        <button onClick={() => setActiveVisitSubTab('visit_owner_tracking')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '900', cursor: 'pointer', background: activeVisitSubTab === 'visit_owner_tracking' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeVisitSubTab === 'visit_owner_tracking' ? '#ffffff' : '#fbbf24', border: '1px solid #fbbf24' }}>
-          👑 Owner Live Route Tracking
-        </button>
-        <button onClick={() => setActiveVisitSubTab('advisor_ratings')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '900', cursor: 'pointer', background: activeVisitSubTab === 'advisor_ratings' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeVisitSubTab === 'advisor_ratings' ? '#ffffff' : '#f59e0b', border: activeVisitSubTab === 'advisor_ratings' ? '1px solid #0284c7' : '1px solid #f59e0b' }}>
-          ⭐ Advisor Ratings & Link Generator
-        </button>
+      <div style={{ display: 'flex', gap: windowWidth <= 640 ? '6px' : '10px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', flexWrap: 'wrap' }}>
+        {[
+          { id: 'visit_route_planner', label: '🗺️ Multi-Property Route Planner', accent: '#38bdf8', borderAccent: '#0284c7' },
+          { id: 'visit_scheduler', label: '📅 Single Site Visit Scheduler' },
+          { id: 'visit_otp_checkin', label: '🔐 OTP Verification & Check-In' },
+          { id: 'visit_feedback', label: '⭐ Structured 5-Star Feedback' },
+          { id: 'visit_analytics', label: '📊 Visit Conversion Analytics' },
+          { id: 'visit_owner_tracking', label: '👑 Owner Live Route Tracking', accent: '#fbbf24', borderAccent: '#fbbf24' },
+          { id: 'advisor_ratings', label: '⭐ Advisor Ratings & Links', accent: '#f59e0b', borderAccent: '#f59e0b' }
+        ].map(tab => (
+          <button 
+            key={tab.id}
+            onClick={() => setActiveVisitSubTab(tab.id)} 
+            style={{ 
+              flex: windowWidth <= 640 ? '1 1 calc(50% - 4px)' : windowWidth <= 1024 ? '1 1 auto' : 'auto',
+              padding: windowWidth <= 640 ? '6px 8px' : '8px 14px', 
+              borderRadius: '8px', 
+              fontSize: windowWidth <= 640 ? '0.74rem' : '0.82rem', 
+              fontWeight: activeVisitSubTab === tab.id ? '900' : '800', 
+              cursor: 'pointer', 
+              textAlign: 'center',
+              background: activeVisitSubTab === tab.id ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), 
+              color: activeVisitSubTab === tab.id ? '#ffffff' : (tab.accent || (isLight ? '#475569' : '#94a3b8')), 
+              border: activeVisitSubTab === tab.id ? '1px solid #0284c7' : (tab.borderAccent ? `1px solid ${tab.borderAccent}` : (isLight ? '1px solid #cbd5e1' : '1px solid #334155')),
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* SUB-TAB 1: MULTI-PROPERTY ROUTE PLANNER & LIVE EXECUTION */}
@@ -326,87 +334,81 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
             {/* ROUTE PLANNER COMPACT TOOLBAR */}
-            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: windowWidth <= 640 ? '12px' : '16px', padding: windowWidth <= 640 ? '12px' : '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isLight ? '#0f172a' : '#ffffff' }}>
+                <div style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isLight ? '#0f172a' : '#ffffff', flexShrink: 0 }}>
                   <Navigation size={20} />
                 </div>
                 <div>
-                  <h3 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '1.05rem' }}>🚘 MULTI-PROPERTY VISIT SCHEDULE REGISTER</h3>
-                  <p style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.76rem' }}>Compact Master Records • Click Visit Schedule ID for Full Route Details</p>
+                  <h3 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.92rem' : '1.05rem', margin: 0 }}>🚘 MULTI-PROPERTY VISIT SCHEDULE REGISTER</h3>
+                  <p style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.74rem', margin: '2px 0 0 0' }}>Compact Master Records • Click Visit Schedule ID for Full Route Details</p>
                 </div>
               </div>
 
               {/* QUICK ACTION BUTTONS */}
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto' }}>
                 <button 
                   onClick={() => setShowScheduleVisitModal({ open: true, costSheet: individualCostSheets[0] })} 
-                  style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ flex: windowWidth <= 640 ? '1 1 100%' : 'auto', justifyContent: 'center', background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   <Plus size={15} /> + Schedule Site Visit
                 </button>
                 <button 
                   onClick={() => setRoutePlannerMode(routePlannerMode === 'exec_cockpit' ? 'compact_table' as any : 'exec_cockpit')} 
-                  style={{ background: routePlannerMode === 'exec_cockpit' ? '#0284c7' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ flex: windowWidth <= 640 ? '1 1 calc(50% - 4px)' : 'auto', justifyContent: 'center', background: routePlannerMode === 'exec_cockpit' ? '#0284c7' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
-                  📱 Sales Person Mobile Cockpit
+                  📱 Mobile Cockpit
                 </button>
                 <button 
                   onClick={() => setShowRouteMapModal({ open: true, plan: visitPlans[0] })} 
-                  style={{ background: '#334155', color: '#38bdf8', border: '1px solid #0284c7', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ flex: windowWidth <= 640 ? '1 1 calc(50% - 4px)' : 'auto', justifyContent: 'center', background: '#334155', color: '#38bdf8', border: '1px solid #0284c7', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
-                  🗺️ View Route Map
+                  🗺️ View Map
                 </button>
               </div>
             </div>
 
             {/* SEARCH & FILTERS BAR */}
-            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <div style={{ flex: '1', minWidth: '240px' }}>
+            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 640 ? '10px' : '14px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ flex: '1 1 100%', minWidth: windowWidth <= 640 ? '100%' : '240px' }}>
                 <input 
                   type="text" 
-                  placeholder="🔍 Search Visit Schedule ID, Customer ID, Customer Name, Mobile, Exec, Property, Cost Sheet..." 
+                  placeholder="🔍 Search Visit Schedule ID, Customer ID, Customer Name, Mobile, Exec..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.82rem' }}
                 />
               </div>
 
-              {/* STATUS FILTER */}
-              <div>
+              {/* FILTERS WRAPPER FOR MOBILE */}
+              <div style={{ display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' }}>
                 <select 
                   value={visitFilterStatus} 
                   onChange={(e) => setVisitFilterStatus(e.target.value)}
-                  style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.82rem' }}
+                  style={{ flex: windowWidth <= 640 ? '1 1 calc(33.33% - 6px)' : '1', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontWeight: '800', padding: '8px', borderRadius: '6px', fontSize: windowWidth <= 640 ? '0.72rem' : '0.82rem' }}
                 >
                   <option value="ALL">All Statuses</option>
                   <option value="IN_PROGRESS">🔵 IN PROGRESS</option>
-                  <option value="ASSIGNED">⚪ ASSIGNED / SCHEDULED</option>
+                  <option value="ASSIGNED">⚪ ASSIGNED</option>
                   <option value="COMPLETED">✅ COMPLETED</option>
-                  <option value="PARTIALLY_COMPLETED">🟣 PARTIALLY COMPLETED</option>
+                  <option value="PARTIALLY_COMPLETED">🟣 PARTIAL</option>
                   <option value="DELAYED">🟡 DELAYED</option>
                 </select>
-              </div>
 
-              {/* DATE FILTER */}
-              <div>
                 <select 
                   value={visitFilterDate} 
                   onChange={(e) => setVisitFilterDate(e.target.value)}
-                  style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#fbbf24', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.82rem' }}
+                  style={{ flex: windowWidth <= 640 ? '1 1 calc(33.33% - 6px)' : '1', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#fbbf24', fontWeight: '800', padding: '8px', borderRadius: '6px', fontSize: windowWidth <= 640 ? '0.72rem' : '0.82rem' }}
                 >
                   <option value="ALL">All Dates</option>
                   <option value="2026-08-22">22 Aug 2026</option>
                   <option value="2026-08-23">23 Aug 2026</option>
                 </select>
-              </div>
 
-              {/* EXEC FILTER */}
-              <div>
                 <select 
                   value={visitFilterExec} 
                   onChange={(e) => setVisitFilterExec(e.target.value)}
-                  style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.82rem' }}
+                  style={{ flex: windowWidth <= 640 ? '1 1 calc(33.33% - 6px)' : '1', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '800', padding: '8px', borderRadius: '6px', fontSize: windowWidth <= 640 ? '0.72rem' : '0.82rem' }}
                 >
                   <option value="ALL">All Execs</option>
                   <option value="Punita Roy">Punita Roy</option>
@@ -1644,34 +1646,34 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       });
 
       return (
-        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: windowWidth <= 640 ? '12px' : '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                 🔐 6-DIGIT MOBILE OTP & GPS GEOFENCE VERIFICATION CONTROL CENTER
               </h3>
-              <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
+              <p style={{ fontSize: windowWidth <= 640 ? '0.74rem' : '0.8rem', color: isLight ? '#64748b' : '#94a3b8', margin: '4px 0 0 0' }}>
                 Real-time tracking of pending vs completed customer OTP verifications and Project Visit Agreements (PVA)
               </p>
             </div>
-            <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid #22c55e', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '900' }}>
+            <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid #22c55e', padding: '4px 12px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: '900' }}>
               ● 5-MINUTE OTP TIMER & GEOFENCE ACTIVE
             </span>
           </div>
 
           {/* SUMMARY CARDS */}
-          <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(3, 1fr)', gap: '14px' }}>
-            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '16px', borderRadius: '12px' }}>
-              <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>TOTAL SCHEDULED VISITS</span>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#38bdf8', marginTop: '4px' }}>{unifiedVisits.length} Visits</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)', gap: windowWidth <= 640 ? '10px' : '14px' }}>
+            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '12px' : '16px', borderRadius: '12px' }}>
+              <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>TOTAL SCHEDULED VISITS</span>
+              <h3 style={{ fontSize: windowWidth <= 640 ? '1.3rem' : '1.5rem', fontWeight: '900', color: '#38bdf8', marginTop: '4px', margin: 0 }}>{unifiedVisits.length} Visits</h3>
             </div>
-            <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid #f59e0b', padding: '16px', borderRadius: '12px' }}>
-              <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: '800' }}>⏳ PENDING OTP VERIFICATION</span>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#fbbf24', marginTop: '4px' }}>{pendingVisits.length} Visits Pending</h3>
+            <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid #f59e0b', padding: windowWidth <= 640 ? '12px' : '16px', borderRadius: '12px' }}>
+              <span style={{ fontSize: '0.72rem', color: '#fbbf24', fontWeight: '800' }}>⏳ PENDING OTP VERIFICATION</span>
+              <h3 style={{ fontSize: windowWidth <= 640 ? '1.3rem' : '1.5rem', fontWeight: '900', color: '#fbbf24', marginTop: '4px', margin: 0 }}>{pendingVisits.length} Visits Pending</h3>
             </div>
-            <div style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid #22c55e', padding: '16px', borderRadius: '12px' }}>
-              <span style={{ fontSize: '0.75rem', color: '#4ade80', fontWeight: '800' }}>✅ OTP VERIFIED (PVA GENERATED)</span>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#4ade80', marginTop: '4px' }}>{verifiedVisits.length} Visits Verified</h3>
+            <div style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid #22c55e', padding: windowWidth <= 640 ? '12px' : '16px', borderRadius: '12px' }}>
+              <span style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: '800' }}>✅ OTP VERIFIED (PVA GENERATED)</span>
+              <h3 style={{ fontSize: windowWidth <= 640 ? '1.3rem' : '1.5rem', fontWeight: '900', color: '#4ade80', marginTop: '4px', margin: 0 }}>{verifiedVisits.length} Visits Verified</h3>
             </div>
           </div>
 
@@ -2308,7 +2310,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
           </div>
 
           {/* 5 DYNAMIC METRIC CARDS */}
-          <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : windowWidth <= 1024 ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: windowWidth <= 640 ? '10px' : '14px' }}>
             
             {/* CARD 1: TOTAL VISITS */}
             <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative', overflow: 'hidden' }}>
@@ -2759,7 +2761,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
           const satisfactionPct = ratedInvites.length > 0 ? Math.round((highRatingsCount / ratedInvites.length) * 100) : 100;
 
           return (
-            <div style={{ display: 'grid', gridTemplateColumns: windowWidth < 768 ? '1fr' : 'repeat(4, 1fr)', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: windowWidth <= 640 ? '10px' : '16px' }}>
               <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '14px', padding: '18px' }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', textTransform: 'uppercase' }}>Overall Team Rating</div>
                 <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#f59e0b', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>

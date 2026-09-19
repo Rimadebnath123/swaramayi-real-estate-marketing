@@ -11399,6 +11399,7 @@ export default function App() {
             <AgreementManagementView
               currentRole={currentRole}
               isLight={isLight}
+              windowWidth={windowWidth}
               agreementCategory={agreementCategory}
               setAgreementCategory={setAgreementCategory}
               visitPlans={visitPlans}
@@ -12934,8 +12935,8 @@ export default function App() {
 
       {/* CREATE ADVANCED CUSTOMER MASTER MODAL */}
       {(showAddCustomerModal || showCustomerModal) && (
-        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', width: '94vw', maxWidth: '850px', maxHeight: '90vh', borderRadius: '16px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: windowWidth <= 640 ? '6px' : '12px', boxSizing: 'border-box' }}>
+          <div className="custom-modal-scrollbar" style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', width: windowWidth <= 640 ? '98vw' : '94vw', maxWidth: '850px', height: '90vh', maxHeight: 'calc(100vh - 28px)', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '28px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', scrollbarWidth: 'auto', scrollbarColor: '#0284c7 #0f172a' }}>
             
             {/* MODAL HEADER */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
@@ -13295,8 +13296,8 @@ export default function App() {
 
       {/* 10-STEP ENTERPRISE LEAD INTAKE & QUALIFICATION WIZARD MODAL */}
       {(showLeadModal || showAddCustomerModal) && (
-        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(15, 23, 42, 0.5)' : 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: windowWidth <= 640 ? '8px' : '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #0284c7', width: windowWidth <= 640 ? '98vw' : '94vw', maxWidth: '920px', maxHeight: windowWidth <= 640 ? '95vh' : '92vh', borderRadius: windowWidth <= 640 ? '12px' : '18px', padding: windowWidth <= 640 ? '14px' : '28px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', boxShadow: isLight ? '0 20px 40px rgba(0,0,0,0.12)' : '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(15, 23, 42, 0.5)' : 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: windowWidth <= 640 ? '8px' : '16px', overflow: 'hidden', boxSizing: 'border-box' }}>
+          <div className="custom-modal-scrollbar" style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #0284c7', width: windowWidth <= 640 ? '98vw' : windowWidth <= 1024 ? '96vw' : '94vw', maxWidth: '920px', maxHeight: 'calc(100vh - 32px)', borderRadius: windowWidth <= 640 ? '12px' : '18px', padding: windowWidth <= 640 ? '12px' : windowWidth <= 1024 ? '16px' : '24px', display: 'flex', flexDirection: 'column', gap: windowWidth <= 1024 ? '12px' : '20px', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: isLight ? '#0284c7 #e2e8f0' : '#0284c7 #0f172a', boxShadow: isLight ? '0 20px 40px rgba(0,0,0,0.12)' : '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
             
             {/* WIZARD HEADER & PROGRESS INDICATOR */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
@@ -13333,19 +13334,14 @@ export default function App() {
               ))}
             </div>
 
-            {/* STEP STEPPER TAB STRIP (HORIZONTALLY SCROLLABLE WITH FULL TEXT) */}
+            {/* STEP STEPPER TAB STRIP (RESPONSIVE FLEX-WRAP FOR ALL STEPS 1 TO 9) */}
             <div 
-              className="table-responsive-wrapper"
               style={{ 
                 display: 'flex', 
-                gap: '8px', 
-                overflowX: 'auto', 
-                flexWrap: 'nowrap', 
+                gap: '6px', 
+                flexWrap: 'wrap', 
                 paddingBottom: '8px', 
-                borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
-                WebkitOverflowScrolling: 'touch',
-                scrollbarWidth: 'thin',
-                msOverflowStyle: 'none'
+                borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155'
               }}
             >
               {[
@@ -13364,10 +13360,10 @@ export default function App() {
                   type="button" 
                   onClick={() => setLeadIntakeStep(item.s)} 
                   style={{ 
-                    flexShrink: 0,
-                    padding: '8px 14px', 
+                    flex: windowWidth <= 640 ? '1 1 calc(50% - 6px)' : '1 1 auto',
+                    padding: windowWidth <= 640 ? '6px 8px' : '6px 12px', 
                     borderRadius: '8px', 
-                    fontSize: '0.78rem', 
+                    fontSize: windowWidth <= 640 ? '0.72rem' : '0.78rem', 
                     fontWeight: '800', 
                     cursor: 'pointer', 
                     whiteSpace: 'nowrap',
@@ -13376,8 +13372,9 @@ export default function App() {
                     justifyContent: 'center',
                     background: leadIntakeStep === item.s ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), 
                     color: leadIntakeStep === item.s ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'), 
-                    border: leadIntakeStep === item.s ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
-                    transition: 'all 0.15s ease'
+                    border: leadIntakeStep === item.s ? '1.5px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                    transition: 'all 0.15s ease',
+                    boxShadow: leadIntakeStep === item.s ? '0 2px 8px rgba(2, 132, 199, 0.3)' : 'none'
                   }}
                 >
                   {item.label}
@@ -13474,6 +13471,7 @@ export default function App() {
                     <input type="text" value={newCustomerForm.utm_source} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, utm_source: e.target.value })} placeholder="e.g. SRM-PROP-2026-000426" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} />
                   </div>
                 </div>
+
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Referrer Name & Contact (If Applicable)</label>
                   <input type="text" value={newCustomerForm.referral_name} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, referral_name: e.target.value })} placeholder="e.g. Dr. Rajesh Sharma (+91 98480 12345)" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} />
@@ -14447,10 +14445,10 @@ export default function App() {
 
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1.5px solid ${badgeColor}`, borderRadius: '12px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1.5px solid ${badgeColor}`, borderRadius: '12px', padding: windowWidth <= 640 ? '14px' : '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                     <div>
                       <span style={{ fontSize: '0.75rem', color: badgeColor, fontWeight: '900' }}>REQUIREMENT COMPLETENESS AUDIT SCORE</span>
-                      <h2 style={{ fontSize: '1.8rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '2px' }}>{dynamicScore}% COMPLETE</h2>
+                      <h2 style={{ fontSize: windowWidth <= 640 ? '1.4rem' : '1.8rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '2px' }}>{dynamicScore}% COMPLETE</h2>
                       <p style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>
                         {isReady ? 'Meets 75%+ minimum qualification threshold for property matching engine.' : 'Partial qualification profile. Fill missing BHK, Location, or Budget details for higher match accuracy.'}
                       </p>
@@ -14461,7 +14459,7 @@ export default function App() {
                   </div>
 
                   {/* INTERACTIVE AUDIT BREAKDOWN CHECKLIST: SHOWS WHICH PARTS ARE FILLED & WHICH NEED FILLING */}
-                  <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 640 ? '12px' : '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                       <h4 style={{ fontSize: '0.88rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                         📊 REQUIREMENT COMPLETENESS AUDIT BREAKDOWN
@@ -14478,7 +14476,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)', gap: '10px' }}>
                       {auditChecklist.map(item => (
                         <div 
                           key={item.key}
@@ -14505,7 +14503,14 @@ export default function App() {
                           {!item.isFilled && (
                             <button
                               type="button"
-                              onClick={() => setLeadIntakeStep(item.stepNum)}
+                              onClick={() => {
+                                setLeadIntakeStep(item.stepNum);
+                                if (item.stepNum === 9) {
+                                  setTimeout(() => {
+                                    document.getElementById('assign-executive-selector')?.scrollIntoView({ behavior: 'smooth' });
+                                  }, 50);
+                                }
+                              }}
                               style={{
                                 background: '#0284c7',
                                 color: '#ffffff',
@@ -14527,70 +14532,84 @@ export default function App() {
                     </div>
                   </div>
 
-                <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: '12px', fontSize: '0.82rem' }}>
-                  <div>
-                    <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Customer Name:</span>
-                    <strong style={{ display: 'block', color: isLight ? '#0f172a' : '#ffffff' }}>{newCustomerForm.name || 'Sumanth Varma'}</strong>
+                  {/* SUMMARY TABLE GRID */}
+                  <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 640 ? '12px' : '16px', display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : windowWidth <= 1024 ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', gap: '12px', fontSize: '0.82rem' }}>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Customer Name:</span>
+                      <strong style={{ display: 'block', color: isLight ? '#0f172a' : '#ffffff' }}>{newCustomerForm.name || 'Sumanth Varma'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Mobile Phone:</span>
+                      <strong style={{ display: 'block', color: '#4ade80' }}>{newCustomerForm.mobile || '+91 98490 88888'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Assigned Executive:</span>
+                      <strong style={{ display: 'block', color: '#38bdf8', fontWeight: '900' }}>{newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Budget Range:</span>
+                      <strong style={{ display: 'block', color: '#fbbf24' }}>{newCustomerForm.budget_min} - {newCustomerForm.budget_max}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Preferred Area:</span>
+                      <strong style={{ display: 'block', color: '#38bdf8' }}>{newCustomerForm.preferredArea} ({newCustomerForm.configuration})</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Agreed Brokerage:</span>
+                      <strong style={{ display: 'block', color: '#4ade80', fontWeight: '900' }}>💰 {newCustomerForm.brokerage_rate || '2.0%'} ({newCustomerForm.brokerage_payer || 'CUSTOMER'})</strong>
+                    </div>
                   </div>
-                  <div>
-                    <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Mobile Phone:</span>
-                    <strong style={{ display: 'block', color: '#4ade80' }}>{newCustomerForm.mobile || '+91 98490 88888'}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Assigned Executive:</span>
-                    <strong style={{ display: 'block', color: '#38bdf8', fontWeight: '900' }}>{newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)'}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Budget Range:</span>
-                    <strong style={{ display: 'block', color: '#fbbf24' }}>{newCustomerForm.budget_min} - {newCustomerForm.budget_max}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Preferred Area:</span>
-                    <strong style={{ display: 'block', color: '#38bdf8' }}>{newCustomerForm.preferredArea} ({newCustomerForm.configuration})</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Agreed Brokerage:</span>
-                    <strong style={{ display: 'block', color: '#4ade80', fontWeight: '900' }}>💰 {newCustomerForm.brokerage_rate || '2.0%'} ({newCustomerForm.brokerage_payer || 'CUSTOMER'})</strong>
-                  </div>
-                </div>
 
-                {/* ASSIGN EXECUTIVE SELECTOR IN STEP 9 */}
-                <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #0284c7', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.82rem', color: '#fbbf24', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    👤 ASSIGN SALES EXECUTIVE / CLIENT RELATIONSHIP MANAGER *
-                  </label>
-                  <select 
-                    value={(() => {
-                      const cur = newCustomerForm.assigned_employee_id || newCustomerForm.assigned_salesperson || newCustomerForm.assigned_employee_name;
-                      if (!cur) return dynamicSalesExecutives[0]?.value || 'Priya Nair';
-                      const match = dynamicSalesExecutives.find((x: any) => 
-                        x.value === cur || x.name === cur || x.id === cur || (x.label && x.label.includes(cur)) || (cur && cur.includes(x.name))
-                      );
-                      return match ? match.value : cur;
-                    })()} 
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const match = dynamicSalesExecutives.find((x: any) => x.value === val || x.name === val);
-                      const displayName = match ? match.name : val;
-                      setNewCustomerForm({ 
-                        ...newCustomerForm, 
-                        assigned_employee_id: val, 
-                        assigned_employee_name: displayName,
-                        assigned_salesperson: displayName
-                      });
-                    }} 
-                    style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', color: '#38bdf8', fontWeight: '900', padding: '10px 12px', borderRadius: '8px', fontSize: '0.9rem' }}
+                  {/* ORIGINAL POSITION ASSIGN SALES EXECUTIVE SELECTOR IN STEP 9 (FULL RESPONSIVE & HIGHLIGHTED) */}
+                  <div 
+                    id="assign-executive-selector" 
+                    style={{ 
+                      background: isLight ? '#f8fafc' : '#0f172a', 
+                      border: '2px solid #0284c7', 
+                      borderRadius: '12px', 
+                      padding: windowWidth <= 640 ? '12px' : '16px', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '8px', 
+                      boxShadow: '0 4px 14px rgba(2, 132, 199, 0.2)',
+                      scrollMarginTop: '20px'
+                    }}
                   >
-                    {dynamicSalesExecutives.map((exec: any) => (
-                      <option key={exec.id || exec.name} value={exec.value}>
-                        👤 {exec.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontStyle: 'italic' }}>
-                    💡 Assign the designated Sales Executive / CRM for property matching hand-off and client relationship management.
-                  </span>
-                </div>
+                    <label style={{ fontSize: '0.82rem', color: '#fbbf24', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      👤 ASSIGN SALES EXECUTIVE / CLIENT RELATIONSHIP MANAGER *
+                    </label>
+                    <select 
+                      value={(() => {
+                        const cur = newCustomerForm.assigned_employee_id || newCustomerForm.assigned_salesperson || newCustomerForm.assigned_employee_name;
+                        if (!cur) return dynamicSalesExecutives[0]?.value || 'Priya Nair';
+                        const match = dynamicSalesExecutives.find((x: any) => 
+                          x.value === cur || x.name === cur || x.id === cur || (x.label && x.label.includes(cur)) || (cur && cur.includes(x.name))
+                        );
+                        return match ? match.value : cur;
+                      })()} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const match = dynamicSalesExecutives.find((x: any) => x.value === val || x.name === val);
+                        const displayName = match ? match.name : val;
+                        setNewCustomerForm({ 
+                          ...newCustomerForm, 
+                          assigned_employee_id: val, 
+                          assigned_employee_name: displayName,
+                          assigned_salesperson: displayName
+                        });
+                      }} 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', color: '#38bdf8', fontWeight: '900', padding: '10px 12px', borderRadius: '8px', fontSize: windowWidth <= 640 ? '0.82rem' : '0.9rem' }}
+                    >
+                      {dynamicSalesExecutives.map((exec: any) => (
+                        <option key={exec.id || exec.name} value={exec.value}>
+                          👤 {exec.label}
+                        </option>
+                      ))}
+                    </select>
+                    <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontStyle: 'italic' }}>
+                      💡 Assign the designated Sales Executive / CRM for property matching hand-off and client relationship management.
+                    </span>
+                  </div>
 
                 <div style={{ display: 'flex', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
                   <button type="button" onClick={() => setLeadIntakeStep(8)} style={{ flex: 1, minWidth: '140px', background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
@@ -16788,8 +16807,8 @@ export default function App() {
 
       {/* MODAL: SKIP PROPERTY STOP */}
       {showSkipStopModal && showSkipStopModal.open && (
-        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #ef4444', width: '500px', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: windowWidth <= 640 ? '8px' : '20px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #ef4444', width: windowWidth <= 640 ? '98vw' : '500px', maxWidth: '96vw', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: '#f87171' }}>⏭️ SKIP PROPERTY VISIT STOP</h3>
               <X size={20} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowSkipStopModal(null)} />
@@ -16845,8 +16864,8 @@ export default function App() {
 
       {/* MODAL: ADD PROPERTY TO ROUTE */}
       {showAddPropertyRouteModal && showAddPropertyRouteModal.open && (
-        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', width: '540px', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: windowWidth <= 640 ? '8px' : '20px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', width: windowWidth <= 640 ? '98vw' : '540px', maxWidth: '96vw', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: '#38bdf8' }}>➕ ADD ANOTHER PROPERTY TO ROUTE</h3>
               <X size={20} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowAddPropertyRouteModal(null)} />
@@ -16934,8 +16953,8 @@ export default function App() {
 
       {/* MODAL: OWNER LIVE ROUTE AUDIT TRACKING */}
       {showLiveRouteTrackingModal && showLiveRouteTrackingModal.open && showLiveRouteTrackingModal.plan && (
-        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', width: '750px', maxHeight: '90vh', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: windowWidth <= 640 ? '8px' : '20px' }}>
+          <div className="custom-modal-scrollbar" style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', width: windowWidth <= 640 ? '98vw' : windowWidth <= 1024 ? '95vw' : '750px', maxWidth: '96vw', maxHeight: 'calc(100vh - 32px)', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Activity size={24} color="#38bdf8" />
@@ -16947,7 +16966,7 @@ export default function App() {
               <X size={20} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowLiveRouteTrackingModal(null)} />
             </div>
 
-            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.82rem' }}>
+            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '14px', display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '10px', fontSize: '0.82rem' }}>
               <div><span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Executive:</span> <strong style={{ color: isLight ? '#0f172a' : '#ffffff', display: 'block' }}>{showLiveRouteTrackingModal.plan.assignedExecutive}</strong></div>
               <div><span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Customer Contact:</span> <strong style={{ color: '#4ade80', display: 'block' }}>{showLiveRouteTrackingModal.plan.mobile}</strong></div>
               <div><span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Delay Audit:</span> <strong style={{ color: '#4ade80', display: 'block' }}>{showLiveRouteTrackingModal.plan.delayStatus}</strong></div>
@@ -17002,8 +17021,8 @@ export default function App() {
 
       {/* MODAL: ROUTE MAP MODAL */}
       {showRouteMapModal && showRouteMapModal.open && showRouteMapModal.plan && (
-        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', width: '800px', maxHeight: '90vh', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px', overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: windowWidth <= 640 ? '8px' : '20px' }}>
+          <div className="custom-modal-scrollbar" style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', width: windowWidth <= 640 ? '98vw' : windowWidth <= 1024 ? '95vw' : '800px', maxWidth: '96vw', maxHeight: 'calc(100vh - 32px)', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '18px', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
               <div>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>🗺️ INTERACTIVE VISIT ROUTE MAP</h3>
@@ -17564,8 +17583,8 @@ export default function App() {
 
       {/* MODAL: DEVELOPER CUSTOMER INTRODUCTION REPORT */}
       {showDeveloperIntroductionReportModal && (
-        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', width: '900px', maxHeight: '92vh', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px', overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: windowWidth <= 640 ? '8px' : '20px' }}>
+          <div className="custom-modal-scrollbar" style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', width: windowWidth <= 640 ? '98vw' : windowWidth <= 1024 ? '95vw' : '900px', maxWidth: '96vw', maxHeight: 'calc(100vh - 32px)', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '18px', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
               <div>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>🏢 DEVELOPER CUSTOMER INTRODUCTION REPORT</h3>
@@ -18030,11 +18049,11 @@ export default function App() {
       )}
 
       {showNewBookingModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #38bdf8', borderRadius: '16px', width: '100%', maxWidth: '650px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: windowWidth <= 640 ? '8px' : '20px' }}>
+          <div className="custom-modal-scrollbar" style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #38bdf8', borderRadius: '16px', width: windowWidth <= 640 ? '98vw' : windowWidth <= 1024 ? '95vw' : '650px', maxWidth: '96vw', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px' }}>
               <div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   🏢 Register New Property Unit Booking & Lock Token Advance
                 </h3>
                 <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8' }}>Generate official booking code, record advance token payment, and lock unit in inventory board.</p>
@@ -18076,7 +18095,7 @@ export default function App() {
               alert(`🎉 Property Unit Booking ${newBkgCode} registered & unit locked successfully!`);
             }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Customer Name *</label>
                   <input type="text" value={newBookingForm.customer_name} onChange={(e) => setNewBookingForm({ ...newBookingForm, customer_name: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
@@ -18087,7 +18106,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Project Name *</label>
                   <input type="text" value={newBookingForm.project_name} onChange={(e) => setNewBookingForm({ ...newBookingForm, project_name: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
@@ -18103,7 +18122,7 @@ export default function App() {
                 <input type="text" value={newBookingForm.tower_unit} onChange={(e) => setNewBookingForm({ ...newBookingForm, tower_unit: e.target.value })} placeholder="e.g. Tower A - Unit A-504 (3BHK)" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Total Agreement Value (₹) *</label>
                   <input type="number" value={newBookingForm.agreement_value} onChange={(e) => setNewBookingForm({ ...newBookingForm, agreement_value: e.target.value })} placeholder="8400000" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
@@ -18114,7 +18133,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Payment Mode *</label>
                   <select value={newBookingForm.payment_mode} onChange={(e) => setNewBookingForm({ ...newBookingForm, payment_mode: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}>
@@ -18141,11 +18160,11 @@ export default function App() {
 
       {/* MODAL: ALLOTMENT LETTER & TOKEN RECEIPT PRINT MODAL */}
       {showAllotmentModal && showAllotmentModal.open && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px' }}>
-          <div style={{ background: '#ffffff', color: '#0f172a', borderRadius: '16px', width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px', border: '2px solid #0284c7' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: windowWidth <= 640 ? '8px' : '20px' }}>
+          <div className="custom-modal-scrollbar" style={{ background: '#ffffff', color: '#0f172a', borderRadius: '16px', width: windowWidth <= 640 ? '98vw' : windowWidth <= 1024 ? '95vw' : '750px', maxWidth: '96vw', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', padding: windowWidth <= 640 ? '16px' : '32px', display: 'flex', flexDirection: 'column', gap: '20px', border: '2px solid #0284c7' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0284c7', paddingBottom: '16px' }}>
               <div>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: '900', color: '#0284c7' }}>SWARAMAYI REAL ESTATE MARKETING</h2>
+                <h2 style={{ fontSize: windowWidth <= 640 ? '1.1rem' : '1.4rem', fontWeight: '900', color: '#0284c7' }}>SWARAMAYI REAL ESTATE MARKETING</h2>
                 <p style={{ fontSize: '0.8rem', color: '#475569', margin: '2px 0 0 0' }}>Official Property Unit Allotment Letter & Advance Token Receipt</p>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -18154,7 +18173,7 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.85rem' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px', display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px', fontSize: '0.85rem' }}>
               <div><strong>Allottee Name:</strong> {showAllotmentModal.booking.customer_name}</div>
               <div><strong>Customer ID:</strong> {showAllotmentModal.booking.customer_number}</div>
               <div><strong>Contact Mobile:</strong> {showAllotmentModal.booking.customer_mobile}</div>

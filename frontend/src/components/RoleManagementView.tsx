@@ -817,33 +817,33 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       )}
 
       {/* SYSTEM GOVERNANCE HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: windowWidth <= 640 ? 'flex-start' : 'center', flexDirection: windowWidth <= 640 ? 'column' : 'row', gap: '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '20px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>ADVANCED ROLE, USER & MANAGEMENT CONTROL SYSTEM</h2>
-            <span style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800' }}>ENTERPRISE RBAC</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h2 style={{ fontSize: windowWidth <= 480 ? '1.05rem' : (windowWidth <= 640 ? '1.18rem' : '1.4rem'), fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>ADVANCED ROLE, USER & MANAGEMENT CONTROL SYSTEM</h2>
+            <span style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: '800' }}>ENTERPRISE RBAC</span>
           </div>
-          <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
+          <p style={{ fontSize: windowWidth <= 640 ? '0.75rem' : '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
             Active Enterprise Roles • Company & Branch Hierarchy • Maker-Checker Universal Approvals • Employee Exit Handover Engine
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', width: windowWidth <= 640 ? '100%' : 'auto' }}>
           {isSuperAdmin && (
             <>
-              <button onClick={() => handleOpenAddUserModal()} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button onClick={() => handleOpenAddUserModal()} style={{ flex: windowWidth <= 480 ? '1 1 100%' : 'initial', background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 <UserPlus size={15} /> + Add User
               </button>
-              <button onClick={() => setShowCustomRoleModal(true)} style={{ background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button onClick={() => setShowCustomRoleModal(true)} style={{ flex: windowWidth <= 480 ? '1 1 100%' : 'initial', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 <ShieldCheck size={15} color="#0284c7" /> + Add Custom Role
               </button>
-              <button onClick={handleResetDefaultRoles} style={{ background: isLight ? '#ffffff' : '#1e293b', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button onClick={handleResetDefaultRoles} style={{ flex: windowWidth <= 480 ? '1 1 100%' : 'initial', background: isLight ? '#ffffff' : '#1e293b', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 <RotateCw size={15} color="#38bdf8" /> Reset Scopes
               </button>
-              <button onClick={() => setShowBranchModal(true)} style={{ background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button onClick={() => setShowBranchModal(true)} style={{ flex: windowWidth <= 480 ? '1 1 100%' : 'initial', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 <Building2 size={15} color="#fbbf24" /> + Add Branch
               </button>
-              <button onClick={() => setShowTeamModal(true)} style={{ background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button onClick={() => setShowTeamModal(true)} style={{ flex: windowWidth <= 480 ? '1 1 100%' : 'initial', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 <Users size={15} color="#22c55e" /> + Add Team Squad
               </button>
             </>
@@ -855,13 +855,15 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
               alert(nextState ? '🚨 EMERGENCY LOCKDOWN ACTIVATED! Non-admin access restricted.' : '🟢 EMERGENCY LOCKDOWN LIFTED! Standard operations restored.');
             }} 
             style={{ 
+              flex: windowWidth <= 640 ? '1 1 100%' : 'initial',
+              justifyContent: 'center',
               background: isLockdown ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', 
               color: '#ffffff', 
               border: 'none', 
               padding: '8px 14px', 
               borderRadius: '8px', 
               fontWeight: '900', 
-              fontSize: '0.8rem', 
+              fontSize: '0.78rem', 
               cursor: 'pointer', 
               display: 'flex', 
               alignItems: 'center', 
@@ -876,52 +878,64 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       </div>
 
       {/* SUB-TABS NAVIGATION BAR FOR ROLE MANAGEMENT */}
-      <div style={{ display: 'flex', gap: '10px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', flexWrap: 'wrap' }}>
+      <div 
+        className={windowWidth <= 768 ? "horizontal-scroll-touch" : ""}
+        style={{ 
+          display: 'flex', 
+          gap: '10px', 
+          borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', 
+          paddingBottom: '12px', 
+          flexWrap: windowWidth <= 768 ? 'nowrap' : 'wrap',
+          overflowX: windowWidth <= 768 ? 'auto' : 'visible',
+          width: '100%',
+          maxWidth: '100%'
+        }}
+      >
         <button 
           onClick={() => setActiveRoleSubTab('active_roles_matrix')} 
-          style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'active_roles_matrix' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'active_roles_matrix' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}
+          style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'active_roles_matrix' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'active_roles_matrix' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
           🔑 Active Roles & Security Matrix
         </button>
         <button 
           onClick={() => setActiveRoleSubTab('employee_directory')} 
-          style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'employee_directory' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'employee_directory' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}
+          style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'employee_directory' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'employee_directory' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
           👥 Employee Directory ({safeUsers.filter(u => isSuperAdmin || (u.role !== 'SUPER_ADMIN' && u.role !== 'OWNER' && u.id !== 'USR-01')).length})
         </button>
         <button 
           onClick={() => setActiveRoleSubTab('assigned_property_advisors')} 
-          style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'assigned_property_advisors' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'assigned_property_advisors' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}
+          style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'assigned_property_advisors' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'assigned_property_advisors' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
           👨‍💼 Assigned Property Advisor ({propertyAdvisorsList.length})
         </button>
         <button 
           onClick={() => setActiveRoleSubTab('branches_offices')} 
-          style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'branches_offices' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'branches_offices' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}
+          style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'branches_offices' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'branches_offices' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
           🏢 Enterprise Branches & Offices ({safeBranches.length})
         </button>
         <button 
           onClick={() => setActiveRoleSubTab('sales_teams_squads')} 
-          style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'sales_teams_squads' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'sales_teams_squads' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}
+          style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'sales_teams_squads' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'sales_teams_squads' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
           🎯 Teams & Squads ({safeTeams.length})
         </button>
         <button 
           onClick={() => setActiveRoleSubTab('active_sessions_risk')} 
-          style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'active_sessions_risk' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'active_sessions_risk' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}
+          style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'active_sessions_risk' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'active_sessions_risk' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
           🚨 Active Sessions & Risk Alerts ({safeSessions.length})
         </button>
         <button 
           onClick={() => setActiveRoleSubTab('approval_queue')} 
-          style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'approval_queue' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'approval_queue' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}
+          style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'approval_queue' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'approval_queue' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
           ⚖️ Universal Approval Queue ({safeApprovals.filter(r => r.status === 'PENDING').length})
         </button>
         <button 
           onClick={() => setActiveRoleSubTab('exit_handover')} 
-          style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'exit_handover' ? '#ef4444' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'exit_handover' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}
+          style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'exit_handover' ? '#ef4444' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'exit_handover' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
           📋 Employee Exit & Handover Hub
         </button>
@@ -1016,12 +1030,12 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
 
       {/* SUB-TAB 2: EMPLOYEE DIRECTORY */}
       {activeRoleSubTab === 'employee_directory' && (
-        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
           {/* CONTROLS */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <div style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: windowWidth <= 640 ? 'stretch' : 'center', flexDirection: windowWidth <= 640 ? 'column' : 'row', gap: '14px' }}>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', width: windowWidth <= 640 ? '100%' : 'auto' }}>
+              <div style={{ position: 'relative', flex: windowWidth <= 640 ? 1 : 'initial', width: windowWidth <= 640 ? '100%' : 'auto' }}>
                 <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="text"
@@ -1029,6 +1043,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search user name, email, mobile..."
                   style={{
+                    width: '100%',
                     background: isLight ? '#f8fafc' : '#0f172a',
                     border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
                     color: isLight ? '#0f172a' : '#ffffff',
@@ -1036,7 +1051,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                     borderRadius: '8px',
                     fontSize: '0.82rem',
                     fontWeight: '700',
-                    minWidth: '240px'
+                    minWidth: windowWidth <= 640 ? '100%' : '240px'
                   }}
                 />
               </div>
@@ -1045,6 +1060,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
                 style={{
+                  width: windowWidth <= 640 ? '100%' : 'auto',
                   background: isLight ? '#f8fafc' : '#0f172a',
                   border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
                   color: isLight ? '#0f172a' : '#ffffff',
@@ -1069,6 +1085,8 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
               <button
                 onClick={() => handleOpenAddUserModal()}
                 style={{
+                  width: windowWidth <= 640 ? '100%' : 'auto',
+                  justifyContent: 'center',
                   background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                   color: '#ffffff',
                   border: 'none',
@@ -1087,95 +1105,175 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
             )}
           </div>
 
-          {/* USER TABLE */}
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                  <th style={{ padding: '10px 14px' }}>User ID & Staff Name</th>
-                  <th style={{ padding: '10px 14px' }}>Assigned Role & Level</th>
-                  <th style={{ padding: '10px 14px' }}>Branch & Department</th>
-                  <th style={{ padding: '10px 14px' }}>Contact Info</th>
-                  <th style={{ padding: '10px 14px' }}>Reporting Manager</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'center' }}>Security & Audit</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'center' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {safeUsers
-                  .filter(u => isSuperAdmin || (u.role !== 'SUPER_ADMIN' && u.role !== 'OWNER' && u.id !== 'USR-01'))
-                  .filter(u => filterCategory === 'ALL' || u.role === filterCategory)
-                  .filter(u => !searchQuery || JSON.stringify(u).toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map((u: any) => (
-                    <tr key={u.id} style={{ borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
-                      <td style={{ padding: '10px 14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '0.9rem' }}>
-                            {(u.full_name || u.username || 'U').substring(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.9rem' }}>{u.full_name || u.username}</strong>
-                            <br /><span style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'monospace' }}>{u.id} • @{u.username}</span>
-                          </div>
+          {/* USER DATA DISPLAY: MOBILE CARDS OR DESKTOP TABLE */}
+          {windowWidth <= 768 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {safeUsers
+                .filter(u => isSuperAdmin || (u.role !== 'SUPER_ADMIN' && u.role !== 'OWNER' && u.id !== 'USR-01'))
+                .filter(u => filterCategory === 'ALL' || u.role === filterCategory)
+                .filter(u => !searchQuery || JSON.stringify(u).toLowerCase().includes(searchQuery.toLowerCase()))
+                .map((u: any) => (
+                  <div 
+                    key={u.id}
+                    style={{
+                      background: isLight ? '#f8fafc' : '#0f172a',
+                      border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                      borderRadius: '12px',
+                      padding: '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '0.9rem' }}>
+                          {(u.full_name || u.username || 'U').substring(0, 2).toUpperCase()}
                         </div>
-                      </td>
+                        <div>
+                          <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.92rem', display: 'block' }}>{u.full_name || u.username}</strong>
+                          <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'monospace' }}>{u.id} • @{u.username}</span>
+                        </div>
+                      </div>
 
-                      <td style={{ padding: '10px 14px' }}>
-                        <span style={{ background: u.role === 'SUPER_ADMIN' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(2, 132, 199, 0.15)', color: u.role === 'SUPER_ADMIN' ? '#f59e0b' : '#38bdf8', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '0.75rem' }}>
-                          👑 {u.role}
-                        </span>
-                      </td>
+                      <span style={{ background: u.role === 'SUPER_ADMIN' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(2, 132, 199, 0.15)', color: u.role === 'SUPER_ADMIN' ? '#f59e0b' : '#38bdf8', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '0.72rem' }}>
+                        👑 {u.role}
+                      </span>
+                    </div>
 
-                      <td style={{ padding: '10px 14px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.78rem', background: isLight ? '#ffffff' : '#1e293b', padding: '10px', borderRadius: '8px', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
+                      <div>
+                        <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Branch & Dept:</span>
                         <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{u.branch_name || 'Head Office'}</strong>
-                        <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>{u.department || 'Sales Operations'}</span>
-                      </td>
+                        <span style={{ display: 'block', fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>{u.department || 'Operations'}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Contact Info:</span>
+                        <span style={{ color: '#38bdf8', fontWeight: '700', display: 'block' }}>{u.email}</span>
+                        <span style={{ color: '#4ade80', fontWeight: '800', display: 'block' }}>{u.mobile}</span>
+                      </div>
+                    </div>
 
-                      <td style={{ padding: '10px 14px', fontSize: '0.78rem' }}>
-                        <span style={{ color: '#38bdf8', fontWeight: '700' }}>{u.email}</span>
-                        <br /><span style={{ color: '#4ade80', fontWeight: '800' }}>{u.mobile}</span>
-                      </td>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '10px' }}>
+                      <button
+                        onClick={() => handleOpenSecurityAuditModal(u)}
+                        style={{ background: isLight ? '#ffffff' : '#1e293b', color: '#0284c7', border: '1px solid #0284c7', padding: '5px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.74rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Shield size={13} /> Security Audit
+                      </button>
 
-                      <td style={{ padding: '10px 14px', color: isLight ? '#334155' : '#cbd5e1', fontSize: '0.8rem', fontWeight: '700' }}>
-                        {u.manager_name || 'Avishek Das (Super Admin)'}
-                      </td>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => handleOpenEditUserModal(u)}
+                            style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Edit3 size={13} /> Edit
+                          </button>
+                        )}
+                        {canDelete && u.id !== 'USR-01' && (
+                          <button
+                            onClick={() => handleDeleteUser(u.id, u.full_name || u.username)}
+                            style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Trash2 size={13} /> Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                    <th style={{ padding: '10px 14px' }}>User ID & Staff Name</th>
+                    <th style={{ padding: '10px 14px' }}>Assigned Role & Level</th>
+                    <th style={{ padding: '10px 14px' }}>Branch & Department</th>
+                    <th style={{ padding: '10px 14px' }}>Contact Info</th>
+                    <th style={{ padding: '10px 14px' }}>Reporting Manager</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>Security & Audit</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {safeUsers
+                    .filter(u => isSuperAdmin || (u.role !== 'SUPER_ADMIN' && u.role !== 'OWNER' && u.id !== 'USR-01'))
+                    .filter(u => filterCategory === 'ALL' || u.role === filterCategory)
+                    .filter(u => !searchQuery || JSON.stringify(u).toLowerCase().includes(searchQuery.toLowerCase()))
+                    .map((u: any) => (
+                      <tr key={u.id} style={{ borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
+                        <td style={{ padding: '10px 14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '0.9rem' }}>
+                              {(u.full_name || u.username || 'U').substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.9rem' }}>{u.full_name || u.username}</strong>
+                              <br /><span style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'monospace' }}>{u.id} • @{u.username}</span>
+                            </div>
+                          </div>
+                        </td>
 
-                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                        <button
-                          onClick={() => handleOpenSecurityAuditModal(u)}
-                          style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: '#0284c7', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.74rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          <Shield size={13} /> Security Audit
-                        </button>
-                      </td>
+                        <td style={{ padding: '10px 14px' }}>
+                          <span style={{ background: u.role === 'SUPER_ADMIN' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(2, 132, 199, 0.15)', color: u.role === 'SUPER_ADMIN' ? '#f59e0b' : '#38bdf8', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '0.75rem' }}>
+                            👑 {u.role}
+                          </span>
+                        </td>
 
-                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                          {isSuperAdmin && (
-                            <button
-                              onClick={() => handleOpenEditUserModal(u)}
-                              style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem' }}
-                              title="Edit User Profile"
-                            >
-                              <Edit3 size={13} />
-                            </button>
-                          )}
-                          {canDelete && u.id !== 'USR-01' && (
-                            <button
-                              onClick={() => handleDeleteUser(u.id, u.full_name || u.username)}
-                              style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem' }}
-                              title="Delete User"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
+                        <td style={{ padding: '10px 14px' }}>
+                          <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{u.branch_name || 'Head Office'}</strong>
+                          <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>{u.department || 'Sales Operations'}</span>
+                        </td>
+
+                        <td style={{ padding: '10px 14px', fontSize: '0.78rem' }}>
+                          <span style={{ color: '#38bdf8', fontWeight: '700' }}>{u.email}</span>
+                          <br /><span style={{ color: '#4ade80', fontWeight: '800' }}>{u.mobile}</span>
+                        </td>
+
+                        <td style={{ padding: '10px 14px', color: isLight ? '#334155' : '#cbd5e1', fontSize: '0.8rem', fontWeight: '700' }}>
+                          {u.manager_name || 'Avishek Das (Super Admin)'}
+                        </td>
+
+                        <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                          <button
+                            onClick={() => handleOpenSecurityAuditModal(u)}
+                            style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: '#0284c7', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.74rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Shield size={13} /> Security Audit
+                          </button>
+                        </td>
+
+                        <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                            {isSuperAdmin && (
+                              <button
+                                onClick={() => handleOpenEditUserModal(u)}
+                                style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem' }}
+                                title="Edit User Profile"
+                              >
+                                <Edit3 size={13} />
+                              </button>
+                            )}
+                            {canDelete && u.id !== 'USR-01' && (
+                              <button
+                                onClick={() => handleDeleteUser(u.id, u.full_name || u.username)}
+                                style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem' }}
+                                title="Delete User"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -1384,45 +1482,103 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
               </span>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                    <th style={{ padding: '10px' }}>Session ID</th>
-                    <th style={{ padding: '10px' }}>Authenticated User</th>
-                    <th style={{ padding: '10px' }}>IP Address</th>
-                    <th style={{ padding: '10px' }}>Device Info</th>
-                    <th style={{ padding: '10px' }}>Login Time</th>
-                    <th style={{ padding: '10px', textAlign: 'center' }}>Status</th>
-                    <th style={{ padding: '10px', textAlign: 'center' }}>Security Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {safeSessions.map((s: any) => (
-                    <tr key={s.id} style={{ borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
-                      <td style={{ padding: '10px', fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800' }}>{s.id}</td>
-                      <td style={{ padding: '10px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{s.user || s.username} ({s.role})</td>
-                      <td style={{ padding: '10px', fontFamily: 'monospace', color: isLight ? '#64748b' : '#94a3b8' }}>{s.ip || s.ip_address}</td>
-                      <td style={{ padding: '10px', color: isLight ? '#64748b' : '#94a3b8' }}>{s.device || s.device_info}</td>
-                      <td style={{ padding: '10px', color: '#fbbf24', fontWeight: '700' }}>{s.login_time}</td>
-                      <td style={{ padding: '10px', textAlign: 'center' }}>
-                        <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '0.74rem' }}>
-                          ● {s.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px', textAlign: 'center' }}>
-                        <button
-                          onClick={() => handleRevokeSession(s.id, s.user || s.username)}
-                          style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.74rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          <Lock size={12} /> Force Disconnect
-                        </button>
-                      </td>
+            {windowWidth <= 768 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {safeSessions.map((s: any) => (
+                  <div
+                    key={s.id}
+                    style={{
+                      background: isLight ? '#f8fafc' : '#0f172a',
+                      border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+                      borderRadius: '12px',
+                      padding: '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800', fontSize: '0.85rem' }}>
+                        {s.id}
+                      </span>
+                      <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '0.74rem' }}>
+                        ● {s.status}
+                      </span>
+                    </div>
+
+                    <div>
+                      <strong style={{ fontSize: '0.9rem', color: isLight ? '#0f172a' : '#ffffff', display: 'block' }}>
+                        {s.user || s.username} <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontWeight: 'normal', fontSize: '0.8rem' }}>({s.role})</span>
+                      </strong>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                      <div>
+                        <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: '700' }}>IP ADDRESS</span>
+                        <span style={{ fontFamily: 'monospace' }}>{s.ip || s.ip_address}</span>
+                      </div>
+                      <div>
+                        <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: '700' }}>LOGIN TIME</span>
+                        <span style={{ color: '#fbbf24', fontWeight: '700' }}>{s.login_time}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                      <span style={{ fontWeight: '700' }}>DEVICE: </span>{s.device || s.device_info}
+                    </div>
+
+                    <div style={{ borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => handleRevokeSession(s.id, s.user || s.username)}
+                        style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', width: '100%', justifyContent: 'center' }}
+                      >
+                        <Lock size={12} /> Force Disconnect
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                      <th style={{ padding: '10px' }}>Session ID</th>
+                      <th style={{ padding: '10px' }}>Authenticated User</th>
+                      <th style={{ padding: '10px' }}>IP Address</th>
+                      <th style={{ padding: '10px' }}>Device Info</th>
+                      <th style={{ padding: '10px' }}>Login Time</th>
+                      <th style={{ padding: '10px', textAlign: 'center' }}>Status</th>
+                      <th style={{ padding: '10px', textAlign: 'center' }}>Security Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {safeSessions.map((s: any) => (
+                      <tr key={s.id} style={{ borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
+                        <td style={{ padding: '10px', fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800' }}>{s.id}</td>
+                        <td style={{ padding: '10px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{s.user || s.username} ({s.role})</td>
+                        <td style={{ padding: '10px', fontFamily: 'monospace', color: isLight ? '#64748b' : '#94a3b8' }}>{s.ip || s.ip_address}</td>
+                        <td style={{ padding: '10px', color: isLight ? '#64748b' : '#94a3b8' }}>{s.device || s.device_info}</td>
+                        <td style={{ padding: '10px', color: '#fbbf24', fontWeight: '700' }}>{s.login_time}</td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>
+                          <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '0.74rem' }}>
+                            ● {s.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>
+                          <button
+                            onClick={() => handleRevokeSession(s.id, s.user || s.username)}
+                            style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.74rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Lock size={12} /> Force Disconnect
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* AI SECURITY RISK ALERT & ANOMALY DETECTION ENGINE FEED */}
@@ -1586,102 +1742,196 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
             </span>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                  <th style={{ padding: '12px' }}>Request Code & Date</th>
-                  <th style={{ padding: '12px' }}>Type</th>
-                  <th style={{ padding: '12px' }}>Targeted Record / Entity</th>
-                  <th style={{ padding: '12px' }}>Requested By</th>
-                  <th style={{ padding: '12px' }}>Old Value ➔ New Value Diff</th>
-                  <th style={{ padding: '12px' }}>Reason & Justification</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Status</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Governance Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {safeApprovals.map((req: any) => (
-                  <tr key={req.id} style={{ borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
-                    <td style={{ padding: '12px' }}>
-                      <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800', display: 'block' }}>{req.request_code || req.id}</span>
+          {windowWidth <= 768 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {safeApprovals.map((req: any) => (
+                <div
+                  key={req.id}
+                  style={{
+                    background: isLight ? '#f8fafc' : '#0f172a',
+                    border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+                    borderRadius: '12px',
+                    padding: '14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800', display: 'block', fontSize: '0.85rem' }}>{req.request_code || req.id}</span>
                       <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>{req.requested_at || 'Today, 12:00 PM'}</span>
-                    </td>
+                    </div>
+                    <span style={{
+                      background: req.status === 'APPROVED' ? 'rgba(34, 197, 94, 0.15)' : req.status === 'REJECTED' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                      color: req.status === 'APPROVED' ? '#4ade80' : req.status === 'REJECTED' ? '#ef4444' : '#fbbf24',
+                      border: `1px solid ${req.status === 'APPROVED' ? 'rgba(34, 197, 94, 0.3)' : req.status === 'REJECTED' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                      padding: '3px 9px',
+                      borderRadius: '6px',
+                      fontWeight: '900',
+                      fontSize: '0.74rem'
+                    }}>
+                      {req.status === 'APPROVED' ? '✓ APPROVED' : req.status === 'REJECTED' ? '✕ REJECTED' : '⏳ PENDING'}
+                    </span>
+                  </div>
 
-                    <td style={{ padding: '12px' }}>
-                      <span style={{ background: req.request_type === 'DELETION_APPROVAL' ? 'rgba(239, 68, 68, 0.15)' : req.request_type === 'PRICE_OVERRIDE' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(2, 132, 199, 0.15)', color: req.request_type === 'DELETION_APPROVAL' ? '#ef4444' : req.request_type === 'PRICE_OVERRIDE' ? '#f59e0b' : '#38bdf8', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '3px 8px', borderRadius: '6px', fontWeight: '900', fontSize: '0.74rem' }}>
-                        {req.request_type}
-                      </span>
-                    </td>
-
-                    <td style={{ padding: '12px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ background: req.request_type === 'DELETION_APPROVAL' ? 'rgba(239, 68, 68, 0.15)' : req.request_type === 'PRICE_OVERRIDE' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(2, 132, 199, 0.15)', color: req.request_type === 'DELETION_APPROVAL' ? '#ef4444' : req.request_type === 'PRICE_OVERRIDE' ? '#f59e0b' : '#38bdf8', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '3px 8px', borderRadius: '6px', fontWeight: '900', fontSize: '0.74rem' }}>
+                      {req.request_type}
+                    </span>
+                    <span style={{ fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem' }}>
                       {req.record_id || 'SRM-CUS-2026-000184'}
-                    </td>
+                    </span>
+                  </div>
 
-                    <td style={{ padding: '12px', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}>
-                      {req.requested_by_name || req.requested_by}
-                    </td>
+                  <div style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                    <strong>Requested By:</strong> <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}>{req.requested_by_name || req.requested_by}</span>
+                  </div>
 
-                    <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', flexWrap: 'wrap' }}>
-                        <span style={{ background: isLight ? '#f1f5f9' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#64748b' : '#94a3b8', padding: '2px 6px', borderRadius: '4px', textDecoration: 'line-through' }}>
-                          {req.old_val || 'Previous Value'}
-                        </span>
-                        <ArrowRight size={14} color="#38bdf8" />
-                        <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
-                          {req.new_val || 'Updated Value'}
-                        </span>
-                      </div>
-                    </td>
-
-                    <td style={{ padding: '12px', color: isLight ? '#475569' : '#cbd5e1', fontSize: '0.8rem', maxWidth: '200px' }}>
-                      {req.reason}
-                    </td>
-
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <span style={{
-                        background: req.status === 'APPROVED' ? 'rgba(34, 197, 94, 0.15)' : req.status === 'REJECTED' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                        color: req.status === 'APPROVED' ? '#4ade80' : req.status === 'REJECTED' ? '#ef4444' : '#fbbf24',
-                        border: `1px solid ${req.status === 'APPROVED' ? 'rgba(34, 197, 94, 0.3)' : req.status === 'REJECTED' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
-                        padding: '3px 9px',
-                        borderRadius: '6px',
-                        fontWeight: '900',
-                        fontSize: '0.74rem'
-                      }}>
-                        {req.status === 'APPROVED' ? '✓ APPROVED' : req.status === 'REJECTED' ? '✕ REJECTED' : '⏳ PENDING'}
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>VALUE DIFF</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', flexWrap: 'wrap' }}>
+                      <span style={{ background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#64748b' : '#94a3b8', padding: '2px 6px', borderRadius: '4px', textDecoration: 'line-through' }}>
+                        {req.old_val || 'Previous Value'}
                       </span>
-                      {req.approved_by && (
-                        <span style={{ display: 'block', fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>By: {req.approved_by}</span>
-                      )}
-                    </td>
+                      <ArrowRight size={14} color="#38bdf8" />
+                      <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
+                        {req.new_val || 'Updated Value'}
+                      </span>
+                    </div>
+                  </div>
 
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      {req.status === 'PENDING' ? (
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                          <button
-                            onClick={() => handleApproveRequest(req.id, req.request_code || req.id)}
-                            style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          >
-                            <Check size={13} /> Approve
-                          </button>
-                          <button
-                            onClick={() => handleRejectRequest(req.id, req.request_code || req.id)}
-                            style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          >
-                            <XCircle size={13} /> Reject
-                          </button>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>
-                          Action Finalized
-                        </span>
-                      )}
-                    </td>
+                  <div style={{ fontSize: '0.78rem', color: isLight ? '#475569' : '#cbd5e1', background: isLight ? '#ffffff' : '#0f172a', padding: '8px', borderRadius: '6px', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
+                    <strong>Reason:</strong> {req.reason}
+                  </div>
+
+                  {req.approved_by && (
+                    <span style={{ display: 'block', fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>Approved By: {req.approved_by}</span>
+                  )}
+
+                  <div style={{ borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '10px' }}>
+                    {req.status === 'PENDING' ? (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => handleApproveRequest(req.id, req.request_code || req.id)}
+                          style={{ flex: 1, background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                        >
+                          <Check size={14} /> Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectRequest(req.id, req.request_code || req.id)}
+                          style={{ flex: 1, background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                        >
+                          <XCircle size={14} /> Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', textAlign: 'center' }}>
+                        Action Finalized
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                    <th style={{ padding: '12px' }}>Request Code & Date</th>
+                    <th style={{ padding: '12px' }}>Type</th>
+                    <th style={{ padding: '12px' }}>Targeted Record / Entity</th>
+                    <th style={{ padding: '12px' }}>Requested By</th>
+                    <th style={{ padding: '12px' }}>Old Value ➔ New Value Diff</th>
+                    <th style={{ padding: '12px' }}>Reason & Justification</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Status</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Governance Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {safeApprovals.map((req: any) => (
+                    <tr key={req.id} style={{ borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
+                      <td style={{ padding: '12px' }}>
+                        <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800', display: 'block' }}>{req.request_code || req.id}</span>
+                        <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>{req.requested_at || 'Today, 12:00 PM'}</span>
+                      </td>
+
+                      <td style={{ padding: '12px' }}>
+                        <span style={{ background: req.request_type === 'DELETION_APPROVAL' ? 'rgba(239, 68, 68, 0.15)' : req.request_type === 'PRICE_OVERRIDE' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(2, 132, 199, 0.15)', color: req.request_type === 'DELETION_APPROVAL' ? '#ef4444' : req.request_type === 'PRICE_OVERRIDE' ? '#f59e0b' : '#38bdf8', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '3px 8px', borderRadius: '6px', fontWeight: '900', fontSize: '0.74rem' }}>
+                          {req.request_type}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '12px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
+                        {req.record_id || 'SRM-CUS-2026-000184'}
+                      </td>
+
+                      <td style={{ padding: '12px', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}>
+                        {req.requested_by_name || req.requested_by}
+                      </td>
+
+                      <td style={{ padding: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', flexWrap: 'wrap' }}>
+                          <span style={{ background: isLight ? '#f1f5f9' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#64748b' : '#94a3b8', padding: '2px 6px', borderRadius: '4px', textDecoration: 'line-through' }}>
+                            {req.old_val || 'Previous Value'}
+                          </span>
+                          <ArrowRight size={14} color="#38bdf8" />
+                          <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
+                            {req.new_val || 'Updated Value'}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '12px', color: isLight ? '#475569' : '#cbd5e1', fontSize: '0.8rem', maxWidth: '200px' }}>
+                        {req.reason}
+                      </td>
+
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        <span style={{
+                          background: req.status === 'APPROVED' ? 'rgba(34, 197, 94, 0.15)' : req.status === 'REJECTED' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                          color: req.status === 'APPROVED' ? '#4ade80' : req.status === 'REJECTED' ? '#ef4444' : '#fbbf24',
+                          border: `1px solid ${req.status === 'APPROVED' ? 'rgba(34, 197, 94, 0.3)' : req.status === 'REJECTED' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                          padding: '3px 9px',
+                          borderRadius: '6px',
+                          fontWeight: '900',
+                          fontSize: '0.74rem'
+                        }}>
+                          {req.status === 'APPROVED' ? '✓ APPROVED' : req.status === 'REJECTED' ? '✕ REJECTED' : '⏳ PENDING'}
+                        </span>
+                        {req.approved_by && (
+                          <span style={{ display: 'block', fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>By: {req.approved_by}</span>
+                        )}
+                      </td>
+
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        {req.status === 'PENDING' ? (
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                            <button
+                              onClick={() => handleApproveRequest(req.id, req.request_code || req.id)}
+                              style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <Check size={13} /> Approve
+                            </button>
+                            <button
+                              onClick={() => handleRejectRequest(req.id, req.request_code || req.id)}
+                              style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <XCircle size={13} /> Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>
+                            Action Finalized
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -1954,7 +2204,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       {/* ASSIGN PROPERTY TO ADVISOR MODAL */}
       {showAssignPropertyModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '20px', width: '100%', maxWidth: '520px', padding: '24px', boxShadow: '0 25px 60px rgba(0,0,0,0.45)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '20px', width: '100%', maxWidth: '520px', maxHeight: '92vh', overflowY: 'auto', padding: windowWidth <= 640 ? '16px' : '24px', boxShadow: '0 25px 60px rgba(0,0,0,0.45)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
               <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 👨‍💼 Assign Property to Advisor

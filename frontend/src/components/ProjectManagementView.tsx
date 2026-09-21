@@ -32,6 +32,7 @@ interface ProjectManagementViewProps {
   generateNextPropertyCode: () => string;
   handleOpenAddPropertyModal: () => void;
   setShowBulkImportPropertyModal: (val: boolean) => void;
+  setShowBulkImportProjectDeveloperModal?: (val: boolean) => void;
   setShowDeveloperIntroductionReportModal: (val: boolean) => void;
   setShowPvaDocumentModal: (val: any) => void;
   handleStartEditProperty: (prop: any) => void;
@@ -1139,56 +1140,56 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
       
       {/* SYSTEM HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '20px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>PROJECT & PROPERTY INVENTORY MANAGEMENT SYSTEM</h2>
-            <span style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800' }}>STOCK INVENTORY ACTIVE</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h2 style={{ fontSize: windowWidth <= 640 ? '1.15rem' : '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>PROJECT & PROPERTY INVENTORY MANAGEMENT SYSTEM</h2>
+            <span style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: '800' }}>STOCK INVENTORY ACTIVE</span>
           </div>
           <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
             Master Stock Inventory
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto' }}>
           <button 
             onClick={handleOpenNewPropertyForm} 
-            style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}
           >
             🏠 + Add Property
           </button>
           <button 
             onClick={handleOpenNewProjectDeveloperForm} 
-            style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}
           >
             🏢 + Add Project & Developer
           </button>
           <button 
             onClick={() => setShowBulkImportProjectDeveloperModal && setShowBulkImportProjectDeveloperModal(true)} 
-            style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto' }}
+            style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}
           >
             <Upload size={15} /> 🏢 📥 Import Bulk Projects & Developers
           </button>
           <button 
             onClick={() => setShowBulkImportPropertyModal(true)} 
-            style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto' }}
+            style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}
           >
             <Upload size={15} /> 🏠 📥 Import Bulk Property Stock
           </button>
-          <button onClick={() => alert('📄 Generating Property Stock Inventory CSV Report...')} style={{ background: isLight ? '#ffffff' : '#1e293b', color: '#cbd5e1', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button onClick={() => alert('📄 Generating Property Stock Inventory CSV Report...')} style={{ background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#cbd5e1', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}>
             <Share2 size={15} /> Export Inventory
           </button>
         </div>
       </div>
       {/* SUB-TABS NAVIGATION BAR FOR PROJECT MANAGEMENT */}
-      <div style={{ display: 'flex', gap: '10px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', flexWrap: 'wrap' }}>
-        <button onClick={() => setActiveProjectSubTab('property_master')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeProjectSubTab === 'property_master' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeProjectSubTab === 'property_master' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+      <div className="horizontal-scroll-touch" style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', width: '100%' }}>
+        <button onClick={() => setActiveProjectSubTab('property_master')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeProjectSubTab === 'property_master' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeProjectSubTab === 'property_master' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}>
           🏠 Property Master Stock ({properties.length})
         </button>
-        <button onClick={() => setActiveProjectSubTab('introduction_register' as any)} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeProjectSubTab === ('introduction_register' as any) ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeProjectSubTab === ('introduction_register' as any) ? '#ffffff' : '#a855f7', border: activeProjectSubTab === ('introduction_register' as any) ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155') }}>
+        <button onClick={() => setActiveProjectSubTab('introduction_register' as any)} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeProjectSubTab === ('introduction_register' as any) ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeProjectSubTab === ('introduction_register' as any) ? '#ffffff' : '#a855f7', border: activeProjectSubTab === ('introduction_register' as any) ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), whiteSpace: 'nowrap', flexShrink: 0 }}>
           🛡️ Customer Introduction Register ({projectVisitAgreements.length})
         </button>
-        <button onClick={() => setShowDevVaultModal(true)} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: isLight ? '#ffffff' : '#1e293b', color: '#fbbf24', border: '1px solid #fbbf24', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+        <button onClick={() => setShowDevVaultModal(true)} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: isLight ? '#ffffff' : '#1e293b', color: '#fbbf24', border: '1px solid #fbbf24', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
           🏢 Developer Master Vault ({developerMasterList.length} Developer IDs)
         </button>
       </div>
@@ -1198,71 +1199,130 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
             <div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>🛡️ PROJECT-WISE CUSTOMER INTRODUCTION REGISTER</h3>
+              <h3 style={{ fontSize: windowWidth <= 640 ? '1rem' : '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>🛡️ PROJECT-WISE CUSTOMER INTRODUCTION REGISTER</h3>
               <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
                 Time-stamped, project-specific proof of introduced buyers backed by Project Visit Agreements (PVA)
               </p>
             </div>
             <button 
               onClick={() => setShowDeveloperIntroductionReportModal(true)}
-              style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto' }}
             >
               🏢 VIEW DEVELOPER INTRODUCTION SUMMARY REPORT
             </button>
           </div>
 
-          <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-              <thead>
-                <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                  <th style={{ padding: '10px' }}>PVA ID & Date</th>
-                  <th style={{ padding: '10px' }}>Customer & Mobile</th>
-                  <th style={{ padding: '10px' }}>Project & Developer</th>
-                  <th style={{ padding: '10px' }}>Assigned Sales Exec</th>
-                  <th style={{ padding: '10px' }}>Protection Expiry Date</th>
-                  <th style={{ padding: '10px' }}>Verification Status</th>
-                  <th style={{ padding: '10px', textAlign: 'center' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projectVisitAgreements.map((pva: any, idx: number) => (
-                  <tr key={idx} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-                    <td style={{ padding: '10px' }}>
-                      <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900' }}>{pva.projectVisitAgreementId}</span>
-                      <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>📅 {pva.visitDate}</span>
-                    </td>
-                    <td style={{ padding: '10px' }}>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.88rem' }}>{pva.customerName}</strong>
-                      <br /><span style={{ fontSize: '0.75rem', color: '#4ade80', fontFamily: 'monospace' }}>{pva.customerMobile}</span>
-                    </td>
-                    <td style={{ padding: '10px' }}>
-                      <strong style={{ color: '#fbbf24', fontSize: '0.85rem' }}>{pva.projectTitle}</strong>
-                      <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>Dev: {pva.developerName}</span>
-                    </td>
-                    <td style={{ padding: '10px', color: '#38bdf8', fontWeight: '800' }}>
-                      {pva.salesPersonName}
-                    </td>
-                    <td style={{ padding: '10px', color: '#4ade80', fontWeight: '800' }}>
-                      🗓️ {pva.protectionEndDate} ({pva.protectionPeriodMonths}M Protection)
-                    </td>
-                    <td style={{ padding: '10px' }}>
-                      <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: '900' }}>
+          {windowWidth <= 768 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {projectVisitAgreements.length === 0 ? (
+                <div style={{ padding: '24px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px' }}>
+                  No customer introduction records found.
+                </div>
+              ) : (
+                projectVisitAgreements.map((pva: any, idx: number) => (
+                  <div key={idx} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px' }}>
+                      <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.82rem' }}>
+                        {pva.projectVisitAgreementId}
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                        📅 {pva.visitDate}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '0.8rem' }}>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Customer</span>
+                        <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{pva.customerName}</strong>
+                        <div style={{ fontSize: '0.72rem', color: '#4ade80', fontFamily: 'monospace' }}>{pva.customerMobile}</div>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Project & Dev</span>
+                        <strong style={{ color: '#fbbf24' }}>{pva.projectTitle}</strong>
+                        <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>{pva.developerName}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '0.78rem', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '8px' }}>
+                      <div>
+                        <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Sales Exec</span>
+                        <strong style={{ color: '#38bdf8' }}>{pva.salesPersonName}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Protection Expiry</span>
+                        <strong style={{ color: '#4ade80' }}>🗓️ {pva.protectionEndDate}</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '8px' }}>
+                      <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '3px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '900' }}>
                         ✓ VISIT VERIFIED (GPS+OTP)
                       </span>
-                    </td>
-                    <td style={{ padding: '10px', textAlign: 'center' }}>
                       <button 
                         onClick={() => setShowPvaDocumentModal({ open: true, pva })}
-                        style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem' }}
+                        style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem', width: windowWidth <= 640 ? '100%' : 'auto', textAlign: 'center' }}
                       >
                         📄 View PVA Document
                       </button>
-                    </td>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                    <th style={{ padding: '10px' }}>PVA ID & Date</th>
+                    <th style={{ padding: '10px' }}>Customer & Mobile</th>
+                    <th style={{ padding: '10px' }}>Project & Developer</th>
+                    <th style={{ padding: '10px' }}>Assigned Sales Exec</th>
+                    <th style={{ padding: '10px' }}>Protection Expiry Date</th>
+                    <th style={{ padding: '10px' }}>Verification Status</th>
+                    <th style={{ padding: '10px', textAlign: 'center' }}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {projectVisitAgreements.map((pva: any, idx: number) => (
+                    <tr key={idx} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+                      <td style={{ padding: '10px' }}>
+                        <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900' }}>{pva.projectVisitAgreementId}</span>
+                        <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>📅 {pva.visitDate}</span>
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.88rem' }}>{pva.customerName}</strong>
+                        <br /><span style={{ fontSize: '0.75rem', color: '#4ade80', fontFamily: 'monospace' }}>{pva.customerMobile}</span>
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        <strong style={{ color: '#fbbf24', fontSize: '0.85rem' }}>{pva.projectTitle}</strong>
+                        <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>Dev: {pva.developerName}</span>
+                      </td>
+                      <td style={{ padding: '10px', color: '#38bdf8', fontWeight: '800' }}>
+                        {pva.salesPersonName}
+                      </td>
+                      <td style={{ padding: '10px', color: '#4ade80', fontWeight: '800' }}>
+                        🗓️ {pva.protectionEndDate} ({pva.protectionPeriodMonths}M Protection)
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: '900' }}>
+                          ✓ VISIT VERIFIED (GPS+OTP)
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px', textAlign: 'center' }}>
+                        <button 
+                          onClick={() => setShowPvaDocumentModal({ open: true, pva })}
+                          style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem' }}
+                        >
+                          📄 View PVA Document
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -3149,7 +3209,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   style={{ background: 'transparent', border: 'none', color: isLight ? '#0f172a' : '#ffffff', outline: 'none', fontSize: '0.82rem', width: '100%', fontWeight: '700' }} 
                 />
                 {searchQuery && (
-                  <X size={14} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setSearchQuery('')} title="Clear Search" />
+                  <span title="Clear Search" style={{ display: 'inline-flex', cursor: 'pointer' }} onClick={() => setSearchQuery('')}>
+                    <X size={14} color="#94a3b8" />
+                  </span>
                 )}
               </div>
               <button onClick={() => setShowBulkImportPropertyModal(true)} style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none', whiteSpace: 'nowrap' }}>
@@ -3158,24 +3220,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             </div>
           </div>
 
-          <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                  <th style={{ padding: '12px' }}>Code</th>
-                  <th style={{ padding: '12px' }}>Title & Project</th>
-                  <th style={{ padding: '12px' }}>Developer Name & Project Code</th>
-                  <th style={{ padding: '12px' }}>Config</th>
-                  <th style={{ padding: '12px' }}>Super Built-up</th>
-                  <th style={{ padding: '12px' }}>Carpet Area</th>
-                  <th style={{ padding: '12px' }}>Price</th>
-                  <th style={{ padding: '12px' }}>Parking Stock & Slot</th>
-                  <th style={{ padding: '12px' }}>Status</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {properties
+          {windowWidth <= 768 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {properties
+                .filter(p => matchesSearchQuery(p, searchQuery))
+                .length === 0 ? (
+                <div style={{ padding: '24px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px' }}>
+                  No matching property stock items found.
+                </div>
+              ) : (
+                properties
                   .filter(p => matchesSearchQuery(p, searchQuery))
                   .map(p => {
                     const carpetNum = parseFloat((p.carpet_area || '').replace(/[^0-9.]/g, ''));
@@ -3205,7 +3259,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       'SRM-PROJ-2026-000088'
                     );
 
-                    // PARKING COMPUTATION FOR THIS ROW
                     const projProps = properties.filter(item => {
                       const itemTitle = item.title || item.property_title || item.project_name || '';
                       return (item.project_id && item.project_id === projCode) ||
@@ -3238,170 +3291,414 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     const availCountForType = isEv ? availEv : isOpen ? availOpen : availCovered;
                     const totalCapForType = isEv ? totalEvCap : isOpen ? totalOpenCap : totalCoveredCap;
 
+                    const isSoldOutByBilling = (invoices || []).some((inv: any) => {
+                      if (!inv || inv.status === 'CANCELLED' || inv.payment_status === 'CANCELLED') return false;
+                      const isCustInvoice = inv.invoice_category === 'CUSTOMER' || (inv.customer_name && (inv.total_invoice_amount > 0 || inv.taxable_value > 0));
+                      if (!isCustInvoice) return false;
 
+                      const pCode = (p.property_code || p.id || '').toString().toLowerCase().trim();
+                      const invCode = (inv.property_code || inv.property_id || '').toString().toLowerCase().trim();
+                      return pCode && invCode && pCode === invCode;
+                    }) || (agreements || []).some((agr: any) => {
+                      if (!agr || agr.status === 'CANCELLED' || agr.agreement_status === 'CANCELLED') return false;
+                      const isCustAgr = agr.agreement_category === 'CUSTOMER' || (agr.customer_name && agr.agreement_type !== 'DEVELOPER');
+                      if (!isCustAgr) return false;
+
+                      const pCode = (p.property_code || p.id || '').toString().toLowerCase().trim();
+                      const agrCode = (agr.property_code || agr.property_id || '').toString().toLowerCase().trim();
+                      return pCode && agrCode && pCode === agrCode;
+                    });
+
+                    const isBookedByWorkflow = (bookings || []).some((b: any) => {
+                      if (!b || b.status === 'CANCELLED' || b.approval_status === 'REJECTED') return false;
+                      const pCode = (p.property_code || p.id || '').toString().toLowerCase().trim();
+                      const pTitle = (p.title || '').toString().toLowerCase().trim();
+                      const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().trim();
+                      const bTitle = (b.project_name || b.property_title || b.propertyTitle || '').toString().toLowerCase().trim();
+                      return (pCode && bCode && pCode === bCode) || (pTitle && bTitle && (pTitle === bTitle || pTitle.includes(bTitle) || bTitle.includes(pTitle)));
+                    });
+
+                    const isUnderConstructionByPossession = (p.possession_status || p.possession || '').toLowerCase().includes('construction');
+
+                    let effectiveStatus = p.status || (isUnderConstructionByPossession ? 'UNDER_CONSTRUCTION' : 'LIVE');
+                    if (p.status && p.status !== 'AUTO') {
+                       effectiveStatus = p.status;
+                     } else if (isSoldOutByBilling) {
+                       effectiveStatus = 'SOLD_OUT';
+                     } else if (isBookedByWorkflow) {
+                       effectiveStatus = 'BOOKED';
+                     } else if (isUnderConstructionByPossession) {
+                       effectiveStatus = 'UNDER_CONSTRUCTION';
+                     }
+
+                    const rawStatus = (effectiveStatus || 'LIVE').toUpperCase().replace(/\s+/g, '_');
+                    const normalizedStatus = rawStatus === 'AVAILABLE' ? 'LIVE' : rawStatus;
+                    
+                    const getStatusBadgeStyle = (statusVal: string) => {
+                      if (statusVal.includes('SOLD')) {
+                        return { border: '1.5px solid #ef4444', bg: 'rgba(239, 68, 68, 0.18)', color: '#f87171' };
+                      } else if (statusVal.includes('BOOKED')) {
+                        return { border: '1.5px solid #fbbf24', bg: 'rgba(234, 179, 8, 0.18)', color: '#fbbf24' };
+                      } else if (statusVal.includes('HOLD') || statusVal.includes('RESERVED')) {
+                        return { border: '1.5px solid #f59e0b', bg: 'rgba(245, 158, 11, 0.18)', color: '#fbbf24' };
+                      } else if (statusVal.includes('UNDER_CONSTRUCTION') || statusVal.includes('CONSTRUCTION')) {
+                        return { border: '1.5px solid #a855f7', bg: 'rgba(168, 85, 247, 0.18)', color: '#c084fc' };
+                      } else if (statusVal.includes('READY')) {
+                        return { border: '1.5px solid #0284c7', bg: 'rgba(2, 132, 199, 0.18)', color: '#38bdf8' };
+                      }
+                      return { border: '1.5px solid #22c55e', bg: 'rgba(34, 197, 94, 0.18)', color: '#4ade80' };
+                    };
+
+                    const badgeStyle = getStatusBadgeStyle(normalizedStatus);
 
                     return (
-                      <tr key={p.id} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-                        <td style={{ padding: '12px', fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800' }}>{p.property_code}</td>
-                        <td style={{ padding: '12px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
-                          <div>{displayTitle}</div>
-                          <span style={{ fontSize: '0.7rem', color: '#a855f7', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid #a855f7', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', marginTop: '3px', display: 'inline-block' }}>
-                            🏢 {p.property_type || p.type || 'Flat / Apartment'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          <div style={{ fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{displayDeveloper}</div>
-                          <span style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', border: '1px solid #a855f7', padding: '2px 6px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '900', fontFamily: 'monospace', marginTop: '4px', display: 'inline-block' }} title="Master Project Code">
-                            🔑 {projCode}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px', color: '#38bdf8', fontWeight: '800' }}>{p.configuration}</td>
-                        <td style={{ padding: '12px', fontWeight: '900', color: '#fbbf24' }}>{superDisp}</td>
-                        <td style={{ padding: '12px', fontWeight: '700' }}>{p.carpet_area}</td>
-                        <td style={{ padding: '12px', color: '#4ade80', fontWeight: '800' }}>{p.final_price}</td>
-                        <td style={{ padding: '12px' }}>
-                          <div style={{ fontWeight: '800', color: isEv ? '#eab308' : isOpen ? '#22c55e' : '#0284c7', fontSize: '0.78rem' }}>
-                            {isEv ? '⚡ EV Fast Charger' : isOpen ? '🅿️ Open Surface' : '🚘 Covered Basement'}
+                      <div key={p.id} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.85rem' }}>{p.property_code}</span>
+                            <span style={{ fontSize: '0.7rem', color: '#a855f7', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid #a855f7', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
+                              🏢 {p.property_type || p.type || 'Flat'}
+                            </span>
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', marginTop: '2px' }}>
-                            Avail: <strong style={{ color: availCountForType > 0 ? '#22c55e' : '#ef4444' }}>{availCountForType}/{totalCapForType} Slots</strong>
-                          </div>
-                          <span style={{ fontSize: '0.66rem', color: '#eab308', fontWeight: '800' }}>
-                            Rate: ₹{parseInt(parkingRateStr, 10).toLocaleString('en-IN')}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          {(() => {
-                            const isSoldOutByBilling = (invoices || []).some((inv: any) => {
-                              if (!inv || inv.status === 'CANCELLED' || inv.payment_status === 'CANCELLED') return false;
-                              const isCustInvoice = inv.invoice_category === 'CUSTOMER' || (inv.customer_name && (inv.total_invoice_amount > 0 || inv.taxable_value > 0));
-                              if (!isCustInvoice) return false;
-
-                              const pCode = (p.property_code || p.id || '').toString().toLowerCase().trim();
-                              const invCode = (inv.property_code || inv.property_id || '').toString().toLowerCase().trim();
-                              return pCode && invCode && pCode === invCode;
-                            }) || (agreements || []).some((agr: any) => {
-                              if (!agr || agr.status === 'CANCELLED' || agr.agreement_status === 'CANCELLED') return false;
-                              const isCustAgr = agr.agreement_category === 'CUSTOMER' || (agr.customer_name && agr.agreement_type !== 'DEVELOPER');
-                              if (!isCustAgr) return false;
-
-                              const pCode = (p.property_code || p.id || '').toString().toLowerCase().trim();
-                              const agrCode = (agr.property_code || agr.property_id || '').toString().toLowerCase().trim();
-                              return pCode && agrCode && pCode === agrCode;
-                            });
-
-                            const isBookedByWorkflow = (bookings || []).some((b: any) => {
-                              if (!b || b.status === 'CANCELLED' || b.approval_status === 'REJECTED') return false;
-                              const pCode = (p.property_code || p.id || '').toString().toLowerCase().trim();
-                              const pTitle = (p.title || '').toString().toLowerCase().trim();
-const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().trim();
-                              const bTitle = (b.project_name || b.property_title || b.propertyTitle || '').toString().toLowerCase().trim();
-                              return (pCode && bCode && pCode === bCode) || (pTitle && bTitle && (pTitle === bTitle || pTitle.includes(bTitle) || bTitle.includes(pTitle)));
-                            });
-
-                            const isUnderConstructionByPossession = (p.possession_status || p.possession || '').toLowerCase().includes('construction');
-
-                            let effectiveStatus = p.status || (isUnderConstructionByPossession ? 'UNDER_CONSTRUCTION' : 'LIVE');
-                            if (p.status && p.status !== 'AUTO') {
-                               effectiveStatus = p.status;
-                             } else if (isSoldOutByBilling) {
-                               effectiveStatus = 'SOLD_OUT';
-                             } else if (isBookedByWorkflow) {
-                               effectiveStatus = 'BOOKED';
-                             } else if (isUnderConstructionByPossession) {
-                               effectiveStatus = 'UNDER_CONSTRUCTION';
-                             }
-
-                            const rawStatus = (effectiveStatus || 'LIVE').toUpperCase().replace(/\s+/g, '_');
-                            const normalizedStatus = rawStatus === 'AVAILABLE' ? 'LIVE' : rawStatus;
-                            
-                            const getStatusBadgeStyle = (statusVal: string) => {
-                              if (statusVal.includes('SOLD')) {
-                                return { border: '1.5px solid #ef4444', bg: 'rgba(239, 68, 68, 0.18)', color: '#f87171' };
-                              } else if (statusVal.includes('BOOKED')) {
-                                return { border: '1.5px solid #fbbf24', bg: 'rgba(234, 179, 8, 0.18)', color: '#fbbf24' };
-                              } else if (statusVal.includes('HOLD') || statusVal.includes('RESERVED')) {
-                                return { border: '1.5px solid #f59e0b', bg: 'rgba(245, 158, 11, 0.18)', color: '#fbbf24' };
-                              } else if (statusVal.includes('UNDER_CONSTRUCTION') || statusVal.includes('CONSTRUCTION')) {
-                                return { border: '1.5px solid #a855f7', bg: 'rgba(168, 85, 247, 0.18)', color: '#c084fc' };
-                              } else if (statusVal.includes('READY')) {
-                                return { border: '1.5px solid #0284c7', bg: 'rgba(2, 132, 199, 0.18)', color: '#38bdf8' };
+                          
+                          <select
+                            value={normalizedStatus}
+                            onChange={(e) => {
+                              const newStatus = e.target.value;
+                              let newPossession = p.possession_status || p.possession || 'Ready to Move In (Immediate)';
+                              if (newStatus === 'UNDER_CONSTRUCTION') {
+                                newPossession = 'Under Construction';
+                              } else if (newStatus === 'READY_TO_MOVE' || newStatus === 'LIVE') {
+                                newPossession = 'Ready to Move In (Immediate)';
                               }
-                              return { border: '1.5px solid #22c55e', bg: 'rgba(34, 197, 94, 0.18)', color: '#4ade80' };
-                            };
 
-                            const badgeStyle = getStatusBadgeStyle(normalizedStatus);
+                              let updatedProps: any[] = [];
+                              if (setProperties) {
+                                setProperties((prev: any[]) => {
+                                  updatedProps = prev.map((item: any) => item.id === p.id ? { 
+                                    ...item, 
+                                    status: newStatus,
+                                    possession_status: newPossession,
+                                    possession: newPossession
+                                  } : item);
+                                  try {
+                                    localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(updatedProps));
+                                  } catch (err) {}
+                                  return updatedProps;
+                                });
+                              }
+                              if (syncAllToMongoDB && updatedProps.length > 0) {
+                                syncAllToMongoDB({ properties: updatedProps });
+                              }
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '8px',
+                              fontWeight: '900',
+                              fontSize: '0.72rem',
+                              cursor: 'pointer',
+                              border: badgeStyle.border,
+                              background: badgeStyle.bg,
+                              color: badgeStyle.color,
+                              outline: 'none'
+                            }}
+                          >
+                            <option value="LIVE" style={{ background: '#0f172a', color: '#4ade80' }}>🟢 LIVE / AVAILABLE</option>
+                            <option value="BOOKED" style={{ background: '#0f172a', color: '#fbbf24' }}>🟡 BOOKED</option>
+                            <option value="SOLD_OUT" style={{ background: '#0f172a', color: '#f87171' }}>🔴 SOLD OUT</option>
+                            <option value="UNDER_CONSTRUCTION" style={{ background: '#0f172a', color: '#c084fc' }}>🏗️ UNDER CONSTRUCTION</option>
+                            <option value="HOLD" style={{ background: '#0f172a', color: '#fbbf24' }}>⚡ HOLD / RESERVED</option>
+                            <option value="READY_TO_MOVE" style={{ background: '#0f172a', color: '#38bdf8' }}>🔑 READY TO MOVE</option>
+                          </select>
+                        </div>
 
-                            return (
-                              <select
-                                value={normalizedStatus}
-                                onChange={(e) => {
-                                  const newStatus = e.target.value;
-                                  let newPossession = p.possession_status || p.possession || 'Ready to Move In (Immediate)';
-                                  if (newStatus === 'UNDER_CONSTRUCTION') {
-                                    newPossession = 'Under Construction';
-                                  } else if (newStatus === 'READY_TO_MOVE' || newStatus === 'LIVE') {
-                                    newPossession = 'Ready to Move In (Immediate)';
-                                  }
-
-                                  let updatedProps: any[] = [];
-                                  if (setProperties) {
-                                    setProperties((prev: any[]) => {
-                                      updatedProps = prev.map((item: any) => item.id === p.id ? { 
-                                        ...item, 
-                                        status: newStatus,
-                                        possession_status: newPossession,
-                                        possession: newPossession
-                                      } : item);
-                                      try {
-                                        localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(updatedProps));
-                                      } catch (err) {}
-                                      return updatedProps;
-                                    });
-                                  }
-                                  if (syncAllToMongoDB && updatedProps.length > 0) {
-                                    syncAllToMongoDB({ properties: updatedProps });
-                                  }
-                                }}
-                                style={{
-                                  padding: '6px 10px',
-                                  borderRadius: '8px',
-                                  fontWeight: '900',
-                                  fontSize: '0.74rem',
-                                  cursor: 'pointer',
-                                  border: badgeStyle.border,
-                                  background: badgeStyle.bg,
-                                  color: badgeStyle.color,
-                                  outline: 'none',
-                                  transition: 'all 0.2s ease'
-                                }}
-                              >
-                                <option value="LIVE" style={{ background: '#0f172a', color: '#4ade80' }}>🟢 LIVE / AVAILABLE</option>
-                                <option value="BOOKED" style={{ background: '#0f172a', color: '#fbbf24' }}>🟡 BOOKED</option>
-                                <option value="SOLD_OUT" style={{ background: '#0f172a', color: '#f87171' }}>🔴 SOLD OUT</option>
-                                <option value="UNDER_CONSTRUCTION" style={{ background: '#0f172a', color: '#c084fc' }}>🏗️ UNDER CONSTRUCTION</option>
-                                <option value="HOLD" style={{ background: '#0f172a', color: '#fbbf24' }}>⚡ HOLD / RESERVED</option>
-                                <option value="READY_TO_MOVE" style={{ background: '#0f172a', color: '#38bdf8' }}>🔑 READY TO MOVE</option>
-                              </select>
-                            );
-                          })()}
-                        </td>
-                        <td style={{ padding: '12px', textAlign: 'center' }}>
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                            <button onClick={() => setShowMultipleUnitsSlider({ open: true, project: p })} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }} title="Open Multiple Property Units Builder Slider for this project">🏢 Units Slider</button>
-                            <button onClick={() => setViewPropertyModal(p)} style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>👁️ View</button>
-                            <button onClick={() => handleStartEditProperty(p)} style={{ background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }}>Edit</button>
-                            {isStrictSuperAdmin && (
-                              <button onClick={() => handleDeleteProperty(p.id, p.property_code)} style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }}>Delete</button>
-                            )}
+                        <div>
+                          <strong style={{ fontSize: '1rem', color: isLight ? '#0f172a' : '#ffffff' }}>{displayTitle}</strong>
+                          <div style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
+                            Dev: <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{displayDeveloper}</strong>
+                            <span style={{ marginLeft: '8px', background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', padding: '1px 5px', borderRadius: '4px', fontSize: '0.7rem', fontFamily: 'monospace' }}>
+                              🔑 {projCode}
+                            </span>
                           </div>
-                        </td>
-                      </tr>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', padding: '10px', borderRadius: '8px', fontSize: '0.8rem' }}>
+                          <div>
+                            <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Config & Area</span>
+                            <strong style={{ color: '#38bdf8' }}>{p.configuration || '2BHK'}</strong> • <span style={{ color: '#fbbf24' }}>{superDisp}</span>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Price Tag</span>
+                            <strong style={{ color: '#4ade80', fontSize: '0.92rem' }}>{p.final_price}</strong>
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: '0.75rem', background: isLight ? '#ffffff' : '#1e293b', padding: '8px', borderRadius: '6px', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
+                          <span style={{ color: isEv ? '#eab308' : isOpen ? '#22c55e' : '#0284c7', fontWeight: '800' }}>
+                            {isEv ? '⚡ EV Fast Charger' : isOpen ? '🅿️ Open Surface' : '🚘 Covered Basement'}
+                          </span>
+                          <span style={{ marginLeft: '6px', color: isLight ? '#64748b' : '#94a3b8' }}>
+                            (Avail: <strong style={{ color: availCountForType > 0 ? '#22c55e' : '#ef4444' }}>{availCountForType}/{totalCapForType}</strong>)
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '6px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '10px' }}>
+                          <button onClick={() => setShowMultipleUnitsSlider({ open: true, project: p })} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>🏢 Units</button>
+                          <button onClick={() => setViewPropertyModal(p)} style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>👁️ View</button>
+                          <button onClick={() => handleStartEditProperty(p)} style={{ background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', textAlign: 'center' }}>Edit</button>
+                          {isStrictSuperAdmin && (
+                            <button onClick={() => handleDeleteProperty(p.id, p.property_code)} style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', textAlign: 'center' }}>Delete</button>
+                          )}
+                        </div>
+                      </div>
                     );
-                  })}
-              </tbody>
-            </table>
-          </div>
+                  })
+              )}
+            </div>
+          ) : (
+            <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                    <th style={{ padding: '12px' }}>Code</th>
+                    <th style={{ padding: '12px' }}>Title & Project</th>
+                    <th style={{ padding: '12px' }}>Developer Name & Project Code</th>
+                    <th style={{ padding: '12px' }}>Config</th>
+                    <th style={{ padding: '12px' }}>Super Built-up</th>
+                    <th style={{ padding: '12px' }}>Carpet Area</th>
+                    <th style={{ padding: '12px' }}>Price</th>
+                    <th style={{ padding: '12px' }}>Parking Stock & Slot</th>
+                    <th style={{ padding: '12px' }}>Status</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {properties
+                    .filter(p => matchesSearchQuery(p, searchQuery))
+                    .map(p => {
+                      const carpetNum = parseFloat((p.carpet_area || '').replace(/[^0-9.]/g, ''));
+                      const calcSuper = carpetNum ? `${Math.round(carpetNum / 0.7)} Sq.Ft.` : '1,280 Sq.Ft.';
+                      const superDisp = p.super_builtup_area || calcSuper;
+
+                      const displayTitle = p.title || p.property_title || p.project_name || p.property_name || p.name || 'GAJAPATI APARTMENT';
+                      const displayDeveloper = p.developer || p.developer_name || p.builder_name || p.developer_company || 'Swaramayi Partner Developer';
+
+                      const allMasters = getAllMasterProjects();
+                      const matchedMaster = allMasters.find(m => 
+                        (m.title && displayTitle && m.title.toLowerCase().trim() === displayTitle.toLowerCase().trim()) ||
+                        (m.id && p.project_id && m.id === p.project_id) ||
+                        (m.code && p.project_id && m.code === p.project_id)
+                      );
+                      let rawProjCode = (p.project_id && !p.project_id.startsWith('SRM-DEV-')) ? p.project_id : null;
+                      if (!rawProjCode && matchedMaster?.code && !matchedMaster.code.startsWith('SRM-DEV-')) {
+                        rawProjCode = matchedMaster.code;
+                      }
+                      if (!rawProjCode && matchedMaster?.id && !matchedMaster.id.startsWith('SRM-DEV-')) {
+                        rawProjCode = matchedMaster.id;
+                      }
+                      const projCode = (rawProjCode && !rawProjCode.startsWith('SRM-DEV-')) ? rawProjCode : (
+                        displayTitle.toLowerCase().includes('shibalay') ? 'SRM-PROJ-2026-000087' :
+                        displayTitle.toLowerCase().includes('gajapati') ? 'SRM-PROJ-2026-000088' :
+                        displayTitle.toLowerCase().includes('dhriti') ? 'SRM-PROJ-2026-000089' :
+                        'SRM-PROJ-2026-000088'
+                      );
+
+                      // PARKING COMPUTATION FOR THIS ROW
+                      const projProps = properties.filter(item => {
+                        const itemTitle = item.title || item.property_title || item.project_name || '';
+                        return (item.project_id && item.project_id === projCode) ||
+                               (itemTitle && displayTitle && itemTitle.toLowerCase().trim() === displayTitle.toLowerCase().trim());
+                      });
+
+                      const totalCoveredCap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : 24;
+                      const totalEvCap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : 6;
+                      const totalOpenCap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : 12;
+
+                      const allocCovered = projProps.filter(item => (item.car_parking || '').toLowerCase().includes('covered')).length;
+                      const allocEv = projProps.filter(item => (item.car_parking || '').toLowerCase().includes('ev')).length;
+                      const allocOpen = projProps.filter(item => (item.car_parking || '').toLowerCase().includes('open')).length;
+
+                      const availCovered = Math.max(0, totalCoveredCap - allocCovered);
+                      const availEv = Math.max(0, totalEvCap - allocEv);
+                      const availOpen = Math.max(0, totalOpenCap - allocOpen);
+
+                      const assignedParking = p.car_parking || '1 Covered Basement Parking Slot';
+                      const isCovered = (assignedParking).toLowerCase().includes('covered');
+                      const isEv = (assignedParking).toLowerCase().includes('ev');
+                      const isOpen = (assignedParking).toLowerCase().includes('open');
+
+                      const parkingRateStr = isEv 
+                        ? (matchedMaster?.ev_parking_rate || '450000') 
+                        : isOpen 
+                        ? (matchedMaster?.open_parking_rate || '150000') 
+                        : (matchedMaster?.covered_parking_rate || '300000');
+
+                      const availCountForType = isEv ? availEv : isOpen ? availOpen : availCovered;
+                      const totalCapForType = isEv ? totalEvCap : isOpen ? totalOpenCap : totalCoveredCap;
+
+                      return (
+                        <tr key={p.id} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+                          <td style={{ padding: '12px', fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800' }}>{p.property_code}</td>
+                          <td style={{ padding: '12px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
+                            <div>{displayTitle}</div>
+                            <span style={{ fontSize: '0.7rem', color: '#a855f7', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid #a855f7', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', marginTop: '3px', display: 'inline-block' }}>
+                              🏢 {p.property_type || p.type || 'Flat / Apartment'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            <div style={{ fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{displayDeveloper}</div>
+                            <span style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', border: '1px solid #a855f7', padding: '2px 6px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '900', fontFamily: 'monospace', marginTop: '4px', display: 'inline-block' }} title="Master Project Code">
+                              🔑 {projCode}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px', color: '#38bdf8', fontWeight: '800' }}>{p.configuration}</td>
+                          <td style={{ padding: '12px', fontWeight: '900', color: '#fbbf24' }}>{superDisp}</td>
+                          <td style={{ padding: '12px', fontWeight: '700' }}>{p.carpet_area}</td>
+                          <td style={{ padding: '12px', color: '#4ade80', fontWeight: '800' }}>{p.final_price}</td>
+                          <td style={{ padding: '12px' }}>
+                            <div style={{ fontWeight: '800', color: isEv ? '#eab308' : isOpen ? '#22c55e' : '#0284c7', fontSize: '0.78rem' }}>
+                              {isEv ? '⚡ EV Fast Charger' : isOpen ? '🅿️ Open Surface' : '🚘 Covered Basement'}
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', marginTop: '2px' }}>
+                              Avail: <strong style={{ color: availCountForType > 0 ? '#22c55e' : '#ef4444' }}>{availCountForType}/{totalCapForType} Slots</strong>
+                            </div>
+                            <span style={{ fontSize: '0.66rem', color: '#eab308', fontWeight: '800' }}>
+                              Rate: ₹{parseInt(parkingRateStr, 10).toLocaleString('en-IN')}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            {(() => {
+                              const isSoldOutByBilling = (invoices || []).some((inv: any) => {
+                                if (!inv || inv.status === 'CANCELLED' || inv.payment_status === 'CANCELLED') return false;
+                                const isCustInvoice = inv.invoice_category === 'CUSTOMER' || (inv.customer_name && (inv.total_invoice_amount > 0 || inv.taxable_value > 0));
+                                if (!isCustInvoice) return false;
+
+                                const pCode = (p.property_code || p.id || '').toString().toLowerCase().trim();
+                                const invCode = (inv.property_code || inv.property_id || '').toString().toLowerCase().trim();
+                                return pCode && invCode && pCode === invCode;
+                              }) || (agreements || []).some((agr: any) => {
+                                if (!agr || agr.status === 'CANCELLED' || agr.agreement_status === 'CANCELLED') return false;
+                                const isCustAgr = agr.agreement_category === 'CUSTOMER' || (agr.customer_name && agr.agreement_type !== 'DEVELOPER');
+                                if (!isCustAgr) return false;
+
+                                const pCode = (p.property_code || p.id || '').toString().toLowerCase().trim();
+                                const agrCode = (agr.property_code || agr.property_id || '').toString().toLowerCase().trim();
+                                return pCode && agrCode && pCode === agrCode;
+                              });
+
+                              const isBookedByWorkflow = (bookings || []).some((b: any) => {
+                                if (!b || b.status === 'CANCELLED' || b.approval_status === 'REJECTED') return false;
+                                const pCode = (p.property_code || p.id || '').toString().toLowerCase().trim();
+                                const pTitle = (p.title || '').toString().toLowerCase().trim();
+                                const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().trim();
+                                const bTitle = (b.project_name || b.property_title || b.propertyTitle || '').toString().toLowerCase().trim();
+                                return (pCode && bCode && pCode === bCode) || (pTitle && bTitle && (pTitle === bTitle || pTitle.includes(bTitle) || bTitle.includes(pTitle)));
+                              });
+
+                              const isUnderConstructionByPossession = (p.possession_status || p.possession || '').toLowerCase().includes('construction');
+
+                              let effectiveStatus = p.status || (isUnderConstructionByPossession ? 'UNDER_CONSTRUCTION' : 'LIVE');
+                              if (p.status && p.status !== 'AUTO') {
+                                 effectiveStatus = p.status;
+                               } else if (isSoldOutByBilling) {
+                                 effectiveStatus = 'SOLD_OUT';
+                               } else if (isBookedByWorkflow) {
+                                 effectiveStatus = 'BOOKED';
+                               } else if (isUnderConstructionByPossession) {
+                                 effectiveStatus = 'UNDER_CONSTRUCTION';
+                               }
+
+                              const rawStatus = (effectiveStatus || 'LIVE').toUpperCase().replace(/\s+/g, '_');
+                              const normalizedStatus = rawStatus === 'AVAILABLE' ? 'LIVE' : rawStatus;
+                              
+                              const getStatusBadgeStyle = (statusVal: string) => {
+                                if (statusVal.includes('SOLD')) {
+                                  return { border: '1.5px solid #ef4444', bg: 'rgba(239, 68, 68, 0.18)', color: '#f87171' };
+                                } else if (statusVal.includes('BOOKED')) {
+                                  return { border: '1.5px solid #fbbf24', bg: 'rgba(234, 179, 8, 0.18)', color: '#fbbf24' };
+                                } else if (statusVal.includes('HOLD') || statusVal.includes('RESERVED')) {
+                                  return { border: '1.5px solid #f59e0b', bg: 'rgba(245, 158, 11, 0.18)', color: '#fbbf24' };
+                                } else if (statusVal.includes('UNDER_CONSTRUCTION') || statusVal.includes('CONSTRUCTION')) {
+                                  return { border: '1.5px solid #a855f7', bg: 'rgba(168, 85, 247, 0.18)', color: '#c084fc' };
+                                } else if (statusVal.includes('READY')) {
+                                  return { border: '1.5px solid #0284c7', bg: 'rgba(2, 132, 199, 0.18)', color: '#38bdf8' };
+                                }
+                                return { border: '1.5px solid #22c55e', bg: 'rgba(34, 197, 94, 0.18)', color: '#4ade80' };
+                              };
+
+                              const badgeStyle = getStatusBadgeStyle(normalizedStatus);
+
+                              return (
+                                <select
+                                  value={normalizedStatus}
+                                  onChange={(e) => {
+                                    const newStatus = e.target.value;
+                                    let newPossession = p.possession_status || p.possession || 'Ready to Move In (Immediate)';
+                                    if (newStatus === 'UNDER_CONSTRUCTION') {
+                                      newPossession = 'Under Construction';
+                                    } else if (newStatus === 'READY_TO_MOVE' || newStatus === 'LIVE') {
+                                      newPossession = 'Ready to Move In (Immediate)';
+                                    }
+
+                                    let updatedProps: any[] = [];
+                                    if (setProperties) {
+                                      setProperties((prev: any[]) => {
+                                        updatedProps = prev.map((item: any) => item.id === p.id ? { 
+                                          ...item, 
+                                          status: newStatus,
+                                          possession_status: newPossession,
+                                          possession: newPossession
+                                        } : item);
+                                        try {
+                                          localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(updatedProps));
+                                        } catch (err) {}
+                                        return updatedProps;
+                                      });
+                                    }
+                                    if (syncAllToMongoDB && updatedProps.length > 0) {
+                                      syncAllToMongoDB({ properties: updatedProps });
+                                    }
+                                  }}
+                                  style={{
+                                    padding: '6px 10px',
+                                    borderRadius: '8px',
+                                    fontWeight: '900',
+                                    fontSize: '0.74rem',
+                                    cursor: 'pointer',
+                                    border: badgeStyle.border,
+                                    background: badgeStyle.bg,
+                                    color: badgeStyle.color,
+                                    outline: 'none',
+                                    transition: 'all 0.2s ease'
+                                  }}
+                                >
+                                  <option value="LIVE" style={{ background: '#0f172a', color: '#4ade80' }}>🟢 LIVE / AVAILABLE</option>
+                                  <option value="BOOKED" style={{ background: '#0f172a', color: '#fbbf24' }}>🟡 BOOKED</option>
+                                  <option value="SOLD_OUT" style={{ background: '#0f172a', color: '#f87171' }}>🔴 SOLD OUT</option>
+                                  <option value="UNDER_CONSTRUCTION" style={{ background: '#0f172a', color: '#c084fc' }}>🏗️ UNDER CONSTRUCTION</option>
+                                  <option value="HOLD" style={{ background: '#0f172a', color: '#fbbf24' }}>⚡ HOLD / RESERVED</option>
+                                  <option value="READY_TO_MOVE" style={{ background: '#0f172a', color: '#38bdf8' }}>🔑 READY TO MOVE</option>
+                                </select>
+                              );
+                            })()}
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                              <button onClick={() => setShowMultipleUnitsSlider({ open: true, project: p })} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }} title="Open Multiple Property Units Builder Slider for this project">🏢 Units Slider</button>
+                              <button onClick={() => setViewPropertyModal(p)} style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>👁️ View</button>
+                              <button onClick={() => handleStartEditProperty(p)} style={{ background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }}>Edit</button>
+                              {isStrictSuperAdmin && (
+                                <button onClick={() => handleDeleteProperty(p.id, p.property_code)} style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }}>Delete</button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -3411,8 +3708,8 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
 
       {/* DEVELOPER MASTER VAULT MODAL */}
       {showDevVaultModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '20px', width: '100%', maxWidth: '850px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: windowWidth <= 640 ? '10px' : '16px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: windowWidth <= 640 ? '16px' : '20px', width: '100%', maxWidth: '850px', maxHeight: '92vh', overflowY: 'auto', padding: windowWidth <= 640 ? '14px' : '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
               <div>
                 <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -3698,7 +3995,7 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
                               padding: '8px 12px', 
                               display: 'flex', 
                               alignItems: 'center', 
-                              justify: 'space-between',
+                              justifyContent: 'space-between',
                               gap: '8px', 
                               flexWrap: 'wrap',
                               boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)'
@@ -3847,8 +4144,8 @@ const bCode = (b.property_code || b.property_id || '').toString().toLowerCase().
         const altDevMobile = viewPropertyModal.developer_alt_mobile || devObj?.altMobile || devProjectAltMobile || primaryDevMobile;
 
         return (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
-            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1.5px solid #0284c7', borderRadius: '24px', width: '100%', maxWidth: '880px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: windowWidth <= 640 ? '10px' : '20px' }}>
+            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1.5px solid #0284c7', borderRadius: windowWidth <= 640 ? '16px' : '24px', width: '100%', maxWidth: '880px', maxHeight: '92vh', overflowY: 'auto', padding: windowWidth <= 640 ? '14px' : '28px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
               {/* MODAL HEADER */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: isLight ? '2px solid #e2e8f0' : '2px solid #334155', paddingBottom: '16px' }}>

@@ -174,11 +174,23 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Touch friendly scrolling for horizontal steppers and button strips */
+
 .horizontal-scroll-touch {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
+  display: flex;
+  gap: 10px;
+  padding-bottom: 6px;
+}
+
+.horizontal-scroll-touch::-webkit-scrollbar {
+  height: 4px;
+}
+
+.horizontal-scroll-touch::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
 }
 
 @media (max-width: 1024px) {
@@ -198,5 +210,11 @@ body {
   .responsive-full-width {
     width: 100% !important;
   }
+  .responsive-modal-box {
+    padding: 14px !important;
+    border-radius: 16px !important;
+    max-height: 92vh !important;
+  }
 }
+
 

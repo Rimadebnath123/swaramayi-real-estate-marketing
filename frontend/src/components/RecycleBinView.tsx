@@ -18,6 +18,7 @@ export interface RecycleBinItem {
 interface RecycleBinViewProps {
   isLight: boolean;
   recycledItems: RecycleBinItem[];
+  windowWidth?: number;
   onRestoreItem: (item: RecycleBinItem) => void;
   onPurgeItem: (item: RecycleBinItem) => void;
   onEmptyBin: () => void;
@@ -26,10 +27,23 @@ interface RecycleBinViewProps {
 export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
   isLight,
   recycledItems = [],
+  windowWidth,
   onRestoreItem,
   onPurgeItem,
   onEmptyBin
 }) => {
+  const [winWidth, setWinWidth] = useState<number>(windowWidth || (typeof window !== 'undefined' ? window.innerWidth : 1200));
+
+  React.useEffect(() => {
+    if (windowWidth) {
+      setWinWidth(windowWidth);
+    } else {
+      const handleResize = () => setWinWidth(window.innerWidth);
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [windowWidth]);
+
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -90,21 +104,22 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
   const textSub = isLight ? '#64748b' : '#94a3b8';
 
   return (
-    <div style={{ padding: '24px', color: textMain, maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: winWidth <= 640 ? '12px' : '24px', color: textMain, maxWidth: '1400px', margin: '0 auto' }}>
       {/* TOAST NOTIFICATION */}
       {toastMessage && (
         <div style={{
           position: 'fixed',
           top: '20px',
-          right: '20px',
+          right: winWidth <= 640 ? '10px' : '20px',
+          left: winWidth <= 640 ? '10px' : 'auto',
           zIndex: 9999,
           background: isLight ? '#0284c7' : '#0369a1',
           color: '#ffffff',
-          padding: '12px 20px',
+          padding: '12px 18px',
           borderRadius: '8px',
           boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
           fontWeight: '600',
-          fontSize: '0.9rem',
+          fontSize: '0.85rem',
           display: 'flex',
           alignItems: 'center',
           gap: '10px'
@@ -120,41 +135,43 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
         flexWrap: 'wrap',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '24px',
+        marginBottom: winWidth <= 640 ? '16px' : '24px',
         gap: '16px'
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
-              width: '42px',
-              height: '42px',
+              width: winWidth <= 480 ? '36px' : '42px',
+              height: winWidth <= 480 ? '36px' : '42px',
               borderRadius: '10px',
               background: 'rgba(239, 68, 68, 0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: '1px solid rgba(239, 68, 68, 0.3)'
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              flexShrink: 0
             }}>
-              <Trash2 size={24} color="#ef4444" />
+              <Trash2 size={winWidth <= 480 ? 20 : 24} color="#ef4444" />
             </div>
             <div>
-              <h1 style={{ fontSize: '1.6rem', fontWeight: '800', margin: 0 }}>
+              <h1 style={{ fontSize: winWidth <= 480 ? '1.2rem' : winWidth <= 640 ? '1.4rem' : '1.6rem', fontWeight: '800', margin: 0 }}>
                 Recycle Bin & Data Vault
               </h1>
-              <p style={{ margin: '4px 0 0 0', color: textSub, fontSize: '0.875rem' }}>
+              <p style={{ margin: '4px 0 0 0', color: textSub, fontSize: '0.82rem' }}>
                 Soft-deleted items are stored here dynamically when deleted from any CRM module. Restore item back or permanently purge.
               </p>
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: winWidth <= 640 ? '100%' : 'auto' }}>
           {recycledItems.length > 0 && (
             <button
               onClick={() => setShowEmptyConfirmModal(true)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '8px',
                 padding: '9px 16px',
                 borderRadius: '8px',
@@ -163,7 +180,8 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
                 border: '1px solid rgba(239, 68, 68, 0.4)',
                 fontWeight: '700',
                 fontSize: '0.85rem',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                width: winWidth <= 640 ? '100%' : 'auto'
               }}
             >
               <Trash2 size={16} /> Empty Recycle Bin ({recycledItems.length})
@@ -176,17 +194,29 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
       <div style={{
         background: bgCard,
         borderRadius: '12px',
-        padding: '16px',
+        padding: winWidth <= 640 ? '12px' : '16px',
         border: `1px solid ${borderCol}`,
         marginBottom: '20px',
         display: 'flex',
+        flexDirection: winWidth <= 640 ? 'column' : 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '16px'
+        alignItems: winWidth <= 640 ? 'stretch' : 'center',
+        gap: '14px'
       }}>
         {/* Category Tabs */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div
+          className="horizontal-scroll-touch"
+          style={{
+            display: 'flex',
+            gap: '8px',
+            flexWrap: winWidth <= 768 ? 'nowrap' : 'wrap',
+            overflowX: winWidth <= 768 ? 'auto' : 'visible',
+            paddingBottom: winWidth <= 768 ? '6px' : '0',
+            width: winWidth <= 640 ? '100%' : 'auto',
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
           {['ALL', 'Lead', 'Customer', 'Project', 'Agreement', 'Cost Sheet', 'Billing', 'Visit Management'].map(cat => {
             const count = cat === 'ALL'
               ? recycledItems.length
@@ -207,7 +237,9 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
                 }}
               >
                 <span>{cat === 'ALL' ? 'All Categories' : cat}</span>
@@ -227,7 +259,7 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
         </div>
 
         {/* Search input */}
-        <div style={{ position: 'relative', minWidth: '280px', flexGrow: 0 }}>
+        <div style={{ position: 'relative', width: winWidth <= 640 ? '100%' : 'auto', minWidth: winWidth <= 640 ? '0' : '280px', flexGrow: winWidth <= 640 ? 1 : 0 }}>
           <Search size={16} color={textSub} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
           <input
             type="text"
@@ -256,7 +288,7 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
         overflow: 'hidden'
       }}>
         {filteredItems.length === 0 ? (
-          <div style={{ padding: '60px 20px', textAlign: 'center', color: textSub }}>
+          <div style={{ padding: winWidth <= 640 ? '40px 16px' : '60px 20px', textAlign: 'center', color: textSub }}>
             <Trash2 size={48} color="#94a3b8" style={{ marginBottom: '12px', opacity: 0.5 }} />
             <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 6px 0', color: textMain }}>
               No Deleted Items Found
@@ -266,6 +298,109 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
                 ? 'Your Recycle Bin is empty! Any records deleted from Leads, Customers, Projects, Agreements, Cost Sheets, Billing, or Visit Management will automatically be stored here.'
                 : 'No items match your search filter.'}
             </p>
+          </div>
+        ) : winWidth <= 768 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '12px' }}>
+            {filteredItems.map(item => (
+              <div
+                key={item.id}
+                style={{
+                  background: isLight ? '#f8fafc' : '#020617',
+                  border: `1px solid ${borderCol}`,
+                  borderRadius: '10px',
+                  padding: '14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    background: isLight ? '#ffffff' : '#1e293b',
+                    border: `1px solid ${borderCol}`,
+                    fontSize: '0.78rem',
+                    fontWeight: '700'
+                  }}>
+                    {getCategoryIcon(item.category)}
+                    <span>{item.category}</span>
+                  </div>
+
+                  <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800', fontSize: '0.8rem' }}>
+                    {item.id}
+                  </span>
+                </div>
+
+                <div>
+                  <strong style={{ fontSize: '0.92rem', color: textMain, display: 'block', marginBottom: '2px' }}>
+                    {item.title}
+                  </strong>
+                  <p style={{ fontSize: '0.78rem', color: textSub, margin: 0 }}>
+                    {item.details}
+                  </p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.78rem', color: textSub, background: isLight ? '#ffffff' : '#1e293b', padding: '8px 10px', borderRadius: '6px', border: `1px solid ${borderCol}` }}>
+                  <div>
+                    <span style={{ display: 'block', fontSize: '0.68rem', fontWeight: '800', color: textSub, textTransform: 'uppercase' }}>ORIGINAL VAULT</span>
+                    <span style={{ fontWeight: '600', color: textMain }}>{item.originalLocation}</span>
+                  </div>
+                  <div>
+                    <span style={{ display: 'block', fontSize: '0.68rem', fontWeight: '800', color: textSub, textTransform: 'uppercase' }}>DELETED BY / DATE</span>
+                    <span style={{ fontWeight: '600', color: textMain }}>{item.deletedBy}</span>
+                    <span style={{ display: 'block', fontSize: '0.72rem', color: '#fbbf24' }}>{item.deletedAt}</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', borderTop: `1px solid ${borderCol}`, paddingTop: '10px' }}>
+                  <button
+                    onClick={() => handleRestore(item)}
+                    style={{
+                      flex: 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      color: '#10b981',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      fontWeight: '700',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <RotateCcw size={14} /> Restore
+                  </button>
+
+                  <button
+                    onClick={() => setItemToPurge(item)}
+                    style={{
+                      flex: 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      background: 'rgba(239, 68, 68, 0.12)',
+                      color: '#ef4444',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      fontWeight: '700',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Trash2 size={14} /> Purge
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -403,7 +538,9 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
             borderRadius: '12px',
             maxWidth: '500px',
             width: '100%',
-            padding: '24px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: winWidth <= 640 ? '16px' : '24px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -414,11 +551,12 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
                 background: 'rgba(239, 68, 68, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                flexShrink: 0
               }}>
                 <AlertTriangle size={22} color="#ef4444" />
               </div>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: textMain }}>
+              <h3 style={{ margin: 0, fontSize: winWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '800', color: textMain }}>
                 Permanent Purge Confirmation
               </h3>
             </div>
@@ -431,6 +569,7 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
               <button
                 onClick={() => setItemToPurge(null)}
                 style={{
+                  flex: winWidth <= 640 ? 1 : 'initial',
                   padding: '9px 16px',
                   borderRadius: '6px',
                   background: isLight ? '#e2e8f0' : '#1e293b',
@@ -446,6 +585,7 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
               <button
                 onClick={handleConfirmPurge}
                 style={{
+                  flex: winWidth <= 640 ? 1 : 'initial',
                   padding: '9px 16px',
                   borderRadius: '6px',
                   background: '#ef4444',
@@ -482,7 +622,9 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
             borderRadius: '12px',
             maxWidth: '500px',
             width: '100%',
-            padding: '24px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: winWidth <= 640 ? '16px' : '24px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -493,11 +635,12 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
                 background: 'rgba(239, 68, 68, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                flexShrink: 0
               }}>
                 <AlertTriangle size={22} color="#ef4444" />
               </div>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: textMain }}>
+              <h3 style={{ margin: 0, fontSize: winWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '800', color: textMain }}>
                 Empty Recycle Bin
               </h3>
             </div>
@@ -510,6 +653,7 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
               <button
                 onClick={() => setShowEmptyConfirmModal(false)}
                 style={{
+                  flex: winWidth <= 640 ? 1 : 'initial',
                   padding: '9px 16px',
                   borderRadius: '6px',
                   background: isLight ? '#e2e8f0' : '#1e293b',
@@ -525,6 +669,7 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
               <button
                 onClick={handleEmptyBin}
                 style={{
+                  flex: winWidth <= 640 ? 1 : 'initial',
                   padding: '9px 16px',
                   borderRadius: '6px',
                   background: '#ef4444',

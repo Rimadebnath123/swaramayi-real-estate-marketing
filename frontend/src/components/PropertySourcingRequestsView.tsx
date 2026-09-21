@@ -277,13 +277,13 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
       {/* TOP TITLE & ACTION HEADER */}
-      <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', boxShadow: isLight ? '0 4px 16px rgba(0,0,0,0.04)' : 'none' }}>
+      <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', boxShadow: isLight ? '0 4px 16px rgba(0,0,0,0.04)' : 'none' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <div style={{ background: 'rgba(56, 189, 248, 0.15)', padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <SearchCode size={24} color="#38bdf8" />
             </div>
-            <h2 style={{ fontSize: '1.35rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>PROPERTY SOURCING REQUESTS DESK</h2>
+            <h2 style={{ fontSize: windowWidth <= 640 ? '1.15rem' : '1.35rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>PROPERTY SOURCING REQUESTS DESK</h2>
           </div>
           <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
             Custom Property Sourcing Queue • Off-Market & Builder Inventory Procurement • Client Specification Matching
@@ -292,14 +292,14 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
 
         <button 
           onClick={() => setShowCreateModal(true)} 
-          style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)' }}
+          style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)', width: windowWidth <= 640 ? '100%' : 'auto' }}
         >
           <Plus size={16} /> + CREATE NEW SOURCING REQUEST
         </button>
       </div>
 
       {/* METRICS CARDS ROW */}
-      <div style={{ display: 'grid', gridTemplateColumns: windowWidth < 768 ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: '14px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? '1fr' : windowWidth <= 768 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '14px' }}>
         <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ background: 'rgba(56, 189, 248, 0.15)', padding: '10px', borderRadius: '10px', color: '#38bdf8' }}>
             <SearchCode size={20} />
@@ -342,10 +342,10 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
       </div>
 
       {/* FILTER & SEARCH CONTROL BAR */}
-      <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 640 ? '10px' : '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         
         {/* STATUS TABS */}
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        <div className="horizontal-scroll-touch" style={{ width: windowWidth <= 640 ? '100%' : 'auto' }}>
           {[
             { id: 'ALL', label: `All Requests (${sourcingRequests.length})` },
             { id: 'PENDING_SOURCING', label: `⚡ Pending (${pendingCount})` },
@@ -363,7 +363,9 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
                 borderRadius: '6px',
                 fontWeight: '800',
                 fontSize: '0.78rem',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
             >
               {tab.label}
@@ -372,11 +374,11 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
         </div>
 
         {/* SEARCH INPUT & PRIORITY SELECT */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: windowWidth <= 640 ? '100%' : 'auto', flexWrap: 'wrap' }}>
           <select 
             value={priorityFilter} 
             onChange={(e) => setPriorityFilter(e.target.value)}
-            style={{ background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '700' }}
+            style={{ background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '700', width: windowWidth <= 640 ? '100%' : 'auto' }}
           >
             <option value="ALL">All Priorities</option>
             <option value="HOT">🔥 HOT / Urgent Only</option>
@@ -384,7 +386,7 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
             <option value="COLD">❄️ COLD Priority</option>
           </select>
 
-          <div style={{ position: 'relative', width: '240px' }}>
+          <div style={{ position: 'relative', width: windowWidth <= 640 ? '100%' : '240px' }}>
             <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input 
               type="text" 
@@ -409,237 +411,393 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
           </span>
         </div>
 
-        <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-            <thead>
-              <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
-                <th style={{ padding: '12px' }}>Sourcing ID & Date</th>
-                <th style={{ padding: '12px' }}>Customer Name & Contact</th>
-                <th style={{ padding: '12px' }}>Customer & Matching ID</th>
-                <th style={{ padding: '12px' }}>Target Spec & Locality</th>
-                <th style={{ padding: '12px' }}>💬 Shift Reason / Executive Notes</th>
-                <th style={{ padding: '12px' }}>Target Budget</th>
-                <th style={{ padding: '12px' }}>Sourcing Status</th>
-                <th style={{ padding: '12px' }}>Assigned Desk</th>
-                <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRequests.length === 0 ? (
-                <tr>
-                  <td colSpan={9} style={{ padding: '30px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
-                    🔍 No property sourcing requests found matching your filters.
-                  </td>
-                </tr>
-              ) : (
-                filteredRequests.map(req => {
-                  const isPending = req.status === 'PENDING_SOURCING';
-                  const isContacted = req.status === 'BUILDER_CONTACTED';
-                  const isMatched = req.status === 'INVENTORY_MATCHED' || req.status === 'CLOSED';
-                  const shiftNotes = req.sourcing_reason || req.notes || (req.lead_details && req.lead_details.sourcing_reason) || 'No specific notes recorded.';
+        {windowWidth <= 768 ? (
+          <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {filteredRequests.length === 0 ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px' }}>
+                🔍 No property sourcing requests found matching your filters.
+              </div>
+            ) : (
+              filteredRequests.map(req => {
+                const isPending = req.status === 'PENDING_SOURCING';
+                const isContacted = req.status === 'BUILDER_CONTACTED';
+                const isMatched = req.status === 'INVENTORY_MATCHED' || req.status === 'CLOSED';
+                const shiftNotes = req.sourcing_reason || req.notes || (req.lead_details && req.lead_details.sourcing_reason) || 'No specific notes recorded.';
 
-                  return (
-                    <tr key={req.id} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-                      <td style={{ padding: '12px' }}>
-                        <span 
-                          onClick={() => setShowLeadDetailsModal({ open: true, request: req })}
-                          style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.84rem', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', display: 'inline-block' }}
-                          title="Click to view full lead details & sourcing reason"
-                        >
-                          🎯 {req.id}
+                return (
+                  <div key={req.id} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                      <span 
+                        onClick={() => setShowLeadDetailsModal({ open: true, request: req })}
+                        style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.84rem', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer' }}
+                        title="Click to view full lead details & sourcing reason"
+                      >
+                        🎯 {req.id}
+                      </span>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {req.priority === 'HOT' && (
+                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid #ef4444', padding: '2px 6px', borderRadius: '4px', fontWeight: '900', fontSize: '0.68rem' }}>🔥 HOT</span>
+                        )}
+                        <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                          📅 {new Date(req.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
                         </span>
-                        <br />
-                        <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px', display: 'block' }}>
-                          📅 {new Date(req.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </span>
-                      </td>
+                      </div>
+                    </div>
 
-                      <td style={{ padding: '12px' }}>
-                        <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.88rem' }}>{req.customer_name}</strong>
-                        <br />
-                        <span style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: '800', fontFamily: 'monospace' }}>
-                          📞 {maskPhone(req.mobile)}
-                        </span>
-                        {(() => {
-                          const usedProps = getCustomerUsedPropertyCodes(
-                            req.customer_number || req.customerId,
-                            req.customer_name || req.customerName,
-                            req.mobile,
-                            individualCostSheets,
-                            costSheetShares,
-                            scheduledVisits
-                          );
-                          if (usedProps.length === 0) return null;
-                          return (
-                            <div style={{ marginTop: '4px', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid #0284c7', borderRadius: '4px', padding: '3px 6px', fontSize: '0.7rem' }}>
-                              <span style={{ color: '#38bdf8', fontWeight: '800' }}>🏢 Cost Sheet Property Codes ({usedProps.length}):</span>
-                              <div style={{ color: '#fbbf24', fontWeight: '900', fontFamily: 'monospace', display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
-                                {usedProps.map(p => (
-                                  <span key={p.propertyCode} style={{ background: '#0f172a', border: '1px solid #eab308', padding: '1px 4px', borderRadius: '3px' }}>
-                                    {p.propertyCode}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </td>
+                    <div>
+                      <strong style={{ fontSize: '0.95rem', color: isLight ? '#0f172a' : '#ffffff' }}>{req.customer_name}</strong>
+                      <div style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: '800', fontFamily: 'monospace', marginTop: '2px' }}>
+                        📞 {maskPhone(req.mobile)}
+                      </div>
+                    </div>
 
-                      <td style={{ padding: '12px' }}>
-                        <span 
-                          onClick={() => openIdDetailsModal(req.customer_number, 'CUSTOMER_ID')}
-                          style={{ fontSize: '0.75rem', color: '#4ade80', fontFamily: 'monospace', textDecoration: 'underline', cursor: 'pointer', display: 'block' }}
-                          title="Click to view Customer details"
-                        >
-                          👤 {req.customer_number}
-                        </span>
-                        <span 
-                          onClick={() => openIdDetailsModal(req.matching_id || (req.lead_details && req.lead_details.matching_id) || 'SRM-MAT-2026-000422', 'MATCHING_ID')}
-                          style={{ fontSize: '0.73rem', color: '#c084fc', fontFamily: 'monospace', textDecoration: 'underline', cursor: 'pointer', display: 'inline-block', marginTop: '4px', background: 'rgba(192, 132, 252, 0.12)', border: '1px solid rgba(192, 132, 252, 0.3)', padding: '2px 6px', borderRadius: '4px' }}
-                          title="Click to view Matching Request details"
-                        >
-                          ⚡ {req.matching_id || (req.lead_details && req.lead_details.matching_id) || 'SRM-MAT-2026-000422'}
-                        </span>
-                      </td>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', fontSize: '0.74rem' }}>
+                      <span 
+                        onClick={() => openIdDetailsModal(req.customer_number, 'CUSTOMER_ID')}
+                        style={{ color: '#4ade80', fontFamily: 'monospace', textDecoration: 'underline', cursor: 'pointer' }}
+                      >
+                        👤 {req.customer_number}
+                      </span>
+                      <span 
+                        onClick={() => openIdDetailsModal(req.matching_id || (req.lead_details && req.lead_details.matching_id) || 'SRM-MAT-2026-000422', 'MATCHING_ID')}
+                        style={{ color: '#c084fc', fontFamily: 'monospace', textDecoration: 'underline', cursor: 'pointer', background: 'rgba(192, 132, 252, 0.12)', border: '1px solid rgba(192, 132, 252, 0.3)', padding: '1px 5px', borderRadius: '4px' }}
+                      >
+                        ⚡ {req.matching_id || (req.lead_details && req.lead_details.matching_id) || 'SRM-MAT-2026-000422'}
+                      </span>
+                    </div>
 
-                      <td style={{ padding: '12px', minWidth: '190px' }}>
-                        <strong style={{ color: '#fbbf24', fontSize: '0.85rem' }}>{req.configuration} {req.property_type}</strong>
-                        <div style={{ marginTop: '4px', fontSize: '0.75rem' }}>
-                          <span style={{ color: '#22c55e', fontWeight: '900' }}>📍 Primary Preferred:</span>{' '}
-                          <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800' }}>
-                            {req.preferred_locality || 'Madhamgram'}
-                          </strong>
-                        </div>
-                        <div style={{ marginTop: '2px', fontSize: '0.73rem' }}>
-                          <span style={{ color: '#38bdf8', fontWeight: '900' }}>🌐 Secondary Preferred:</span>{' '}
-                          <span style={{ color: isLight ? '#475569' : '#cbd5e1', fontWeight: '700' }}>
-                            {req.secondary_areas || (req.lead_details && req.lead_details.secondary_areas) || 'Barasat, New Town, Hitec City'}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', fontStyle: 'italic', display: 'block', marginTop: '2px' }}>
-                          Facing: {req.facing || 'East Facing'}
-                        </span>
-                      </td>
+                    <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.78rem' }}>
+                      <div>
+                        <strong style={{ color: '#fbbf24' }}>{req.configuration} {req.property_type}</strong>
+                        <span style={{ marginLeft: '6px', color: '#22c55e', fontWeight: '800' }}>📍 {req.preferred_locality || 'Madhamgram'}</span>
+                      </div>
+                      <div style={{ color: '#4ade80', fontWeight: '900' }}>
+                        Target Budget: {req.budget_min && req.budget_max ? `${req.budget_min} - ${req.budget_max}` : (req.budget_max || req.budget_min || '₹70 Lakhs+')}
+                      </div>
+                    </div>
 
-                      <td style={{ padding: '12px', minWidth: '220px', maxWidth: '320px' }}>
-                        <div style={{ background: isLight ? '#fef3c7' : 'rgba(234, 179, 8, 0.12)', border: '1px solid rgba(234, 179, 8, 0.4)', borderRadius: '8px', padding: '8px 10px', fontSize: '0.78rem', color: isLight ? '#0f172a' : '#ffffff', lineHeight: '1.4' }}>
-                          <span style={{ fontSize: '0.68rem', color: '#d97706', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
-                            💬 SIFT REASON / NOTES:
-                          </span>
-                          <strong style={{ fontWeight: '800', wordBreak: 'break-word' }}>
-                            "{shiftNotes}"
-                          </strong>
-                        </div>
-                      </td>
+                    <div style={{ background: isLight ? '#fef3c7' : 'rgba(234, 179, 8, 0.12)', border: '1px solid rgba(234, 179, 8, 0.4)', borderRadius: '8px', padding: '8px 10px', fontSize: '0.76rem', color: isLight ? '#0f172a' : '#ffffff' }}>
+                      <span style={{ fontSize: '0.68rem', color: '#d97706', fontWeight: '900', display: 'block', marginBottom: '2px' }}>
+                        💬 SIFT REASON / NOTES:
+                      </span>
+                      <strong style={{ fontWeight: '800', wordBreak: 'break-word' }}>
+                        "{shiftNotes}"
+                      </strong>
+                    </div>
 
-                      <td style={{ padding: '12px', color: '#4ade80', fontWeight: '900' }}>
-                        {req.budget_min && req.budget_max ? `${req.budget_min} - ${req.budget_max}` : (req.budget_max || req.budget_min || '₹70 Lakhs+')}
-                      </td>
-
-                      <td style={{ padding: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                      <div>
                         {isPending && (
-                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid #ef4444', padding: '3px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.73rem', display: 'inline-block' }}>
+                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid #ef4444', padding: '3px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.7rem' }}>
                             ⚡ PENDING SOURCING
                           </span>
                         )}
                         {isContacted && (
-                          <span style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', border: '1px solid #fbbf24', padding: '3px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.73rem', display: 'inline-block' }}>
+                          <span style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', border: '1px solid #fbbf24', padding: '3px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.7rem' }}>
                             🟡 BUILDER CONTACTED
                           </span>
                         )}
                         {isMatched && (
-                          <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', border: '1px solid #22c55e', padding: '3px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.73rem', display: 'inline-block' }}>
+                          <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', border: '1px solid #22c55e', padding: '3px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.7rem' }}>
                             🟢 INVENTORY MATCHED
                           </span>
                         )}
-                      </td>
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                        Desk: {req.assigned_executive}
+                      </span>
+                    </div>
 
-                      <td style={{ padding: '12px' }}>
-                        <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.78rem' }}>
-                          {req.assigned_executive}
-                        </span>
-                      </td>
+                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '6px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '10px' }}>
+                      <button
+                        onClick={() => setShowLeadDetailsModal({ open: true, request: req })}
+                        style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                      >
+                        <Eye size={12} /> Details
+                      </button>
+                      <button
+                        onClick={() => {
+                          setUpdateForm({
+                            status: req.status,
+                            notes: '',
+                            matched_property_code: req.matched_property_code || ''
+                          });
+                          setShowUpdateModal({ open: true, request: req });
+                        }}
+                        style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                      >
+                        <Edit3 size={12} /> Update
+                      </button>
+                      <button
+                        onClick={() => handleSendToMatching(req)}
+                        style={{ background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.4)', padding: '6px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                      >
+                        <Sparkles size={12} /> Matching
+                      </button>
+                      {isSuperAdmin && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Sourcing Request ${req.id} for ${req.customer_name}? It will be moved to Recycle Bin.`)) {
+                              if (onRecycleItem) {
+                                onRecycleItem({
+                                  id: req.id || `SRC-${Date.now()}`,
+                                  title: `Sourcing Request - ${req.customer_name || 'Client'} (${req.id})`,
+                                  category: 'Lead',
+                                  originalLocation: 'Property Sourcing Requests Desk',
+                                  details: `Locality: ${req.locality || 'N/A'}, Budget: ${req.budget || 'N/A'}`,
+                                  originalData: req
+                                });
+                              }
+                              const nextList = sourcingRequests.filter((r: any) => r.id !== req.id);
+                              setSourcingRequests(nextList);
+                              alert(`🗑️ Sourcing Request ${req.id} moved to Recycle Bin.`);
+                            }
+                          }}
+                          style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                        >
+                          <Trash2 size={12} /> Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        ) : (
+          <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <thead>
+                <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                  <th style={{ padding: '12px' }}>Sourcing ID & Date</th>
+                  <th style={{ padding: '12px' }}>Customer Name & Contact</th>
+                  <th style={{ padding: '12px' }}>Customer & Matching ID</th>
+                  <th style={{ padding: '12px' }}>Target Spec & Locality</th>
+                  <th style={{ padding: '12px' }}>💬 Shift Reason / Executive Notes</th>
+                  <th style={{ padding: '12px' }}>Target Budget</th>
+                  <th style={{ padding: '12px' }}>Sourcing Status</th>
+                  <th style={{ padding: '12px' }}>Assigned Desk</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} style={{ padding: '30px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
+                      🔍 No property sourcing requests found matching your filters.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRequests.map(req => {
+                    const isPending = req.status === 'PENDING_SOURCING';
+                    const isContacted = req.status === 'BUILDER_CONTACTED';
+                    const isMatched = req.status === 'INVENTORY_MATCHED' || req.status === 'CLOSED';
+                    const shiftNotes = req.sourcing_reason || req.notes || (req.lead_details && req.lead_details.sourcing_reason) || 'No specific notes recorded.';
 
-                      <td style={{ padding: '12px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                          <button
+                    return (
+                      <tr key={req.id} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+                        <td style={{ padding: '12px' }}>
+                          <span 
                             onClick={() => setShowLeadDetailsModal({ open: true, request: req })}
-                            style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.73rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                            title="View complete Create New Lead 360° details & sourcing reason"
+                            style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.84rem', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', display: 'inline-block' }}
+                            title="Click to view full lead details & sourcing reason"
                           >
-                            <Eye size={13} /> Lead Details
-                          </button>
-                          <button
-                            onClick={() => {
-                              setUpdateForm({
-                                status: req.status,
-                                notes: '',
-                                matched_property_code: req.matched_property_code || ''
-                              });
-                              setShowUpdateModal({ open: true, request: req });
-                            }}
-                            style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.73rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            🎯 {req.id}
+                          </span>
+                          <br />
+                          <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px', display: 'block' }}>
+                            📅 {new Date(req.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '12px' }}>
+                          <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.88rem' }}>{req.customer_name}</strong>
+                          <br />
+                          <span style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: '800', fontFamily: 'monospace' }}>
+                            📞 {maskPhone(req.mobile)}
+                          </span>
+                          {(() => {
+                            const usedProps = getCustomerUsedPropertyCodes(
+                              req.customer_number || req.customerId,
+                              req.customer_name || req.customerName,
+                              req.mobile,
+                              individualCostSheets,
+                              costSheetShares,
+                              scheduledVisits
+                            );
+                            if (usedProps.length === 0) return null;
+                            return (
+                              <div style={{ marginTop: '4px', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid #0284c7', borderRadius: '4px', padding: '3px 6px', fontSize: '0.7rem' }}>
+                                <span style={{ color: '#38bdf8', fontWeight: '800' }}>🏢 Cost Sheet Property Codes ({usedProps.length}):</span>
+                                <div style={{ color: '#fbbf24', fontWeight: '900', fontFamily: 'monospace', display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
+                                  {usedProps.map(p => (
+                                    <span key={p.propertyCode} style={{ background: '#0f172a', border: '1px solid #eab308', padding: '1px 4px', borderRadius: '3px' }}>
+                                      {p.propertyCode}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </td>
+
+                        <td style={{ padding: '12px' }}>
+                          <span 
+                            onClick={() => openIdDetailsModal(req.customer_number, 'CUSTOMER_ID')}
+                            style={{ fontSize: '0.75rem', color: '#4ade80', fontFamily: 'monospace', textDecoration: 'underline', cursor: 'pointer', display: 'block' }}
+                            title="Click to view Customer details"
                           >
-                            <Edit3 size={13} /> Update
-                          </button>
-                          <button
-                            onClick={() => handleSendToMatching(req)}
-                            style={{ background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.4)', padding: '5px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.73rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                            title={`Send ${req.customer_name} back to Matching Management under original Matching Code: ${req.matching_id || (req.lead_details && req.lead_details.matching_id) || 'SRM-MAT-2026-000422'}`}
+                            👤 {req.customer_number}
+                          </span>
+                          <span 
+                            onClick={() => openIdDetailsModal(req.matching_id || (req.lead_details && req.lead_details.matching_id) || 'SRM-MAT-2026-000422', 'MATCHING_ID')}
+                            style={{ fontSize: '0.73rem', color: '#c084fc', fontFamily: 'monospace', textDecoration: 'underline', cursor: 'pointer', display: 'inline-block', marginTop: '4px', background: 'rgba(192, 132, 252, 0.12)', border: '1px solid rgba(192, 132, 252, 0.3)', padding: '2px 6px', borderRadius: '4px' }}
+                            title="Click to view Matching Request details"
                           >
-                            <Sparkles size={13} /> Send to Matching
-                          </button>
-                          {isSuperAdmin && (
+                            ⚡ {req.matching_id || (req.lead_details && req.lead_details.matching_id) || 'SRM-MAT-2026-000422'}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '12px', minWidth: '190px' }}>
+                          <strong style={{ color: '#fbbf24', fontSize: '0.85rem' }}>{req.configuration} {req.property_type}</strong>
+                          <div style={{ marginTop: '4px', fontSize: '0.75rem' }}>
+                            <span style={{ color: '#22c55e', fontWeight: '900' }}>📍 Primary Preferred:</span>{' '}
+                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800' }}>
+                              {req.preferred_locality || 'Madhamgram'}
+                            </strong>
+                          </div>
+                          <div style={{ marginTop: '2px', fontSize: '0.73rem' }}>
+                            <span style={{ color: '#38bdf8', fontWeight: '900' }}>🌐 Secondary Preferred:</span>{' '}
+                            <span style={{ color: isLight ? '#475569' : '#cbd5e1', fontWeight: '700' }}>
+                              {req.secondary_areas || (req.lead_details && req.lead_details.secondary_areas) || 'Barasat, New Town, Hitec City'}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', fontStyle: 'italic', display: 'block', marginTop: '2px' }}>
+                            Facing: {req.facing || 'East Facing'}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '12px', minWidth: '220px', maxWidth: '320px' }}>
+                          <div style={{ background: isLight ? '#fef3c7' : 'rgba(234, 179, 8, 0.12)', border: '1px solid rgba(234, 179, 8, 0.4)', borderRadius: '8px', padding: '8px 10px', fontSize: '0.78rem', color: isLight ? '#0f172a' : '#ffffff', lineHeight: '1.4' }}>
+                            <span style={{ fontSize: '0.68rem', color: '#d97706', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+                              💬 SIFT REASON / NOTES:
+                            </span>
+                            <strong style={{ fontWeight: '800', wordBreak: 'break-word' }}>
+                              "{shiftNotes}"
+                            </strong>
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '12px', color: '#4ade80', fontWeight: '900' }}>
+                          {req.budget_min && req.budget_max ? `${req.budget_min} - ${req.budget_max}` : (req.budget_max || req.budget_min || '₹70 Lakhs+')}
+                        </td>
+
+                        <td style={{ padding: '12px' }}>
+                          {isPending && (
+                            <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid #ef4444', padding: '3px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.73rem', display: 'inline-block' }}>
+                              ⚡ PENDING SOURCING
+                            </span>
+                          )}
+                          {isContacted && (
+                            <span style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', border: '1px solid #fbbf24', padding: '3px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.73rem', display: 'inline-block' }}>
+                              🟡 BUILDER CONTACTED
+                            </span>
+                          )}
+                          {isMatched && (
+                            <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', border: '1px solid #22c55e', padding: '3px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.73rem', display: 'inline-block' }}>
+                              🟢 INVENTORY MATCHED
+                            </span>
+                          )}
+                        </td>
+
+                        <td style={{ padding: '12px' }}>
+                          <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.78rem' }}>
+                            {req.assigned_executive}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                            <button
+                              onClick={() => setShowLeadDetailsModal({ open: true, request: req })}
+                              style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.73rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              title="View complete Create New Lead 360° details & sourcing reason"
+                            >
+                              <Eye size={13} /> Lead Details
+                            </button>
                             <button
                               onClick={() => {
-                                if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Sourcing Request ${req.id} for ${req.customer_name}? It will be moved to Recycle Bin.`)) {
-                                  if (onRecycleItem) {
-                                    onRecycleItem({
-                                      id: req.id || `SRC-${Date.now()}`,
-                                      title: `Sourcing Request - ${req.customer_name || 'Client'} (${req.id})`,
-                                      category: 'Lead',
-                                      originalLocation: 'Property Sourcing Requests Desk',
-                                      details: `Locality: ${req.locality || 'N/A'}, Budget: ${req.budget || 'N/A'}`,
-                                      originalData: req
-                                    });
-                                  }
-                                  const nextList = sourcingRequests.filter((r: any) => r.id !== req.id);
-                                  setSourcingRequests(nextList);
-                                  alert(`🗑️ Sourcing Request ${req.id} moved to Recycle Bin.`);
-                                }
+                                setUpdateForm({
+                                  status: req.status,
+                                  notes: '',
+                                  matched_property_code: req.matched_property_code || ''
+                                });
+                                setShowUpdateModal({ open: true, request: req });
                               }}
-                              style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.73rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                              title="Super Admin Only: Permanently delete this sourcing request"
+                              style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.73rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                             >
-                              <Trash2 size={13} /> Delete
+                              <Edit3 size={13} /> Update
                             </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                            <button
+                              onClick={() => handleSendToMatching(req)}
+                              style={{ background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.4)', padding: '5px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.73rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              title={`Send ${req.customer_name} back to Matching Management under original Matching Code: ${req.matching_id || (req.lead_details && req.lead_details.matching_id) || 'SRM-MAT-2026-000422'}`}
+                            >
+                              <Sparkles size={13} /> Send to Matching
+                            </button>
+                            {isSuperAdmin && (
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Sourcing Request ${req.id} for ${req.customer_name}? It will be moved to Recycle Bin.`)) {
+                                    if (onRecycleItem) {
+                                      onRecycleItem({
+                                        id: req.id || `SRC-${Date.now()}`,
+                                        title: `Sourcing Request - ${req.customer_name || 'Client'} (${req.id})`,
+                                        category: 'Lead',
+                                        originalLocation: 'Property Sourcing Requests Desk',
+                                        details: `Locality: ${req.locality || 'N/A'}, Budget: ${req.budget || 'N/A'}`,
+                                        originalData: req
+                                      });
+                                    }
+                                    const nextList = sourcingRequests.filter((r: any) => r.id !== req.id);
+                                    setSourcingRequests(nextList);
+                                    alert(`🗑️ Sourcing Request ${req.id} moved to Recycle Bin.`);
+                                  }
+                                }}
+                                style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontWeight: '800', fontSize: '0.73rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                title="Super Admin Only: Permanently delete this sourcing request"
+                              >
+                                <Trash2 size={13} /> Delete
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* CREATE NEW SOURCING REQUEST MODAL */}
       {showCreateModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', width: '100%', maxWidth: '640px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: windowWidth <= 640 ? '10px' : '20px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', width: '100%', maxWidth: '640px', maxHeight: '92vh', overflowY: 'auto', padding: windowWidth <= 640 ? '16px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <SearchCode size={20} color="#38bdf8" />
-                <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>CREATE NEW PROPERTY SOURCING REQUEST</h3>
+                <h3 style={{ fontSize: windowWidth <= 480 ? '0.95rem' : '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>CREATE NEW PROPERTY SOURCING REQUEST</h3>
               </div>
               <X size={20} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowCreateModal(false)} />
             </div>
 
             <form onSubmit={handleCreateRequest} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Customer Full Name *</label>
                   <input type="text" value={newRequestForm.customer_name} onChange={(e) => setNewRequestForm({ ...newRequestForm, customer_name: e.target.value })} placeholder="e.g. Bishwajit Pandey" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
@@ -650,7 +808,7 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Primary Preferred Locality *</label>
                   <input type="text" value={newRequestForm.preferred_locality} onChange={(e) => setNewRequestForm({ ...newRequestForm, preferred_locality: e.target.value })} placeholder="e.g. Madhamgram" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
@@ -661,7 +819,7 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Property Type</label>
                   <select value={newRequestForm.property_type} onChange={(e) => setNewRequestForm({ ...newRequestForm, property_type: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}>
@@ -682,7 +840,7 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Min Budget</label>
                   <input type="text" value={newRequestForm.budget_min} onChange={(e) => setNewRequestForm({ ...newRequestForm, budget_min: e.target.value })} placeholder="₹50 Lakhs" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} />
@@ -722,12 +880,12 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
 
       {/* UPDATE STATUS MODAL */}
       {showUpdateModal && showUpdateModal.request && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', width: '100%', maxWidth: '520px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: windowWidth <= 640 ? '10px' : '20px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', width: '100%', maxWidth: '520px', maxHeight: '92vh', overflowY: 'auto', padding: windowWidth <= 640 ? '16px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px' }}>
               <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>UPDATE SOURCING STATUS</h3>
+                <h3 style={{ fontSize: windowWidth <= 480 ? '0.95rem' : '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>UPDATE SOURCING STATUS</h3>
                 <span style={{ fontSize: '0.75rem', color: '#38bdf8', fontFamily: 'monospace' }}>{showUpdateModal.request.id} • {showUpdateModal.request.customer_name}</span>
               </div>
               <X size={20} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowUpdateModal(null)} />
@@ -781,11 +939,11 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
         const sourcingReason = req.sourcing_reason || req.notes || details.sourcing_reason || 'Property sourcing request initiated.';
 
         return (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(6px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', borderRadius: '16px', width: '100%', maxWidth: '780px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)' }}>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(6px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: windowWidth <= 640 ? '10px' : '20px' }}>
+            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', borderRadius: '16px', width: '100%', maxWidth: '780px', maxHeight: '90vh', overflowY: 'auto', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '18px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)' }}>
               
               {/* MODAL HEADER */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ background: 'rgba(56, 189, 248, 0.15)', padding: '10px', borderRadius: '10px' }}>
                     <SearchCode size={24} color="#38bdf8" />

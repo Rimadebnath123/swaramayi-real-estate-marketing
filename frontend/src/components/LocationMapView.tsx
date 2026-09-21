@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Compass, Search, Target, MapPin, X, Building, Sliders, Navigation, Loader2, Globe } from 'lucide-react';
 
 interface LocationMapViewProps {
+  windowWidth?: number;
   currentRole?: string;
   isLight: boolean;
   selectedLocality: string;
@@ -80,6 +81,7 @@ const formatPropertyRateSqft = (p: any): string => {
 };
 
 export const LocationMapView: React.FC<LocationMapViewProps> = ({
+  windowWidth: propWindowWidth,
   currentRole,
   isLight,
   selectedLocality,
@@ -94,6 +96,17 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
   handleDeleteProperty,
   InteractiveLeafletMap,
 }) => {
+  const [winWidth, setWinWidth] = useState<number>(propWindowWidth || (typeof window !== 'undefined' ? window.innerWidth : 1200));
+
+  useEffect(() => {
+    if (propWindowWidth) {
+      setWinWidth(propWindowWidth);
+      return;
+    }
+    const handleResize = () => setWinWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [propWindowWidth]);
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
   const isSuperAdmin = isStrictSuperAdmin || roleUpper.includes('ADMIN');
@@ -249,17 +262,17 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       
       {/* CATEGORY HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: winWidth <= 640 ? 'flex-start' : 'center', flexDirection: winWidth <= 640 ? 'column' : 'row', gap: '12px' }}>
         <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Compass size={24} color="#38bdf8" /> Project Location Wise Interactive Geographical Radar Map
+          <h2 style={{ fontSize: winWidth <= 480 ? '1.05rem' : (winWidth <= 640 ? '1.18rem' : '1.4rem'), fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Compass size={winWidth <= 640 ? 20 : 24} color="#38bdf8" /> Project Location Wise Interactive Geographical Radar Map
           </h2>
-          <p style={{ fontSize: '0.85rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+          <p style={{ fontSize: winWidth <= 640 ? '0.78rem' : '0.85rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
             Search any real-world location (e.g. Madhyamgram station) or project name to pinpoint and view all nearby properties radius-wise.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: winWidth <= 640 ? '100%' : 'auto' }}>
           <button 
             onClick={() => { 
               setSelectedLocality('ALL'); 
@@ -276,6 +289,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
               color: (selectedLocality === 'ALL' && selectedRadius === 'ALL' && !searchQuery && !searchedLocationPin) ? '#ffffff' : (isLight ? '#334155' : '#94a3b8'), 
               fontSize: '0.8rem', 
               fontWeight: '800',
+              width: winWidth <= 640 ? '100%' : 'auto',
               boxShadow: (selectedLocality === 'ALL' && selectedRadius === 'ALL' && !searchQuery && !searchedLocationPin) ? '0 2px 8px rgba(2, 132, 199, 0.35)' : 'none'
             }}
           >
@@ -289,7 +303,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
         background: isLight ? '#ffffff' : '#0f172a', 
         border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', 
         borderRadius: '14px', 
-        padding: '16px', 
+        padding: winWidth <= 640 ? '12px' : '16px', 
         display: 'flex', 
         flexDirection: 'column', 
         gap: '14px', 
@@ -297,25 +311,25 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
       }}>
         
         {/* ROW 1: REAL-WORLD LOCATION SEARCH + PROJECT QUICK SELECTOR DROPDOWN */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: winWidth <= 1024 ? '1fr' : 'minmax(0, 1fr) minmax(0, 340px)', gap: '12px', alignItems: 'center' }}>
           
           {/* LOCATION SEARCH INPUT FORM WITH AUTOCOMPLETE */}
-          <form onSubmit={handlePerformLocationSearch} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <form onSubmit={handlePerformLocationSearch} style={{ position: 'relative', display: 'flex', alignItems: 'center', minWidth: 0, width: '100%' }}>
             <Search size={18} color="#38bdf8" style={{ position: 'absolute', left: '12px', pointerEvents: 'none', zIndex: 5 }} />
             <input 
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => { if (suggestions.length > 0) setShowSuggestionsDropdown(true); }}
-              placeholder="Search location (e.g. Madhyamgram station, Barasat, Salt Lake) or Project Title..."
+              placeholder={winWidth <= 640 ? "Search location or project title..." : "Search location (e.g. Madhyamgram station, Barasat, Salt Lake) or Project Title..."}
               style={{
                 width: '100%',
-                padding: '10px 100px 10px 38px',
+                padding: winWidth <= 640 ? '10px 85px 10px 34px' : '10px 100px 10px 38px',
                 borderRadius: '8px',
                 border: searchedLocationPin ? '2px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
                 background: isLight ? '#f8fafc' : '#1e293b',
                 color: isLight ? '#0f172a' : '#ffffff',
-                fontSize: '0.85rem',
+                fontSize: winWidth <= 640 ? '0.8rem' : '0.85rem',
                 fontWeight: '700',
                 outline: 'none'
               }}
@@ -398,8 +412,8 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
           </form>
 
           {/* QUICK PROJECT SELECTOR DROPDOWN */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Building size={18} color="#0284c7" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+            <Building size={18} color="#0284c7" style={{ flexShrink: 0 }} />
             <select
               value={selectedProperty?.id || ''}
               onChange={(e) => {
@@ -411,12 +425,18 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
               }}
               style={{
                 flex: 1,
+                minWidth: 0,
+                width: '100%',
+                maxWidth: '100%',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
                 padding: '9px 12px',
                 borderRadius: '8px',
                 border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
                 background: isLight ? '#f8fafc' : '#1e293b',
                 color: isLight ? '#0f172a' : '#ffffff',
-                fontSize: '0.85rem',
+                fontSize: winWidth <= 640 ? '0.8rem' : '0.85rem',
                 fontWeight: '700',
                 outline: 'none',
                 cursor: 'pointer'
@@ -434,10 +454,10 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
         </div>
 
         {/* ROW 2: RADIUS SELECTION PILLS & STATUS */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b', paddingTop: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: winWidth <= 640 ? 'stretch' : 'center', flexDirection: winWidth <= 640 ? 'column' : 'row', gap: '10px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b', paddingTop: '12px' }}>
           
           {/* RADIUS FILTER BUTTONS */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: winWidth <= 640 ? '100%' : 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '4px' }}>
               <Target size={18} color="#0284c7" />
               <span style={{ fontSize: '0.8rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
@@ -445,7 +465,22 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: '4px', background: isLight ? '#f1f5f9' : '#1e293b', padding: '3px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div 
+              className={winWidth <= 640 ? "horizontal-scroll-touch" : ""}
+              style={{ 
+                display: 'flex', 
+                gap: '4px', 
+                background: isLight ? '#f1f5f9' : '#1e293b', 
+                padding: '4px', 
+                borderRadius: '8px', 
+                border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', 
+                alignItems: 'center', 
+                flexWrap: winWidth <= 640 ? 'nowrap' : 'wrap',
+                overflowX: winWidth <= 640 ? 'auto' : 'visible',
+                width: winWidth <= 640 ? '100%' : 'auto',
+                maxWidth: '100%'
+              }}
+            >
               {radiusOptions.map((rad) => {
                 const isActive = selectedRadius === rad;
                 return (
@@ -462,6 +497,8 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
                       fontSize: '0.75rem',
                       fontWeight: isActive ? '900' : '700',
                       boxShadow: isActive ? '0 2px 6px rgba(2, 132, 199, 0.4)' : 'none',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
                       transition: 'all 0.15s ease'
                     }}
                   >
@@ -471,8 +508,8 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
               })}
 
               {/* EDITABLE CUSTOM RADIUS NUMBER INPUT */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 6px', borderLeft: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8' }}>✏️ Custom:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 6px', borderLeft: isLight ? '1px solid #cbd5e1' : '1px solid #334155', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', whiteSpace: 'nowrap' }}>✏️ Custom:</span>
                 <input
                   type="number"
                   min="0.1"
@@ -505,7 +542,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
               </div>
 
               {/* INTERACTIVE RADIUS SLIDER */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '4px', borderLeft: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '4px', borderLeft: isLight ? '1px solid #cbd5e1' : '1px solid #334155', flexShrink: 0 }}>
                 <input
                   type="range"
                   min="0.5"
@@ -514,7 +551,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
                   value={selectedRadius === 'ALL' ? 50 : (parseFloat(selectedRadius) || 5)}
                   onChange={(e) => setSelectedRadius(e.target.value)}
                   title={`Adjust Radius Slider: ${selectedRadius} km`}
-                  style={{ width: '90px', cursor: 'pointer', accentColor: '#0284c7' }}
+                  style={{ width: '80px', cursor: 'pointer', accentColor: '#0284c7' }}
                 />
               </div>
 
@@ -522,17 +559,17 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
           </div>
 
           {/* VIEW ALL MAP / FOCUS TOGGLE */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <div style={{ background: isLight ? '#f1f5f9' : '#1e293b', borderRadius: '6px', padding: '3px', display: 'flex', gap: '4px', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: winWidth <= 640 ? '100%' : 'auto', justifyContent: winWidth <= 640 ? 'space-between' : 'flex-end' }}>
+            <div style={{ background: isLight ? '#f1f5f9' : '#1e293b', borderRadius: '6px', padding: '3px', display: 'flex', gap: '4px', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', flex: winWidth <= 640 ? 1 : 'initial' }}>
               <button 
                 onClick={() => setShowAllOnMap(true)} 
-                style={{ background: showAllOnMap ? '#0284c7' : 'transparent', color: showAllOnMap ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'), border: 'none', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
+                style={{ flex: 1, background: showAllOnMap ? '#0284c7' : 'transparent', color: showAllOnMap ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'), border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', textAlign: 'center', whiteSpace: 'nowrap' }}
               >
                 🌐 View All Pins
               </button>
               <button 
                 onClick={() => setShowAllOnMap(false)} 
-                style={{ background: !showAllOnMap ? '#0284c7' : 'transparent', color: !showAllOnMap ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'), border: 'none', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
+                style={{ flex: 1, background: !showAllOnMap ? '#0284c7' : 'transparent', color: !showAllOnMap ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'), border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', textAlign: 'center', whiteSpace: 'nowrap' }}
               >
                 📍 Focus Pin
               </button>
@@ -551,11 +588,12 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px'
+                gap: '4px',
+                whiteSpace: 'nowrap'
               }}
             >
               <Sliders size={14} />
-              {showRadiusSelectionList ? 'Hide Radius Panel' : 'Show Radius Projects List'}
+              {showRadiusSelectionList ? (winWidth <= 640 ? 'Hide List' : 'Hide Radius Panel') : (winWidth <= 640 ? 'Show List' : 'Show Radius Projects List')}
             </button>
           </div>
 
@@ -568,16 +606,16 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
         background: searchedLocationPin ? (isLight ? '#f0fdf4' : '#064e3b') : (isLight ? '#f0f9ff' : '#0c4a6e'), 
         border: searchedLocationPin ? '1px solid #22c55e' : '1px solid #0284c7', 
         borderRadius: '10px', 
-        padding: '10px 16px', 
+        padding: '10px 14px', 
         display: 'flex', 
         justifyContent: 'space-between', 
-        alignItems: 'center', 
-        flexWrap: 'wrap', 
+        alignItems: winWidth <= 640 ? 'flex-start' : 'center', 
+        flexDirection: winWidth <= 640 ? 'column' : 'row', 
         gap: '8px' 
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: winWidth <= 640 ? '100%' : 'auto' }}>
           <MapPin size={18} color={searchedLocationPin ? '#4ade80' : '#38bdf8'} />
-          <span style={{ fontSize: '0.85rem', fontWeight: '800', color: searchedLocationPin ? (isLight ? '#166534' : '#dcfce7') : (isLight ? '#0369a1' : '#e0f2fe') }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: '800', color: searchedLocationPin ? (isLight ? '#166534' : '#dcfce7') : (isLight ? '#0369a1' : '#e0f2fe'), wordBreak: 'break-word' }}>
             {searchedLocationPin ? `📍 Searched Target Location: ${searchedLocationPin.name}` : `Center Anchor: ${selectedProperty?.title || 'Property Location'}`}
           </span>
           <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: searchedLocationPin ? '#4ade80' : '#38bdf8', background: searchedLocationPin ? 'rgba(34, 197, 94, 0.2)' : 'rgba(2, 132, 199, 0.2)', padding: '2px 8px', borderRadius: '4px', fontWeight: '800' }}>
@@ -585,17 +623,17 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', width: winWidth <= 640 ? '100%' : 'auto', justifyContent: winWidth <= 640 ? 'space-between' : 'flex-end' }}>
           {searchedLocationPin && (
             <button
               onClick={() => setSearchedLocationPin(null)}
-              style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '3px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800', cursor: 'pointer' }}
+              style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800', cursor: 'pointer' }}
             >
               Clear Searched Pin
             </button>
           )}
           <span style={{ fontSize: '0.78rem', fontWeight: '800', color: searchedLocationPin ? '#22c55e' : (isLight ? '#0284c7' : '#38bdf8') }}>
-            Matches: {finalFilteredProperties.length} Projects {selectedRadius !== 'ALL' ? `(within ${selectedRadius} km)` : ''}
+            Matches: {finalFilteredProperties.length} Projects {selectedRadius !== 'ALL' ? `(${selectedRadius} km)` : ''}
           </span>
           <a 
             href={`https://www.google.com/maps?q=${anchorCoords.lat},${anchorCoords.lng}+(${encodeURIComponent(searchedLocationPin ? searchedLocationPin.name : selectedProperty?.title || 'Location')})`}
@@ -609,10 +647,10 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
       </div>
 
       {/* MAIN CONTENT GRID (MAP LEFT, DETAILS & RADIUS LIST RIGHT) */}
-      <div style={{ display: 'grid', gridTemplateColumns: showRadiusSelectionList ? '1fr 400px' : '1fr 360px', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: winWidth <= 900 ? '1fr' : (showRadiusSelectionList ? '1fr 400px' : '1fr 360px'), gap: '20px' }}>
         
         {/* MAP CANVAS CONTAINER */}
-        <div style={{ background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', height: '620px', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 6px 20px rgba(0,0,0,0.15)' }}>
+        <div style={{ background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', height: winWidth <= 640 ? '380px' : (winWidth <= 900 ? '450px' : '620px'), position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 6px 20px rgba(0,0,0,0.15)' }}>
           <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
             <InteractiveLeafletMap 
               properties={finalFilteredProperties}
@@ -627,19 +665,19 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
             />
 
             {/* BOTTOM MAP STATUS OVERLAY */}
-            <div style={{ position: 'absolute', bottom: '12px', left: '12px', right: '12px', zIndex: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isLight ? 'rgba(255, 255, 255, 0.94)' : 'rgba(15, 23, 42, 0.94)', backdropFilter: 'blur(8px)', padding: '8px 14px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', fontSize: '0.75rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '65%' }}>
+            <div style={{ position: 'absolute', bottom: '12px', left: '12px', right: '12px', zIndex: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px', background: isLight ? 'rgba(255, 255, 255, 0.94)' : 'rgba(15, 23, 42, 0.94)', backdropFilter: 'blur(8px)', padding: '6px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', fontSize: '0.72rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: winWidth <= 640 ? '100%' : '65%' }}>
                 📍 GPS Engine • {searchedLocationPin ? `Searched: ${searchedLocationPin.name}` : (selectedProperty ? selectedProperty.title : 'Barasat Core')} ({anchorCoords.lat.toFixed(4)}, {anchorCoords.lng.toFixed(4)})
               </span>
               <span style={{ color: '#22c55e', fontWeight: '800', whiteSpace: 'nowrap' }}>
-                ● Radar Active ({finalFilteredProperties.length} Tracked {selectedRadius !== 'ALL' ? `@ ${selectedRadius}km radius` : ''})
+                ● Radar Active ({finalFilteredProperties.length} Tracked {selectedRadius !== 'ALL' ? `@ ${selectedRadius}km` : ''})
               </span>
             </div>
           </div>
         </div>
 
         {/* RIGHT SIDE PANEL: SPECIFICATIONS & RADIUS WISE SELECTION LIST */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '620px', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: winWidth <= 900 ? 'none' : '620px', overflowY: winWidth <= 900 ? 'visible' : 'auto' }}>
           
           {/* PROPERTY SPECIFICATION CARD */}
           <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>

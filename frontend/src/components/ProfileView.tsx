@@ -190,7 +190,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
         border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
         borderRadius: '16px',
-        padding: '28px',
+        padding: windowWidth <= 640 ? '16px' : '28px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -198,22 +198,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         gap: '20px',
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: windowWidth <= 480 ? '14px' : '20px', flexWrap: 'wrap' }}>
           {/* AVATAR BADGE WITH PROFILE LOGO SUPPORT */}
           <div style={{ position: 'relative' }}>
             <div 
               onClick={() => fileInputRef.current?.click()}
               title="Click to upload or change profile logo"
               style={{
-                width: '95px',
-                height: '95px',
+                width: windowWidth <= 480 ? '75px' : '95px',
+                height: windowWidth <= 480 ? '75px' : '95px',
                 borderRadius: '24px',
                 background: avatarUrl ? '#0f172a' : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#ffffff',
-                fontSize: '2.2rem',
+                fontSize: windowWidth <= 480 ? '1.75rem' : '2.2rem',
                 fontWeight: '900',
                 boxShadow: '0 8px 20px rgba(2, 132, 199, 0.4)',
                 border: '3px solid #38bdf8',
@@ -248,7 +248,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
               >
-                <Camera size={28} color="#ffffff" />
+                <Camera size={windowWidth <= 480 ? 22 : 28} color="#ffffff" />
               </div>
             </div>
 
@@ -280,8 +280,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           {/* USER INFO */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: windowWidth <= 480 ? '1.25rem' : windowWidth <= 640 ? '1.45rem' : '1.75rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
                 {currentUser.full_name}
               </h1>
               <span style={{
@@ -327,7 +327,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
 
         {/* ACTION BUTTONS */}
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', width: windowWidth <= 640 ? '100%' : 'auto' }}>
           <button 
             onClick={() => handleStartEditProfile(currentUser)}
             style={{
@@ -341,7 +341,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              justifyContent: 'center',
+              gap: '6px',
+              flex: windowWidth <= 640 ? '1 1 calc(50% - 6px)' : 'initial'
             }}
           >
             <Edit3 size={16} /> Edit Details
@@ -359,8 +361,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '6px',
-              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)'
+              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)',
+              flex: windowWidth <= 640 ? '1 1 calc(50% - 6px)' : 'initial'
             }}
           >
             <Shield size={16} color="#ffffff" /> Security Audit
@@ -369,14 +373,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       </div>
 
       {/* 3-COLUMN DETAIL GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 768 ? '1fr' : 'repeat(3, 1fr)', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '20px' }}>
         
         {/* COLUMN 1: CONTACT & PERSONAL INFORMATION */}
         <div style={{
           background: isLight ? '#ffffff' : '#1e293b',
           border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
           borderRadius: '14px',
-          padding: '20px',
+          padding: windowWidth <= 640 ? '14px' : '20px',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px'
@@ -417,7 +421,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           background: isLight ? '#ffffff' : '#1e293b',
           border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
           borderRadius: '14px',
-          padding: '20px',
+          padding: windowWidth <= 640 ? '14px' : '20px',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px'
@@ -458,7 +462,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           background: isLight ? '#ffffff' : '#1e293b',
           border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
           borderRadius: '14px',
-          padding: '20px',
+          padding: windowWidth <= 640 ? '14px' : '20px',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px'
@@ -494,12 +498,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         background: isLight ? '#ffffff' : '#1e293b',
         border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
         borderRadius: '14px',
-        padding: '20px',
+        padding: windowWidth <= 640 ? '14px' : '20px',
         display: 'flex',
         flexDirection: 'column',
         gap: '16px'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Lock size={20} color="#38bdf8" />
             <h3 style={{ fontSize: '1rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
@@ -511,34 +515,72 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </span>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ color: isLight ? '#64748b' : '#94a3b8', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
-                <th style={{ padding: '8px 12px' }}>Session ID</th>
-                <th style={{ padding: '8px 12px' }}>Authenticated User</th>
-                <th style={{ padding: '8px 12px' }}>IP Address</th>
-                <th style={{ padding: '8px 12px' }}>Device / Browser</th>
-                <th style={{ padding: '8px 12px' }}>Login Time</th>
-                <th style={{ padding: '8px 12px', textAlign: 'center' }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
-                <td style={{ padding: '10px 12px', color: '#38bdf8', fontWeight: '700', fontFamily: 'monospace' }}>SES-01</td>
-                <td style={{ padding: '10px 12px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{currentUser.full_name || currentUser.username} ({roleInfo.name || currentUser.role})</td>
-                <td style={{ padding: '10px 12px', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace' }}>127.0.0.1 (Localhost)</td>
-                <td style={{ padding: '10px 12px', color: isLight ? '#64748b' : '#94a3b8' }}>Chrome / Windows 11</td>
-                <td style={{ padding: '10px 12px', color: '#fbbf24', fontWeight: '700' }}>27 Aug 09:00 AM</td>
-                <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                  <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: '800' }}>
-                    ● ACTIVE
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {windowWidth <= 768 ? (
+          <div style={{
+            background: isLight ? '#f8fafc' : '#0f172a',
+            border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+            borderRadius: '12px',
+            padding: '14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800', fontSize: '0.85rem' }}>SES-01</span>
+              <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: '800' }}>
+                ● ACTIVE
+              </span>
+            </div>
+            <div>
+              <strong style={{ fontSize: '0.9rem', color: isLight ? '#0f172a' : '#ffffff', display: 'block' }}>
+                {currentUser.full_name || currentUser.username}
+              </strong>
+              <span style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8' }}>({roleInfo.name || currentUser.role})</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: '700' }}>IP ADDRESS</span>
+                <span style={{ fontFamily: 'monospace' }}>127.0.0.1 (Localhost)</span>
+              </div>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: '700' }}>LOGIN TIME</span>
+                <span style={{ color: '#fbbf24', fontWeight: '700' }}>27 Aug 09:00 AM</span>
+              </div>
+            </div>
+            <div style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+              <span style={{ fontWeight: '700' }}>DEVICE: </span>Chrome / Windows 11
+            </div>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ color: isLight ? '#64748b' : '#94a3b8', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
+                  <th style={{ padding: '8px 12px' }}>Session ID</th>
+                  <th style={{ padding: '8px 12px' }}>Authenticated User</th>
+                  <th style={{ padding: '8px 12px' }}>IP Address</th>
+                  <th style={{ padding: '8px 12px' }}>Device / Browser</th>
+                  <th style={{ padding: '8px 12px' }}>Login Time</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'center' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                  <td style={{ padding: '10px 12px', color: '#38bdf8', fontWeight: '700', fontFamily: 'monospace' }}>SES-01</td>
+                  <td style={{ padding: '10px 12px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{currentUser.full_name || currentUser.username} ({roleInfo.name || currentUser.role})</td>
+                  <td style={{ padding: '10px 12px', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace' }}>127.0.0.1 (Localhost)</td>
+                  <td style={{ padding: '10px 12px', color: isLight ? '#64748b' : '#94a3b8' }}>Chrome / Windows 11</td>
+                  <td style={{ padding: '10px 12px', color: '#fbbf24', fontWeight: '700' }}>27 Aug 09:00 AM</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                    <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: '800' }}>
+                      ● ACTIVE
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
     </div>

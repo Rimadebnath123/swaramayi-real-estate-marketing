@@ -11388,6 +11388,7 @@ export default function App() {
             <RecycleBinView
               isLight={isLight}
               recycledItems={recycledItems}
+              windowWidth={windowWidth}
               onRestoreItem={handleRestoreRecycledItem}
               onPurgeItem={handlePurgeRecycledItem}
               onEmptyBin={handleEmptyRecycleBin}
@@ -11781,17 +11782,17 @@ export default function App() {
 
       {/* EDIT USER PROFILE MODAL */}
       {showEditProfileModal && editingProfile && (
-        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '2px solid #0284c7' : '2px solid #0284c7', width: '94vw', maxWidth: '800px', maxHeight: '92vh', borderRadius: '16px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: windowWidth <= 640 ? '10px' : '20px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '2px solid #0284c7' : '2px solid #0284c7', width: '94vw', maxWidth: '800px', maxHeight: '92vh', borderRadius: '16px', padding: windowWidth <= 640 ? '16px' : '28px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
             
             {/* MODAL HEADER */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
+                <div style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', flexShrink: 0 }}>
                   <Edit3 size={22} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>
+                  <h3 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
                     ✏️ EDIT USER PROFILE — {(editingProfile.full_name || '').toUpperCase()}
                   </h3>
                   <span style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8' }}>
@@ -11799,7 +11800,7 @@ export default function App() {
                   </span>
                 </div>
               </div>
-              <X size={24} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowEditProfileModal(false)} />
+              <X size={24} color="#94a3b8" style={{ cursor: 'pointer', flexShrink: 0 }} onClick={() => setShowEditProfileModal(false)} />
             </div>
 
             {/* FORM */}
@@ -11811,7 +11812,7 @@ export default function App() {
                   👤 PERSONAL & CONTACT DETAILS
                 </h4>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#475569' : '#cbd5e1', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Full Name *</label>
                     <input 
@@ -11856,7 +11857,7 @@ export default function App() {
                     />
                   </div>
 
-                  <div style={{ gridColumn: 'span 2' }}>
+                  <div style={{ gridColumn: windowWidth <= 640 ? 'span 1' : 'span 2' }}>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#475569' : '#cbd5e1', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Official Designation</label>
                     <input 
                       type="text" 
@@ -11875,7 +11876,7 @@ export default function App() {
                   🏢 ORGANIZATIONAL & BRANCH GOVERNANCE
                 </h4>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#475569' : '#cbd5e1', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Assigned Branch</label>
                     <input 

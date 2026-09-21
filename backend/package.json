@@ -11,24 +11,21 @@
     "seed:mongo": "tsx src/db/seedMongo.ts"
   },
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
     "@types/mongoose": "^5.11.96",
+    "@types/node": "^20.11.24",
+    "@types/uuid": "^9.0.8",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.9.3",
-    "swaramayi-real-estate-marketing": "file:..",
-    "uuid": "^9.0.1"
-  },
-  "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.6",
-    "@types/node": "^20.11.24",
-    "@types/uuid": "^9.0.8",
     "tsx": "^4.7.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "uuid": "^9.0.1"
   }
 }

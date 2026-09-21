@@ -1,3 +1,4 @@
+// Vercel deployment trigger
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   LayoutDashboard, UserCog, Building, Users, CreditCard, User, FileCheck,

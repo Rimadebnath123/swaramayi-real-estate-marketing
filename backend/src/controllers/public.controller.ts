@@ -255,64 +255,51 @@ function formatPublicProperty(p: any) {
     views: (p.views || 0) + 1,
     created_at: p.created_at || new Date().toISOString(),
     assignedAdvisor: (() => {
-      const u = (dbStore.data.users || []).find((usr: any) => 
-        (p.assigned_employee_id && (usr.id === p.assigned_employee_id || String(usr.id) === String(p.assigned_employee_id))) ||
-        (p.assigned_employee_name && (usr.full_name === p.assigned_employee_name || usr.username === p.assigned_employee_name))
-      );
-      let name = u?.full_name || p.assigned_employee_name;
-      let role = u?.role || 'Property Advisor';
-      let phone = u?.mobile || '9051322932';
-      let email = u?.email || 'punitagswaramayi.com';
-      let img = (u as any)?.avatar || (u as any)?.profileImage;
-      let rating = (u as any)?.rating;
+      const pTitleLower = (title || p.title || p.property_title || p.project_name || '').toLowerCase();
+      const pCodeLower = String(p.property_code || p.id || '').toLowerCase();
 
-      const tLower = title.toLowerCase();
-      const codeLower = String(p.property_code || p.id || '').toLowerCase();
+      // Find user who has this property assigned in CRM (or assigned_employee_id/name)
+      const u = (dbStore.data.users || []).find((usr: any) => {
+        if (p.assigned_employee_id && (usr.id === p.assigned_employee_id || String(usr.id) === String(p.assigned_employee_id))) return true;
+        if (p.assigned_employee_name && (usr.full_name === p.assigned_employee_name || usr.username === p.assigned_employee_name)) return true;
+        
+        const userProps: any[] = usr.assigned_properties || usr.assignedProperties || [];
+        if (Array.isArray(userProps)) {
+          return userProps.some((ap: any) => {
+            const apStr = String(ap || '').toLowerCase();
+            return apStr && (
+              apStr === pCodeLower ||
+              pTitleLower.includes(apStr) ||
+              apStr.includes(pTitleLower) ||
+              (pTitleLower.includes('shibalay') && apStr.includes('shibalay')) ||
+              (pTitleLower.includes('dhriti') && apStr.includes('dhriti')) ||
+              (pTitleLower.includes('gajapati') && apStr.includes('gajapati'))
+            );
+          });
+        }
+        return false;
+      });
+
+      let name = u?.full_name || u?.username || p.assigned_employee_name;
+      let role = u?.role || (u as any)?.designation || 'Sales Management';
+      let phone = u?.mobile || (u as any)?.phone || '8668767887';
+      let email = u?.email || 'punita13.pr@gmail.com';
+      let img = (u as any)?.avatar || (u as any)?.profileImage || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
+      let rating = (u as any)?.rating || 4.8;
 
       if (!name) {
-        if (tLower.includes('shibalay') || codeLower.includes('425') || codeLower.includes('shibalay')) {
-          name = 'Abinash Roy';
-          role = 'Admin';
-          phone = '7697098078';
-          email = 'abinshggmail.com';
-          img = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&q=80';
-          rating = rating || 4.7;
-        } else if (tLower.includes('dhriti') || codeLower.includes('427') || codeLower.includes('423') || codeLower.includes('dhriti')) {
-          name = 'Punita Roy';
-          role = 'Sales Management';
-          phone = '9051322932';
-          email = 'punitagswaramayi.com';
-          img = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
-          rating = rating || 4.8;
-        } else if (tLower.includes('gajapati') || codeLower.includes('422')) {
-          name = 'Punita Roy';
-          role = 'Sales Management';
-          phone = '9051322932';
-          email = 'punitagswaramayi.com';
-          img = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
-          rating = rating || 4.8;
-        } else {
-          name = 'Punita Roy';
-          role = 'Sales Management';
-          phone = '9051322932';
-          email = 'punitagswaramayi.com';
-          img = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
-          rating = rating || 4.8;
-        }
-      }
-
-      if (!rating) {
-        rating = (name && name.toLowerCase().includes('abinash')) ? 4.7 : 4.8;
-      }
-
-      if (!img) {
-        img = (name && name.toLowerCase().includes('punita')) 
-          ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80'
-          : 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&q=80';
+        name = 'punita Roy chowdhury';
+        role = 'TELECALLER';
+        phone = '8668767887';
+        email = 'punita13.pr@gmail.com';
+        img = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
+        rating = 4.8;
       }
 
       return {
+        id: u?.id || 'USR-02',
         name,
+        full_name: name,
         role,
         designation: role,
         phone,
@@ -320,7 +307,7 @@ function formatPublicProperty(p: any) {
         email,
         profileImage: img,
         image: img,
-        rating: Number(rating) || 4.8
+        rating
       };
     })(),
     agent: (() => {

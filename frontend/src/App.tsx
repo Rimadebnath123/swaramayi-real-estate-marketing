@@ -9174,8 +9174,7 @@ export default function App() {
           <button 
             onClick={() => { 
               if (isMobile) setIsMobileSidebarOpen(false); 
-              const rawUrl = (import.meta as any).env?.VITE_WEBSITE_URL;
-              const websiteUrl = (!rawUrl || rawUrl.includes('swarnamoyi.info')) ? 'https://swaramayi-website.vercel.app/' : rawUrl;
+              const websiteUrl = 'https://swaramayi-website.vercel.app/';
               if (typeof window !== 'undefined') {
                 window.open(websiteUrl, '_blank', 'noopener,noreferrer');
               }

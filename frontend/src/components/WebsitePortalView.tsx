@@ -13,8 +13,7 @@ export const WebsitePortalView: React.FC<WebsitePortalViewProps> = ({ isLight, w
   const [viewMode, setViewMode] = useState<'preview' | 'iframe' | 'setup'>('preview');
   const [iframeKey, setIframeKey] = useState<number>(Date.now());
 
-  const rawUrl = (import.meta as any).env?.VITE_WEBSITE_URL;
-  const websiteUrl = (!rawUrl || rawUrl.includes('swarnamoyi.info')) ? 'https://swaramayi-website.vercel.app/' : rawUrl;
+  const websiteUrl = 'https://swaramayi-website.vercel.app/';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minHeight: '80vh' }}>

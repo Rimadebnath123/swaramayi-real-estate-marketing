@@ -4116,14 +4116,16 @@ export default function App() {
       if (saved) {
         const sanitized = saved.replace(/Rajesh V[ae]rma/gi, 'Avishek Das');
         const parsed = JSON.parse(sanitized);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const filtered = parsed.filter((u: any) => u.id !== 'USR-02' || u.full_name?.toLowerCase().includes('punita') || u.username?.toLowerCase().includes('punita'));
+          if (filtered.length > 0) return filtered;
+        }
       }
     } catch (e) {
       console.error('Error reading users from localStorage:', e);
     }
     return [
-      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', password: 'Swaramayi@2026', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office', department: 'Executive Board', team_name: 'Core Management', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' },
-      { id: 'USR-02', username: 'Abinash Roy', full_name: 'Abinash Roy', email: 'abinsh@gmail.com', password: 'Swaramayi@2026', mobile: '+91 76970 98078', role: 'ADMIN', designation: 'System Administrator', branch_name: 'Kolkata Branch', department: 'General Management', team_name: 'Kolkata Expansion Team', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE' }
+      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', password: 'Swaramayi@2026', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office', department: 'Executive Board', team_name: 'Core Management', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' }
     ];
   });
 
@@ -6566,10 +6568,19 @@ export default function App() {
   }, [developers]);
 
   // CENTRAL MONGODB ATLAS LIVE SYNC ENGINE
+  const getBackendApiUrl = (endpoint: string) => {
+    if (typeof window !== 'undefined') {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return `http://localhost:5000${endpoint}`;
+      }
+      return endpoint; // Vercel vercel.json proxies /api/* to Render backend
+    }
+    return `https://swaramayi-real-estate-marketing.onrender.com${endpoint}`;
+  };
+
   const syncAllToMongoDB = React.useCallback(async (overrideData?: any) => {
     try {
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const apiUrl = `http://${host}:5000/api/v1/crm/sync`;
+      const apiUrl = getBackendApiUrl('/api/v1/crm/sync');
 
       let devList: any[] = [];
       try {
@@ -6609,8 +6620,7 @@ export default function App() {
   useEffect(() => {
     const loadFromMongoDB = async () => {
       try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const apiUrl = `http://${host}:5000/api/v1/crm/sync`;
+        const apiUrl = getBackendApiUrl('/api/v1/crm/sync');
         const res = await fetch(apiUrl);
         if (res.ok) {
           const result = await res.json();

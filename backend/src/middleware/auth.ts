@@ -24,9 +24,9 @@ export function verifyToken(req: AuthRequest, res: Response, next: NextFunction)
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     req.user = {
-      id: 'USR-04',
-      username: 'Priya Nair (Sales Exec)',
-      email: 'priya.nair@swaramayi.com',
+      id: 'USR-01',
+      username: 'Avishek Das (Super Admin)',
+      email: 'admin@swaramayi.com',
       role: 'SUPER_ADMIN'
     };
     return next();
@@ -49,9 +49,9 @@ export function verifyToken(req: AuthRequest, res: Response, next: NextFunction)
     next();
   } catch (err) {
     req.user = {
-      id: 'USR-04',
-      username: 'Priya Nair (Sales Exec)',
-      email: 'priya.nair@swaramayi.com',
+      id: 'USR-01',
+      username: 'Avishek Das (Super Admin)',
+      email: 'admin@swaramayi.com',
       role: 'SUPER_ADMIN'
     };
     return next();

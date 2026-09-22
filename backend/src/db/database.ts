@@ -417,155 +417,16 @@ export interface Schema {
 
 const initialData: Schema = {
   branches: [
-    { id: 'BR-01', branch_code: 'SRM-BR-01', branch_name: 'Head Office (Kolkata)', city: 'Kolkata', address: 'Camac Street, Kolkata - 700017', branch_manager_id: 'USR-01', branch_manager_name: 'Avishek Das (Super Admin)', created_at: '2026-01-01' },
-    { id: 'BR-02', branch_code: 'SRM-BR-02', branch_name: 'Kolkata Branch', city: 'Kolkata', address: 'Park Street, Kolkata - 700016', branch_manager_id: 'USR-02', branch_manager_name: 'Abinash Roy (Admin)', created_at: '2026-03-01' }
+    { id: 'BR-01', branch_code: 'SRM-BR-01', branch_name: 'Head Office (Kolkata)', city: 'Kolkata', address: 'Camac Street, Kolkata - 700017', branch_manager_id: 'USR-01', branch_manager_name: 'Avishek Das (Super Admin)', created_at: '2026-01-01' }
   ],
   teams: [
-    { id: 'TEAM-01', team_name: 'Corporate Leadership Squad', branch_id: 'BR-01', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', leader_name: 'Avishek Das (SUPER_ADMIN)', monthly_target: '50 Property Units', created_at: '2026-01-15', members_count: 1 },
-    { id: 'TEAM-02', team_name: 'Kolkata Expansion Team', branch_id: 'BR-02', branch_name: 'Kolkata Branch', department: 'Sales Operations', leader_name: 'Abinash Roy (Admin)', monthly_target: '25 Property Units', created_at: '2026-03-10', members_count: 1 },
-    { id: 'TEAM-03', team_name: 'General Operations Squad', branch_id: 'BR-01', branch_name: 'Head Office (Kolkata)', department: 'System Admin', leader_name: 'Avishek Das (SUPER_ADMIN)', monthly_target: '15 Property Units', created_at: '2026-04-01', members_count: 1 },
-    { id: 'TEAM-04', team_name: 'Kolkata Admin & Technical Squad', branch_id: 'BR-02', branch_name: 'Kolkata Branch', department: 'System Admin', leader_name: 'Abinash Roy (Admin)', monthly_target: '20 Property Units', created_at: '2026-08-27', members_count: 1 }
+    { id: 'TEAM-01', team_name: 'Corporate Leadership Squad', branch_id: 'BR-01', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', leader_name: 'Avishek Das (SUPER_ADMIN)', monthly_target: '50 Property Units', created_at: '2026-01-15', members_count: 1 }
   ],
   users: [
-    { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-01' },
-    { id: 'USR-02', username: 'punita.roy', full_name: 'Punita Roy', email: 'punita.roy@swaramayi.com', mobile: '+91 90513 22932', role: 'SALES_EXEC', branch_name: 'Kolkata Branch', department: 'Sales Management', team_name: 'Kolkata Expansion Team', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-15' },
-    { id: 'USR-03', username: 'abinash.roy', full_name: 'Abinash Roy', email: 'abinash.roy@swaramayi.com', mobile: '+91 76970 90078', role: 'ADMIN', branch_name: 'Kolkata Branch', department: 'Residential Sales', team_name: 'Kolkata Admin & Technical Squad', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-15' }
+    { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-01' }
   ],
   customers: [],
-  properties: [
-    {
-      id: 'PROP-001',
-      property_code: 'SRM-PROP-2026-000425',
-      property_title: 'SHIBALAY',
-      property_type: 'Apartment',
-      transaction_type: 'Sale',
-      category: 'Buy',
-      developer_name: 'KRISHNA DAS',
-      project_name: 'SHIBALAY',
-      tower_name: 'Block A',
-      floor: 3,
-      unit_number: 'A-302',
-      configuration: '3BHK',
-      bedrooms: 3,
-      bathrooms: 2,
-      carpet_area_sqft: 422.5,
-      built_up_area_sqft: 650,
-      areaSqft: 650,
-      facing: 'East',
-      parking_spaces: 1,
-      furnishing_status: 'Semi-Furnished',
-      possession_date: 'Ready to Move',
-      base_price: 2080000,
-      price_per_sqft: 3200,
-      final_price: '₹22,76,200',
-      price_sqft: '₹4,574/Sq.Ft.',
-      discount: 0,
-      final_estimated_price: 2080000,
-      property_status: 'Active',
-      availability_status: 'AVAILABLE',
-      location_address: 'Chapadali Bus Terminus Hub, Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124',
-      city: 'Kolkata',
-      locality: 'BARASAT, CHAPADALI',
-      location: 'BARASAT, CHAPADALI',
-      description: 'Spacious 3 BHK residential apartment featuring modern amenities, excellent ventilation, and prime location connectivity in BARASAT, CHAPADALI, Kolkata.',
-      images: [
-        'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=1200&q=80'
-      ],
-      image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80',
-      is_deleted: false,
-      created_at: '2026-01-10T10:00:00.000Z'
-    },
-    {
-      id: 'PROP-002',
-      property_code: 'SRM-PROP-2026-000426',
-      property_title: 'GAJAPATI APARTMENT',
-      property_type: 'Apartment',
-      transaction_type: 'Sale',
-      category: 'Buy',
-      developer_name: 'BABLA DUTTA',
-      project_name: 'GAJAPATI APARTMENT',
-      tower_name: 'Block B',
-      floor: 2,
-      unit_number: 'B-204',
-      configuration: '2BHK',
-      bedrooms: 2,
-      bathrooms: 2,
-      carpet_area_sqft: 700.35,
-      built_up_area_sqft: 771,
-      areaSqft: 771,
-      facing: 'North-East',
-      parking_spaces: 1,
-      furnishing_status: 'Semi-Furnished',
-      possession_date: 'Ready to Move',
-      base_price: 3515900,
-      price_per_sqft: 4560,
-      final_price: '₹35,15,900',
-      price_sqft: '₹5,020/Sq.Ft.',
-      discount: 0,
-      final_estimated_price: 3515900,
-      property_status: 'Active',
-      availability_status: 'AVAILABLE',
-      location_address: 'Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124',
-      city: 'Kolkata',
-      locality: 'Barasat, Kolkata',
-      location: 'Barasat, Kolkata',
-      description: 'Premium 2 BHK residential apartment with modern fittings, lift, 24x7 security, and power backup in Barasat, Kolkata.',
-      images: [
-        'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'
-      ],
-      image: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=80',
-      is_deleted: false,
-      created_at: '2026-02-01T10:00:00.000Z'
-    },
-    {
-      id: 'PROP-003',
-      property_code: 'SRM-PROP-2026-000427',
-      property_title: 'DHRITI APARTMENT',
-      property_type: 'Apartment',
-      transaction_type: 'Sale',
-      category: 'Buy',
-      developer_name: 'NANIGOPAL DAS',
-      project_name: 'DHRITI APARTMENT',
-      tower_name: 'Tower 1',
-      floor: 4,
-      unit_number: '1-401',
-      configuration: '2BHK',
-      bedrooms: 2,
-      bathrooms: 2,
-      carpet_area_sqft: 718.25,
-      built_up_area_sqft: 765,
-      areaSqft: 765,
-      facing: 'East',
-      parking_spaces: 1,
-      furnishing_status: 'Fully Furnished',
-      possession_date: 'Ready to Move',
-      base_price: 3621400,
-      price_per_sqft: 4733,
-      final_price: '₹36,21,400',
-      price_sqft: '₹5,042/Sq.Ft.',
-      discount: 0,
-      final_estimated_price: 3621400,
-      property_status: 'Active',
-      availability_status: 'AVAILABLE',
-      location_address: 'Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124',
-      city: 'Kolkata',
-      locality: 'Barasat, Kolkata',
-      location: 'Barasat, Kolkata',
-      description: 'Luxury 2 BHK residence with covered parking, modular kitchen, balcony views, and close proximity to Barasat, Kolkata.',
-      images: [
-        'https://images.unsplash.com/photo-1567496898669-ee935f5f647a?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80'
-      ],
-      image: 'https://images.unsplash.com/photo-1567496898669-ee935f5f647a?auto=format&fit=crop&w=1200&q=80',
-      is_deleted: false,
-      created_at: '2026-03-05T10:00:00.000Z'
-    }
-  ],
+  properties: [],
   property_units: [],
   property_price_history: [],
   property_shares: [],
@@ -592,34 +453,8 @@ const initialData: Schema = {
     { id: 'RP-14', role_key: 'FIELD_EXEC', role_name: 'FIELD EXECUTIVE', data_scope: 'ASSIGNED_DATA', permissions: [] },
     { id: 'RP-15', role_key: 'CUSTOMER_SUPPORT', role_name: 'CUSTOMER SUPPORT', data_scope: 'ASSIGNED_DATA', permissions: [] }
   ],
-  approval_requests: [
-    {
-      id: 'REQ-01',
-      request_code: 'SRM-REQ-2026-000101',
-      request_type: 'LEAD_TRANSFER',
-      record_id: 'SRM-CUS-2026-000184',
-      requested_by_id: 'USR-04',
-      requested_by_name: 'Priya Nair (Sales Exec)',
-      requested_at: '16 Aug 2026 12:00 PM',
-      old_value: 'Priya Nair (Sales Exec)',
-      new_value: 'Amit Kumar (Sales Exec)',
-      reason: 'Customer requested secondary agent consultation for villa project in Gachibowli.',
-      status: 'PENDING'
-    }
-  ],
-  active_sessions: [
-    {
-      id: 'SES-01',
-      user_id: 'USR-01',
-      username: 'Avishek Das (Super Admin)',
-      role: 'SUPER_ADMIN',
-      ip_address: '127.0.0.1 (Localhost)',
-      device_info: 'Chrome 127.0 / Windows 11 Enterprise',
-      login_time: '16 Aug 2026 09:00 AM',
-      last_active: 'Just Now',
-      status: 'ACTIVE'
-    }
-  ],
+  approval_requests: [],
+  active_sessions: [],
   security_alerts: [],
   audit_logs: [],
   payments: [],
@@ -669,36 +504,18 @@ export const dbStore = new MongoStoreDatabase();
 
 import { syncToMongoDB, loadDataFromMongoDB } from './mongoPersistence.js';
 
-export function loadData() {
+export async function loadData() {
   dbStore.load();
-  loadDataFromMongoDB().then(mongoData => {
+  try {
+    const mongoData = await loadDataFromMongoDB();
     if (mongoData) {
       if (mongoData.users && mongoData.users.length > 0) {
-        const userMap = new Map<string, any>();
-        initialData.users.forEach((u: any) => userMap.set(u.id, u));
-        mongoData.users.forEach((u: any) => userMap.set(u.id || u.username, { ...(userMap.get(u.id || u.username) || {}), ...u }));
-        dbStore.data.users = Array.from(userMap.values()) as any;
-      } else {
-        dbStore.data.users = initialData.users as any;
+        dbStore.data.users = mongoData.users as any;
       }
       if (mongoData.teams && mongoData.teams.length > 0) dbStore.data.teams = mongoData.teams as any;
       if (mongoData.branches && mongoData.branches.length > 0) dbStore.data.branches = mongoData.branches as any;
-      if (mongoData.properties && mongoData.properties.length > 0) {
-        const realProps = mongoData.properties.filter((p: any) => {
-          const title = String(p.property_title || p.title || '').toLowerCase();
-          const pCode = String(p.property_code || p.id || '').toLowerCase();
-          return !title.includes('sky villa') && 
-                 !title.includes('commercial plaza') && 
-                 !title.includes('greenwood plots') && 
-                 !title.includes('aparna zenon') && 
-                 !title.includes('financial towers') && 
-                 !title.includes('prestige high') && 
-                 !title.includes('silicon county') &&
-                 pCode !== 'prop-04' && pCode !== 'prop-05' && pCode !== 'prop-06';
-        });
-        dbStore.data.properties = realProps.length > 0 ? (realProps as any) : (initialData.properties as any);
-      } else if (!dbStore.data.properties || dbStore.data.properties.length === 0) {
-        dbStore.data.properties = initialData.properties as any;
+      if (mongoData.properties) {
+        dbStore.data.properties = mongoData.properties as any;
       }
       if (mongoData.customers && mongoData.customers.length > 0) dbStore.data.customers = mongoData.customers as any;
       if (mongoData.leads && mongoData.leads.length > 0) dbStore.data.leads = mongoData.leads as any;
@@ -709,22 +526,10 @@ export function loadData() {
       if (mongoData.matching_requests && mongoData.matching_requests.length > 0) (dbStore.data as any).matching_requests = mongoData.matching_requests as any;
       if (mongoData.developers && mongoData.developers.length > 0) (dbStore.data as any).developers = mongoData.developers as any;
       if (mongoData.rating_invites && mongoData.rating_invites.length > 0) {
-        const currentInvites: any[] = (dbStore.data as any).rating_invites || [];
-        const inviteMap = new Map<string, any>();
-        mongoData.rating_invites.forEach((mItem: any) => {
-          const k = String(mItem.id || mItem._id);
-          if (k) inviteMap.set(k, mItem);
-        });
-        currentInvites.forEach((cItem: any) => {
-          const k = String(cItem.id || cItem._id);
-          if (k) {
-            inviteMap.set(k, { ...(inviteMap.get(k) || {}), ...cItem });
-          }
-        });
-        (dbStore.data as any).rating_invites = Array.from(inviteMap.values());
+        (dbStore.data as any).rating_invites = mongoData.rating_invites as any;
       }
     }
-  }).catch(() => {});
+  } catch (err) {}
 }
 
 export function saveData() {

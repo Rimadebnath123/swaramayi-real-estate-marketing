@@ -4427,36 +4427,7 @@ export default function App() {
   };
 
   // 6. CUSTOMERS MASTER VAULT (WITH LOCALSTORAGE PERSISTENCE)
-  const defaultInitialCustomers: any[] = [
-    {
-      id: 'SRM-CUS-2026-000189',
-      customer_number: 'SRM-CUS-2026-000189',
-      customerNumber: 'SRM-CUS-2026-000189',
-      full_name: 'Avishek Das',
-      name: 'Avishek Das',
-      mobile: '9432328947',
-      phone: '9432328947',
-      email: 'a@gmail.com',
-      city: 'Kolkata',
-      preferred_location: 'Madhyamgram',
-      preferredArea: 'Madhyamgram',
-      locality: 'Madhyamgram',
-      budget: '₹45 Lakh - ₹50 Lakh',
-      budget_min: 4500000,
-      budget_max: 5000000,
-      configuration: '3BHK',
-      status: 'HOT',
-      customer_status: 'HOT',
-      priority: 'HOT',
-      quality_score: 100,
-      score: 100,
-      source: 'Lead Ingestion',
-      assigned_employee_id: 'Ramesh Pawar',
-      assigned_employee_name: 'Ramesh Pawar',
-      created_at: '2026-08-28',
-      updated_at: '2026-08-28'
-    }
-  ];
+  const defaultInitialCustomers: any[] = [];
 
   const [customers, setCustomers] = useState<any[]>(() => {
     try {
@@ -4467,10 +4438,6 @@ export default function App() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           list = parsed;
         }
-      }
-
-      if (list.length === 0) {
-        list = [...defaultInitialCustomers];
       }
 
       list = list.filter((c: any) => 
@@ -4486,7 +4453,7 @@ export default function App() {
     } catch (e) {
       console.error('Error reading customers from localStorage:', e);
     }
-    return defaultInitialCustomers;
+    return [];
   });
 
   useEffect(() => {
@@ -6685,26 +6652,23 @@ export default function App() {
                 localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(sanitizedProps));
               } catch (e) {}
             }
-            if (Array.isArray(mData.customers) && mData.customers.length > 0) {
-              setCustomers(prev => {
-                const combined = [...mData.customers, ...(prev || [])].filter((c: any) => 
-                  c &&
-                  !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000190') &&
-                  !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
-                  !(c.name && c.name.toLowerCase().includes('sunil')) &&
-                  !(c.full_name && c.full_name.toLowerCase().includes('sunil')) &&
-                  !(c.email && c.email.toLowerCase().includes('sunil.verma@gmail.com')) &&
-                  !(c.mobile && c.mobile.includes('5777564356'))
-                );
+            if (Array.isArray(mData.customers)) {
+              const clean = mData.customers.filter((c: any) => 
+                c &&
+                !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000190') &&
+                !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
+                !(c.name && c.name.toLowerCase().includes('sunil')) &&
+                !(c.full_name && c.full_name.toLowerCase().includes('sunil')) &&
+                !(c.email && c.email.toLowerCase().includes('sunil.verma@gmail.com')) &&
+                !(c.mobile && c.mobile.includes('5777564356'))
+              );
 
-                const cleanDeduped = dedupeCustomerList(combined);
-                try {
-                  localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
-                  localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
-                } catch (e) {}
-
-                return cleanDeduped;
-              });
+              const cleanDeduped = dedupeCustomerList(clean);
+              setCustomers(cleanDeduped);
+              try {
+                localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
+                localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
+              } catch (e) {}
             }
             if (Array.isArray(mData.leads)) {
               setLeadsList(mData.leads);

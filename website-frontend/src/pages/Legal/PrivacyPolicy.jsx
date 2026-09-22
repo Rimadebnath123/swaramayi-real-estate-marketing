@@ -5,7 +5,7 @@ import Breadcrumbs from '../../components/Common/Breadcrumbs';
 export default function PrivacyPolicy() {
   return (
     <>
-      <SEO title="Privacy Policy | Swarnamayi Real Estate Marketing" />
+      <SEO title="Privacy Policy | Swaramayi Real Estate Marketing" />
 
       <div className="bg-light-bg min-h-screen pb-16">
         <div className="bg-navy-900 text-white py-10 border-b border-gold-500/30">
@@ -24,12 +24,12 @@ export default function PrivacyPolicy() {
 
             <h2 className="text-base font-bold text-navy-900">1. Information Collection</h2>
             <p>
-              Swarnamayi Real Estate Marketing collects information provided voluntarily when submitting property enquiries, scheduling site visits, or listing real estate properties.
+              Swaramayi Real Estate Marketing collects information provided voluntarily when submitting property enquiries, scheduling site visits, or listing real estate properties.
             </p>
 
             <h2 className="text-base font-bold text-navy-900">2. Use of Information</h2>
             <p>
-              Your contact details are strictly utilized to connect you with official Swarnamayi real estate advisors, coordinate physical property tours, and process legal documentation.
+              Your contact details are strictly utilized to connect you with official Swaramayi real estate advisors, coordinate physical property tours, and process legal documentation.
             </p>
 
             <h2 className="text-base font-bold text-navy-900">3. Data Security</h2>

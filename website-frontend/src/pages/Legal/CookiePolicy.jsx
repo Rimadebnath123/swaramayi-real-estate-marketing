@@ -5,7 +5,7 @@ import Breadcrumbs from '../../components/Common/Breadcrumbs';
 export default function CookiePolicy() {
   return (
     <>
-      <SEO title="Cookie Policy | Swarnamayi Real Estate Marketing" />
+      <SEO title="Cookie Policy | Swaramayi Real Estate Marketing" />
 
       <div className="bg-light-bg min-h-screen pb-16">
         <div className="bg-navy-900 text-white py-10 border-b border-gold-500/30">
@@ -19,7 +19,7 @@ export default function CookiePolicy() {
           <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm space-y-6 text-xs text-gray-700 leading-relaxed">
             <h2 className="text-base font-bold text-navy-900">How We Use Cookies</h2>
             <p>
-              Swarnamayi Real Estate Marketing uses session cookies to store saved favorite properties, compare selections, and maintain authentication tokens for seamless browsing across Kolkata property listings.
+              Swaramayi Real Estate Marketing uses session cookies to store saved favorite properties, compare selections, and maintain authentication tokens for seamless browsing across Kolkata property listings.
             </p>
           </div>
         </div>

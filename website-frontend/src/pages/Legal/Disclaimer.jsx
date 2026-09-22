@@ -6,7 +6,7 @@ import { AlertTriangle } from 'lucide-react';
 export default function Disclaimer() {
   return (
     <>
-      <SEO title="Property Disclaimer | Swarnamayi Real Estate Marketing" />
+      <SEO title="Property Disclaimer | Swaramayi Real Estate Marketing" />
 
       <div className="bg-light-bg min-h-screen pb-16">
         <div className="bg-navy-900 text-white py-10 border-b border-gold-500/30">
@@ -28,7 +28,7 @@ export default function Disclaimer() {
             </p>
 
             <p>
-              Swarnamayi Real Estate Marketing operates as a real estate marketing platform and property advisory company in Kolkata, West Bengal. Images, layouts, floor plans, and renderings shown on property listings are illustrative representations.
+              Swaramayi Real Estate Marketing operates as a real estate marketing platform and property advisory company in Kolkata, West Bengal. Images, layouts, floor plans, and renderings shown on property listings are illustrative representations.
             </p>
           </div>
         </div>

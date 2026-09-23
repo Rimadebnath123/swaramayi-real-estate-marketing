@@ -15,6 +15,68 @@ import {
   Grid, List, Columns, Edit3, Trash2, Layers2, Navigation, Map as MapIcon, PieChart, BarChart2,
   GitMerge, ArrowDown, Sun, Moon, Menu, LogOut, BookmarkCheck, Camera, Image as ImageIcon, SearchCode, Globe, ExternalLink
 } from 'lucide-react';
+
+export const extractAllIdentifiers = (item: any): Set<string> => {
+  const ids = new Set<string>();
+  if (!item) return ids;
+
+  const data = item.originalData || item;
+
+  [
+    item.id,
+    data.id,
+    data._id,
+    data.property_code,
+    data.code,
+    data.project_id,
+    data.project_code,
+    data.lead_number,
+    data.customer_number,
+    data.name
+  ].forEach(val => {
+    if (val && typeof val === 'string' && val.trim()) {
+      const trimmed = val.trim();
+      ids.add(trimmed);
+      ids.add(trimmed.toLowerCase());
+      ids.add(trimmed.toUpperCase());
+    }
+  });
+
+  const titlesToProcess = [
+    item.title,
+    data.title,
+    data.property_title,
+    data.project_title,
+    data.project_name,
+    data.name
+  ];
+
+  titlesToProcess.forEach(rawTitle => {
+    if (rawTitle && typeof rawTitle === 'string' && rawTitle.trim()) {
+      const t = rawTitle.trim();
+      ids.add(t.toLowerCase());
+      const cleanT = t.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      if (cleanT) ids.add(cleanT);
+      const match = t.match(/\(([^)]+)\)/);
+      if (match && match[1]) {
+        ids.add(match[1].trim().toLowerCase());
+        ids.add(match[1].trim().toUpperCase());
+      }
+    }
+  });
+
+  return ids;
+};
+
+export const isItemInRecycledSet = (targetItem: any, recycledSet: Set<string>): boolean => {
+  if (!targetItem || !recycledSet || recycledSet.size === 0) return false;
+  const targetIds = extractAllIdentifiers(targetItem);
+  for (const id of targetIds) {
+    if (recycledSet.has(id)) return true;
+  }
+  return false;
+};
+
 import { ProfileView } from './components/ProfileView';
 import { RecycleBinView } from './components/RecycleBinView';
 import { RoleManagementView } from './components/RoleManagementView';
@@ -4642,16 +4704,9 @@ export default function App() {
       localStorage.setItem('swaramayi_recycled_items', JSON.stringify(updatedRecycled));
     } catch (e) {}
 
-    const itemData = item.originalData || {};
-    const purgeId = itemData.id || item.id;
-    const purgeCode = itemData.property_code || itemData.code || item.id;
-    const purgeTitle = (itemData.title || itemData.project_title || item.title || '').toLowerCase().trim();
+    const purgeSet = extractAllIdentifiers(item);
 
-    const nextProps = properties.filter(p => {
-      const pTitle = (p.title || p.property_title || '').toLowerCase().trim();
-      return p.id !== purgeId && p.property_code !== purgeCode && p.code !== purgeCode && p.project_id !== purgeCode &&
-        !(purgeTitle && pTitle && (pTitle === purgeTitle || purgeTitle.includes(pTitle) || pTitle.includes(purgeTitle)));
-    });
+    const nextProps = properties.filter(p => !isItemInRecycledSet(p, purgeSet));
     setProperties(nextProps);
 
     let currentDevs: any[] = developers;
@@ -4666,13 +4721,9 @@ export default function App() {
     const nextDevs = currentDevs
       .map((d: any) => ({
         ...d,
-        projects: (d.projects || []).filter((proj: any) => {
-          const projTitle = (proj.title || '').toLowerCase().trim();
-          return proj.id !== purgeId && proj.code !== purgeCode && proj.id !== purgeCode && proj.code !== purgeId &&
-            !(purgeTitle && projTitle && (projTitle === purgeTitle || purgeTitle.includes(projTitle) || projTitle.includes(purgeTitle)));
-        })
+        projects: (d.projects || []).filter((proj: any) => !isItemInRecycledSet(proj, purgeSet))
       }))
-      .filter((d: any) => d.id !== purgeId && d.name !== itemData.name);
+      .filter((d: any) => !isItemInRecycledSet(d, purgeSet));
 
     setDevelopers(nextDevs);
 
@@ -6664,42 +6715,20 @@ export default function App() {
         if (savedRec) activeRecycled = JSON.parse(savedRec);
       } catch (e) {}
 
-      const recycledIds = new Set(
-        (activeRecycled || []).flatMap(r => [
-          r.id,
-          r.originalData?.id,
-          r.originalData?.property_code,
-          r.originalData?.code,
-          r.originalData?.lead_number,
-          r.originalData?.customer_number,
-          r.originalData?.name,
-          r.originalData?.title ? r.originalData.title.toLowerCase().trim() : null
-        ]).filter(Boolean)
-      );
-
+      const recycledSet = new Set<string>();
       (activeRecycled || []).forEach((r: any) => {
-        if (r.title) {
-          const match = r.title.match(/\(([^)]+)\)/);
-          if (match) recycledIds.add(match[1]);
-          recycledIds.add(r.title.toLowerCase().trim());
-        }
+        extractAllIdentifiers(r).forEach(id => recycledSet.add(id));
       });
 
       const activeProps = (overrideData?.properties || properties).filter(
-        (p: any) => {
-          const titleLower = (p.title || p.property_title || '').toLowerCase().trim();
-          return !recycledIds.has(p.id) && !recycledIds.has(p.property_code) && !recycledIds.has(p.code) && !(titleLower && recycledIds.has(titleLower));
-        }
+        (p: any) => !isItemInRecycledSet(p, recycledSet)
       );
 
       const activeDevs = (overrideData?.developers || devList)
-        .filter((d: any) => !recycledIds.has(d.id) && !recycledIds.has(d.name))
+        .filter((d: any) => !isItemInRecycledSet(d, recycledSet))
         .map((d: any) => ({
           ...d,
-          projects: (d.projects || []).filter((proj: any) => {
-            const projTitle = (proj.title || '').toLowerCase().trim();
-            return !recycledIds.has(proj.id) && !recycledIds.has(proj.code) && !(projTitle && recycledIds.has(projTitle));
-          })
+          projects: (d.projects || []).filter((proj: any) => !isItemInRecycledSet(proj, recycledSet))
         }));
 
       const payload = {
@@ -6708,8 +6737,8 @@ export default function App() {
         branches: overrideData?.branches || branches,
         properties: activeProps,
         developers: activeDevs,
-        customers: (overrideData?.customers || customers).filter((c: any) => !recycledIds.has(c.id) && !recycledIds.has(c.customer_number)),
-        leads: (overrideData?.leads || leadsList).filter((l: any) => !recycledIds.has(l.id) && !recycledIds.has(l.lead_number)),
+        customers: (overrideData?.customers || customers).filter((c: any) => !isItemInRecycledSet(c, recycledSet)),
+        leads: (overrideData?.leads || leadsList).filter((l: any) => !isItemInRecycledSet(l, recycledSet)),
         bookings: overrideData?.bookings !== undefined ? overrideData.bookings : bookings,
         invoices: overrideData?.invoices !== undefined ? overrideData.invoices : invoices,
         agreements: overrideData?.agreements || agreements,
@@ -6747,25 +6776,9 @@ export default function App() {
               if (savedRec) activeRecycled = JSON.parse(savedRec);
             } catch (e) {}
 
-            const recycledIds = new Set(
-              (activeRecycled || []).flatMap(r => [
-                r.id,
-                r.originalData?.id,
-                r.originalData?.property_code,
-                r.originalData?.code,
-                r.originalData?.lead_number,
-                r.originalData?.customer_number,
-                r.originalData?.name,
-                r.originalData?.title ? r.originalData.title.toLowerCase().trim() : null
-              ]).filter(Boolean)
-            );
-
+            const recycledSet = new Set<string>();
             (activeRecycled || []).forEach((r: any) => {
-              if (r.title) {
-                const match = r.title.match(/\(([^)]+)\)/);
-                if (match) recycledIds.add(match[1]);
-                recycledIds.add(r.title.toLowerCase().trim());
-              }
+              extractAllIdentifiers(r).forEach(id => recycledSet.add(id));
             });
 
             if (Array.isArray(mData.users) && mData.users.length > 0) setUsers(mData.users);
@@ -6773,10 +6786,7 @@ export default function App() {
             if (Array.isArray(mData.branches) && mData.branches.length > 0) setBranches(mData.branches);
             if (Array.isArray(mData.properties) && mData.properties.length > 0) {
               const sanitizedProps = mData.properties
-                .filter((p: any) => {
-                  const titleLower = (p.title || p.property_title || '').toLowerCase().trim();
-                  return !recycledIds.has(p.id) && !recycledIds.has(p.property_code) && !recycledIds.has(p.code) && !(titleLower && recycledIds.has(titleLower));
-                })
+                .filter((p: any) => !isItemInRecycledSet(p, recycledSet))
                 .map((p: any) => {
                   let updated = { ...p };
                   const titleVal = p.title || p.property_title || p.project_name || p.property_name || p.name || '';
@@ -6926,13 +6936,10 @@ export default function App() {
                 localDevs.forEach((d: any) => map.set(d.id || d.name, d));
                 mData.developers.forEach((d: any) => map.set(d.id || d.name, d));
                 const cleanDevs = Array.from(map.values())
-                  .filter((d: any) => !recycledIds.has(d.id) && !recycledIds.has(d.name))
+                  .filter((d: any) => !isItemInRecycledSet(d, recycledSet))
                   .map((d: any) => ({
                     ...d,
-                    projects: (d.projects || []).filter((proj: any) => {
-                      const projTitle = (proj.title || '').toLowerCase().trim();
-                      return !recycledIds.has(proj.id) && !recycledIds.has(proj.code) && !(projTitle && recycledIds.has(projTitle));
-                    })
+                    projects: (d.projects || []).filter((proj: any) => !isItemInRecycledSet(proj, recycledSet))
                   }));
                 setDevelopers(cleanDevs);
                 localStorage.setItem('swaramayi_developers_v1', JSON.stringify(cleanDevs));
@@ -7765,17 +7772,21 @@ export default function App() {
   const handleDeleteProperty = (id: string, code: string) => {
     if (window.confirm(`Are you sure you want to move Property Master Record ${code} to Recycle Bin?`)) {
       const prop = properties.find(p => p.id === id || p.property_code === code || p.code === code || p.project_id === code);
-      if (prop) {
-        handleRecycleItem({
-          id: prop.id || code || `PROP-${Date.now()}`,
-          title: `${prop.title || 'Property'} (${code})`,
-          category: 'Project',
-          originalLocation: 'Property Master / Live Inventory',
-          details: `${prop.configuration || ''} ${prop.property_type || ''} at ${prop.locality || ''}`,
-          originalData: prop
-        });
-      }
-      const nextProps = properties.filter(p => p.id !== id && p.property_code !== code && p.code !== code && p.project_id !== code);
+      const delItem = prop || { id, property_code: code, code };
+      handleRecycleItem({
+        id: delItem.id || code || `PROP-${Date.now()}`,
+        title: `${delItem.title || 'Property'} (${code})`,
+        category: 'Project',
+        originalLocation: 'Property Master / Live Inventory',
+        details: `${delItem.configuration || ''} ${delItem.property_type || ''} at ${delItem.locality || ''}`,
+        originalData: delItem
+      });
+
+      const targetSet = extractAllIdentifiers(delItem);
+      targetSet.add(id);
+      targetSet.add(code);
+
+      const nextProps = properties.filter(p => !isItemInRecycledSet(p, targetSet));
       setProperties(nextProps);
 
       let currentDevs: any[] = developers;
@@ -7787,14 +7798,9 @@ export default function App() {
         }
       } catch (e) {}
 
-      const propTitle = prop ? (prop.title || prop.project_title || '').toLowerCase().trim() : '';
       const nextDevs = currentDevs.map((d: any) => ({
         ...d,
-        projects: (d.projects || []).filter((proj: any) => {
-          const projTitle = (proj.title || '').toLowerCase().trim();
-          return proj.id !== id && proj.code !== code && proj.id !== code && proj.code !== id &&
-            !(propTitle && projTitle && (projTitle === propTitle || propTitle.includes(projTitle) || projTitle.includes(propTitle)));
-        })
+        projects: (d.projects || []).filter((proj: any) => !isItemInRecycledSet(proj, targetSet))
       }));
 
       setDevelopers(nextDevs);

@@ -1,3 +1,4 @@
+import { extractAllIdentifiers, isItemInRecycledSet } from '../App';
 import React from 'react';
 import { Upload, Building2, Share2, ArrowRightLeft, Compass, Navigation, Camera, Video, Search, X, Download } from 'lucide-react';
 
@@ -247,23 +248,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
   // COLLECT ALL REGISTERED MASTER PROJECTS FROM DEVELOPER VAULT & EXISTING PROPERTIES
   const getAllMasterProjects = React.useCallback(() => {
-    let recycledIds = new Set<string>();
+    let recycledSet = new Set<string>();
     try {
       const savedRec = localStorage.getItem('swaramayi_recycled_items');
       if (savedRec) {
         const parsed = JSON.parse(savedRec);
         if (Array.isArray(parsed)) {
           parsed.forEach((r: any) => {
-            if (r.id) recycledIds.add(r.id);
-            if (r.originalData?.id) recycledIds.add(r.originalData.id);
-            if (r.originalData?.property_code) recycledIds.add(r.originalData.property_code);
-            if (r.originalData?.code) recycledIds.add(r.originalData.code);
-            if (r.originalData?.title) recycledIds.add(r.originalData.title.toLowerCase().trim());
-            if (r.title) {
-              recycledIds.add(r.title.toLowerCase().trim());
-              const match = r.title.match(/\(([^)]+)\)/);
-              if (match) recycledIds.add(match[1]);
-            }
+            extractAllIdentifiers(r).forEach(id => recycledSet.add(id));
           });
         }
       }
@@ -274,13 +266,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     // 1. From developerMasterList
     (developerMasterList || []).forEach((dev: any) => {
       (dev.projects || []).forEach((proj: any) => {
-        const projId = proj.code || proj.id || `PROJ-${(proj.title || 'PROJECT').replace(/\s+/g, '-').toUpperCase()}`;
-        const projTitle = (proj.title || '').toLowerCase().trim();
-
-        if (recycledIds.has(projId) || recycledIds.has(proj.id) || recycledIds.has(proj.code) || (projTitle && recycledIds.has(projTitle))) {
+        if (isItemInRecycledSet(proj, recycledSet)) {
           return;
         }
 
+        const projId = proj.code || proj.id || `PROJ-${(proj.title || 'PROJECT').replace(/\s+/g, '-').toUpperCase()}`;
         if (!masterProjectsMap.has(projId)) {
           masterProjectsMap.set(projId, {
             id: projId,
@@ -308,14 +298,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
     // 2. From properties list
     (properties || []).forEach((prop: any) => {
+      if (isItemInRecycledSet(prop, recycledSet)) {
+        return;
+      }
+
       let projId = (prop.project_id && !prop.project_id.startsWith('SRM-DEV-')) ? prop.project_id : null;
       if (!projId && prop.id) {
         projId = `SRM-PROJ-${prop.id}`;
-      }
-      const propTitle = (prop.title || prop.project_title || '').toLowerCase().trim();
-
-      if (recycledIds.has(prop.id) || recycledIds.has(prop.property_code) || recycledIds.has(prop.code) || recycledIds.has(projId) || (propTitle && recycledIds.has(propTitle))) {
-        return;
       }
 
       if (projId && !masterProjectsMap.has(projId) && (prop.title || prop.project_title)) {

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { 
   getCustomers, checkDuplicateCustomer, createCustomer, getCustomer360, 
   submitTransferRequest, handleTransferApproval, smartSearch,
-  getMongoDBSync, syncMongoDB
+  getMongoDBSync, syncMongoDB, purgeRecycledItem, purgeAllRecycledItems
 } from '../controllers/crm.controller.js';
 import { verifyToken, requireRole } from '../middleware/auth.js';
 
@@ -20,5 +20,8 @@ router.get('/search', verifyToken, smartSearch);
 
 router.get('/sync', getMongoDBSync);
 router.post('/sync', syncMongoDB);
+router.post('/purge', verifyToken, purgeRecycledItem);
+router.post('/purge-all', verifyToken, purgeAllRecycledItems);
 
 export default router;
+

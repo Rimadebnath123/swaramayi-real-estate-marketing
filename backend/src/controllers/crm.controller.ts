@@ -381,7 +381,11 @@ export async function smartSearch(req: AuthRequest, res: Response) {
   });
 }
 
-import { syncToMongoDB, loadDataFromMongoDB } from '../db/mongoPersistence.js';
+import { 
+  syncToMongoDB, loadDataFromMongoDB, PropertyModel, DeveloperModel, 
+  CustomerModel, LeadModel, AgreementModel, CostSheetModel, 
+  InvoiceModel, SiteVisitModel 
+} from '../db/mongoPersistence.js';
 
 export async function getMongoDBSync(req: AuthRequest, res: Response) {
   loadData();
@@ -420,3 +424,200 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
     synced_at: new Date().toISOString()
   });
 }
+
+function extractItemIdentifiers(item: any): { ids: string[]; cleanTitle: string } {
+  const idsSet = new Set<string>();
+  if (!item) return { ids: [], cleanTitle: '' };
+
+  const fields = [
+    item.id, item._id, item.property_code, item.code, item.project_id, item.propertyId, item.projectId,
+    item.lead_number, item.customer_number, item.booking_code, item.agreement_code, item.invoice_number,
+    item.costSheetId, item.visitId, item.visitScheduleId, item.visitPlanId, item.record_id, item.itemId
+  ];
+
+  fields.forEach(f => {
+    if (f !== undefined && f !== null) {
+      const s = String(f).trim();
+      if (s) idsSet.add(s);
+    }
+  });
+
+  const rawTitle = String(
+    item.record_title || item.title || item.projectTitle || item.propertyTitle || item.name || item.full_name || ''
+  ).trim();
+
+  let cleanTitle = rawTitle;
+  const match = cleanTitle.match(/^([^(]+)/);
+  if (match && match[1]) {
+    cleanTitle = match[1].trim();
+  }
+
+  return {
+    ids: Array.from(idsSet),
+    cleanTitle
+  };
+}
+
+export async function purgeSingleItemFromDB(item: any) {
+  if (!item) return;
+  const { ids, cleanTitle } = extractItemIdentifiers(item);
+  const cat = String(item.category || item.record_category || '').toLowerCase();
+
+  const titleRegex = cleanTitle.length >= 3 ? new RegExp(cleanTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') : null;
+
+  const orConditions: any[] = [];
+  ids.forEach(id => {
+    orConditions.push({ id });
+    orConditions.push({ _id: id });
+    orConditions.push({ property_code: id });
+    orConditions.push({ code: id });
+    orConditions.push({ project_id: id });
+    orConditions.push({ lead_number: id });
+    orConditions.push({ customer_number: id });
+    orConditions.push({ booking_code: id });
+    orConditions.push({ agreement_code: id });
+    orConditions.push({ invoice_number: id });
+    orConditions.push({ costSheetId: id });
+    orConditions.push({ visitId: id });
+    orConditions.push({ visitScheduleId: id });
+    orConditions.push({ visitPlanId: id });
+  });
+
+  if (titleRegex) {
+    orConditions.push({ title: titleRegex });
+    orConditions.push({ name: titleRegex });
+    orConditions.push({ full_name: titleRegex });
+  }
+
+  if (orConditions.length === 0) return;
+
+  const query = { $or: orConditions };
+
+  try {
+    // 1. Permanently delete from PropertyModel
+    if (cat.includes('project') || cat.includes('property') || !cat) {
+      await PropertyModel.deleteMany(query);
+
+      // Permanently remove matching projects from DeveloperModel documents
+      await DeveloperModel.updateMany({}, {
+        $pull: {
+          projects: {
+            $or: [
+              ...ids.map(id => ({ id })),
+              ...ids.map(id => ({ property_code: id })),
+              ...ids.map(id => ({ code: id })),
+              ...ids.map(id => ({ project_id: id })),
+              ...(titleRegex ? [{ title: titleRegex }] : [])
+            ]
+          }
+        }
+      });
+
+      if (Array.isArray((dbStore.data as any).properties)) {
+        (dbStore.data as any).properties = (dbStore.data as any).properties.filter((p: any) => {
+          const pIds = extractItemIdentifiers(p).ids;
+          const pTitle = extractItemIdentifiers(p).cleanTitle.toLowerCase();
+          const matchId = pIds.some(id => ids.includes(id));
+          const matchTitle = cleanTitle && pTitle && (pTitle.includes(cleanTitle.toLowerCase()) || cleanTitle.toLowerCase().includes(pTitle));
+          return !matchId && !matchTitle;
+        });
+      }
+
+      if (Array.isArray((dbStore.data as any).developers)) {
+        (dbStore.data as any).developers = (dbStore.data as any).developers.map((d: any) => ({
+          ...d,
+          projects: Array.isArray(d.projects)
+            ? d.projects.filter((proj: any) => {
+                const projIds = extractItemIdentifiers(proj).ids;
+                const projTitle = extractItemIdentifiers(proj).cleanTitle.toLowerCase();
+                const matchId = projIds.some(id => ids.includes(id));
+                const matchTitle = cleanTitle && projTitle && (projTitle.includes(cleanTitle.toLowerCase()) || cleanTitle.toLowerCase().includes(projTitle));
+                return !matchId && !matchTitle;
+              })
+            : []
+        }));
+      }
+    }
+
+    if (cat.includes('lead')) {
+      await LeadModel.deleteMany(query);
+      if (Array.isArray(dbStore.data.leads)) {
+        dbStore.data.leads = dbStore.data.leads.filter((l: any) => !extractItemIdentifiers(l).ids.some(id => ids.includes(id)));
+      }
+    }
+
+    if (cat.includes('customer')) {
+      await CustomerModel.deleteMany(query);
+      if (Array.isArray(dbStore.data.customers)) {
+        dbStore.data.customers = dbStore.data.customers.filter((c: any) => !extractItemIdentifiers(c).ids.some(id => ids.includes(id)));
+      }
+    }
+
+    if (cat.includes('agreement')) {
+      await AgreementModel.deleteMany(query);
+      if (Array.isArray(dbStore.data.agreements)) {
+        dbStore.data.agreements = dbStore.data.agreements.filter((a: any) => !extractItemIdentifiers(a).ids.some(id => ids.includes(id)));
+      }
+    }
+
+    if (cat.includes('cost sheet') || cat.includes('costsheet')) {
+      await CostSheetModel.deleteMany(query);
+      if (Array.isArray((dbStore.data as any).cost_sheets)) {
+        (dbStore.data as any).cost_sheets = (dbStore.data as any).cost_sheets.filter((cs: any) => !extractItemIdentifiers(cs).ids.some(id => ids.includes(id)));
+      }
+    }
+
+    if (cat.includes('billing') || cat.includes('invoice')) {
+      await InvoiceModel.deleteMany(query);
+      if (Array.isArray(dbStore.data.invoices)) {
+        dbStore.data.invoices = dbStore.data.invoices.filter((inv: any) => !extractItemIdentifiers(inv).ids.some(id => ids.includes(id)));
+      }
+    }
+
+    if (cat.includes('visit')) {
+      await SiteVisitModel.deleteMany(query);
+      if (Array.isArray(dbStore.data.site_visits)) {
+        dbStore.data.site_visits = dbStore.data.site_visits.filter((v: any) => !extractItemIdentifiers(v).ids.some(id => ids.includes(id)));
+      }
+    }
+
+    saveData();
+  } catch (err: any) {
+    console.error(`Error purging item from MongoDB Atlas:`, err.message);
+  }
+}
+
+export async function purgeRecycledItem(req: AuthRequest, res: Response) {
+  const { item } = req.body;
+  if (!item) {
+    return res.status(400).json({ status: 'ERROR', message: 'Item payload is required for purging.' });
+  }
+
+  loadData();
+  await purgeSingleItemFromDB(item);
+  await syncToMongoDB(dbStore.data);
+
+  return res.json({
+    status: 'SUCCESS',
+    message: 'Item permanently purged from MongoDB Atlas & CRM Database'
+  });
+}
+
+export async function purgeAllRecycledItems(req: AuthRequest, res: Response) {
+  const { items } = req.body;
+  loadData();
+
+  if (Array.isArray(items) && items.length > 0) {
+    for (const item of items) {
+      await purgeSingleItemFromDB(item);
+    }
+  }
+
+  await syncToMongoDB(dbStore.data);
+
+  return res.json({
+    status: 'SUCCESS',
+    message: 'All recycled items permanently purged from MongoDB Atlas & CRM Database'
+  });
+}
+

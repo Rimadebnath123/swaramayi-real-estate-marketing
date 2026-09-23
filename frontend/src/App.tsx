@@ -4732,16 +4732,43 @@ export default function App() {
       localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevs));
     } catch (e) {}
 
+    const purgeUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:5000/api/v1/crm/purge'
+      : '/api/v1/crm/purge';
+
+    fetch(purgeUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('swaramayi_token') || ''}`
+      },
+      body: JSON.stringify({ item })
+    }).catch(err => console.warn('Direct MongoDB Purge API Error:', err));
+
     setTimeout(() => {
       syncAllToMongoDB({ properties: nextProps, developers: nextDevs });
     }, 100);
   };
 
   const handleEmptyRecycleBin = () => {
+    const itemsToPurge = [...recycledItems];
     setRecycledItems([]);
     try {
       localStorage.setItem('swaramayi_recycled_items', JSON.stringify([]));
     } catch (e) {}
+
+    const purgeAllUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:5000/api/v1/crm/purge-all'
+      : '/api/v1/crm/purge-all';
+
+    fetch(purgeAllUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('swaramayi_token') || ''}`
+      },
+      body: JSON.stringify({ items: itemsToPurge })
+    }).catch(err => console.warn('Direct MongoDB Purge All API Error:', err));
 
     setTimeout(() => {
       syncAllToMongoDB();

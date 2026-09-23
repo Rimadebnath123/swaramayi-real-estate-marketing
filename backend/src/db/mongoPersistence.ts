@@ -62,6 +62,8 @@ async function syncCollection(model: mongoose.Model<any>, records: any[]) {
     records.forEach((r: any) => {
       if (r._id) recordConditions.push({ _id: r._id });
       if (r.id) recordConditions.push({ id: String(r.id) });
+      if (r.code) recordConditions.push({ code: String(r.code) });
+      if (r.project_id) recordConditions.push({ project_id: String(r.project_id) });
       if (r.invoice_number) recordConditions.push({ invoice_number: String(r.invoice_number) });
       if (r.booking_code) recordConditions.push({ booking_code: String(r.booking_code) });
       if (r.agreement_code) recordConditions.push({ agreement_code: String(r.agreement_code) });

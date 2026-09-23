@@ -4636,14 +4636,62 @@ export default function App() {
   };
 
   const handlePurgeRecycledItem = (item: any) => {
-    setRecycledItems(prev => prev.filter(r => r.id !== item.id));
+    const updatedRecycled = recycledItems.filter(r => r.id !== item.id);
+    setRecycledItems(updatedRecycled);
+    try {
+      localStorage.setItem('swaramayi_recycled_items', JSON.stringify(updatedRecycled));
+    } catch (e) {}
+
+    const itemData = item.originalData || {};
+    const purgeId = itemData.id || item.id;
+    const purgeCode = itemData.property_code || itemData.code || item.id;
+    const purgeTitle = (itemData.title || itemData.project_title || item.title || '').toLowerCase().trim();
+
+    const nextProps = properties.filter(p => {
+      const pTitle = (p.title || p.property_title || '').toLowerCase().trim();
+      return p.id !== purgeId && p.property_code !== purgeCode && p.code !== purgeCode && p.project_id !== purgeCode &&
+        !(purgeTitle && pTitle && (pTitle === purgeTitle || purgeTitle.includes(pTitle) || pTitle.includes(purgeTitle)));
+    });
+    setProperties(nextProps);
+
+    let currentDevs: any[] = developers;
+    try {
+      const savedDevs = localStorage.getItem('swaramayi_developers_v1');
+      if (savedDevs) {
+        const parsed = JSON.parse(savedDevs);
+        if (Array.isArray(parsed) && parsed.length > 0) currentDevs = parsed;
+      }
+    } catch (e) {}
+
+    const nextDevs = currentDevs
+      .map((d: any) => ({
+        ...d,
+        projects: (d.projects || []).filter((proj: any) => {
+          const projTitle = (proj.title || '').toLowerCase().trim();
+          return proj.id !== purgeId && proj.code !== purgeCode && proj.id !== purgeCode && proj.code !== purgeId &&
+            !(purgeTitle && projTitle && (projTitle === purgeTitle || purgeTitle.includes(projTitle) || projTitle.includes(purgeTitle)));
+        })
+      }))
+      .filter((d: any) => d.id !== purgeId && d.name !== itemData.name);
+
+    setDevelopers(nextDevs);
+
+    try {
+      localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(nextProps));
+      localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevs));
+    } catch (e) {}
+
     setTimeout(() => {
-      syncAllToMongoDB();
+      syncAllToMongoDB({ properties: nextProps, developers: nextDevs });
     }, 100);
   };
 
   const handleEmptyRecycleBin = () => {
     setRecycledItems([]);
+    try {
+      localStorage.setItem('swaramayi_recycled_items', JSON.stringify([]));
+    } catch (e) {}
+
     setTimeout(() => {
       syncAllToMongoDB();
     }, 100);
@@ -6610,14 +6658,58 @@ export default function App() {
         if (savedDevs) devList = JSON.parse(savedDevs);
       } catch (e) {}
 
+      let activeRecycled: any[] = [];
+      try {
+        const savedRec = localStorage.getItem('swaramayi_recycled_items');
+        if (savedRec) activeRecycled = JSON.parse(savedRec);
+      } catch (e) {}
+
+      const recycledIds = new Set(
+        (activeRecycled || []).flatMap(r => [
+          r.id,
+          r.originalData?.id,
+          r.originalData?.property_code,
+          r.originalData?.code,
+          r.originalData?.lead_number,
+          r.originalData?.customer_number,
+          r.originalData?.name,
+          r.originalData?.title ? r.originalData.title.toLowerCase().trim() : null
+        ]).filter(Boolean)
+      );
+
+      (activeRecycled || []).forEach((r: any) => {
+        if (r.title) {
+          const match = r.title.match(/\(([^)]+)\)/);
+          if (match) recycledIds.add(match[1]);
+          recycledIds.add(r.title.toLowerCase().trim());
+        }
+      });
+
+      const activeProps = (overrideData?.properties || properties).filter(
+        (p: any) => {
+          const titleLower = (p.title || p.property_title || '').toLowerCase().trim();
+          return !recycledIds.has(p.id) && !recycledIds.has(p.property_code) && !recycledIds.has(p.code) && !(titleLower && recycledIds.has(titleLower));
+        }
+      );
+
+      const activeDevs = (overrideData?.developers || devList)
+        .filter((d: any) => !recycledIds.has(d.id) && !recycledIds.has(d.name))
+        .map((d: any) => ({
+          ...d,
+          projects: (d.projects || []).filter((proj: any) => {
+            const projTitle = (proj.title || '').toLowerCase().trim();
+            return !recycledIds.has(proj.id) && !recycledIds.has(proj.code) && !(projTitle && recycledIds.has(projTitle));
+          })
+        }));
+
       const payload = {
         users: overrideData?.users || users,
         teams: overrideData?.teams || teams,
         branches: overrideData?.branches || branches,
-        properties: overrideData?.properties || properties,
-        developers: overrideData?.developers || devList,
-        customers: overrideData?.customers || customers,
-        leads: overrideData?.leads || leadsList,
+        properties: activeProps,
+        developers: activeDevs,
+        customers: (overrideData?.customers || customers).filter((c: any) => !recycledIds.has(c.id) && !recycledIds.has(c.customer_number)),
+        leads: (overrideData?.leads || leadsList).filter((l: any) => !recycledIds.has(l.id) && !recycledIds.has(l.lead_number)),
         bookings: overrideData?.bookings !== undefined ? overrideData.bookings : bookings,
         invoices: overrideData?.invoices !== undefined ? overrideData.invoices : invoices,
         agreements: overrideData?.agreements || agreements,
@@ -6648,60 +6740,86 @@ export default function App() {
           const result = await res.json();
           if (result.status === 'SUCCESS' && result.data) {
             const mData = result.data;
+
+            let activeRecycled: any[] = [];
+            try {
+              const savedRec = localStorage.getItem('swaramayi_recycled_items');
+              if (savedRec) activeRecycled = JSON.parse(savedRec);
+            } catch (e) {}
+
+            const recycledIds = new Set(
+              (activeRecycled || []).flatMap(r => [
+                r.id,
+                r.originalData?.id,
+                r.originalData?.property_code,
+                r.originalData?.code,
+                r.originalData?.lead_number,
+                r.originalData?.customer_number,
+                r.originalData?.name,
+                r.originalData?.title ? r.originalData.title.toLowerCase().trim() : null
+              ]).filter(Boolean)
+            );
+
+            (activeRecycled || []).forEach((r: any) => {
+              if (r.title) {
+                const match = r.title.match(/\(([^)]+)\)/);
+                if (match) recycledIds.add(match[1]);
+                recycledIds.add(r.title.toLowerCase().trim());
+              }
+            });
+
             if (Array.isArray(mData.users) && mData.users.length > 0) setUsers(mData.users);
             if (Array.isArray(mData.teams) && mData.teams.length > 0) setTeams(mData.teams);
             if (Array.isArray(mData.branches) && mData.branches.length > 0) setBranches(mData.branches);
             if (Array.isArray(mData.properties) && mData.properties.length > 0) {
-              const sanitizedProps = mData.properties.map((p: any) => {
-                let updated = { ...p };
-                const titleVal = p.title || p.property_title || p.project_name || p.property_name || p.name || 'GAJAPATI APARTMENT';
-                const devVal = p.developer || p.developer_name || p.builder_name || p.developer_company || 'Swaramayi Partner Developer';
+              const sanitizedProps = mData.properties
+                .filter((p: any) => {
+                  const titleLower = (p.title || p.property_title || '').toLowerCase().trim();
+                  return !recycledIds.has(p.id) && !recycledIds.has(p.property_code) && !recycledIds.has(p.code) && !(titleLower && recycledIds.has(titleLower));
+                })
+                .map((p: any) => {
+                  let updated = { ...p };
+                  const titleVal = p.title || p.property_title || p.project_name || p.property_name || p.name || '';
+                  const devVal = p.developer || p.developer_name || p.builder_name || p.developer_company || '';
 
-                updated.title = titleVal;
-                updated.property_title = titleVal;
-                updated.project_name = p.project_name || titleVal;
-                updated.developer = devVal;
-                updated.developer_name = devVal;
+                  updated.title = titleVal;
+                  updated.property_title = titleVal;
+                  updated.project_name = p.project_name || titleVal;
+                  updated.developer = devVal;
+                  updated.developer_name = devVal;
 
-                // Normalize final_price string representation
-                const rawPriceVal = p.final_price || p.base_price || p.final_estimated_price || p.asking_price || p.price;
-                if (!updated.final_price || updated.final_price === '₹0' || updated.final_price === '0') {
-                  const numPrice = typeof rawPriceVal === 'number' ? rawPriceVal : parseFloat(String(rawPriceVal || '').replace(/[^0-9.]/g, ''));
-                  if (!isNaN(numPrice) && numPrice > 0) {
-                    updated.final_price = `₹${Math.round(numPrice).toLocaleString('en-IN')}`;
-                  } else {
-                    updated.final_price = '₹0';
-                  }
-                }
-
-                // Normalize price_sqft string representation
-                const rawSqftVal = p.price_sqft || p.price_per_sqft || p.rate_sqft;
-                if (!updated.price_sqft || updated.price_sqft === '₹0 / sq.ft.' || updated.price_sqft === '0') {
-                  const numSqft = typeof rawSqftVal === 'number' ? rawSqft : parseFloat(String(rawSqft || '').replace(/[^0-9.]/g, ''));
-                  if (!isNaN(numSqft) && numSqft > 0) {
-                    updated.price_sqft = `₹${Math.round(numSqft).toLocaleString('en-IN')}/Sq.Ft.`;
-                  } else if (updated.final_price && updated.final_price !== '₹0') {
-                    const pNum = parseFloat(String(updated.final_price).replace(/[^0-9.]/g, ''));
-                    const areaNum = parseFloat(String(p.super_builtup_area || p.carpet_area || p.areaSqft || p.built_up_area_sqft || '').replace(/[^0-9.]/g, ''));
-                    if (!isNaN(pNum) && !isNaN(areaNum) && areaNum > 0) {
-                      updated.price_sqft = `₹${Math.round(pNum / areaNum).toLocaleString('en-IN')}/Sq.Ft.`;
+                  // Normalize final_price string representation
+                  const rawPriceVal = p.final_price || p.base_price || p.final_estimated_price || p.asking_price || p.price;
+                  if (!updated.final_price || updated.final_price === '₹0' || updated.final_price === '0') {
+                    const numPrice = typeof rawPriceVal === 'number' ? rawPriceVal : parseFloat(String(rawPriceVal || '').replace(/[^0-9.]/g, ''));
+                    if (!isNaN(numPrice) && numPrice > 0) {
+                      updated.final_price = `₹${Math.round(numPrice).toLocaleString('en-IN')}`;
+                    } else {
+                      updated.final_price = '₹0';
                     }
                   }
-                }
-                if (!updated.price_sqft) updated.price_sqft = '₹0 / sq.ft.';
 
-                if (p.project_id && p.project_id.startsWith('SRM-DEV-')) {
-                  const fixedCode = (titleVal || '').toLowerCase().includes('shibalay') ? 'SRM-PROJ-2026-000087' :
-                                    (titleVal || '').toLowerCase().includes('gajapati') ? 'SRM-PROJ-2026-000088' :
-                                    (titleVal || '').toLowerCase().includes('dhriti') ? 'SRM-PROJ-2026-000089' :
-                                    'SRM-PROJ-2026-000088';
-                  updated.project_id = fixedCode;
-                }
-                if (p.property_code === 'SRM-PROP-2026-000426' || (titleVal && titleVal.toLowerCase().includes('gajapati'))) {
-                  updated.status = 'LIVE';
-                }
-                return updated;
-              });
+                  // Normalize price_sqft string representation
+                  const rawSqftVal = p.price_sqft || p.price_per_sqft || p.rate_sqft;
+                  if (!updated.price_sqft || updated.price_sqft === '₹0 / sq.ft.' || updated.price_sqft === '0') {
+                    const numSqft = typeof rawSqftVal === 'number' ? rawSqft : parseFloat(String(rawSqft || '').replace(/[^0-9.]/g, ''));
+                    if (!isNaN(numSqft) && numSqft > 0) {
+                      updated.price_sqft = `₹${Math.round(numSqft).toLocaleString('en-IN')}/Sq.Ft.`;
+                    } else if (updated.final_price && updated.final_price !== '₹0') {
+                      const pNum = parseFloat(String(updated.final_price).replace(/[^0-9.]/g, ''));
+                      const areaNum = parseFloat(String(p.super_builtup_area || p.carpet_area || p.areaSqft || p.built_up_area_sqft || '').replace(/[^0-9.]/g, ''));
+                      if (!isNaN(pNum) && !isNaN(areaNum) && areaNum > 0) {
+                        updated.price_sqft = `₹${Math.round(pNum / areaNum).toLocaleString('en-IN')}/Sq.Ft.`;
+                      }
+                    }
+                  }
+                  if (!updated.price_sqft) updated.price_sqft = '₹0 / sq.ft.';
+
+                  if (p.project_id && p.project_id.startsWith('SRM-DEV-') && p.id) {
+                    updated.project_id = `SRM-PROJ-${p.id}`;
+                  }
+                  return updated;
+                });
               setProperties(sanitizedProps);
               try {
                 localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(sanitizedProps));
@@ -6807,7 +6925,15 @@ export default function App() {
                 const map = new Map<string, any>();
                 localDevs.forEach((d: any) => map.set(d.id || d.name, d));
                 mData.developers.forEach((d: any) => map.set(d.id || d.name, d));
-                const cleanDevs = Array.from(map.values());
+                const cleanDevs = Array.from(map.values())
+                  .filter((d: any) => !recycledIds.has(d.id) && !recycledIds.has(d.name))
+                  .map((d: any) => ({
+                    ...d,
+                    projects: (d.projects || []).filter((proj: any) => {
+                      const projTitle = (proj.title || '').toLowerCase().trim();
+                      return !recycledIds.has(proj.id) && !recycledIds.has(proj.code) && !(projTitle && recycledIds.has(projTitle));
+                    })
+                  }));
                 setDevelopers(cleanDevs);
                 localStorage.setItem('swaramayi_developers_v1', JSON.stringify(cleanDevs));
               } catch (e) {}
@@ -7638,10 +7764,10 @@ export default function App() {
 
   const handleDeleteProperty = (id: string, code: string) => {
     if (window.confirm(`Are you sure you want to move Property Master Record ${code} to Recycle Bin?`)) {
-      const prop = properties.find(p => p.id === id || p.property_code === code);
+      const prop = properties.find(p => p.id === id || p.property_code === code || p.code === code || p.project_id === code);
       if (prop) {
         handleRecycleItem({
-          id: prop.id || `PROP-${Date.now()}`,
+          id: prop.id || code || `PROP-${Date.now()}`,
           title: `${prop.title || 'Property'} (${code})`,
           category: 'Project',
           originalLocation: 'Property Master / Live Inventory',
@@ -7649,9 +7775,36 @@ export default function App() {
           originalData: prop
         });
       }
-      const nextProps = properties.filter(p => p.id !== id && p.property_code !== code);
+      const nextProps = properties.filter(p => p.id !== id && p.property_code !== code && p.code !== code && p.project_id !== code);
       setProperties(nextProps);
-      syncAllToMongoDB({ properties: nextProps });
+
+      let currentDevs: any[] = developers;
+      try {
+        const savedDevs = localStorage.getItem('swaramayi_developers_v1');
+        if (savedDevs) {
+          const parsed = JSON.parse(savedDevs);
+          if (Array.isArray(parsed) && parsed.length > 0) currentDevs = parsed;
+        }
+      } catch (e) {}
+
+      const propTitle = prop ? (prop.title || prop.project_title || '').toLowerCase().trim() : '';
+      const nextDevs = currentDevs.map((d: any) => ({
+        ...d,
+        projects: (d.projects || []).filter((proj: any) => {
+          const projTitle = (proj.title || '').toLowerCase().trim();
+          return proj.id !== id && proj.code !== code && proj.id !== code && proj.code !== id &&
+            !(propTitle && projTitle && (projTitle === propTitle || propTitle.includes(projTitle) || projTitle.includes(propTitle)));
+        })
+      }));
+
+      setDevelopers(nextDevs);
+
+      try {
+        localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(nextProps));
+        localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevs));
+      } catch (e) {}
+
+      syncAllToMongoDB({ properties: nextProps, developers: nextDevs });
       alert(`🗑️ Property ${code} moved to Recycle Bin!`);
     }
   };

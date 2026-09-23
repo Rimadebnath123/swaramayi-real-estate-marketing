@@ -113,28 +113,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
   const isSuperAdmin = isStrictSuperAdmin || roleUpper.includes('ADMIN');
   // DEVELOPER MASTER ID REGISTRY STATE & PERSISTENCE
-  const PROJECT_GPS_MAP: Record<string, { lat: string; lng: string }> = {
-    'SHIBALAY RESIDENCY': { lat: '22.722361', lng: '88.493403' },
-    'GAJAPATI APARTMENT': { lat: '22.722361', lng: '88.493403' },
-    'My Home Sayuk': { lat: '22.720500', lng: '88.485000' },
-    'Dhriti Residency': { lat: '22.698021', lng: '88.463723' },
-    'Rajapushpa Imperia': { lat: '22.715420', lng: '88.479150' },
-    'Aparna Zenith': { lat: '22.722361', lng: '88.493403' },
-    'Jayabheri Peak': { lat: '22.725000', lng: '88.498000' },
-    'Lansum Elena': { lat: '22.718000', lng: '88.488000' },
-    'Star Horizon': { lat: '22.6955', lng: '88.4610' },
-    'Cyber Towers': { lat: '22.710000', lng: '88.475000' },
-    'Aparna Zenon': { lat: '22.722361', lng: '88.493403' },
-    'Prestige High Fields': { lat: '22.723000', lng: '88.490000' }
-  };
-
   const getGpsForProject = (projTitle?: string, defaultLat?: string, defaultLng?: string) => {
-    const cleanTitle = (projTitle || '').trim();
-    if (!cleanTitle) return { lat: defaultLat || '22.722361', lng: defaultLng || '88.493403' };
-    if (PROJECT_GPS_MAP[cleanTitle]) return PROJECT_GPS_MAP[cleanTitle];
-    const foundKey = Object.keys(PROJECT_GPS_MAP).find(k => k.toLowerCase().includes(cleanTitle.toLowerCase()) || cleanTitle.toLowerCase().includes(k.toLowerCase()));
-    if (foundKey) return PROJECT_GPS_MAP[foundKey];
-    return { lat: defaultLat || '22.722361', lng: defaultLng || '88.493403' };
+    return { lat: defaultLat || '', lng: defaultLng || '' };
   };
 
   const downloadImage = (url: string, filename: string) => {
@@ -301,32 +281,29 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     // 2. From properties list
     (properties || []).forEach((prop: any) => {
       let projId = (prop.project_id && !prop.project_id.startsWith('SRM-DEV-')) ? prop.project_id : null;
-      if (!projId) {
-        projId = (prop.title || '').toLowerCase().includes('shibalay') ? 'SRM-PROJ-2026-000087' :
-                 (prop.title || '').toLowerCase().includes('gajapati') ? 'SRM-PROJ-2026-000088' :
-                 (prop.title || '').toLowerCase().includes('dhriti') ? 'SRM-PROJ-2026-000089' :
-                 `SRM-PROJ-2026-${String(Math.floor(100000 + Math.random() * 900000))}`;
+      if (!projId && prop.id) {
+        projId = `SRM-PROJ-${prop.id}`;
       }
       if (projId && !masterProjectsMap.has(projId) && (prop.title || prop.project_title)) {
         masterProjectsMap.set(projId, {
           id: projId,
           code: projId,
           title: prop.title || prop.project_title,
-          developer: prop.developer || prop.builder_name || 'Developer',
+          developer: prop.developer || prop.builder_name || '',
           developer_id: prop.developer_id || '',
           mobile: prop.developer_mobile || prop.mobile || '',
           altMobile: prop.developer_alt_mobile || '',
           locality: prop.locality || '',
-          latitude: prop.latitude || '22.722361',
-          longitude: prop.longitude || '88.493403',
+          latitude: prop.latitude || '',
+          longitude: prop.longitude || '',
           amenities: prop.selected_amenities || [],
           building_photos: prop.building_photos || [],
-          total_covered_parking_capacity: prop.total_covered_parking_capacity !== undefined ? prop.total_covered_parking_capacity : 24,
-          covered_parking_rate: prop.covered_parking_rate || '300000',
-          total_ev_parking_capacity: prop.total_ev_parking_capacity !== undefined ? prop.total_ev_parking_capacity : 6,
-          ev_parking_rate: prop.ev_parking_rate || '450000',
-          total_open_parking_capacity: prop.total_open_parking_capacity !== undefined ? prop.total_open_parking_capacity : 12,
-          open_parking_rate: prop.open_parking_rate || '150000'
+          total_covered_parking_capacity: prop.total_covered_parking_capacity !== undefined ? prop.total_covered_parking_capacity : 0,
+          covered_parking_rate: prop.covered_parking_rate || '0',
+          total_ev_parking_capacity: prop.total_ev_parking_capacity !== undefined ? prop.total_ev_parking_capacity : 0,
+          ev_parking_rate: prop.ev_parking_rate || '0',
+          total_open_parking_capacity: prop.total_open_parking_capacity !== undefined ? prop.total_open_parking_capacity : 0,
+          open_parking_rate: prop.open_parking_rate || '0'
         });
       }
     });
@@ -348,32 +325,32 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
   const handleStartEditProjectDeveloper = React.useCallback((p: any) => {
     if (!p) return;
-    const devMobile = p.developer_mobile || p.mobile || '9883395102';
-    const altMobile = p.developer_alt_mobile || p.altMobile || '7044293951';
+    const devMobile = p.developer_mobile || p.mobile || '';
+    const altMobile = p.developer_alt_mobile || p.altMobile || '';
 
     setNewPropertyForm((prev: any) => ({
       ...prev,
-      project_id: p.project_id || p.project_code || p.code || p.id || 'SRM-PROJ-2026-000088',
+      project_id: p.project_id || p.project_code || p.code || p.id || '',
       property_code: p.property_code || p.code || '',
-      developer_id: p.developer_id || p.developerId || 'SRM-DEV-2026-000105',
-      developer: p.developer || p.developer_name || p.name || 'KRISHNA DAS (SWARAMAYI DEVELOPERS)',
-      title: p.title || p.project_name || 'SHIBALAY RESIDENCY',
-      locality: p.locality || 'BARASAT, CHAPADALI',
-      city: p.city || 'Kolkata',
-      full_address: p.full_address || p.address || 'Chapadali Bus Terminus Hub, Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124',
-      latitude: p.latitude || '22.722361',
-      longitude: p.longitude || '88.493403',
-      possession_status: p.possession_status || 'Under Construction',
-      handover_month: p.handover_month || 'December',
-      handover_year: p.handover_year || '2026',
-      handover_month_year: p.handover_month_year || 'December 2026',
-      total_covered_parking_capacity: p.total_covered_parking_capacity || 24,
-      covered_parking_rate: p.covered_parking_rate || '300000',
-      total_ev_parking_capacity: p.total_ev_parking_capacity || 6,
-      ev_parking_rate: p.ev_parking_rate || '450000',
-      total_open_parking_capacity: p.total_open_parking_capacity || 12,
-      open_parking_rate: p.open_parking_rate || '150000',
-      selected_amenities: Array.isArray(p.selected_amenities) ? p.selected_amenities : ['Elevator', 'Gym', '24/7 Security'],
+      developer_id: p.developer_id || p.developerId || '',
+      developer: p.developer || p.developer_name || p.name || '',
+      title: p.title || p.project_name || '',
+      locality: p.locality || '',
+      city: p.city || '',
+      full_address: p.full_address || p.address || '',
+      latitude: p.latitude || '',
+      longitude: p.longitude || '',
+      possession_status: p.possession_status || '',
+      handover_month: p.handover_month || '',
+      handover_year: p.handover_year || '',
+      handover_month_year: p.handover_month_year || '',
+      total_covered_parking_capacity: p.total_covered_parking_capacity !== undefined ? p.total_covered_parking_capacity : 0,
+      covered_parking_rate: p.covered_parking_rate || '0',
+      total_ev_parking_capacity: p.total_ev_parking_capacity !== undefined ? p.total_ev_parking_capacity : 0,
+      ev_parking_rate: p.ev_parking_rate || '0',
+      total_open_parking_capacity: p.total_open_parking_capacity !== undefined ? p.total_open_parking_capacity : 0,
+      open_parking_rate: p.open_parking_rate || '0',
+      selected_amenities: Array.isArray(p.selected_amenities) ? p.selected_amenities : [],
       building_photos: Array.isArray(p.building_photos) ? p.building_photos : (p.building_photo ? [p.building_photo] : []),
       building_photo: p.building_photo || '',
       rera_id: p.rera_id || '',
@@ -402,71 +379,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {}
-    return propertyUnits && propertyUnits.length > 0 ? propertyUnits : [
-      {
-        id: 'UNIT-101',
-        propertyId: 'SRM-PROP-2026-000426',
-        projectTitle: 'BISNUPRIYA PLAZA',
-        developerName: 'BISWAJIT KARMAKAR',
-        unitNumber: 'Flat 101',
-        unit_num: 'Flat 101',
-        unit_code: 'SRM-PROP-2026-000426-Flat101',
-        bhk: '2BHK',
-        floor: '1st Floor',
-        tower: 'Tower A',
-        superBuiltupArea: '1,150 Sq.Ft.',
-        carpetArea: '805 Sq.Ft.',
-        area: '805 Sq.Ft.',
-        priceSqft: '₹4,000/Sq.Ft.',
-        basePrice: '₹46,00,000',
-        price: '₹46,00,000',
-        facing: 'East Facing',
-        parking: '1 Covered Car Parking Slot',
-        status: 'AVAILABLE'
-      },
-      {
-        id: 'UNIT-102',
-        propertyId: 'SRM-PROP-2026-000426',
-        projectTitle: 'BISNUPRIYA PLAZA',
-        developerName: 'BISWAJIT KARMAKAR',
-        unitNumber: 'Flat 102',
-        unit_num: 'Flat 102',
-        unit_code: 'SRM-PROP-2026-000426-Flat102',
-        bhk: '3BHK',
-        floor: '1st Floor',
-        tower: 'Tower A',
-        superBuiltupArea: '1,450 Sq.Ft.',
-        carpetArea: '1,015 Sq.Ft.',
-        area: '1,015 Sq.Ft.',
-        priceSqft: '₹4,200/Sq.Ft.',
-        basePrice: '₹60,90,000',
-        price: '₹60,90,000',
-        facing: 'North-East Facing',
-        parking: '1 Covered Car Parking Slot',
-        status: 'AVAILABLE'
-      },
-      {
-        id: 'UNIT-201',
-        propertyId: 'SRM-PROP-2026-000426',
-        projectTitle: 'BISNUPRIYA PLAZA',
-        developerName: 'BISWAJIT KARMAKAR',
-        unitNumber: 'Flat 201',
-        unit_num: 'Flat 201',
-        unit_code: 'SRM-PROP-2026-000426-Flat201',
-        bhk: '3BHK',
-        floor: '2nd Floor',
-        tower: 'Tower A',
-        superBuiltupArea: '1,450 Sq.Ft.',
-        carpetArea: '1,015 Sq.Ft.',
-        area: '1,015 Sq.Ft.',
-        priceSqft: '₹4,300/Sq.Ft.',
-        basePrice: '₹62,35,000',
-        price: '₹62,35,000',
-        facing: 'East Facing',
-        parking: '1 Covered Car Parking Slot',
-        status: 'BOOKED'
-      }
-    ];
+    return propertyUnits && propertyUnits.length > 0 ? propertyUnits : [];
   });
 
   React.useEffect(() => {
@@ -722,14 +635,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     } catch (e) {
       console.error(e);
     }
-    return {
-      'TILOTTAMA APPARTMENT': { totalCovered: 12, priceCovered: 300000, totalEv: 2, priceEv: 450000, totalOpen: 6, priceOpen: 150000 },
-      'My Home Sayuk': { totalCovered: 120, priceCovered: 350000, totalEv: 20, priceEv: 500000, totalOpen: 30, priceOpen: 200000 },
-      'My Home Bhooja': { totalCovered: 150, priceCovered: 400000, totalEv: 25, priceEv: 600000, totalOpen: 40, priceOpen: 250000 },
-      'Aparna Zenon': { totalCovered: 90, priceCovered: 300000, totalEv: 15, priceEv: 450000, totalOpen: 25, priceOpen: 150000 },
-      'Rajapushpa Imperia': { totalCovered: 80, priceCovered: 350000, totalEv: 10, priceEv: 500000, totalOpen: 20, priceOpen: 175000 },
-      'Dhriti Residency': { totalCovered: 15, priceCovered: 250000, totalEv: 2, priceEv: 350000, totalOpen: 5, priceOpen: 125000 }
-    };
+    return {};
   });
 
   const [showManageParkingModal, setShowManageParkingModal] = React.useState<boolean>(false);
@@ -778,37 +684,37 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       if (devObj.projects?.[0]) setSelectedProjectId(devObj.projects[0].id);
     }
 
-    const primaryMob = foundProp.developer_mobile || devObj?.mobile?.split('/')[0]?.trim() || devObj?.mobile || '9883395102';
-    const secondaryMob = foundProp.developer_alt_mobile || devObj?.altMobile || '7044293951';
-    const projTitle = foundProp.title || 'TILOTTAMA APPARTMENT';
+    const primaryMob = foundProp.developer_mobile || devObj?.mobile?.split('/')[0]?.trim() || devObj?.mobile || '';
+    const secondaryMob = foundProp.developer_alt_mobile || devObj?.altMobile || '';
+    const projTitle = foundProp.title || '';
     const gps = getGpsForProject(projTitle, foundProp.latitude, foundProp.longitude);
 
     setNewPropertyForm((prev: any) => ({
       ...prev,
-      property_code: foundProp.property_code,
-      developer_id: foundProp.developer_id || devObj?.id || 'SRM-DEV-2026-000105',
-      developer: foundProp.developer || 'LITTON SEN',
+      property_code: foundProp.property_code || '',
+      developer_id: foundProp.developer_id || devObj?.id || '',
+      developer: foundProp.developer || '',
       title: projTitle,
-      locality: foundProp.locality || 'BARASAT, CHAPADALI',
-      configuration: foundProp.configuration || '3BHK',
-      carpet_area: foundProp.carpet_area || '898.1 Sq.Ft.',
-      super_builtup_area: foundProp.super_builtup_area || '1,283 Sq.Ft.',
-      floor_num: foundProp.floor_num || foundProp.floor_number || '2nd Floor',
-      total_floors: foundProp.total_floors || 'G+4 Floors',
-      facing: foundProp.facing || 'South Facing',
-      furnishing: foundProp.furnishing || 'Semi-Furnished',
-      final_price: foundProp.final_price || '₹46,08,000',
-      price_sqft: foundProp.price_sqft || '₹5,131/Sq.Ft.',
-      car_parking: foundProp.car_parking || '1 Covered Parking Slot',
-      parking_price: foundProp.parking_price || '300000',
+      locality: foundProp.locality || '',
+      configuration: foundProp.configuration || '',
+      carpet_area: foundProp.carpet_area || '',
+      super_builtup_area: foundProp.super_builtup_area || '',
+      floor_num: foundProp.floor_num || foundProp.floor_number || '',
+      total_floors: foundProp.total_floors || '',
+      facing: foundProp.facing || '',
+      furnishing: foundProp.furnishing || '',
+      final_price: foundProp.final_price || '',
+      price_sqft: foundProp.price_sqft || '',
+      car_parking: foundProp.car_parking || '',
+      parking_price: foundProp.parking_price || '0',
       latitude: gps.lat,
       longitude: gps.lng,
       building_photos: foundProp.building_photos || [],
       building_photo: foundProp.building_photo || '',
       unit_photos: foundProp.unit_photos || [],
       unit_photo: foundProp.unit_photo || '',
-      project_posting_id: foundProp.project_posting_id || 'PRJ-POST-2026-8802',
-      key_custody: foundProp.key_custody || 'Builder Site Office',
+      project_posting_id: foundProp.project_posting_id || '',
+      key_custody: foundProp.key_custody || '',
       description: foundProp.description || '',
       site_person_name: foundProp.site_person_name || '',
       site_person_contact: foundProp.site_person_contact || ''
@@ -841,7 +747,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     const primaryMob = found.mobile?.split('/')[0]?.trim() || found.mobile || '';
     const secondaryMob = found.altMobile || (found.mobile?.includes('/') ? found.mobile.split('/')[1]?.trim() : '');
 
-    const projTitle = firstProj?.title || 'TILOTTAMA APPARTMENT';
+    const projTitle = firstProj?.title || '';
     const gps = getGpsForProject(projTitle, firstProj?.lat, firstProj?.lng);
 
     setNewPropertyForm((prev: any) => ({
@@ -970,7 +876,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           list.push({
             id: proj.id || `PROJ-${Date.now()}-${Math.random()}`,
             title: proj.title,
-            locality: proj.locality || 'Kondapur / Madhyamgram',
+            locality: proj.locality || '',
             devName: dev.name,
             devId: dev.id,
             devMobile: dev.mobile,
@@ -989,27 +895,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         list.push({
           id: `PROJ-PROP-${p.id}`,
           title: p.title,
-          locality: p.locality || 'BARASAT, CHAPADALI',
-          devName: p.developer || 'LITTON SEN',
-          devId: p.developer_id || 'SRM-DEV-2026-000105',
-          devMobile: p.developer_mobile || '9883395102',
-          devAltMobile: p.developer_alt_mobile || '7044293951',
+          locality: p.locality || '',
+          devName: p.developer || '',
+          devId: p.developer_id || '',
+          devMobile: p.developer_mobile || '',
+          devAltMobile: p.developer_alt_mobile || '',
           lat: gps.lat,
           lng: gps.lng
-        });
-      }
-    });
-
-    const defaultMatrix = [
-      { title: 'TILOTTAMA APPARTMENT', locality: 'BARASAT, BANAMALIPUR, BARASAT NEAR ECO HOSPITAL', devName: 'LITTON SEN', devId: 'SRM-DEV-2026-000105', devMobile: '9883395102', devAltMobile: '7044293951', lat: '22.722361', lng: '88.493403' }
-    ];
-
-    defaultMatrix.forEach(def => {
-      if (!seenTitles.has(def.title.toLowerCase().trim())) {
-        seenTitles.add(def.title.toLowerCase().trim());
-        list.push({
-          id: `PROJ-DEF-${def.title.replace(/\s+/g, '-')}`,
-          ...def
         });
       }
     });
@@ -1034,9 +926,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       ...prev,
       title: foundProj.title,
       locality: foundProj.locality || prev.locality || '',
-      developer: foundProj.devName || prev.developer || 'LITTON SEN',
-      developer_id: foundProj.devId || prev.developer_id || 'SRM-DEV-2026-000105',
-      developer_alt_mobile: foundProj.devAltMobile || prev.developer_alt_mobile || '7044293951',
+      developer: foundProj.devName || prev.developer || '',
+      developer_id: foundProj.devId || prev.developer_id || '',
+      developer_alt_mobile: foundProj.devAltMobile || prev.developer_alt_mobile || '',
       latitude: gps.lat,
       longitude: gps.lng
     }));
@@ -1374,45 +1266,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   🏢 Project & Developer Identification
                 </h4>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const sampleProjCode = generateNextProjectId();
-                      const samplePropCode = generateNextPropertyCode();
-                      setNewPropertyForm({
-                        ...newPropertyForm,
-                        project_id: sampleProjCode,
-                        property_code: samplePropCode,
-                        developer: 'KRISHNA DAS (SWARAMAYI DEVELOPERS)',
-                        title: 'SHIBALAY RESIDENCY',
-                        locality: 'BARASAT, CHAPADALI',
-                        city: 'Kolkata',
-                        full_address: 'Chapadali Bus Terminus Hub, Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124, India',
-                        latitude: '22.722361',
-                        longitude: '88.493403',
-                        possession_status: 'Under Construction',
-                        handover_month: 'December',
-                        handover_year: '2026',
-                        handover_month_year: 'December 2026',
-                        total_covered_parking_capacity: 24,
-                        covered_parking_rate: '300000',
-                        total_ev_parking_capacity: 6,
-                        ev_parking_rate: '450000',
-                        total_open_parking_capacity: 12,
-                        open_parking_rate: '150000',
-                        selected_amenities: ['Elevator', 'Gym', 'Swimming Pool', '24/7 Security', 'Power Backup']
-                      });
-                      if (setDevProjectMobile) setDevProjectMobile('9883395102');
-                      if (setDevProjectAltMobile) setDevProjectAltMobile('7044293951');
-                      if (setDevProjectOtpSent) setDevProjectOtpSent(true);
-                      if (setDevProjectOtpInput) setDevProjectOtpInput('749201');
-                      if (setDevProjectOtpVerified) setDevProjectOtpVerified(true);
-                      alert('✨ Sample Project & Developer Details Loaded! OTP pre-filled & auto-verified (749201).');
-                    }}
-                    style={{ background: '#a855f7', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '900', cursor: 'pointer' }}
-                  >
-                    📄 Load Sample Details
-                  </button>
                   <span style={{ fontSize: '0.75rem', background: '#22c55e', color: '#ffffff', padding: '2px 8px', borderRadius: '4px', fontWeight: '800' }}>
                     1-Time Developer Project OTP Protocol
                   </span>
@@ -1426,11 +1279,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     type="text" 
                     value={newPropertyForm.developer} 
                     onChange={(e) => {
-                      const devVal = e.target.value;
-                      setNewPropertyForm({ ...newPropertyForm, developer: devVal, developer_mobile: devVal === 'SUMAN' || devVal === 'BISWAJIT KARMAKAR' ? newPropertyForm.developer_mobile : '' });
-                      if (setDevProjectMobile && devVal !== 'BISWAJIT KARMAKAR') {
-                        setDevProjectMobile('');
-                      }
+                      setNewPropertyForm({ ...newPropertyForm, developer: e.target.value });
                     }} 
                     placeholder="e.g. My Home Constructions / Dhriti Builders / Aparna" 
                     style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '700' }} 
@@ -1549,7 +1398,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           type="button" 
                           onClick={() => {
                             setDevProjectOtpSent(true);
-                            setDevProjectOtpInput('749201');
+                            setDevProjectOtpInput('');
                           }}
                           style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(168, 85, 247, 0.3)' }}
                         >
@@ -1726,26 +1575,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           />
                         </label>
 
-                        {/* PRESET SAMPLE ELEVATIONS BUTTON */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const sampleElevations = [
-                              'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80',
-                              'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=800&q=80',
-                              'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80'
-                            ];
-                            const updatedList = [...photosList, ...sampleElevations];
-                            setNewPropertyForm((prev: any) => ({
-                              ...prev,
-                              building_photos: updatedList,
-                              building_photo: updatedList[0] || ''
-                            }));
-                          }}
-                          style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #eab308', color: '#eab308', padding: '8px 12px', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          🖼️ Add Sample Elevation
-                        </button>
                       </div>
                     </div>
 
@@ -2267,52 +2096,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const samplePropCode = generateDynamicPropertyCode();
-                      setNewPropertyForm({
-                        ...newPropertyForm,
-                        property_code: samplePropCode,
-                        title: 'GAJAPATI APARTMENT 2BHK',
-                        developer: 'BABLA DUTTA',
-                        developer_id: 'SRM-DEV-2026-000106',
-                        project_id: 'SRM-PROJ-2026-000088',
-                        locality: 'Barasat, Kolkata',
-                        full_address: 'Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124, India',
-                        property_type: 'Flat / Apartment',
-                        configuration: '2BHK',
-                        carpet_area: '700.35 Sq.Ft.',
-                        super_builtup_area: '1,050 Sq.Ft.',
-                        final_price: '₹35,15,900',
-                        price_sqft: '₹5,020/Sq.Ft.',
-                        parking_required: 'YES',
-                        car_parking: 'Covered Basement & 1 Slot',
-                        parking_price: '300000',
-                        amenity_charges: '150000',
-                        gst_pct: '5%',
-                        possession_status: 'Under Construction (June 2027)',
-                        handover_month: 'June',
-                        handover_year: '2027',
-                        handover_month_year: 'June 2027',
-                        tower_block: 'Tower A',
-                        floor_num: '3rd Floor',
-                        floor_number: '3rd Floor',
-                        total_floors: 'G+4 Floors',
-                        facing: 'East Facing',
-                        furnishing: 'Semi-Furnished',
-                        status: 'AVAILABLE',
-                        latitude: '22.722361',
-                        longitude: '88.493403'
-                      });
-                      alert('✨ Sample Property Details Loaded! Ready to Register Property Code ' + samplePropCode);
-                    }}
-                    style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    📄 Load Sample Property Details
-                  </button>
-                </div>
+
 
                 {/* LINKED MASTER PROJECT & UNIQUE PROPERTY CODE SUMMARY BADGE */}
                 <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #22c55e', borderRadius: '10px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
@@ -2835,27 +2619,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                               />
                             </label>
 
-                            {/* SAMPLE PRESET GALLERY BUTTON */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const sampleUnitPhotos = [
-                                  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
-                                  'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=800&q=80',
-                                  'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80',
-                                  'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=800&q=80'
-                                ];
-                                const updatedList = Array.from(new Set([...unitPhotosList, ...sampleUnitPhotos]));
-                                setNewPropertyForm((prev: any) => ({
-                                  ...prev,
-                                  unit_photos: updatedList,
-                                  unit_photo: updatedList[0] || ''
-                                }));
-                              }}
-                              style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '1.5px solid #38bdf8', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}
-                            >
-                              🖼️ Preset Unit Interiors
-                            </button>
                           </div>
                         </div>
 
@@ -3236,8 +2999,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     const calcSuper = carpetNum ? `${Math.round(carpetNum / 0.7)} Sq.Ft.` : '1,280 Sq.Ft.';
                     const superDisp = p.super_builtup_area || calcSuper;
 
-                    const displayTitle = p.title || p.property_title || p.project_name || p.property_name || p.name || 'GAJAPATI APARTMENT';
-                    const displayDeveloper = p.developer || p.developer_name || p.builder_name || p.developer_company || 'Swaramayi Partner Developer';
+                    const displayTitle = p.title || p.property_title || p.project_name || p.property_name || p.name || 'Untitled Property';
+                    const displayDeveloper = p.developer || p.developer_name || p.builder_name || p.developer_company || 'Developer';
 
                     const allMasters = getAllMasterProjects();
                     const matchedMaster = allMasters.find(m => 
@@ -3252,12 +3015,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     if (!rawProjCode && matchedMaster?.id && !matchedMaster.id.startsWith('SRM-DEV-')) {
                       rawProjCode = matchedMaster.id;
                     }
-                    const projCode = (rawProjCode && !rawProjCode.startsWith('SRM-DEV-')) ? rawProjCode : (
-                      displayTitle.toLowerCase().includes('shibalay') ? 'SRM-PROJ-2026-000087' :
-                      displayTitle.toLowerCase().includes('gajapati') ? 'SRM-PROJ-2026-000088' :
-                      displayTitle.toLowerCase().includes('dhriti') ? 'SRM-PROJ-2026-000089' :
-                      'SRM-PROJ-2026-000088'
-                    );
+                    const projCode = (rawProjCode && !rawProjCode.startsWith('SRM-DEV-')) ? rawProjCode : (p.id ? `SRM-PROJ-${p.id}` : '');
 
                     const projProps = properties.filter(item => {
                       const itemTitle = item.title || item.property_title || item.project_name || '';
@@ -3480,8 +3238,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       const calcSuper = carpetNum ? `${Math.round(carpetNum / 0.7)} Sq.Ft.` : '1,280 Sq.Ft.';
                       const superDisp = p.super_builtup_area || calcSuper;
 
-                      const displayTitle = p.title || p.property_title || p.project_name || p.property_name || p.name || 'GAJAPATI APARTMENT';
-                      const displayDeveloper = p.developer || p.developer_name || p.builder_name || p.developer_company || 'Swaramayi Partner Developer';
+                      const displayTitle = p.title || p.property_title || p.project_name || p.property_name || p.name || 'Untitled Property';
+                      const displayDeveloper = p.developer || p.developer_name || p.builder_name || p.developer_company || 'Developer';
 
                       const allMasters = getAllMasterProjects();
                       const matchedMaster = allMasters.find(m => 
@@ -3496,12 +3254,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       if (!rawProjCode && matchedMaster?.id && !matchedMaster.id.startsWith('SRM-DEV-')) {
                         rawProjCode = matchedMaster.id;
                       }
-                      const projCode = (rawProjCode && !rawProjCode.startsWith('SRM-DEV-')) ? rawProjCode : (
-                        displayTitle.toLowerCase().includes('shibalay') ? 'SRM-PROJ-2026-000087' :
-                        displayTitle.toLowerCase().includes('gajapati') ? 'SRM-PROJ-2026-000088' :
-                        displayTitle.toLowerCase().includes('dhriti') ? 'SRM-PROJ-2026-000089' :
-                        'SRM-PROJ-2026-000088'
-                      );
+                      const projCode = (rawProjCode && !rawProjCode.startsWith('SRM-DEV-')) ? rawProjCode : (p.id ? `SRM-PROJ-${p.id}` : '');
 
                       // PARKING COMPUTATION FOR THIS ROW
                       const projProps = properties.filter(item => {
@@ -4069,26 +3822,26 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           (m.id && viewPropertyModal.project_id && m.id === viewPropertyModal.project_id) ||
           (m.code && viewPropertyModal.project_id && m.code === viewPropertyModal.project_id)
         );
-        const projCode = viewPropertyModal.project_id || matchedMaster?.code || matchedMaster?.id || 'SRM-PROJ-2026-000088';
+        const projCode = viewPropertyModal.project_id || matchedMaster?.code || matchedMaster?.id || '';
 
         const devObj = developerMasterList.find(d => 
           (d.name && viewPropertyModal.developer && d.name.toLowerCase().trim() === viewPropertyModal.developer.toLowerCase().trim()) ||
           d.id === viewPropertyModal.developer_id
         );
-        const devIdCode = devObj?.id || viewPropertyModal.developer_id || 'SRM-DEV-2026-000105';
+        const devIdCode = devObj?.id || viewPropertyModal.developer_id || '';
 
         const modalProjProps = properties.filter(p => 
           (p.project_id && p.project_id === projCode) ||
           (p.title || '').toLowerCase().trim() === (viewPropertyModal.title || '').toLowerCase().trim()
         );
 
-        const totalCoveredCap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : 24;
-        const totalEvCap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : 6;
-        const totalOpenCap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : 12;
+        const totalCoveredCap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : 0;
+        const totalEvCap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : 0;
+        const totalOpenCap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : 0;
 
-        const coveredRateStr = matchedMaster?.covered_parking_rate ? parseInt(matchedMaster.covered_parking_rate, 10).toLocaleString('en-IN') : '3,00,000';
-        const evRateStr = matchedMaster?.ev_parking_rate ? parseInt(matchedMaster.ev_parking_rate, 10).toLocaleString('en-IN') : '4,50,000';
-        const openRateStr = matchedMaster?.open_parking_rate ? parseInt(matchedMaster.open_parking_rate, 10).toLocaleString('en-IN') : '1,50,000';
+        const coveredRateStr = matchedMaster?.covered_parking_rate ? parseInt(matchedMaster.covered_parking_rate, 10).toLocaleString('en-IN') : '0';
+        const evRateStr = matchedMaster?.ev_parking_rate ? parseInt(matchedMaster.ev_parking_rate, 10).toLocaleString('en-IN') : '0';
+        const openRateStr = matchedMaster?.open_parking_rate ? parseInt(matchedMaster.open_parking_rate, 10).toLocaleString('en-IN') : '0';
 
         const modalAllocCovered = modalProjProps.filter(p => (p.car_parking || '').toLowerCase().includes('covered')).length;
         const modalAllocEv = modalProjProps.filter(p => (p.car_parking || '').toLowerCase().includes('ev')).length;
@@ -4677,18 +4430,18 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       {/* 🏢 SLIDER DRAWER: MULTIPLE PROPERTY UNITS BUILDER & SLIDER UNDER SAME PROJECT */}
       {showMultipleUnitsSlider && showMultipleUnitsSlider.open && (() => {
         const currentProject = showMultipleUnitsSlider.project || properties[0] || {
-          title: 'BISNUPRIYA PLAZA',
-          developer: 'BISWAJIT KARMAKAR',
-          developer_mobile: '9163408797',
-          locality: 'BC SEN ROAD NEAR SHAKTIPUR AUTO STAND',
-          property_code: 'SRM-PROP-2026-000426'
+          title: '',
+          developer: '',
+          developer_mobile: '',
+          locality: '',
+          property_code: ''
         };
 
-        const projectTitleStr = currentProject.title || currentProject.propertyTitle || 'BISNUPRIYA PLAZA';
-        const devNameStr = currentProject.developer || currentProject.developerName || 'BISWAJIT KARMAKAR';
-        const devMobileStr = currentProject.developer_mobile || currentProject.mobile || '9163408797';
-        const localityStr = currentProject.locality || 'BC SEN ROAD NEAR SHAKTIPUR AUTO STAND';
-        const propCodeStr = currentProject.property_code || currentProject.id || 'SRM-PROP-2026-000426';
+        const projectTitleStr = currentProject.title || currentProject.propertyTitle || '';
+        const devNameStr = currentProject.developer || currentProject.developerName || '';
+        const devMobileStr = currentProject.developer_mobile || currentProject.mobile || '';
+        const localityStr = currentProject.locality || '';
+        const propCodeStr = currentProject.property_code || currentProject.id || '';
 
         // Filter units under this project
         const currentProjectUnits = projectUnitsList.filter(u => 

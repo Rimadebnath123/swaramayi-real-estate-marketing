@@ -4545,41 +4545,90 @@ export default function App() {
 
   const handleRestoreRecycledItem = (item: any) => {
     const data = item.originalData || {};
+    let nextDevs: any[] = [];
+    try {
+      const savedDevs = localStorage.getItem('swaramayi_developers_v1');
+      if (savedDevs) nextDevs = JSON.parse(savedDevs);
+    } catch (e) {}
+
     switch (item.category) {
       case 'Lead':
-        setLeadsList(prev => [data, ...prev.filter(l => l.id !== data.id && l.lead_number !== data.lead_number)]);
+        setLeadsList(prev => {
+          const updated = [data, ...prev.filter(l => l.id !== data.id && l.lead_number !== data.lead_number)];
+          syncAllToMongoDB({ leads: updated });
+          return updated;
+        });
         break;
       case 'Customer':
-        setCustomers(prev => [data, ...prev.filter(c => c.id !== data.id && c.customer_number !== data.customer_number)]);
+        setCustomers(prev => {
+          const updated = [data, ...prev.filter(c => c.id !== data.id && c.customer_number !== data.customer_number)];
+          syncAllToMongoDB({ customers: updated });
+          return updated;
+        });
         break;
       case 'Project':
-        setProperties(prev => [data, ...prev.filter(p => p.id !== data.id && p.property_code !== data.property_code)]);
+        if (data.projects || data.projectsCount !== undefined) {
+          const updatedDevs = [data, ...nextDevs.filter(d => d.id !== data.id && d.name !== data.name)];
+          setDevelopers(updatedDevs);
+          try { localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs)); } catch (e) {}
+          syncAllToMongoDB({ developers: updatedDevs });
+        } else {
+          setProperties(prev => {
+            const updated = [data, ...prev.filter(p => p.id !== data.id && p.property_code !== data.property_code)];
+            syncAllToMongoDB({ properties: updated });
+            return updated;
+          });
+        }
         break;
       case 'Agreement':
         if (data.pvaData) {
           setProjectVisitAgreements(prev => [data, ...prev.filter((p: any) => p.id !== data.id)]);
         } else {
-          setAgreements(prev => [data, ...prev.filter((a: any) => a.id !== data.id)]);
+          setAgreements(prev => {
+            const updated = [data, ...prev.filter((a: any) => a.id !== data.id)];
+            syncAllToMongoDB({ agreements: updated });
+            return updated;
+          });
         }
         break;
       case 'Cost Sheet':
-        setIndividualCostSheets(prev => [data, ...prev.filter((c: any) => c.id !== data.id && c.costSheetId !== data.costSheetId)]);
+        setIndividualCostSheets(prev => {
+          const updated = [data, ...prev.filter((c: any) => c.id !== data.id && c.costSheetId !== data.costSheetId)];
+          syncAllToMongoDB({ cost_sheets: updated });
+          return updated;
+        });
         break;
       case 'Billing':
-        setInvoices(prev => [data, ...prev.filter((i: any) => i.id !== data.id && i.invoice_number !== data.invoice_number)]);
+        setInvoices(prev => {
+          const updated = [data, ...prev.filter((i: any) => i.id !== data.id && i.invoice_number !== data.invoice_number)];
+          syncAllToMongoDB({ invoices: updated });
+          return updated;
+        });
         break;
       case 'Visit Management':
         if (data.stops || data.visitPlanId || data.visitScheduleId) {
           setVisitPlans(prev => [data, ...prev.filter((p: any) => p.visitPlanId !== data.visitPlanId && p.visitScheduleId !== data.visitScheduleId)]);
         } else {
-          setScheduledVisits(prev => [data, ...prev.filter((s: any) => s.visitId !== data.visitId && s.costSheetId !== data.costSheetId)]);
+          setScheduledVisits(prev => {
+            const updated = [data, ...prev.filter((s: any) => s.visitId !== data.visitId && s.costSheetId !== data.costSheetId)];
+            syncAllToMongoDB({ site_visits: updated });
+            return updated;
+          });
         }
         break;
       default:
         if (data.full_name || data.customer_name) {
-          setCustomers(prev => [data, ...prev]);
+          setCustomers(prev => {
+            const updated = [data, ...prev];
+            syncAllToMongoDB({ customers: updated });
+            return updated;
+          });
         } else if (data.property_code || data.title) {
-          setProperties(prev => [data, ...prev]);
+          setProperties(prev => {
+            const updated = [data, ...prev];
+            syncAllToMongoDB({ properties: updated });
+            return updated;
+          });
         }
         break;
     }
@@ -4588,10 +4637,16 @@ export default function App() {
 
   const handlePurgeRecycledItem = (item: any) => {
     setRecycledItems(prev => prev.filter(r => r.id !== item.id));
+    setTimeout(() => {
+      syncAllToMongoDB();
+    }, 100);
   };
 
   const handleEmptyRecycleBin = () => {
     setRecycledItems([]);
+    setTimeout(() => {
+      syncAllToMongoDB();
+    }, 100);
   };
 
   // Central Inbox Filter States
@@ -7573,8 +7628,10 @@ export default function App() {
           originalData: prop
         });
       });
-      setProperties(properties.filter(p => !selectedPropertyIds.includes(p.id)));
+      const nextProps = properties.filter(p => !selectedPropertyIds.includes(p.id));
+      setProperties(nextProps);
       setSelectedPropertyIds([]);
+      syncAllToMongoDB({ properties: nextProps });
       alert(`🗑️ Selected properties moved to Recycle Bin!`);
     }
   };
@@ -7592,7 +7649,9 @@ export default function App() {
           originalData: prop
         });
       }
-      setProperties(prev => prev.filter(p => p.id !== id && p.property_code !== code));
+      const nextProps = properties.filter(p => p.id !== id && p.property_code !== code);
+      setProperties(nextProps);
+      syncAllToMongoDB({ properties: nextProps });
       alert(`🗑️ Property ${code} moved to Recycle Bin!`);
     }
   };

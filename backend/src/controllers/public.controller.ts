@@ -140,37 +140,17 @@ function formatPublicProperty(p: any) {
   let crmAddress = p.location_address || p.full_address || 'Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124';
   let crmCity = p.city || 'Kolkata';
 
-  if (titleLower.includes('shibalay')) {
-    crmCode = 'SRM-PROP-2026-000425';
-    crmDev = 'KRISHNA DAS';
-    crmPrice = 2080000;
-    crmSuperArea = 650;
-    crmCarpetArea = 422.5;
-    crmBeds = 3;
-    crmConfig = '3BHK';
-    crmLocality = 'BARASAT, CHAPADALI';
-    crmAddress = 'Chapadali Bus Terminus Hub, Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124';
-  } else if (titleLower.includes('gajapati')) {
-    crmCode = 'SRM-PROP-2026-000426';
-    crmDev = 'BABLA DUTTA';
-    crmPrice = 3515900;
-    crmSuperArea = 771;
-    crmCarpetArea = 700.35;
-    crmBeds = 2;
-    crmConfig = '2BHK';
-    crmLocality = 'Barasat, Kolkata';
-    crmAddress = 'Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124';
-  } else if (titleLower.includes('dhriti')) {
-    crmCode = 'SRM-PROP-2026-000427';
-    crmDev = 'NANIGOPAL DAS';
-    crmPrice = 3621400;
-    crmSuperArea = 765;
-    crmCarpetArea = 718.25;
-    crmBeds = 2;
-    crmConfig = '2BHK';
-    crmLocality = 'Barasat, Kolkata';
-    crmAddress = 'Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124';
+  crmCode = p.property_code || p.code || p.id || crmCode;
+  crmDev = p.developer || p.developer_name || p.builder_name || p.developer_company || crmDev;
+  if (p.final_price || p.asking_price || p.price) {
+    crmPrice = parsePriceString(p.final_price || p.asking_price || p.price);
   }
+  const parsedSuper = parseFloat(String(p.super_builtup_area || '').replace(/[^0-9.]/g, ''));
+  if (!isNaN(parsedSuper) && parsedSuper > 0) crmSuperArea = parsedSuper;
+  const parsedCarpet = parseFloat(String(p.carpet_area || '').replace(/[^0-9.]/g, ''));
+  if (!isNaN(parsedCarpet) && parsedCarpet > 0) crmCarpetArea = parsedCarpet;
+  if (p.configuration) crmConfig = p.configuration;
+  if (p.locality || p.location) crmLocality = p.locality || p.location;
 
   const price = crmPrice > 0 ? crmPrice : 3000000;
   const area = crmSuperArea > 0 ? crmSuperArea : (crmCarpetArea > 0 ? crmCarpetArea : 1200);
@@ -641,12 +621,7 @@ export async function getPublicProjects(req: Request, res: Response) {
         const priceMin = p.final_estimated_price || p.base_price || 2080000;
         const priceMax = Math.round(priceMin * 1.25);
         
-        let crmLocality = p.locality || p.location || 'Barasat, Kolkata';
-        if (projName.toLowerCase().includes('shibalay')) {
-          crmLocality = 'BARASAT, CHAPADALI';
-        } else if (projName.toLowerCase().includes('gajapati') || projName.toLowerCase().includes('dhriti')) {
-          crmLocality = 'Barasat, Kolkata';
-        }
+        let crmLocality = p.locality || p.location || 'Kolkata';
 
         propertyProjects.push({
           id: p.id,
@@ -718,12 +693,7 @@ async function getPublicProjectsData() {
       if (!seen.has(nameKey)) {
         seen.add(nameKey);
         const images = extractPropertyImages(p, name, p.property_code || p.id);
-        let crmLocality = p.locality || p.location || 'Barasat, Kolkata';
-        if (name.toLowerCase().includes('shibalay')) {
-          crmLocality = 'BARASAT, CHAPADALI';
-        } else if (name.toLowerCase().includes('gajapati') || name.toLowerCase().includes('dhriti')) {
-          crmLocality = 'Barasat, Kolkata';
-        }
+        let crmLocality = p.locality || p.location || 'Kolkata';
         return {
           id: p.id,
           _id: p.id,

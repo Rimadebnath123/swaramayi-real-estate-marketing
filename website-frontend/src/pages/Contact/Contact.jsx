@@ -4,8 +4,10 @@ import Breadcrumbs from '../../components/Common/Breadcrumbs';
 import { Phone, Mail, MapPin, Clock, MessageSquare, Send, CheckCircle } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import API from '../../services/api';
+import CallModal from '../../components/Common/CallModal';
 
 export default function Contact() {
+  const [callModalOpen, setCallModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -124,13 +126,14 @@ export default function Contact() {
                 </div>
 
                 <div className="pt-4 border-t border-gray-100 flex flex-col gap-2.5">
-                  <a
-                    href="tel:+918902130791"
-                    className="w-full py-2.5 bg-navy-900 text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-2"
+                  <button
+                    type="button"
+                    onClick={() => setCallModalOpen(true)}
+                    className="w-full py-2.5 bg-navy-900 text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-2 hover:bg-navy-800 transition-colors shadow-sm cursor-pointer"
                   >
                     <Phone className="w-4 h-4 text-gold-400" />
                     <span>Call Helpline Now</span>
-                  </a>
+                  </button>
                   <a
                     href={whatsappUrl}
                     target="_blank"
@@ -274,6 +277,15 @@ export default function Contact() {
           </div>
         </div>
       </div>
+
+      <CallModal
+        isOpen={callModalOpen}
+        onClose={() => setCallModalOpen(false)}
+        name="Swarnamayi Real Estate Helpline"
+        role="Official Customer Support"
+        phone="+91 89021 30791"
+        whatsappMsg="Hello Swarnamayi Real Estate Team, I would like to schedule a property consultation."
+      />
     </>
   );
 }

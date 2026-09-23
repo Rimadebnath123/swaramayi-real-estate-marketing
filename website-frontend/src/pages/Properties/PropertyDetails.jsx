@@ -27,6 +27,7 @@ import Breadcrumbs from '../../components/Common/Breadcrumbs';
 import EnquiryForm from '../../components/Forms/EnquiryForm';
 import EMICalculator from '../../components/Calculators/EMICalculator';
 import PropertyCard from '../../components/PropertyCard/PropertyCard';
+import CallModal from '../../components/Common/CallModal';
 
 import { propertyService } from '../../services/propertyService';
 import { useFavorites } from '../../context/FavoritesContext';
@@ -44,6 +45,7 @@ export default function PropertyDetails() {
   const { toggleCompare, isComparing } = useCompare();
 
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [callModalData, setCallModalData] = useState({ isOpen: false, name: '', role: '', phone: '', whatsappMsg: '' });
   const [ratingStars, setRatingStars] = useState(5);
   const [hoverStars, setHoverStars] = useState(5);
   const [ratingAdvisorName, setRatingAdvisorName] = useState('');
@@ -378,13 +380,22 @@ export default function PropertyDetails() {
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 mb-2">
-                        <a
-                          href={`tel:${advisorPhone}`}
-                          className="py-2.5 bg-navy-900 text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-1 hover:bg-navy-800 transition-colors shadow-sm"
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCallModalData({
+                              isOpen: true,
+                              name: advisorName,
+                              role: advisorRole,
+                              phone: advisorPhone,
+                              whatsappMsg: `Hi ${advisorName}, I am interested in ${property.description || property.title || 'this property'} (${property.location}). Please share details.`,
+                            })
+                          }
+                          className="py-2.5 bg-navy-900 text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-1 hover:bg-navy-800 transition-colors shadow-sm cursor-pointer"
                         >
                           <Phone className="w-3.5 h-3.5 text-gold-400" />
                           <span>Call Advisor</span>
-                        </a>
+                        </button>
                         <a
                           href={waLink}
                           target="_blank"
@@ -622,6 +633,15 @@ export default function PropertyDetails() {
           </div>
         </div>
       )}
+      {/* CALL ADVISOR MODAL */}
+      <CallModal
+        isOpen={callModalData.isOpen}
+        onClose={() => setCallModalData({ ...callModalData, isOpen: false })}
+        name={callModalData.name}
+        role={callModalData.role}
+        phone={callModalData.phone}
+        whatsappMsg={callModalData.whatsappMsg}
+      />
     </>
   );
 }

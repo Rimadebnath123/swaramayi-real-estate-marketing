@@ -182,7 +182,7 @@ export default function PropertyDetails() {
               items={[
                 { label: 'Properties', link: '/properties' },
                 { label: property.location, link: `/properties?location=${property.location}` },
-                { label: property.title },
+                { label: 'Property Details' },
               ]}
             />
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2">
@@ -192,9 +192,10 @@ export default function PropertyDetails() {
                   <span>
                     {property.location}, {property.city}
                   </span>
-                  {property.society && <span>• {property.society}</span>}
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-white">{property.title}</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-white max-w-3xl leading-relaxed mt-1">
+                  {property.description}
+                </h1>
               </div>
 
               {/* Price Tag & Action Badges */}

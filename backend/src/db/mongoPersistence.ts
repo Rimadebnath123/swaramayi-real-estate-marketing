@@ -82,7 +82,10 @@ async function syncCollection(model: mongoose.Model<any>, records: any[]) {
       if (r.name && (model.modelName === 'User' || model.modelName === 'Developer')) recordConditions.push({ name: String(r.name) });
     });
 
-    // Safely upsert active records into MongoDB Atlas without destructively deleting existing documents
+    // Delete any documents in MongoDB Atlas that are no longer present in active CRM records
+    if (recordConditions.length > 0) {
+      await model.deleteMany({ $nor: recordConditions });
+    }
 
     // Upsert remaining active records
     const ops = records.map(rec => {

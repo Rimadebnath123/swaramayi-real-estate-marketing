@@ -349,7 +349,7 @@ export default function PropertyDetails() {
                   const advisor = property.assignedAdvisor || property.agent || {};
                   const advisorName = advisor.name || 'Punita Roy';
                   const advisorRole = advisor.role || advisor.designation || 'Sales Management';
-                  const advisorPhone = advisor.phone || advisor.mobile || '+91 90513 22932';
+                  const advisorPhone = '+91 89021 30791';
                   const advisorImage = advisor.profileImage || advisor.image || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
                   const advisorRating = advisor.rating || advisor.advisor_rating || (advisorName.toLowerCase().includes('abinash') ? '4.7' : '4.8');
 
@@ -603,7 +603,7 @@ export default function PropertyDetails() {
                   <label className="block text-xs font-bold text-navy-900 mb-1">Your Phone / Mobile Number</label>
                   <input
                     type="text"
-                    placeholder="e.g. +91 90513 22932"
+                    placeholder="e.g. +91 89021 30791"
                     value={ratingCustomerPhone}
                     onChange={(e) => setRatingCustomerPhone(e.target.value)}
                     className="w-full px-3.5 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs text-navy-900 font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none"

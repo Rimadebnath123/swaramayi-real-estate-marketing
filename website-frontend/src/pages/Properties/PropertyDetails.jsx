@@ -156,7 +156,7 @@ export default function PropertyDetails() {
     ? property.images
     : ['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80'];
 
-  const whatsappUrl = `https://wa.me/919830012345?text=${encodeURIComponent(
+  const whatsappUrl = `https://wa.me/918902130791?text=${encodeURIComponent(
     `Hello Swarnamayi Real Estate Team, I am interested in "${property.title}" (${window.location.href}). Please share details.`
   )}`;
 

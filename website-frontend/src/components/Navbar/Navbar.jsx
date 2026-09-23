@@ -190,7 +190,7 @@ export default function Navbar() {
 
               {/* Phone Helpline */}
               <a
-                href="tel:+919830012345"
+                href="tel:+918902130791"
                 className="flex items-center space-x-2 text-xs font-medium text-gray-300 hover:text-gold-400 transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-gold-500/10 border border-gold-500/40 flex items-center justify-center text-gold-500">
@@ -198,7 +198,7 @@ export default function Navbar() {
                 </div>
                 <div>
                   <div className="text-[10px] text-gray-400 uppercase tracking-wider">Help Desk</div>
-                  <div className="font-semibold text-white">+91 98300 12345</div>
+                  <div className="font-semibold text-white">+91 89021 30791</div>
                 </div>
               </a>
 
@@ -300,11 +300,11 @@ export default function Navbar() {
             {/* Mobile Actions Bottom */}
             <div className="space-y-4 pt-6 border-t border-gray-800">
               <a
-                href="tel:+919830012345"
+                href="tel:+918902130791"
                 className="flex items-center justify-center space-x-2 w-full py-3 bg-gold-500 text-navy-900 font-bold rounded-lg text-sm shadow-md"
               >
                 <Phone className="w-4 h-4" />
-                <span>Call +91 98300 12345</span>
+                <span>Call +91 89021 30791</span>
               </a>
             </div>
           </div>

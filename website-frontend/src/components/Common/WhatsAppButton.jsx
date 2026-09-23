@@ -2,7 +2,7 @@ import React from 'react';
 import { MessageSquare } from 'lucide-react';
 
 export default function WhatsAppButton() {
-  const whatsappUrl = `https://wa.me/919830012345?text=${encodeURIComponent(
+  const whatsappUrl = `https://wa.me/918902130791?text=${encodeURIComponent(
     'Hello Swarnamayi Real Estate Team, I would like to inquire about properties in Kolkata.'
   )}`;
 

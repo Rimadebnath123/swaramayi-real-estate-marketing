@@ -179,7 +179,7 @@ export default function PropertyCard({ property }) {
               View Details
             </Link>
             <a
-              href="tel:+919830012345"
+              href="tel:+918902130791"
               className="w-full py-2 border border-gold-500/60 text-navy-900 hover:bg-gold-500 font-bold text-xs rounded-lg flex items-center justify-center space-x-1 transition-colors"
             >
               <Phone className="w-3 h-3 text-gold-600" />

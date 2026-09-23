@@ -117,7 +117,7 @@ export default function EMICalculator({ defaultPrice = 7500000 }) {
           </div>
 
           <a
-            href="tel:+919830012345"
+            href="tel:+918902130791"
             className="mt-6 w-full py-2.5 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold text-xs rounded-lg text-center transition-colors block"
           >
             Apply for Home Loan Assistance

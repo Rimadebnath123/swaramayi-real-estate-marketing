@@ -18,7 +18,7 @@ const faqs = [
   },
   {
     q: 'How do I list my property for sale or rent with Swarnamayi?',
-    a: 'Click the "List Property" or "Contact Us" button in the top navbar or call our helpline (+91 98300 12345). Our team will arrange property inspection and digital marketing.',
+    a: 'Click the "List Property" or "Contact Us" button in the top navbar or call our helpline (+91 89021 30791). Our team will arrange property inspection and digital marketing.',
   },
   {
     q: 'What documents are generally required for buying property in Kolkata?',

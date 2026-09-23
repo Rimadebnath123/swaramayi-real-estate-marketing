@@ -138,19 +138,19 @@ export default function Footer() {
               <li className="flex items-start space-x-3">
                 <MapPin className="w-5 h-5 text-gold-500 shrink-0 mt-0.5" />
                 <span className="text-gray-300">
-                  [OFFICE ADDRESS] <br /> Kolkata, West Bengal 700156
+                  4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, North 24 Parganas, Madhyamgram, Kolkata-700129
                 </span>
               </li>
               <li className="flex items-center space-x-3">
                 <Phone className="w-5 h-5 text-gold-500 shrink-0" />
-                <a href="tel:+919830012345" className="hover:text-gold-400 font-semibold text-white">
-                  +91 98300 12345
+                <a href="tel:+918902130791" className="hover:text-gold-400 font-semibold text-white">
+                  +91 89021 30791
                 </a>
               </li>
               <li className="flex items-center space-x-3">
                 <Mail className="w-5 h-5 text-gold-500 shrink-0" />
-                <a href="mailto:info@swarnamayi.com" className="hover:text-gold-400">
-                  [COMPANY EMAIL]
+                <a href="mailto:avishek@swaramayi.info" className="hover:text-gold-400">
+                  avishek@swaramayi.info
                 </a>
               </li>
               <li className="flex items-start space-x-3">

@@ -53,7 +53,7 @@ export default function Contact() {
     }
   };
 
-  const whatsappUrl = `https://wa.me/919830012345?text=${encodeURIComponent(
+  const whatsappUrl = `https://wa.me/918902130791?text=${encodeURIComponent(
     'Hello Swarnamayi Real Estate Marketing, I would like to schedule a property consultation.'
   )}`;
 
@@ -61,7 +61,7 @@ export default function Contact() {
     <>
       <SEO
         title="Contact Swarnamayi Real Estate Marketing | Kolkata Advisory"
-        description="Get in touch with Swarnamayi Real Estate Marketing in Kolkata. Phone: +91 98300 12345. Office Address: [OFFICE ADDRESS], Kolkata, West Bengal."
+        description="Get in touch with Swarnamayi Real Estate Marketing in Kolkata. Phone: +91 89021 30791. Office Address: 4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, North 24 Parganas, Madhyamgram, Kolkata-700129."
       />
 
       <div className="bg-light-bg min-h-screen pb-16">
@@ -90,7 +90,7 @@ export default function Contact() {
                     <MapPin className="w-5 h-5 text-gold-600 shrink-0 mt-0.5" />
                     <div>
                       <div className="font-bold text-gray-800">Office Address</div>
-                      <div className="text-gray-600 mt-0.5">[OFFICE ADDRESS], Kolkata, West Bengal 700156</div>
+                      <div className="text-gray-600 mt-0.5">4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, North 24 Parganas, Madhyamgram, Kolkata-700129</div>
                     </div>
                   </div>
 
@@ -98,8 +98,8 @@ export default function Contact() {
                     <Phone className="w-5 h-5 text-gold-600 shrink-0" />
                     <div>
                       <div className="font-bold text-gray-800">Helpline Phone</div>
-                      <a href="tel:+919830012345" className="text-navy-900 font-bold hover:text-gold-600">
-                        +91 98300 12345
+                      <a href="tel:+918902130791" className="text-navy-900 font-bold hover:text-gold-600">
+                        +91 89021 30791
                       </a>
                     </div>
                   </div>
@@ -108,8 +108,8 @@ export default function Contact() {
                     <Mail className="w-5 h-5 text-gold-600 shrink-0" />
                     <div>
                       <div className="font-bold text-gray-800">Official Email</div>
-                      <a href="mailto:info@swarnamayi.com" className="text-gray-600 hover:text-navy-900">
-                        [COMPANY EMAIL]
+                      <a href="mailto:avishek@swaramayi.info" className="text-gray-600 hover:text-navy-900">
+                        avishek@swaramayi.info
                       </a>
                     </div>
                   </div>
@@ -125,7 +125,7 @@ export default function Contact() {
 
                 <div className="pt-4 border-t border-gray-100 flex flex-col gap-2.5">
                   <a
-                    href="tel:+919830012345"
+                    href="tel:+918902130791"
                     className="w-full py-2.5 bg-navy-900 text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-2"
                   >
                     <Phone className="w-4 h-4 text-gold-400" />
@@ -181,7 +181,7 @@ export default function Contact() {
                           required
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          placeholder="+91 98300 XXXXX"
+                          placeholder="+91 89021 XXXXX"
                           className="w-full bg-gray-50 border border-gray-300 text-navy-900 text-xs rounded-xl p-3 focus:outline-none focus:border-navy-900"
                         />
                       </div>

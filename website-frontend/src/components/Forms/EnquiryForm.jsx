@@ -92,7 +92,7 @@ export default function EnquiryForm({ propertyId, propertyTitle }) {
                 required
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+91 98300 XXXXX"
+                placeholder="+91 89021 XXXXX"
                 className="w-full bg-navy-800 border border-gray-700 text-white text-xs sm:text-sm rounded-xl px-3.5 py-2.5 focus:border-gold-500 focus:outline-none"
               />
             </div>

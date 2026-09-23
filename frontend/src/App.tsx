@@ -4116,14 +4116,16 @@ export default function App() {
       if (saved) {
         const sanitized = saved.replace(/Rajesh V[ae]rma/gi, 'Avishek Das');
         const parsed = JSON.parse(sanitized);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const filtered = parsed.filter((u: any) => u.id !== 'USR-02' || u.full_name?.toLowerCase().includes('punita') || u.username?.toLowerCase().includes('punita'));
+          if (filtered.length > 0) return filtered;
+        }
       }
     } catch (e) {
       console.error('Error reading users from localStorage:', e);
     }
     return [
-      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', password: 'Swaramayi@2026', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office', department: 'Executive Board', team_name: 'Core Management', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' },
-      { id: 'USR-02', username: 'Abinash Roy', full_name: 'Abinash Roy', email: 'abinsh@gmail.com', password: 'Swaramayi@2026', mobile: '+91 76970 98078', role: 'ADMIN', designation: 'System Administrator', branch_name: 'Kolkata Branch', department: 'General Management', team_name: 'Kolkata Expansion Team', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE' }
+      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', password: 'Swaramayi@2026', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office', department: 'Executive Board', team_name: 'Core Management', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' }
     ];
   });
 
@@ -4425,36 +4427,7 @@ export default function App() {
   };
 
   // 6. CUSTOMERS MASTER VAULT (WITH LOCALSTORAGE PERSISTENCE)
-  const defaultInitialCustomers: any[] = [
-    {
-      id: 'SRM-CUS-2026-000189',
-      customer_number: 'SRM-CUS-2026-000189',
-      customerNumber: 'SRM-CUS-2026-000189',
-      full_name: 'Avishek Das',
-      name: 'Avishek Das',
-      mobile: '9432328947',
-      phone: '9432328947',
-      email: 'a@gmail.com',
-      city: 'Kolkata',
-      preferred_location: 'Madhyamgram',
-      preferredArea: 'Madhyamgram',
-      locality: 'Madhyamgram',
-      budget: '₹45 Lakh - ₹50 Lakh',
-      budget_min: 4500000,
-      budget_max: 5000000,
-      configuration: '3BHK',
-      status: 'HOT',
-      customer_status: 'HOT',
-      priority: 'HOT',
-      quality_score: 100,
-      score: 100,
-      source: 'Lead Ingestion',
-      assigned_employee_id: 'Ramesh Pawar',
-      assigned_employee_name: 'Ramesh Pawar',
-      created_at: '2026-08-28',
-      updated_at: '2026-08-28'
-    }
-  ];
+  const defaultInitialCustomers: any[] = [];
 
   const [customers, setCustomers] = useState<any[]>(() => {
     try {
@@ -4465,10 +4438,6 @@ export default function App() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           list = parsed;
         }
-      }
-
-      if (list.length === 0) {
-        list = [...defaultInitialCustomers];
       }
 
       list = list.filter((c: any) => 
@@ -4484,7 +4453,7 @@ export default function App() {
     } catch (e) {
       console.error('Error reading customers from localStorage:', e);
     }
-    return defaultInitialCustomers;
+    return [];
   });
 
   useEffect(() => {
@@ -6566,10 +6535,19 @@ export default function App() {
   }, [developers]);
 
   // CENTRAL MONGODB ATLAS LIVE SYNC ENGINE
+  const getBackendApiUrl = (endpoint: string) => {
+    if (typeof window !== 'undefined') {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return `http://localhost:5000${endpoint}`;
+      }
+      return endpoint; // Vercel vercel.json proxies /api/* to Render backend
+    }
+    return `https://swaramayi-real-estate-marketing.onrender.com${endpoint}`;
+  };
+
   const syncAllToMongoDB = React.useCallback(async (overrideData?: any) => {
     try {
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const apiUrl = `http://${host}:5000/api/v1/crm/sync`;
+      const apiUrl = getBackendApiUrl('/api/v1/crm/sync');
 
       let devList: any[] = [];
       try {
@@ -6609,8 +6587,7 @@ export default function App() {
   useEffect(() => {
     const loadFromMongoDB = async () => {
       try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const apiUrl = `http://${host}:5000/api/v1/crm/sync`;
+        const apiUrl = getBackendApiUrl('/api/v1/crm/sync');
         const res = await fetch(apiUrl);
         if (res.ok) {
           const result = await res.json();
@@ -6675,26 +6652,23 @@ export default function App() {
                 localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(sanitizedProps));
               } catch (e) {}
             }
-            if (Array.isArray(mData.customers) && mData.customers.length > 0) {
-              setCustomers(prev => {
-                const combined = [...mData.customers, ...(prev || [])].filter((c: any) => 
-                  c &&
-                  !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000190') &&
-                  !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
-                  !(c.name && c.name.toLowerCase().includes('sunil')) &&
-                  !(c.full_name && c.full_name.toLowerCase().includes('sunil')) &&
-                  !(c.email && c.email.toLowerCase().includes('sunil.verma@gmail.com')) &&
-                  !(c.mobile && c.mobile.includes('5777564356'))
-                );
+            if (Array.isArray(mData.customers)) {
+              const clean = mData.customers.filter((c: any) => 
+                c &&
+                !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000190') &&
+                !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
+                !(c.name && c.name.toLowerCase().includes('sunil')) &&
+                !(c.full_name && c.full_name.toLowerCase().includes('sunil')) &&
+                !(c.email && c.email.toLowerCase().includes('sunil.verma@gmail.com')) &&
+                !(c.mobile && c.mobile.includes('5777564356'))
+              );
 
-                const cleanDeduped = dedupeCustomerList(combined);
-                try {
-                  localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
-                  localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
-                } catch (e) {}
-
-                return cleanDeduped;
-              });
+              const cleanDeduped = dedupeCustomerList(clean);
+              setCustomers(cleanDeduped);
+              try {
+                localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
+                localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
+              } catch (e) {}
             }
             if (Array.isArray(mData.leads)) {
               setLeadsList(mData.leads);

@@ -80,7 +80,7 @@ export default function Compare() {
                             className="w-full h-24 object-cover rounded-lg mb-2"
                           />
                           <Link to={`/properties/${item.slug}`} className="font-bold text-white hover:text-gold-400 line-clamp-2">
-                            {item.title}
+                            {item.description || item.short_description || item.overview || `${item.bedrooms || 2} BHK ${item.propertyType || 'Apartment'} in ${item.location || 'Kolkata'}`}
                           </Link>
                           <div className="text-gold-400 font-black text-sm mt-1">{formatPrice(item.price)}</div>
                         </div>

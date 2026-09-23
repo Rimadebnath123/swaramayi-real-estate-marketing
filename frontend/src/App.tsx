@@ -8477,7 +8477,7 @@ export default function App() {
   const handleCreatePropertySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingProperty && editingProperty.id) {
-      setProperties(prev => prev.map(p => p.id === editingProperty.id ? {
+      const updatedProps = properties.map(p => p.id === editingProperty.id ? {
         ...p,
         ...newPropertyForm,
         id: editingProperty.id,
@@ -8524,13 +8524,20 @@ export default function App() {
         description: newPropertyForm.description || p.description,
         site_person_name: newPropertyForm.site_person_name || p.site_person_name,
         site_person_contact: newPropertyForm.site_person_contact || p.site_person_contact
-      } : p));
+      } : p);
+
+      setProperties(updatedProps);
+      try {
+        localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(updatedProps));
+      } catch (e) {}
+      syncAllToMongoDB({ properties: updatedProps });
+
       setShowAddPropertyModal(false);
       setShowPropertyModal(false);
       const code = editingProperty.property_code;
       setEditingProperty(null);
       setActiveProjectSubTab('property_master');
-      alert(`✅ Property Master Record ${code} saved & updated successfully into central inventory registry!`);
+      alert(`✅ Property Master Record ${code} saved & updated successfully into central inventory registry & MongoDB Atlas!`);
       return;
     }
 
@@ -8582,11 +8589,17 @@ export default function App() {
       map_x: 35 + Math.random() * 30,
       map_y: 35 + Math.random() * 30
     };
-    setProperties(prev => [newP, ...prev]);
+    const updatedProps = [newP, ...properties];
+    setProperties(updatedProps);
+    try {
+      localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(updatedProps));
+    } catch (e) {}
+    syncAllToMongoDB({ properties: updatedProps });
+
     setShowAddPropertyModal(false);
     setShowPropertyModal(false);
     setActiveProjectSubTab('property_master');
-    alert(`🎉 Property Registration Complete! New Property Master ${newPropCode} saved & registered into Central Stock Inventory Registry!`);
+    alert(`🎉 Property Registration Complete! New Property Master ${newPropCode} saved & registered into Central Stock Inventory Registry & MongoDB Atlas!`);
   };
 
   const handleCreateLeadSubmit = (e: React.FormEvent) => {
@@ -8657,17 +8670,29 @@ export default function App() {
       updated_at: new Date().toISOString()
     };
 
+    let updatedCusts: any[] = [];
     setCustomers(prev => {
       const cleanMobile = (mob || '').replace(/\D/g, '');
       const exists = prev.some(c => (c.customer_number && c.customer_number === newCustNumber) || (cleanMobile && cleanMobile.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMobile));
       if (exists) {
-        return prev.map(c => ((c.customer_number === newCustNumber || (cleanMobile && cleanMobile.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMobile)) ? { ...c, ...newC } : c));
+        updatedCusts = prev.map(c => ((c.customer_number === newCustNumber || (cleanMobile && cleanMobile.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMobile)) ? { ...c, ...newC } : c));
+      } else {
+        updatedCusts = [newC, ...prev];
       }
-      return [newC, ...prev];
+      return updatedCusts;
     });
-    setLeadsList([newLeadObj, ...leadsList]);
+    const updatedLeads = [newLeadObj, ...leadsList];
+    setLeadsList(updatedLeads);
+
+    try {
+      localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(updatedLeads));
+      localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updatedCusts));
+    } catch (e) {}
+
+    syncAllToMongoDB({ leads: updatedLeads, customers: updatedCusts });
+
     setShowLeadModal(false);
-    alert(`📋 New Lead (${newLeadObj.lead_number} - ${callDisp}) & Customer Master (${newCustNumber}) saved into Customer & Lead Management!`);
+    alert(`📋 New Lead (${newLeadObj.lead_number} - ${callDisp}) & Customer Master (${newCustNumber}) saved into Customer & Lead Management & MongoDB Atlas!`);
   };
 
   const getSevenDigitCustomerNumber = (custNo?: string, altId?: string) => {

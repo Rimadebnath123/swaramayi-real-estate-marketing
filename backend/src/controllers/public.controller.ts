@@ -317,8 +317,8 @@ function formatPublicProperty(p: any) {
       );
       let name = u?.full_name || p.assigned_employee_name;
       let role = u?.role || 'Property Advisor';
-      let phone = u?.mobile || '9051322932';
-      let email = u?.email || 'punitagswaramayi.com';
+      let phone = '8902130791';
+      let email = 'avishek@swaramayi.info';
       let img = (u as any)?.avatar || (u as any)?.profileImage;
       let rating = (u as any)?.rating;
 
@@ -329,29 +329,29 @@ function formatPublicProperty(p: any) {
         if (tLower.includes('shibalay') || codeLower.includes('425') || codeLower.includes('shibalay')) {
           name = 'Abinash Roy';
           role = 'Admin';
-          phone = '7697098078';
-          email = 'abinshggmail.com';
+          phone = '8902130791';
+          email = 'avishek@swaramayi.info';
           img = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&q=80';
           rating = rating || 4.7;
         } else if (tLower.includes('dhriti') || codeLower.includes('427') || codeLower.includes('423') || codeLower.includes('dhriti')) {
           name = 'Punita Roy';
           role = 'Sales Management';
-          phone = '9051322932';
-          email = 'punitagswaramayi.com';
+          phone = '8902130791';
+          email = 'avishek@swaramayi.info';
           img = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
           rating = rating || 4.8;
         } else if (tLower.includes('gajapati') || codeLower.includes('422')) {
           name = 'Punita Roy';
           role = 'Sales Management';
-          phone = '9051322932';
-          email = 'punitagswaramayi.com';
+          phone = '8902130791';
+          email = 'avishek@swaramayi.info';
           img = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
           rating = rating || 4.8;
         } else {
           name = 'Punita Roy';
           role = 'Sales Management';
-          phone = '9051322932';
-          email = 'punitagswaramayi.com';
+          phone = '8902130791';
+          email = 'avishek@swaramayi.info';
           img = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
           rating = rating || 4.8;
         }

@@ -155,15 +155,10 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
       ? rawPropTitle 
       : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'Property Unit');
 
-    const localityStr = item.propertySnapshot?.locality || matchedProp?.locality || matchedProp?.location_address || 'Location';
-    const bhkStr = item.propertySnapshot?.bhk || item.propertySnapshot?.configuration || matchedProp?.configuration || matchedProp?.bhk || 'N/A';
+    const superBuiltStr = item.propertySnapshot?.superBuiltupArea || item.propertySnapshot?.super_builtup_area || matchedProp?.super_builtup_area || '1,283 Sq.Ft.';
+    const rateSqftStr = item.formattedPriceBreakup?.ratePerSqftStr || (item.pricingSnapshot?.ratePerSqft ? `₹${Number(item.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A');
 
-    const basePriceNum = item.pricingSnapshot?.basePrice || item.base_price || matchedProp?.base_price;
-    const basePriceStr = item.formattedPriceBreakup?.basePriceStr || (basePriceNum ? `₹${Number(basePriceNum).toLocaleString('en-IN')}` : 'N/A');
-    const totalEstNum = item.pricingSnapshot?.totalEstimatedCost || item.final_estimated_price || matchedProp?.final_estimated_price;
-    const totalEstStr = item.formattedPriceBreakup?.totalEstimatedCostStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : basePriceStr);
-
-    const waMsg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Cost Sheet Breakdown & PDF Document:\n\n📄 Cost Sheet ID: ${item.costSheetId} (${item.version || 'V01'})\n🏢 Property: ${propTitleStr}\n📍 Locality: ${localityStr}\n📐 Configuration: ${bhkStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\n📎 Cost Sheet PDF Document: Itemized official PDF document is generated & attached.\n\nPlease review the details. Click or reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
+    const waMsg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Cost Sheet Breakdown & PDF Document:\n\n📄 Cost Sheet ID: ${item.costSheetId} (${item.version || 'V01'})\n🏢 Property: ${propTitleStr}\n📍 Locality: ${localityStr}\n📐 Configuration: ${bhkStr}\n📐 Super Built-Up Area: ${superBuiltStr}\n🏷️ Asking Rate per Sq.Ft.: ${rateSqftStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\n📎 Cost Sheet PDF Document: Itemized official PDF document is generated & attached.\n\nPlease review the details. Click or reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
 
     const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(waMsg)}`;
     window.open(waUrl, '_blank');

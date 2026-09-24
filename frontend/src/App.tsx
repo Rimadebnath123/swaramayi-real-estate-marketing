@@ -5342,15 +5342,10 @@ export default function App() {
       ? rawPropTitle 
       : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'Property Unit');
 
-    const localityStr = costSheet.propertySnapshot?.locality || matchedProp?.locality || matchedProp?.location_address || 'Location';
-    const bhkStr = costSheet.propertySnapshot?.bhk || costSheet.propertySnapshot?.configuration || matchedProp?.configuration || matchedProp?.bhk || 'N/A';
+    const superBuiltStr = costSheet.propertySnapshot?.superBuiltupArea || costSheet.propertySnapshot?.super_builtup_area || matchedProp?.super_builtup_area || '1,283 Sq.Ft.';
+    const rateSqftStr = costSheet.formattedPriceBreakup?.ratePerSqftStr || (costSheet.pricingSnapshot?.ratePerSqft ? `₹${Number(costSheet.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A');
 
-    const basePriceNum = costSheet.pricingSnapshot?.basePrice || costSheet.base_price || matchedProp?.base_price;
-    const basePriceStr = costSheet.formattedPriceBreakup?.basePriceStr || (basePriceNum ? `₹${Number(basePriceNum).toLocaleString('en-IN')}` : 'N/A');
-    const totalEstNum = costSheet.pricingSnapshot?.totalEstimatedCost || costSheet.final_estimated_price || matchedProp?.final_estimated_price;
-    const totalEstStr = costSheet.formattedPriceBreakup?.totalEstimatedCostStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : basePriceStr);
-
-    const waMsg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Cost Sheet Breakdown & PDF Document:\n\n📄 Cost Sheet ID: ${costSheet.costSheetId} (${costSheet.version || 'V01'})\n🏢 Property: ${propTitleStr}\n📍 Locality: ${localityStr}\n📐 Configuration: ${bhkStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\n📎 Cost Sheet PDF Document: Itemized official PDF document is generated & attached.\n\nPlease review the details. Click or reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
+    const waMsg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Cost Sheet Breakdown & PDF Document:\n\n📄 Cost Sheet ID: ${costSheet.costSheetId} (${costSheet.version || 'V01'})\n🏢 Property: ${propTitleStr}\n📍 Locality: ${localityStr}\n📐 Configuration: ${bhkStr}\n📐 Super Built-Up Area: ${superBuiltStr}\n🏷️ Asking Rate per Sq.Ft.: ${rateSqftStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\n📎 Cost Sheet PDF Document: Itemized official PDF document is generated & attached.\n\nPlease review the details. Click or reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
 
     const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(waMsg)}`;
     window.open(waUrl, '_blank');
@@ -16757,7 +16752,9 @@ export default function App() {
                     <div><span style={{ color: '#64748b' }}>Property Category Type:</span> <strong style={{ color: '#a855f7', fontWeight: '800' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.property_type || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.propertyType || showViewIndividualCostSheetModal.costSheet.property_type || 'Flat / Apartment'}</strong></div>
                     <div><span style={{ color: '#64748b' }}>Property Code:</span> <strong style={{ color: '#0369a1', fontFamily: 'monospace' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.propertyCode}</strong></div>
                     <div><span style={{ color: '#64748b' }}>Tower / Floor / Unit:</span> <strong style={{ color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.tower}, {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.floor}, Unit {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.unitNumber}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Super Built-Up Area:</span> <strong style={{ color: '#0284c7', fontWeight: '900' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.superBuiltupArea || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.super_builtup_area || '1,283 Sq.Ft.'}</strong></div>
                     <div><span style={{ color: '#64748b' }}>Carpet Area:</span> <strong style={{ color: '#d97706', fontWeight: '800' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.carpetArea}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Asking Rate per Sq.Ft.:</span> <strong style={{ color: '#16a34a', fontWeight: '900' }}>{showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.ratePerSqftStr || (showViewIndividualCostSheetModal.costSheet.pricingSnapshot?.ratePerSqft ? `₹${Number(showViewIndividualCostSheetModal.costSheet.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A')}</strong></div>
                     <div><span style={{ color: '#64748b' }}>Facing & Possession:</span> <strong style={{ color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.facing} • {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.possessionStatus}</strong></div>
                     <div><span style={{ color: '#64748b' }}>Locality Hub / Sector:</span> <strong style={{ color: '#0369a1' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.localityHub || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.locality || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.city || 'Barasat, Kolkata'}</strong></div>
                   </div>
@@ -16786,7 +16783,9 @@ export default function App() {
               <div>
                 <h4 style={{ fontSize: '1rem', fontWeight: '900', color: '#0284c7', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>💰 ITEMIZED PROPERTY PRICE & TAX BREAKUP</span>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700' }}>Rate: {showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.ratePerSqftStr}</span>
+                  <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: '800', background: '#e0f2fe', padding: '4px 12px', borderRadius: '6px', border: '1px solid #7dd3fc' }}>
+                    Rate per Sq.Ft.: {showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.ratePerSqftStr || (showViewIndividualCostSheetModal.costSheet.pricingSnapshot?.ratePerSqft ? `₹${Number(showViewIndividualCostSheetModal.costSheet.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A')}
+                  </span>
                 </h4>
 
                 <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
@@ -16799,7 +16798,12 @@ export default function App() {
                   </thead>
                   <tbody>
                     <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0f172a' }}>1. Base Property Asking Price</td>
+                      <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0f172a' }}>
+                        1. Base Property Asking Price
+                        <span style={{ display: 'block', fontSize: '0.73rem', color: '#0284c7', fontWeight: '600', marginTop: '2px' }}>
+                          (@ {showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.ratePerSqftStr || 'Rate N/A'} on {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.superBuiltupArea || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.super_builtup_area || '1,283 Sq.Ft.'} Super Built-Up Area)
+                        </span>
+                      </td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.basePriceStr}</td>
                     </tr>
                     <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#fafafa' }}>

@@ -4320,8 +4320,7 @@ export default function App() {
   const [approvalRequests, setApprovalRequests] = useState<any[]>([]);
 
   const [activeSessions, setActiveSessions] = useState([
-    { id: 'SES-01', user: 'Avishek Das (Super Admin)', role: 'SUPER_ADMIN', ip: '127.0.0.1 (Localhost)', device: 'Chrome / Windows 11', login_time: '27 Aug 09:00 AM', status: 'ACTIVE' },
-    { id: 'SES-02', user: 'Abinash Roy (Admin)', role: 'ADMIN', ip: '127.0.0.1 (Localhost)', device: 'Chrome / Windows 11', login_time: '27 Aug 09:30 AM', status: 'ACTIVE' }
+    { id: 'SES-01', user: 'Avishek Das (Super Admin)', role: 'SUPER_ADMIN', ip: '127.0.0.1 (Localhost)', device: 'Chrome / Windows 11', login_time: '27 Aug 09:00 AM', status: 'ACTIVE' }
   ]);
 
   // 4. BULK PROPERTIES MASTER STOCK (Direct MongoDB Source)

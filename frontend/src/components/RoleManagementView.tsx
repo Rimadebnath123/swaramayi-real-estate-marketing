@@ -109,41 +109,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
   });
 
   // Security Risk & Anomaly Detection State
-  const [anomalyLogs, setAnomalyLogs] = React.useState<any[]>([
-    {
-      id: 'RISK-8091',
-      timestamp: '28 Aug 2026, 01:24 PM',
-      severity: 'CRITICAL',
-      user: 'Priya Nair (Sales Exec)',
-      rule: 'GEO_VELOCITY_IMPOSSIBLE_TRAVEL',
-      ip: '185.220.101.4 (Frankfurt, DE - Tor Exit Node)',
-      description: 'Account authenticated from Frankfurt 12 mins after active session in Kolkata (Impossible Travel Velocity).',
-      action_taken: 'SESSION_REVOKED & QUARANTINED',
-      resolved: false
-    },
-    {
-      id: 'RISK-8088',
-      timestamp: '28 Aug 2026, 11:45 AM',
-      severity: 'HIGH',
-      user: 'Amit Patel (Sales Exec)',
-      rule: 'DATA_EXFILTRATION_SPIKE_DETECTOR',
-      ip: '122.170.82.19 (Kolkata, IN)',
-      description: 'Initiated 4 consecutive CSV export requests downloading 650+ customer phone numbers in 30 seconds.',
-      action_taken: 'EXPORT_RIGHTS_SUSPENDED',
-      resolved: false
-    },
-    {
-      id: 'RISK-8072',
-      timestamp: '28 Aug 2026, 09:10 AM',
-      severity: 'MEDIUM',
-      user: 'Abinash Roy (Admin)',
-      rule: 'BRUTE_FORCE_THROTTLE_POLICY',
-      ip: '49.207.192.11 (Kolkata, IN)',
-      description: '5 consecutive failed password/PIN attempts recorded within 60 seconds.',
-      action_taken: 'CAPTCHA_LOCKOUT_APPLIED',
-      resolved: true
-    }
-  ]);
+  const [anomalyLogs, setAnomalyLogs] = React.useState<any[]>([]);
 
   const [ruleSettings, setRuleSettings] = React.useState({
     geoTravel: true,
@@ -451,9 +417,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
   const safeTeams = teams || [];
   const safeSessions = activeSessions || [];
 
-  const safeApprovals = (approvalRequests && approvalRequests.length > 0 ? approvalRequests : (localApprovals.length > 0 ? localApprovals : [
-    { id: 'REQ-01', request_code: 'SRM-REQ-2026-000101', request_type: 'LEAD_TRANSFER', record_id: 'SRM-CUS-2026-000184 (Rohan Deshmukh)', requested_by: 'Priya Nair (Sales Exec)', requested_at: '16 Aug 2026 12:00 PM', old_val: 'Priya Nair (Sales Exec)', new_val: 'Rahul Sharma (Team Lead)', reason: 'Customer requested senior consultant for villa project.', status: 'PENDING', approved_by: '' }
-  ]));
+  const safeApprovals = (approvalRequests && approvalRequests.length > 0 ? approvalRequests : localApprovals);
 
   const defaultPristineRoles = [
     { key: 'SUPER_ADMIN', name: 'OWNER / SUPER ADMIN', level: 'Level 5 (Highest)', scope: 'Universal All-Data Access', desc: 'Full administrative control, universal read/write/delete rights, emergency lockdown switch, and system configuration governance.', color: '#0284c7', iconName: 'ShieldCheck' },

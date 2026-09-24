@@ -31,39 +31,59 @@ export async function calculateCustomerMatches(req: AuthRequest, res: Response) 
       facing_match: 0
     };
 
+    let isLocMatch = true;
+    let isBudMatch = true;
+    let isConfigMatch = true;
+
     // Location Match (25 Points)
-    if (customer.preferred_location && property.locality.toLowerCase().includes(customer.preferred_location.toLowerCase())) {
-      score += 25;
-      matchBreakdown.location_match = 25;
+    if (customer.preferred_location && customer.preferred_location.trim().length > 0) {
+      if (property.locality && property.locality.toLowerCase().includes(customer.preferred_location.toLowerCase())) {
+        score += 25;
+        matchBreakdown.location_match = 25;
+      } else {
+        matchBreakdown.location_match = 0;
+        isLocMatch = false;
+      }
     } else {
       score += 15;
       matchBreakdown.location_match = 15;
     }
 
     // Budget Match (25 Points)
-    const maxBudget = customer.budget_max || 8500000;
-    if (property.final_estimated_price <= maxBudget) {
+    const maxBudget = Number(customer.budget_max) || 99999999;
+    const minBudget = Number(customer.budget_min) || 0;
+    const price = Number(property.final_estimated_price) || Number(property.final_price) || property.base_price || 0;
+    if (minBudget > 0 || maxBudget < 99999999) {
+      if (price >= minBudget * 0.8 && price <= maxBudget * 1.2) {
+        score += 25;
+        matchBreakdown.budget_match = 25;
+      } else {
+        matchBreakdown.budget_match = 0;
+        isBudMatch = false;
+      }
+    } else {
       score += 25;
       matchBreakdown.budget_match = 25;
-    } else if (property.final_estimated_price <= maxBudget * 1.15) {
-      score += 15;
-      matchBreakdown.budget_match = 15;
-    } else {
-      score += 5;
-      matchBreakdown.budget_match = 5;
     }
 
     // BHK Configuration Match (20 Points)
-    if (customer.configuration === property.configuration) {
-      score += 20;
-      matchBreakdown.config_match = 20;
+    if (customer.configuration && property.configuration) {
+      const custBhk = customer.configuration.toUpperCase().replace(/\s+/g, '');
+      const propBhk = property.configuration.toUpperCase().replace(/\s+/g, '');
+      if (custBhk === propBhk || custBhk.includes(propBhk) || propBhk.includes(custBhk)) {
+        score += 20;
+        matchBreakdown.config_match = 20;
+      } else {
+        matchBreakdown.config_match = 0;
+        isConfigMatch = false;
+      }
     } else {
-      score += 8;
-      matchBreakdown.config_match = 8;
+      score += 12;
+      matchBreakdown.config_match = 12;
     }
 
     // Property Type Match (15 Points)
-    if (customer.property_type && property.property_type.toLowerCase().includes(customer.property_type.toLowerCase())) {
+    if (customer.property_type && property.property_type && property.property_type.toLowerCase().includes(customer.property_type.toLowerCase())) {
       score += 15;
       matchBreakdown.type_match = 15;
     } else {
@@ -72,12 +92,16 @@ export async function calculateCustomerMatches(req: AuthRequest, res: Response) 
     }
 
     // Facing & Amenities Match (15 Points)
-    if (customer.family_requirements && customer.family_requirements.toLowerCase().includes(property.facing.toLowerCase())) {
+    if (customer.family_requirements && property.facing && customer.family_requirements.toLowerCase().includes(property.facing.toLowerCase())) {
       score += 15;
       matchBreakdown.facing_match = 15;
     } else {
       score += 10;
       matchBreakdown.facing_match = 10;
+    }
+
+    if (!isLocMatch || !isBudMatch || !isConfigMatch) {
+      score = 0;
     }
 
     const totalPct = Math.min(score, 98);
@@ -91,13 +115,15 @@ export async function calculateCustomerMatches(req: AuthRequest, res: Response) 
       locality: property.locality,
       configuration: property.configuration,
       base_price: property.base_price,
-      final_price: property.final_estimated_price,
+      final_price: property.final_estimated_price || Number(property.final_price) || property.base_price,
       availability_status: property.availability_status,
       match_score_pct: totalPct,
       category,
       match_breakdown: matchBreakdown
     };
-  }).sort((a, b) => b.match_score_pct - a.match_score_pct);
+  })
+  .filter(m => m.match_score_pct > 0)
+  .sort((a, b) => b.match_score_pct - a.match_score_pct);
 
   return res.json({
     status: 'SUCCESS',

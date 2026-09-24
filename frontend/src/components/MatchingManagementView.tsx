@@ -1550,9 +1550,12 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                   if (targetPCode && p.property_code === targetPCode) {
                     matchVal = Math.max(matchVal, 96);
                   }
-                  return { ...p, matchTotal: matchVal, breakdown: res.breakdown };
+                  return { ...p, matchTotal: matchVal, breakdown: res.breakdown, isStrictMatch: res.isStrictMatch !== false };
                 })
                 .filter(p => {
+                  // STRICT CRITERIA ENFORCEMENT: Filter out any property that fails Location, Budget OR BHK!
+                  if (p.matchTotal <= 0 || p.isStrictMatch === false) return false;
+
                   if (!propertySearchQuery.trim()) return true;
                   const q = propertySearchQuery.trim().toLowerCase();
                   return (p.property_code || '').toString().toLowerCase().includes(q) ||
@@ -1576,8 +1579,14 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
 
               if (matchedPropsList.length === 0) {
                 return (
-                  <div style={{ padding: '30px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
-                    No matched inventory properties found matching search query "{propertySearchQuery}".
+                  <div style={{ padding: '35px 20px', textAlign: 'center', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', color: isLight ? '#64748b' : '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ fontSize: '1.8rem' }}>🎯 🚫</div>
+                    <div style={{ fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.95rem' }}>
+                      No Inventory Properties Match Strictly ({activeMatchingReq.preferredArea || 'Selected Locality'}, {activeMatchingReq.configuration || 'Any BHK'}, {activeMatchingReq.budget || 'Budget'})
+                    </div>
+                    <div style={{ fontSize: '0.8rem', maxWidth: '550px' }}>
+                      Strict Property Matching Enforcement is ACTIVE. Only properties matching the customer's exact <strong>Location</strong>, <strong>Budget Range</strong>, and <strong>BHK Configuration</strong> are displayed.
+                    </div>
                   </div>
                 );
               }

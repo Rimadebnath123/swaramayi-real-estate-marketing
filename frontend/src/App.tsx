@@ -8807,11 +8807,12 @@ export default function App() {
 
   // Advanced 8-Criteria Real Estate Property Matching Algorithm (With Floor Preference)
   // Advanced 8-Criteria Real Estate Property Matching Algorithm (With Floor Preference)
+  // Advanced 8-Criteria Real Estate Property Matching Algorithm (Strict Location, Budget & BHK Enforcement)
   const calculatePropertyMatchScore = (customer: any, property: any) => {
     let breakdown = {
       bud: 0,                  // 1. Min-Max Budget Range (25%)
-      loc: 10,                 // 2. Location & Locality Hub (20%)
-      bhk: 8,                  // 3. BHK Configuration (15%)
+      loc: 0,                  // 2. Location & Locality Hub (20%)
+      bhk: 0,                  // 3. BHK Configuration (15%)
       sqft: 8,                 // 4. Square Feet Area (15%)
       possession_facing: 6,    // 5. Possession & Vastu Facing (10%)
       floor_pref: 3,           // 6. Floor Preference (5%)
@@ -8851,14 +8852,12 @@ export default function App() {
       const bStr = customerObj?.budget ? String(customerObj.budget).trim() : '';
       if (!bStr) return { min: 0, max: 99999 };
 
-      // Split by hyphen -, en-dash –, em-dash —, " to ", " - ", "/"
       const parts = bStr.split(/[-–—]|(?:\s+to\s+)|(?:\s*\/\s*)/i).map(s => s.trim()).filter(Boolean);
 
       if (parts.length >= 2) {
         let p1 = parseSingleValToLakhs(parts[0]);
         let p2 = parseSingleValToLakhs(parts[1]);
 
-        // If unit like "Crore" is only on part 2 (e.g. "1.20 - 1.80 Crore" or "70 - 85 Lakhs")
         const part2Raw = parts[1].toLowerCase();
         if ((part2Raw.includes('crore') || part2Raw.includes('cr')) && p1 > 0 && p1 < 10) {
           p1 = p1 * 100;
@@ -8869,65 +8868,116 @@ export default function App() {
       } else if (parts.length === 1) {
         const p1 = parseSingleValToLakhs(parts[0]);
         if (p1 > 0) {
-          minBud = p1 * 0.8;
-          maxBud = p1 * 1.2;
+          minBud = p1 * 0.7;
+          maxBud = p1 * 1.3;
         }
       }
 
       return { min: minBud || 0, max: maxBud || 99999 };
     };
 
-    // 1. MINIMUM & MAXIMUM BUDGET RANGE MATCH (25%)
-    const propPriceLakhs = parseSingleValToLakhs(property?.final_price || property?.base_price || property?.AskingPrice || '');
+    // --- 1. STRICT BUDGET CHECK (25%) ---
+    const propPriceLakhs = parseSingleValToLakhs(property?.final_price || property?.base_price || property?.AskingPrice || property?.price || '');
     const { min: minBud, max: maxBud } = parseBudgetRangeInLakhs(customer);
 
+    let isBudMatch = true;
     if (propPriceLakhs > 0) {
       if (minBud > 0 || maxBud < 99999) {
+        const effectiveMin = minBud > 0 ? minBud * 0.80 : 0;
+        const effectiveMax = maxBud < 99999 ? maxBud * 1.20 : 99999;
+
         if (propPriceLakhs >= minBud && propPriceLakhs <= maxBud) {
-          breakdown.bud = 25; // 100% fit inside target budget range
-        } else if (propPriceLakhs >= minBud * 0.85 && propPriceLakhs <= maxBud * 1.15) {
-          breakdown.bud = 18; // Flexible Match within 15% tolerance
-        } else if (propPriceLakhs >= minBud * 0.75 && propPriceLakhs <= maxBud * 1.25) {
-          breakdown.bud = 12; // Near Match within 25% tolerance
+          breakdown.bud = 25;
+        } else if (propPriceLakhs >= effectiveMin && propPriceLakhs <= effectiveMax) {
+          breakdown.bud = 18;
         } else {
-          breakdown.bud = 0;  // Out of range
+          breakdown.bud = 0;
+          isBudMatch = false; // STRICT BUDGET MISMATCH
         }
       } else {
-        breakdown.bud = 25; // Default match if customer has no budget restriction
+        breakdown.bud = 25;
       }
     } else {
       breakdown.bud = 15;
     }
 
-    // 2. LOCATION & LOCALITY HUB MATCH (20%)
-    if (customer?.preferredArea && property?.locality) {
-      const prefLocs = customer.preferredArea.toLowerCase().split(/[\/,–—]|(?:\s+to\s+)/).map((s: string) => s.replace(/\(.*?\)/g, '').trim()).filter(Boolean);
-      const propLoc = property.locality.toLowerCase().trim();
-      if (prefLocs.some((loc: string) => propLoc.includes(loc) || loc.includes(propLoc))) {
+    // --- 2. STRICT LOCATION CHECK (20%) ---
+    const custLocStr = [
+      customer?.preferredArea, 
+      customer?.preferred_location, 
+      customer?.secondary_areas, 
+      customer?.locality, 
+      customer?.city
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    let isLocMatch = true;
+    if (custLocStr.trim().length > 0) {
+      const prefLocs = custLocStr
+        .split(/[\/,–—|]|\s+to\s+/)
+        .map((s: string) => s.replace(/\(.*?\)/g, '').trim().toLowerCase())
+        .filter(s => s.length >= 2 && s !== 'radius:');
+
+      const propLoc = (property?.locality || '').toLowerCase().trim();
+      const propAddress = (property?.full_address || property?.address || '').toLowerCase().trim();
+      const propCity = (property?.city || '').toLowerCase().trim();
+      const propTitle = (property?.title || '').toLowerCase().trim();
+
+      const matches = prefLocs.some((loc: string) => 
+        propLoc.includes(loc) || loc.includes(propLoc) || 
+        propAddress.includes(loc) || loc.includes(propAddress) ||
+        propCity.includes(loc) || loc.includes(propCity) ||
+        propTitle.includes(loc)
+      );
+
+      if (matches) {
         breakdown.loc = 20;
       } else {
-        breakdown.loc = 10;
+        breakdown.loc = 0;
+        isLocMatch = false; // STRICT LOCATION MISMATCH
       }
     } else {
       breakdown.loc = 15;
     }
 
-    // 3. BHK CONFIGURATION MATCH (15%)
-    if (customer?.configuration && property?.configuration) {
-      const custBhk = customer.configuration.toUpperCase().replace(/\s+/g, '');
-      const propBhk = property.configuration.toUpperCase().replace(/\s+/g, '');
-      if (custBhk === propBhk || custBhk.includes(propBhk) || propBhk.includes(custBhk) || (custBhk.includes('VILLA') && propBhk.includes('VILLA'))) {
+    // --- 3. STRICT BHK CONFIGURATION CHECK (15%) ---
+    const custBhkStr = (customer?.configuration || customer?.bhk || '').toUpperCase().replace(/\s+/g, '');
+    const propBhkStr = (property?.configuration || property?.bhk || '').toUpperCase().replace(/\s+/g, '');
+
+    let isBhkMatch = true;
+    if (custBhkStr.trim().length > 0 && propBhkStr.trim().length > 0) {
+      const requestedBhks = custBhkStr.split(/[\/,|]/).map(b => b.trim()).filter(Boolean);
+
+      const matchesBhk = requestedBhks.some(reqBhk => {
+        if (!reqBhk) return false;
+        return propBhkStr === reqBhk || 
+          propBhkStr.includes(reqBhk) || 
+          reqBhk.includes(propBhkStr) ||
+          (reqBhk.includes('VILLA') && propBhkStr.includes('VILLA')) ||
+          (reqBhk.includes('PLOT') && propBhkStr.includes('PLOT')) ||
+          (reqBhk.includes('COMMERCIAL') && propBhkStr.includes('COMMERCIAL'));
+      });
+
+      if (matchesBhk) {
         breakdown.bhk = 15;
-      } else if ((custBhk.includes('4BHK') && propBhk.includes('3BHK')) || (custBhk.includes('3BHK') && propBhk.includes('2BHK'))) {
-        breakdown.bhk = 10;
       } else {
-        breakdown.bhk = 5;
+        breakdown.bhk = 0;
+        isBhkMatch = false; // STRICT BHK MISMATCH
       }
     } else {
       breakdown.bhk = 12;
     }
 
-    // 4. SQUARE FEET AREA MATCH (15%)
+    // STRICT MATCH FILTER RULE:
+    // If Location, Budget OR BHK fails to match customer preference, return total = 0
+    if (!isBudMatch || !isLocMatch || !isBhkMatch) {
+      return { 
+        total: 0, 
+        breakdown: { ...breakdown, bud: isBudMatch ? breakdown.bud : 0, loc: isLocMatch ? breakdown.loc : 0, bhk: isBhkMatch ? breakdown.bhk : 0 }, 
+        isStrictMatch: false 
+      };
+    }
+
+    // --- 4. SQUARE FEET AREA MATCH (15%) ---
     const parseSqft = (str: any) => {
       if (!str) return 0;
       const num = parseFloat(String(str).replace(/[^0-9.]/g, '')) || 0;
@@ -8935,7 +8985,7 @@ export default function App() {
     };
     const propSqft = parseSqft(property?.carpet_area || property?.super_builtup_area || property?.built_up_area_sqft || '');
     if (propSqft > 0) {
-      if (propSqft >= 1000 && propSqft <= 4500) {
+      if (propSqft >= 800 && propSqft <= 5000) {
         breakdown.sqft = 15;
       } else {
         breakdown.sqft = 10;
@@ -8944,7 +8994,7 @@ export default function App() {
       breakdown.sqft = 12;
     }
 
-    // 5. POSSESSION & VASTU FACING MATCH (10%)
+    // --- 5. POSSESSION & VASTU FACING MATCH (10%) ---
     const facingStr = (property?.facing || '').toLowerCase();
     const posStr = (property?.possession_status || property?.status || '').toLowerCase();
     if (facingStr.includes('east') || facingStr.includes('north') || posStr.includes('ready') || posStr.includes('available')) {
@@ -8953,7 +9003,7 @@ export default function App() {
       breakdown.possession_facing = 6;
     }
 
-    // 6. FLOOR PREFERENCE MATCH (5%)
+    // --- 6. FLOOR PREFERENCE MATCH (5%) ---
     const propFloor = property?.floor !== undefined ? Number(property.floor) : 5;
     const floorPrefStr = (customer?.floor_preference || customer?.preferred_floor || customer?.floor_pref || '').toLowerCase();
     if (floorPrefStr.includes('low') || floorPrefStr.includes('1-5')) {
@@ -8966,7 +9016,7 @@ export default function App() {
       breakdown.floor_pref = 5;
     }
 
-    // 7. PROPERTY CATEGORY TYPE MATCH (5%)
+    // --- 7. PROPERTY CATEGORY TYPE MATCH (5%) ---
     if (customer?.property_type && property?.property_type) {
       const cTypeRaw = customer.property_type.toLowerCase();
       const pType = property.property_type.toLowerCase();
@@ -8988,11 +9038,11 @@ export default function App() {
       breakdown.type = 5;
     }
 
-    // 8. PROPERTY CONDITION & FURNISHING MATCH (5%)
+    // --- 8. PROPERTY CONDITION & FURNISHING MATCH (5%) ---
     breakdown.condition = property?.furnishing_status || property?.status === 'AVAILABLE' ? 5 : 3;
 
     const total = Math.min(100, breakdown.bud + breakdown.loc + breakdown.bhk + breakdown.sqft + breakdown.possession_facing + breakdown.floor_pref + breakdown.type + breakdown.condition);
-    return { total, breakdown };
+    return { total, breakdown, isStrictMatch: true };
   };
 
   const isLight = themeMode === 'light';

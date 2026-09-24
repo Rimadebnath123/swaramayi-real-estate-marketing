@@ -5023,8 +5023,11 @@ export default function App() {
     const clubNum = parsePriceToNumeric(prop.clubhouse_charge || prop.club_charge || prop.clubhouse_fee || prop.club_membership_fee || 0);
     const maintenanceNum = parsePriceToNumeric(prop.advance_maintenance_charge || prop.maintenance || prop.maintenance_annual || prop.maintenance_monthly || 0);
     const infraNum = parsePriceToNumeric(prop.legal_doc_charge || prop.infrastructureCharge || prop.infra_legal_fees || prop.infrastructure_charge || prop.legal_charge || prop.infra_legal || 0);
+    const brokerageNum = parsePriceToNumeric(prop.brokerage_charge || prop.brokerage_amount || prop.brokerage || prop.brokerage_fee || 0);
+    const brokeragePct = parsePct(prop.brokerage_pct || prop.brokerage_percent, 0);
+    const computedBrokerage = brokerageNum > 0 ? brokerageNum : (brokeragePct > 0 && basePriceNum > 0 ? Math.round(basePriceNum * (brokeragePct / 100)) : 0);
 
-    const subtotalBeforeTax = basePriceNum + floorRiseNum + plcNum + parkingNum + clubNum + maintenanceNum + infraNum;
+    const subtotalBeforeTax = basePriceNum + floorRiseNum + plcNum + parkingNum + clubNum + maintenanceNum + infraNum + computedBrokerage;
 
     const gstPct = parsePct(prop.gst_pct, basePriceNum > 0 && basePriceNum < 4500000 ? 1 : 5);
     const gstAmount = basePriceNum > 0 ? Math.round(basePriceNum * (gstPct / 100)) : 0;
@@ -5061,6 +5064,18 @@ export default function App() {
       return 'N/A';
     };
 
+    const formatBrokerageStr = (num: number, pct: number, origStr: any) => {
+      if (origStr !== undefined && origStr !== null && origStr !== '') {
+        const s = String(origStr).trim();
+        if (s.toLowerCase().includes('included')) return 'Included in Flat Price';
+        if (s.toLowerCase().includes('zero')) return '0% (Zero Brokerage for Buyer)';
+        const parsed = parsePriceToNumeric(s);
+        if (parsed > 0) return formatIndianRupees(parsed);
+      }
+      if (num > 0) return `${formatIndianRupees(num)}${pct > 0 ? ` (${pct}%)` : ''}`;
+      return '0% (Zero Brokerage for Buyer)';
+    };
+
     return {
       basePriceNum,
       superAreaNum,
@@ -5071,6 +5086,7 @@ export default function App() {
       clubNum,
       maintenanceNum,
       infraNum,
+      brokerageNum: computedBrokerage,
       subtotalBeforeTax,
       gstPct,
       gstAmount,
@@ -5088,6 +5104,7 @@ export default function App() {
       clubStr: formatChargeStr(clubNum, prop.clubhouse_charge || prop.club_charge || prop.clubhouse_fee),
       maintenanceStr: formatChargeStr(maintenanceNum, prop.advance_maintenance_charge || prop.maintenance || prop.maintenance_annual),
       infrastructureStr: formatChargeStr(infraNum, prop.legal_doc_charge || prop.infrastructureCharge || prop.infra_legal_fees || prop.infrastructure_charge || prop.legal_charge),
+      brokerageStr: formatBrokerageStr(computedBrokerage, brokeragePct, prop.brokerage_charge || prop.brokerage || prop.brokerage_fee),
       subtotalStr: subtotalBeforeTax > 0 ? formatIndianRupees(subtotalBeforeTax) : '',
       gstStr: gstAmount > 0 ? `${formatIndianRupees(gstAmount)} (${gstPct}%)` : `₹0 (${gstPct}%)`,
       stampDutyStr: stampDutyAmount > 0 ? `${formatIndianRupees(stampDutyAmount)} (${stampDutyPct}%)` : `₹0 (${stampDutyPct}%)`,
@@ -5140,6 +5157,10 @@ export default function App() {
       ? parsePriceToNumeric(matchedProp.infra_legal_fees || matchedProp.infrastructure_charge)
       : (pBreakup.infrastructureStr && pBreakup.infrastructureStr !== 'N/A' && pBreakup.infrastructureStr !== '₹0' ? parsePriceToNumeric(pBreakup.infrastructureStr) : 0);
 
+    const brokerage = (matchedProp && (matchedProp.brokerage_charge !== undefined || matchedProp.brokerage !== undefined))
+      ? parsePriceToNumeric(matchedProp.brokerage_charge || matchedProp.brokerage)
+      : (ps.brokerageCharge || (pBreakup.brokerageStr && pBreakup.brokerageStr !== 'N/A' && !pBreakup.brokerageStr.includes('Zero') ? parsePriceToNumeric(pBreakup.brokerageStr) : 0));
+
     const discountAmount = ps.discountAmount !== undefined && ps.discountAmount > 0
       ? ps.discountAmount
       : (pBreakup.discountStr && pBreakup.discountStr !== 'N/A' ? parsePriceToNumeric(pBreakup.discountStr) : 0);
@@ -5163,6 +5184,7 @@ export default function App() {
       revClub: clubCharge,
       revMaintenance: maintenance,
       revInfraLegal: infraLegal,
+      revBrokerage: brokerage,
       revDiscount: discountAmount,
       revGstPct: gstPct,
       revStampDutyPct: ps.stampDutyPct !== undefined ? ps.stampDutyPct : 5,
@@ -5631,9 +5653,10 @@ export default function App() {
     const club = form.revClub || 0;
     const maint = form.revMaintenance || 0;
     const infra = form.revInfraLegal || 0;
+    const brok = form.revBrokerage || 0;
     const disc = form.revDiscount || 0;
 
-    const subtotal = Math.max(0, (base + floor + plc + park + club + maint + infra) - disc);
+    const subtotal = Math.max(0, (base + floor + plc + park + club + maint + infra + brok) - disc);
     const gstPct = form.revGstPct !== undefined ? form.revGstPct : 5;
     const stampPct = form.revStampDutyPct !== undefined ? form.revStampDutyPct : 5;
     const regPct = form.revRegPct !== undefined ? form.revRegPct : 1;
@@ -5668,6 +5691,7 @@ export default function App() {
     if (form.revClub !== origPs.clubCharge) changedFields.push('Clubhouse Fee');
     if (form.revMaintenance !== origPs.maintenance) changedFields.push('Maintenance Advance');
     if (form.revInfraLegal !== ((origPs.infrastructureCharge || 0) + (origPs.legalCharge || 0))) changedFields.push('Infra & Legal');
+    if (form.revBrokerage !== origPs.brokerageCharge) changedFields.push('Brokerage Charge');
     if (form.revDiscount !== origPs.discountAmount) changedFields.push('Special Discount');
     if (form.revGstPct !== origPs.gstPct) changedFields.push('GST Rate');
     if (form.revStampDutyPct !== origPs.stampDutyPct) changedFields.push('Stamp Duty Rate');
@@ -5710,6 +5734,7 @@ export default function App() {
         clubCharge: form.revClub,
         maintenance: form.revMaintenance,
         infrastructureCharge: form.revInfraLegal,
+        brokerageCharge: form.revBrokerage,
         discountAmount: form.revDiscount,
         gstPct: form.revGstPct,
         gstAmount: liveCalc.gst,
@@ -5728,6 +5753,7 @@ export default function App() {
         clubStr: formatIndianRupees(form.revClub),
         maintenanceStr: formatIndianRupees(form.revMaintenance),
         infrastructureStr: formatIndianRupees(form.revInfraLegal),
+        brokerageStr: form.revBrokerage > 0 ? formatIndianRupees(form.revBrokerage) : '0% (Zero Brokerage for Buyer)',
         legalStr: 'Included',
         otherStr: 'N/A',
         discountStr: form.revDiscount > 0 ? formatIndianRupees(form.revDiscount) : 'N/A',
@@ -16664,6 +16690,12 @@ export default function App() {
                          (showViewIndividualCostSheetModal.costSheet.pricingSnapshot?.lawyerCharge ? formatIndianRupees(showViewIndividualCostSheetModal.costSheet.pricingSnapshot.lawyerCharge) : 'Included in Legal Charges')}
                       </td>
                     </tr>
+                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '10px 14px', color: '#475569' }}>12. Brokerage & Agency Consultancy Charges</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#0f172a', fontWeight: '800' }}>
+                        {showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.brokerageStr || '0% (Zero Brokerage for Buyer)'}
+                      </td>
+                    </tr>
                     <tr style={{ background: '#f0fdf4', borderTop: '3px solid #16a34a' }}>
                       <td style={{ padding: '14px', fontWeight: '900', fontSize: '1.05rem', color: '#15803d' }}>
                         TOTAL ESTIMATED PROPERTY COST
@@ -16887,6 +16919,20 @@ export default function App() {
                       value={showRevisionModal.revInfraLegal} 
                       onChange={(e) => setShowRevisionModal({ ...showRevisionModal, revInfraLegal: Math.max(0, parseInt(e.target.value) || 0) })} 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                    />
+                  </div>
+
+                  {/* BROKERAGE CHARGES */}
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      8.1 Brokerage Fee (INR)
+                    </label>
+                    <input 
+                      type="number" 
+                      value={showRevisionModal.revBrokerage || 0} 
+                      onChange={(e) => setShowRevisionModal({ ...showRevisionModal, revBrokerage: Math.max(0, parseInt(e.target.value) || 0) })} 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                      placeholder="0 (Zero Brokerage for Buyer)"
                     />
                   </div>
 

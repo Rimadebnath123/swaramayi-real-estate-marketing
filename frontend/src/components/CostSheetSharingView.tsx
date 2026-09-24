@@ -111,6 +111,72 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
     return (individualCostSheets || []).filter(c => c.status !== 'CONVERTED_TO_VISIT');
   }, [individualCostSheets, individualCostSheetsStatusFilter]);
 
+  const sendCostSheetWhatsApp = (item: any) => {
+    if (!item) {
+      alert('⚠️ Cost sheet data is missing.');
+      return;
+    }
+    const itemPropCode = item.propertyCode || item.propertySnapshot?.propertyCode;
+    const itemCustId = item.customerId || item.customerSnapshot?.customerNumber || item.customerSnapshot?.customerId;
+    const itemCustMob = item.customerSnapshot?.mobile || item.mobile;
+
+    const matchedProp = (properties || []).find((p: any) => 
+      (p.property_code && itemPropCode && p.property_code === itemPropCode) ||
+      (p.id && itemPropCode && p.id === itemPropCode) ||
+      (p.property_code && item.propertyId && p.property_code === item.propertyId) ||
+      (p.id && item.propertyId && p.id === item.propertyId)
+    );
+
+    const matchedCust = (customers || []).find((c: any) => 
+      (c.customer_number && itemCustId && c.customer_number === itemCustId) ||
+      (c.id && itemCustId && c.id === itemCustId) ||
+      (itemCustMob && itemCustMob.replace(/\D/g, '').length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === itemCustMob.replace(/\D/g, ''))
+    );
+
+    const custName = item.customerSnapshot?.customerName || item.customerName || matchedCust?.full_name || matchedCust?.name || 'Valued Customer';
+    const custMobile = item.customerSnapshot?.mobile || item.mobile || matchedCust?.mobile || '';
+
+    let cleanPhone = custMobile.replace(/\D/g, '');
+    if (!cleanPhone) {
+      alert(`⚠️ Customer mobile number is missing for ${custName}. Please edit customer details first.`);
+      return;
+    }
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+
+    const rawPropTitle = item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name;
+    const propTitleStr = rawPropTitle && !rawPropTitle.startsWith('1 Properties') 
+      ? rawPropTitle 
+      : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'Property Unit');
+
+    const localityStr = item.propertySnapshot?.locality || matchedProp?.locality || matchedProp?.location_address || 'Location';
+    const bhkStr = item.propertySnapshot?.bhk || item.propertySnapshot?.configuration || matchedProp?.configuration || matchedProp?.bhk || 'N/A';
+
+    const basePriceNum = item.pricingSnapshot?.basePrice || item.base_price || matchedProp?.base_price;
+    const basePriceStr = item.formattedPriceBreakup?.basePriceStr || (basePriceNum ? `₹${Number(basePriceNum).toLocaleString('en-IN')}` : 'N/A');
+    const totalEstNum = item.pricingSnapshot?.totalEstimatedCost || item.final_estimated_price || matchedProp?.final_estimated_price;
+    const totalEstStr = item.formattedPriceBreakup?.totalEstimatedCostStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : basePriceStr);
+
+    const waMsg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Cost Sheet Breakdown:\n\n📄 Cost Sheet ID: ${item.costSheetId} (${item.version || 'V01'})\n🏢 Property: ${propTitleStr}\n📍 Locality: ${localityStr}\n📐 Configuration: ${bhkStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\nPlease review the details. Click or reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
+
+    const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(waMsg)}`;
+    window.open(waUrl, '_blank');
+
+    if (setIndividualCostSheets) {
+      setIndividualCostSheets((prev: any[]) => {
+        const updated = prev.map(c => c.costSheetId === item.costSheetId ? { ...c, status: 'SENT_TO_CUSTOMER' } : c);
+        try {
+          localStorage.setItem('swaramayi_indiv_cost_sheets_v5_clean', JSON.stringify(updated));
+        } catch (e) {}
+        if (syncAllToMongoDB) {
+          syncAllToMongoDB({ cost_sheets: updated });
+        }
+        return updated;
+      });
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
@@ -139,7 +205,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
               <Trash2 size={15} color="#ffffff" /> 🗑️ Delete All Current Inside
             </button>
           )}
-          <button onClick={() => alert('📲 Dispatched WhatsApp Cost Sheet Batch to selected active customers!')} style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button onClick={() => { if (displayedCostSheets.length === 0) { alert('⚠️ No active cost sheets available to share.'); return; } sendCostSheetWhatsApp(displayedCostSheets[0]); }} style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Share2 size={15} /> Batch WhatsApp Share
           </button>
           <button onClick={() => alert('📧 Dispatched Email PDF Attachments to selected customers!')} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -210,7 +276,16 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
 
           <div style={{ display: 'flex', alignItems: 'flex-end' }}>
             <button 
-              onClick={() => alert(`🚀 Executed Quick Dispatch Share Token for ${newShareForm.parentId}!`)} 
+              onClick={() => {
+                const targetCs = allEffectiveCostSheets.find((c: any) => c.costSheetId === newShareForm.parentId);
+                if (targetCs) {
+                  sendCostSheetWhatsApp(targetCs);
+                } else if (displayedCostSheets.length > 0) {
+                  sendCostSheetWhatsApp(displayedCostSheets[0]);
+                } else {
+                  alert(`🚀 Executed Quick Dispatch Share Token for ${newShareForm.parentId || 'Cost Sheet'}!`);
+                }
+              }} 
               style={{ width: '100%', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >
               🚀 Execute Quick Dispatch
@@ -467,11 +542,9 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                                 ✏️ Edit
                               </button>
                               <button 
-                                onClick={() => {
-                                  setIndividualCostSheets(prev => prev.map(c => c.costSheetId === item.costSheetId ? { ...c, status: 'SENT_TO_CUSTOMER' } : c));
-                                  alert(`📲 Dispatched Individual Cost Sheet ${item.costSheetId} to ${item.customerSnapshot?.customerName} (${item.customerSnapshot?.mobile}) via WhatsApp Gateway & Email PDF!`);
-                                }} 
+                                onClick={() => sendCostSheetWhatsApp(item)} 
                                 style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem' }}
+                                title="Send Cost Sheet directly to customer WhatsApp"
                               >
                                 📲 Send
                               </button>
@@ -676,7 +749,22 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                       </td>
                       <td style={{ padding: '12px', textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                          <button onClick={() => alert(`📲 Resent Cost Sheet ${item.costSheetId} to ${item.customerName}!`)} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem' }}>Resend</button>
+                          <button 
+                            onClick={() => {
+                              const cleanMob = (item.mobile || '').replace(/\D/g, '');
+                              if (!cleanMob) {
+                                alert(`⚠️ Mobile number missing for ${item.customerName || 'Customer'}`);
+                                return;
+                              }
+                              const phone = cleanMob.length === 10 ? '91' + cleanMob : cleanMob;
+                              const msg = `Hello ${item.customerName || 'Valued Customer'},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nResending your official Cost Sheet (${item.costSheetId || ''}) for ${item.propertyTitle || 'Property'}.\nTotal Estimated Cost: ${item.finalPrice || 'N/A'}.\n\nPlease reply or click to confirm your interest or schedule a site visit!`;
+                              window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`, '_blank');
+                            }} 
+                            style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem' }}
+                            title="Resend Cost Sheet to customer WhatsApp"
+                          >
+                            Resend
+                          </button>
                           <button 
                             onClick={() => {
                               const custName = item.customerName || 'Customer';

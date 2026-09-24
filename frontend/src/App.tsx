@@ -4559,6 +4559,11 @@ export default function App() {
 
       list = list.filter((c: any) => 
         c &&
+        !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000191') &&
+        !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000191') &&
+        !(c.name && c.name.toLowerCase() === 'dff') &&
+        !(c.full_name && c.full_name.toLowerCase() === 'dff') &&
+        !(c.mobile && c.mobile.includes('5496456')) &&
         !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000190') &&
         !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
         !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000189') &&
@@ -7027,6 +7032,11 @@ export default function App() {
             if (Array.isArray(mData.customers)) {
               const cleanMongo = mData.customers.filter((c: any) => 
                 c &&
+                !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000191') &&
+                !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000191') &&
+                !(c.name && c.name.toLowerCase() === 'dff') &&
+                !(c.full_name && c.full_name.toLowerCase() === 'dff') &&
+                !(c.mobile && c.mobile.includes('5496456')) &&
                 !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000190') &&
                 !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
                 !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000189') &&

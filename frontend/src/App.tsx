@@ -5293,8 +5293,15 @@ export default function App() {
     }, 100);
   };
 
-  const sendCostSheetWhatsApp = (costSheet: any) => {
+  const sendCostSheetWhatsApp = (costSheet: any, autoPrintPdf: boolean = true) => {
     if (!costSheet) return;
+
+    if (autoPrintPdf) {
+      setShowViewIndividualCostSheetModal({ open: true, costSheet });
+      setTimeout(() => {
+        window.print();
+      }, 150);
+    }
 
     const itemPropCode = costSheet.propertyCode || costSheet.propertySnapshot?.propertyCode;
     const itemCustId = costSheet.customerId || costSheet.customerSnapshot?.customerNumber || costSheet.customerSnapshot?.customerId;
@@ -5338,7 +5345,7 @@ export default function App() {
     const totalEstNum = costSheet.pricingSnapshot?.totalEstimatedCost || costSheet.final_estimated_price || matchedProp?.final_estimated_price;
     const totalEstStr = costSheet.formattedPriceBreakup?.totalEstimatedCostStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : basePriceStr);
 
-    const waMsg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Cost Sheet Breakdown:\n\n📄 Cost Sheet ID: ${costSheet.costSheetId} (${costSheet.version || 'V01'})\n🏢 Property: ${propTitleStr}\n📍 Locality: ${localityStr}\n📐 Configuration: ${bhkStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\nPlease review the details. Click or reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
+    const waMsg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Cost Sheet Breakdown & PDF Document:\n\n📄 Cost Sheet ID: ${costSheet.costSheetId} (${costSheet.version || 'V01'})\n🏢 Property: ${propTitleStr}\n📍 Locality: ${localityStr}\n📐 Configuration: ${bhkStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\n📎 Cost Sheet PDF Document: Itemized official PDF document is generated & attached.\n\nPlease review the details. Click or reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
 
     const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(waMsg)}`;
     window.open(waUrl, '_blank');

@@ -254,3 +254,28 @@ export async function revisePropertyPrice(req: AuthRequest, res: Response) {
     new_price: Number(new_price)
   });
 }
+
+// 6. Delete Property Record
+export async function deleteProperty(req: AuthRequest, res: Response) {
+  const { id } = req.params;
+  await loadData();
+
+  const property = dbStore.data.properties.find(p => p.id === id || p.property_code === id);
+  if (!property) {
+    return res.status(404).json({ status: 'ERROR', message: 'Property not found.' });
+  }
+
+  property.is_deleted = true;
+  property.updated_at = new Date().toISOString();
+
+  dbStore.data.properties = dbStore.data.properties.filter(p => p.id !== id && p.property_code !== id);
+
+  saveData();
+  logAudit(req.user?.id || null, 'DELETE_PROPERTY', 'PROPERTY', `Property deleted: ${property.property_code}`, req.ip);
+
+  return res.json({
+    status: 'SUCCESS',
+    message: `Property ${property.property_code} deleted successfully.`,
+    deleted_id: id
+  });
+}

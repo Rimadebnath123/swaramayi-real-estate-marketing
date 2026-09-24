@@ -3229,32 +3229,46 @@ export default function App() {
         'swaramayi_leads_v4',
         'swaramayi_leads_v5_clean',
         'swaramayi_leads_v6_clean',
+        'swaramayi_leads_v7_clean',
         'swaramayi_customers_v3',
         'swaramayi_customers_v4_clean',
         'swaramayi_customers_v5_clean',
         'swaramayi_customers_v6_clean',
+        'swaramayi_customers_v7_clean',
+        'swaramayi_customers_master_v3_clean',
         'swaramayi_properties_v3',
         'swaramayi_properties_v4_clean',
+        'swaramayi_properties_v5_clean',
         'swaramayi_cost_sheet_shares_v3',
         'swaramayi_cost_sheet_shares_v4_clean',
         'swaramayi_cost_sheet_shares_v5_clean',
         'swaramayi_indiv_cost_sheets_v4',
         'swaramayi_indiv_cost_sheets_v5_clean',
         'swaramayi_indiv_cost_sheets_v6_clean',
+        'swaramayi_indiv_cost_sheets_v7_clean',
         'swaramayi_bookings_v2',
+        'swaramayi_bookings_v3_clean',
         'swaramayi_agreements_vault_v4',
         'swaramayi_agreements_vault_v5_clean',
         'swaramayi_invoices_v4',
         'swaramayi_invoices_v5_clean',
+        'swaramayi_invoices_v6',
         'swaramayi_matching_queue_v3',
         'swaramayi_matching_queue_v5_clean',
         'swaramayi_matching_queue_v6_clean',
+        'swaramayi_matching_queue_v7_clean',
         'swaramayi_scheduled_visits_v3',
         'swaramayi_scheduled_visits_v4_clean',
+        'swaramayi_scheduled_visits_v7_clean',
         'swaramayi_visit_plans_v3',
         'swaramayi_visit_plans_v4_clean',
+        'swaramayi_visit_plans_v7_clean',
         'swaramayi_project_visit_agreements_v1',
-        'swaramayi_project_visit_agreements_v2_clean'
+        'swaramayi_project_visit_agreements_v2_clean',
+        'swaramayi_project_visit_agreements_v7_clean',
+        'swaramayi_developers_v1',
+        'swaramayi_users_v6',
+        'swaramayi_users_v7'
       ];
       keysToClean.forEach(k => localStorage.removeItem(k));
     } catch (e) {}
@@ -4171,33 +4185,10 @@ export default function App() {
   // FULL MASTER CRM DATASETS
   // ----------------------------------------------------
 
-  // 1. Employee Directory (Strict Single Super Admin Master Store with LocalStorage Persistence)
-  const [users, setUsers] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_users_v7') || localStorage.getItem('swaramayi_users_v6');
-      if (saved) {
-        const sanitized = saved.replace(/Rajesh V[ae]rma/gi, 'Avishek Das');
-        const parsed = JSON.parse(sanitized);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const filtered = parsed.filter((u: any) => u.id !== 'USR-02' || u.full_name?.toLowerCase().includes('punita') || u.username?.toLowerCase().includes('punita'));
-          if (filtered.length > 0) return filtered;
-        }
-      }
-    } catch (e) {
-      console.error('Error reading users from localStorage:', e);
-    }
-    return [
-      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', password: 'Swaramayi@2026', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office', department: 'Executive Board', team_name: 'Core Management', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' }
-    ];
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_users_v7', JSON.stringify(users));
-    } catch (e) {
-      console.error('Error saving users to localStorage:', e);
-    }
-  }, [users]);
+  // 1. Employee Directory (Strict Single Super Admin Master Store - Direct MongoDB Source)
+  const [users, setUsers] = useState<any[]>([
+    { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', password: 'Swaramayi@2026', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' }
+  ]);
 
   // 2. Active 6 Roles Permission Matrix (with LocalStorage Persistence)
   const [rolePermissions, setRolePermissions] = useState<any[]>(() => {
@@ -4333,111 +4324,8 @@ export default function App() {
     { id: 'SES-02', user: 'Abinash Roy (Admin)', role: 'ADMIN', ip: '127.0.0.1 (Localhost)', device: 'Chrome / Windows 11', login_time: '27 Aug 09:30 AM', status: 'ACTIVE' }
   ]);
 
-  // 4. BULK PROPERTIES MASTER STOCK (WITH LOCALSTORAGE PERSISTENCE)
-  const [properties, setProperties] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_properties_v5_clean') || localStorage.getItem('swaramayi_properties_v4_clean');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((p: any) => ({
-            ...p,
-            status: (p.property_code === 'SRM-PROP-2026-000426' || (p.title && p.title.toLowerCase().includes('gajapati'))) ? 'LIVE' : ((p.status || '').toUpperCase() === 'AVAILABLE' ? 'LIVE' : (p.status || 'LIVE'))
-          }));
-        }
-      }
-    } catch (e) {
-      console.error('Error reading properties from localStorage:', e);
-    }
-    return [
-      {
-        id: 'PROP-001',
-        property_code: 'SRM-PROP-2026-000425',
-        title: 'SHIBALAY',
-        developer: 'KRISHNA DAS',
-        developer_id: 'SRM-DEV-2026-000105',
-        project_id: 'SRM-PROJ-2026-000087',
-        configuration: '3BHK',
-        super_builtup_area: 'P10',
-        carpet_area: '497.6 Sq.Ft.',
-        final_price: '₹22,76,200',
-        price_sqft: '₹4,574/Sq.Ft.',
-        car_parking: 'Covered Basement & 1 Slot',
-        status: 'LIVE',
-        locality: 'BARASAT, CHAPADALI',
-        full_address: 'Chapadali Bus Terminus Hub, Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124, India',
-        latitude: '22.722361',
-        longitude: '88.493403',
-        property_type: 'Flat / Apartment',
-        tower_block: 'Tower A',
-        floor_num: '2nd Floor',
-        total_floors: 'G+4 Floors',
-        facing: 'South Facing',
-        furnishing: 'Semi-Furnished',
-        possession_status: 'Ready to Move'
-      },
-      {
-        id: 'PROP-002',
-        property_code: 'SRM-PROP-2026-000426',
-        title: 'GAJAPATI APARTMENT',
-        developer: 'BABLA DUTTA',
-        developer_id: 'SRM-DEV-2026-000106',
-        project_id: 'SRM-PROJ-2026-000088',
-        configuration: '2BHK',
-        super_builtup_area: 'P71',
-        carpet_area: '700.35 Sq.Ft.',
-        final_price: '₹35,15,900',
-        price_sqft: '₹5,020/Sq.Ft.',
-        car_parking: 'Covered Basement & 1 Slot',
-        status: 'LIVE',
-        locality: 'Barasat, Kolkata',
-        full_address: 'Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124, India',
-        latitude: '22.694318',
-        longitude: '88.400659',
-        property_type: 'Flat / Apartment',
-        tower_block: 'Tower A',
-        floor_num: '3rd Floor',
-        total_floors: 'G+4 Floors',
-        facing: 'East Facing',
-        furnishing: 'Semi-Furnished',
-        possession_status: 'Ready to Move'
-      },
-      {
-        id: 'PROP-003',
-        property_code: 'SRM-PROP-2026-000427',
-        title: 'DHRITI APARTMENT',
-        developer: 'NANIGOPAL DAS',
-        developer_id: 'SRM-DEV-2026-000107',
-        project_id: 'SRM-PROJ-2026-000089',
-        configuration: '2BHK',
-        super_builtup_area: 'P65',
-        carpet_area: '718.25 Sq.Ft.',
-        final_price: '₹36,21,400',
-        price_sqft: '₹5,042/Sq.Ft.',
-        car_parking: 'Covered Basement & 1 Slot',
-        status: 'LIVE',
-        locality: 'Barasat, Kolkata',
-        full_address: 'Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124, India',
-        latitude: '22.715420',
-        longitude: '88.479150',
-        property_type: 'Flat / Apartment',
-        tower_block: 'Tower A',
-        floor_num: '2nd Floor',
-        total_floors: 'G+4 Floors',
-        facing: 'North Facing',
-        furnishing: 'Semi-Furnished',
-        possession_status: 'Ready to Move'
-      }
-    ];
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(properties));
-    } catch (e) {
-      console.error('Error saving properties to localStorage:', e);
-    }
-  }, [properties]);
+  // 4. BULK PROPERTIES MASTER STOCK (Direct MongoDB Source)
+  const [properties, setProperties] = useState<any[]>([]);
 
   const [rawSelectedProperty, setSelectedProperty] = useState<any>(null);
   const selectedProperty = rawSelectedProperty || properties[0] || {
@@ -4488,145 +4376,15 @@ export default function App() {
     return deduped;
   };
 
-  // 6. CUSTOMERS MASTER VAULT (WITH LOCALSTORAGE PERSISTENCE)
-  const defaultInitialCustomers: any[] = [];
-
-  const [customers, setCustomers] = useState<any[]>(() => {
-    try {
-      let list: any[] = [];
-      const saved = localStorage.getItem('swaramayi_customers_v7_clean') || localStorage.getItem('swaramayi_customers_master_v3_clean');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          list = parsed;
-        }
-      }
-
-      // Auto-extract customer master entries from individual cost sheets in localStorage if missing
-      try {
-        const csSaved = localStorage.getItem('swaramayi_indiv_cost_sheets_v7_clean') || localStorage.getItem('swaramayi_indiv_cost_sheets_v5_clean');
-        if (csSaved) {
-          const csList = JSON.parse(csSaved);
-          if (Array.isArray(csList)) {
-            csList.forEach((cs: any) => {
-              if (!cs) return;
-              const snap = cs.customerSnapshot || {};
-              const custName = cs.customerName || snap.customerName || cs.name || 'Customer';
-              const custMob = cs.mobile || cs.customerMobile || snap.mobile || '';
-              const cleanMob = custMob ? custMob.replace(/\D/g, '') : '';
-              const custNum = cs.customerNumber || cs.customerId || snap.customerNumber || snap.customerId || (cleanMob ? `SRM-CUS-2026-${cleanMob.slice(-6)}` : `SRM-CUS-2026-000138`);
-              const custEmail = cs.email || cs.customerEmail || snap.email || `${custName.toLowerCase().replace(/\s+/g, '.')}@gmail.com`;
-
-              const exists = list.some((c: any) => 
-                (c.customer_number && c.customer_number === custNum) ||
-                (cleanMob && cleanMob.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '').endsWith(cleanMob.slice(-10))) ||
-                (c.name && custName && c.name.toLowerCase() === custName.toLowerCase()) ||
-                (c.full_name && custName && c.full_name.toLowerCase() === custName.toLowerCase())
-              );
-
-              if (!exists) {
-                list.push({
-                  id: cs.id || `CUS-${custNum}`,
-                  customer_number: custNum,
-                  full_name: custName,
-                  name: custName,
-                  mobile: custMob,
-                  email: custEmail,
-                  city: 'Kolkata',
-                  preferred_location: cs.preferredArea || cs.propertySnapshot?.locality || 'Barasat, Kolkata',
-                  preferredArea: cs.preferredArea || cs.propertySnapshot?.locality || 'Barasat, Kolkata',
-                  property_type: cs.propertyType || cs.propertySnapshot?.property_type || 'Flat / Apartment',
-                  configuration: cs.configuration || cs.propertySnapshot?.configuration || '2BHK',
-                  budget: cs.budget || `₹35L - ₹50L`,
-                  budget_min: cs.budget_min || 2500000,
-                  budget_max: cs.budget_max || 5000000,
-                  purchase_timeline: 'Immediate (< 30 Days)',
-                  loan_required: true,
-                  investment_purpose: 'Self / End Use',
-                  customer_status: 'COST_SHEET_CREATED',
-                  status: 'COST_SHEET_CREATED',
-                  priority: cs.priority || snap.priority || 'HOT',
-                  quality_score: cs.score || snap.score || 88,
-                  source: 'Cost Sheet Generation',
-                  created_at: cs.createdAt || cs.created_at || new Date().toISOString(),
-                  is_deleted: false
-                });
-              }
-            });
-          }
-        }
-      } catch (e) {}
-
-      list = list.filter((c: any) => 
-        c &&
-        !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000191') &&
-        !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000191') &&
-        !(c.name && c.name.toLowerCase() === 'dff') &&
-        !(c.full_name && c.full_name.toLowerCase() === 'dff') &&
-        !(c.mobile && c.mobile.includes('5496456')) &&
-        !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000190') &&
-        !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
-        !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000189') &&
-        !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000189') &&
-        !(c.name && c.name.toLowerCase().includes('amit sharma')) &&
-        !(c.full_name && c.full_name.toLowerCase().includes('amit sharma')) &&
-        !(c.email && c.email.toLowerCase().includes('amit.sharma@gmail.com')) &&
-        !(c.name && c.name.toLowerCase().includes('sunil')) &&
-        !(c.full_name && c.full_name.toLowerCase().includes('sunil')) &&
-        !(c.email && c.email.toLowerCase().includes('sunil.verma@gmail.com')) &&
-        !(c.mobile && c.mobile.includes('5777564356'))
-      );
-
-      return dedupeCustomerList(list);
-    } catch (e) {
-      console.error('Error reading customers from localStorage:', e);
-    }
-    return [];
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(customers));
-    } catch (e) {
-      console.error('Error saving customers to localStorage:', e);
-    }
-  }, [customers]);
+  // 6. CUSTOMERS MASTER VAULT (Direct MongoDB Source)
+  const [customers, setCustomers] = useState<any[]>([]);
 
   const [rawSelectedCust, setSelectedCust] = useState<any>(null);
   const selectedCust = rawSelectedCust || customers[0] || null;
 
-  // 6.5. CENTRAL LEADS MASTER STORE (WITH LOCALSTORAGE PERSISTENCE)
+  // 6.5. CENTRAL LEADS MASTER STORE (Direct MongoDB Source)
   const [activeEditingLeadId, setActiveEditingLeadId] = useState<string | null>(null);
-  const [leadsList, setLeadsList] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_leads_v7_clean');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((l: any) => {
-            const name = (l.name || l.customer_name || '').toString().toLowerCase();
-            const mob = (l.mobile || l.phone || '').toString().replace(/\D/g, '');
-            const num = (l.customer_number || l.lead_number || l.id || '').toString().toUpperCase();
-            if (name.includes('rishita') || mob.includes('8876697975') || num.includes('000188')) {
-              return false;
-            }
-            return true;
-          });
-        }
-      }
-    } catch (e) {
-      console.error('Error reading leads from localStorage:', e);
-    }
-    return [];
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(leadsList));
-    } catch (e) {
-      console.error('Error saving leads to localStorage:', e);
-    }
-  }, [leadsList]);
+  const [leadsList, setLeadsList] = useState<any[]>([]);
 
   // 6.6. DYNAMIC RECYCLE BIN VAULT (WITH LOCALSTORAGE PERSISTENCE)
   const [recycledItems, setRecycledItems] = useState<any[]>(() => {
@@ -7045,39 +6803,12 @@ export default function App() {
                 !(c.mobile && c.mobile.includes('5777564356'))
               );
 
-              setCustomers(prevLocal => {
-                let merged: any[] = [];
-                if (cleanMongo.length > 0) {
-                  merged = [...cleanMongo];
-                  (prevLocal || []).forEach((loc: any) => {
-                    if (!loc) return;
-                    const locId = (loc.id || '').toString();
-                    const locNum = (loc.customer_number || loc.customerNumber || '').toString();
-                    const locMob = (loc.mobile || '').toString().replace(/\D/g, '');
-                    const exists = merged.some((m: any) => 
-                      (locId && (m.id || '').toString() === locId) ||
-                      (locNum && (m.customer_number || m.customerNumber || '').toString() === locNum) ||
-                      (locMob && locMob.length >= 7 && (m.mobile || '').toString().replace(/\D/g, '').endsWith(locMob.slice(-10)))
-                    );
-                    if (!exists) merged.push(loc);
-                  });
-                } else if (prevLocal && prevLocal.length > 0) {
-                  merged = prevLocal;
-                }
-                const cleanDeduped = dedupeCustomerList(merged);
-                try {
-                  localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
-                  localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
-                } catch (e) {}
-
-                if (cleanDeduped.length > 0) {
-                  setTimeout(() => {
-                    syncAllToMongoDB({ customers: cleanDeduped });
-                  }, 500);
-                }
-
-                return cleanDeduped;
-              });
+              const cleanDeduped = dedupeCustomerList(cleanMongo);
+              setCustomers(cleanDeduped);
+              try {
+                localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
+                localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
+              } catch (e) {}
             }
             if (Array.isArray(mData.leads)) {
               setLeadsList(mData.leads);
@@ -7156,12 +6887,7 @@ export default function App() {
             }
             if (Array.isArray(mData.developers) && mData.developers.length > 0) {
               try {
-                const localDevsStr = localStorage.getItem('swaramayi_developers_v1');
-                const localDevs = localDevsStr ? JSON.parse(localDevsStr) : [];
-                const map = new Map<string, any>();
-                localDevs.forEach((d: any) => map.set(d.id || d.name, d));
-                mData.developers.forEach((d: any) => map.set(d.id || d.name, d));
-                const cleanDevs = Array.from(map.values())
+                const cleanDevs = mData.developers
                   .filter((d: any) => !isItemInRecycledSet(d, recycledSet))
                   .map((d: any) => ({
                     ...d,

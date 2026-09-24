@@ -16925,7 +16925,7 @@ export default function App() {
                   {/* BROKERAGE CHARGES */}
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
-                      8.1 Brokerage Fee (INR)
+                      9. Brokerage Fee (INR)
                     </label>
                     <input 
                       type="number" 
@@ -16939,7 +16939,7 @@ export default function App() {
                   {/* GST RATE */}
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
-                      9. GST Rate Mode
+                      10. GST Rate Mode
                     </label>
                     <select 
                       value={showRevisionModal.revGstPct} 
@@ -16958,7 +16958,7 @@ export default function App() {
                   {/* STAMP DUTY */}
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
-                      10. Stamp Duty Rate
+                      11. Stamp Duty Rate
                     </label>
                     <select 
                       value={showRevisionModal.revStampDutyPct} 
@@ -16978,7 +16978,7 @@ export default function App() {
                   {/* REGISTRATION RATE */}
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
-                      11. Registration Fee Rate
+                      12. Registration Fee Rate
                     </label>
                     <select 
                       value={showRevisionModal.revRegPct} 
@@ -16998,7 +16998,7 @@ export default function App() {
                   {/* SPECIFICATIONS NOTES */}
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
-                      12. Unit & Floor Specification Notes
+                      13. Unit & Floor Specification Notes
                     </label>
                     <input 
                       type="text" 

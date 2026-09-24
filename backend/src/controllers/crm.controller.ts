@@ -18,7 +18,7 @@ function maskEmail(email: string): string {
 
 // 1. Get Customers Master List
 export async function getCustomers(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const user = req.user!;
   let customers = dbStore.data.customers.filter(c => !c.is_deleted);
 
@@ -46,7 +46,7 @@ export async function getCustomers(req: AuthRequest, res: Response) {
 // 2. Duplicate Detection Algorithm
 export async function checkDuplicateCustomer(req: AuthRequest, res: Response) {
   const { mobile, alternate_mobile, email, full_name } = req.body;
-  loadData();
+  await loadData();
 
   if (!mobile && !email && !full_name) {
     return res.status(400).json({ status: 'ERROR', message: 'mobile, email, or full_name is required for duplicate check.' });
@@ -114,7 +114,7 @@ export async function createCustomer(req: AuthRequest, res: Response) {
     return res.status(400).json({ status: 'ERROR', message: 'full_name and mobile are required.' });
   }
 
-  loadData();
+  await loadData();
 
   const cleanMobile = mobile.replace(/\D/g, '');
   const existing = dbStore.data.customers.find(c => c.mobile && c.mobile.replace(/\D/g, '') === cleanMobile);
@@ -234,10 +234,62 @@ export async function createCustomer(req: AuthRequest, res: Response) {
   });
 }
 
+// 3.5. Update Customer Record
+export async function updateCustomer(req: AuthRequest, res: Response) {
+  const { id } = req.params;
+  const updateData = req.body;
+  await loadData();
+
+  const index = dbStore.data.customers.findIndex(c => c.id === id || c.customer_number === id);
+  if (index === -1) {
+    return res.status(404).json({ status: 'ERROR', message: 'Customer not found.' });
+  }
+
+  dbStore.data.customers[index] = {
+    ...dbStore.data.customers[index],
+    ...updateData,
+    updated_at: new Date().toISOString()
+  };
+
+  saveData();
+  logAudit(req.user?.id || null, 'UPDATE_CUSTOMER', 'CUSTOMER', `Customer updated: ${dbStore.data.customers[index].customer_number}`, req.ip);
+
+  return res.json({
+    status: 'SUCCESS',
+    message: 'Customer updated successfully.',
+    data: dbStore.data.customers[index]
+  });
+}
+
+// 3.6. Delete Customer Record
+export async function deleteCustomer(req: AuthRequest, res: Response) {
+  const { id } = req.params;
+  await loadData();
+
+  const customer = dbStore.data.customers.find(c => c.id === id || c.customer_number === id);
+  if (!customer) {
+    return res.status(404).json({ status: 'ERROR', message: 'Customer not found.' });
+  }
+
+  customer.is_deleted = true;
+  customer.updated_at = new Date().toISOString();
+
+  dbStore.data.customers = dbStore.data.customers.filter(c => c.id !== id && c.customer_number !== id);
+
+  saveData();
+  logAudit(req.user?.id || null, 'DELETE_CUSTOMER', 'CUSTOMER', `Customer deleted: ${customer.customer_number}`, req.ip);
+
+  return res.json({
+    status: 'SUCCESS',
+    message: 'Customer deleted successfully.',
+    deleted_id: id
+  });
+}
+
 // 4. Complete Customer 360° Profile Dataset (18 Streams)
 export async function getCustomer360(req: AuthRequest, res: Response) {
   const { id } = req.params;
-  loadData();
+  await loadData();
 
   const customer = dbStore.data.customers.find(c => c.id === id || c.customer_number === id);
   if (!customer) {
@@ -282,7 +334,7 @@ export async function submitTransferRequest(req: AuthRequest, res: Response) {
     return res.status(400).json({ status: 'ERROR', message: 'lead_id and reason are required.' });
   }
 
-  loadData();
+  await loadData();
   const lead = dbStore.data.leads.find(l => l.id === lead_id || l.lead_number === lead_id);
   if (!lead) {
     return res.status(404).json({ status: 'ERROR', message: 'Lead record not found.' });
@@ -322,7 +374,7 @@ export async function handleTransferApproval(req: AuthRequest, res: Response) {
     return res.status(400).json({ status: 'ERROR', message: 'transfer_id and action are required.' });
   }
 
-  loadData();
+  await loadData();
   const transfer = dbStore.data.lead_transfers.find(t => t.id === transfer_id);
   if (!transfer) {
     return res.status(404).json({ status: 'ERROR', message: 'Transfer request not found.' });
@@ -357,7 +409,7 @@ export async function smartSearch(req: AuthRequest, res: Response) {
     return res.status(400).json({ status: 'ERROR', message: 'Query parameter q is required.' });
   }
 
-  loadData();
+  await loadData();
   const queryStr = q.toLowerCase();
 
   const matchingCustomers = dbStore.data.customers.filter(c => 
@@ -388,7 +440,7 @@ import {
 } from '../db/mongoPersistence.js';
 
 export async function getMongoDBSync(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const mongoData = await loadDataFromMongoDB();
   return res.json({
     status: 'SUCCESS',
@@ -593,7 +645,7 @@ export async function purgeRecycledItem(req: AuthRequest, res: Response) {
     return res.status(400).json({ status: 'ERROR', message: 'Item payload is required for purging.' });
   }
 
-  loadData();
+  await loadData();
   await purgeSingleItemFromDB(item);
   await syncToMongoDB(dbStore.data);
 
@@ -605,7 +657,7 @@ export async function purgeRecycledItem(req: AuthRequest, res: Response) {
 
 export async function purgeAllRecycledItems(req: AuthRequest, res: Response) {
   const { items } = req.body;
-  loadData();
+  await loadData();
 
   if (Array.isArray(items) && items.length > 0) {
     for (const item of items) {

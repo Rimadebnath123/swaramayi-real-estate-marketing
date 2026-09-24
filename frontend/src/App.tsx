@@ -4494,7 +4494,7 @@ export default function App() {
   const [customers, setCustomers] = useState<any[]>(() => {
     try {
       let list: any[] = [];
-      const saved = localStorage.getItem('swaramayi_customers_v7_clean');
+      const saved = localStorage.getItem('swaramayi_customers_v7_clean') || localStorage.getItem('swaramayi_customers_master_v3_clean');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -4502,9 +4502,70 @@ export default function App() {
         }
       }
 
+      // Auto-extract customer master entries from individual cost sheets in localStorage if missing
+      try {
+        const csSaved = localStorage.getItem('swaramayi_indiv_cost_sheets_v7_clean') || localStorage.getItem('swaramayi_indiv_cost_sheets_v5_clean');
+        if (csSaved) {
+          const csList = JSON.parse(csSaved);
+          if (Array.isArray(csList)) {
+            csList.forEach((cs: any) => {
+              if (!cs) return;
+              const snap = cs.customerSnapshot || {};
+              const custName = cs.customerName || snap.customerName || cs.name || 'Customer';
+              const custMob = cs.mobile || cs.customerMobile || snap.mobile || '';
+              const cleanMob = custMob ? custMob.replace(/\D/g, '') : '';
+              const custNum = cs.customerNumber || cs.customerId || snap.customerNumber || snap.customerId || (cleanMob ? `SRM-CUS-2026-${cleanMob.slice(-6)}` : `SRM-CUS-2026-000138`);
+              const custEmail = cs.email || cs.customerEmail || snap.email || `${custName.toLowerCase().replace(/\s+/g, '.')}@gmail.com`;
+
+              const exists = list.some((c: any) => 
+                (c.customer_number && c.customer_number === custNum) ||
+                (cleanMob && cleanMob.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '').endsWith(cleanMob.slice(-10))) ||
+                (c.name && custName && c.name.toLowerCase() === custName.toLowerCase()) ||
+                (c.full_name && custName && c.full_name.toLowerCase() === custName.toLowerCase())
+              );
+
+              if (!exists) {
+                list.push({
+                  id: cs.id || `CUS-${custNum}`,
+                  customer_number: custNum,
+                  full_name: custName,
+                  name: custName,
+                  mobile: custMob,
+                  email: custEmail,
+                  city: 'Kolkata',
+                  preferred_location: cs.preferredArea || cs.propertySnapshot?.locality || 'Barasat, Kolkata',
+                  preferredArea: cs.preferredArea || cs.propertySnapshot?.locality || 'Barasat, Kolkata',
+                  property_type: cs.propertyType || cs.propertySnapshot?.property_type || 'Flat / Apartment',
+                  configuration: cs.configuration || cs.propertySnapshot?.configuration || '2BHK',
+                  budget: cs.budget || `₹35L - ₹50L`,
+                  budget_min: cs.budget_min || 2500000,
+                  budget_max: cs.budget_max || 5000000,
+                  purchase_timeline: 'Immediate (< 30 Days)',
+                  loan_required: true,
+                  investment_purpose: 'Self / End Use',
+                  customer_status: 'COST_SHEET_CREATED',
+                  status: 'COST_SHEET_CREATED',
+                  priority: cs.priority || snap.priority || 'HOT',
+                  quality_score: cs.score || snap.score || 88,
+                  source: 'Cost Sheet Generation',
+                  created_at: cs.createdAt || cs.created_at || new Date().toISOString(),
+                  is_deleted: false
+                });
+              }
+            });
+          }
+        }
+      } catch (e) {}
+
       list = list.filter((c: any) => 
+        c &&
         !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000190') &&
         !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
+        !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000189') &&
+        !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000189') &&
+        !(c.name && c.name.toLowerCase().includes('amit sharma')) &&
+        !(c.full_name && c.full_name.toLowerCase().includes('amit sharma')) &&
+        !(c.email && c.email.toLowerCase().includes('amit.sharma@gmail.com')) &&
         !(c.name && c.name.toLowerCase().includes('sunil')) &&
         !(c.full_name && c.full_name.toLowerCase().includes('sunil')) &&
         !(c.email && c.email.toLowerCase().includes('sunil.verma@gmail.com')) &&
@@ -5202,31 +5263,7 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.map((cs: any) => {
-            const csId = (cs.costSheetId || cs.id || '').toString().toUpperCase();
-            const csMob = (cs.customerSnapshot?.mobile || '').toString().replace(/\D/g, '');
-            const mId = (cs.matchId || '').toString().toUpperCase();
-            if (
-              csId === 'COST-SHEET-2026-000001' || 
-              csId === 'COST-SHEET-2026-000002' || 
-              csId === 'COST-SHEET-2026-000003' ||
-              mId.includes('988588') ||
-              csMob === '9432328947'
-            ) {
-              return {
-                ...cs,
-                customerId: 'SRM-CUS-2026-000189',
-                customerSnapshot: {
-                  ...cs.customerSnapshot,
-                  customerName: 'Avishek Das',
-                  customerNumber: 'SRM-CUS-2026-000189',
-                  mobile: '9432328947',
-                  email: 'avishek.das@gmail.com'
-                }
-              };
-            }
-            return cs;
-          });
+          return parsed;
         }
       }
     } catch (e) {
@@ -5899,6 +5936,9 @@ export default function App() {
       setSelectedPropertyIds([]);
       setSelectedCust(null);
       setActiveSelectionRecord(null);
+      localStorage.removeItem('swaramayi_customers_v7_clean');
+      localStorage.removeItem('swaramayi_customers_master_v3_clean');
+      localStorage.removeItem('swaramayi_indiv_cost_sheets_v7_clean');
       localStorage.removeItem('swaramayi_indiv_cost_sheets_v5_clean');
       localStorage.removeItem('swaramayi_indiv_cost_sheets_v4');
       localStorage.removeItem('swaramayi_matching_queue_v4_clean');
@@ -5911,7 +5951,20 @@ export default function App() {
       localStorage.removeItem('swaramayi_visit_plans_v4_clean');
       localStorage.removeItem('swaramayi_sourcing_requests_v1');
       localStorage.removeItem('swaramayi_developers_v1');
-      alert('🗑️ All current records inside have been deleted! Workspace is now 100% clean.');
+
+      syncAllToMongoDB({
+        customers: [],
+        leads: [],
+        cost_sheets: [],
+        agreements: [],
+        bookings: [],
+        invoices: [],
+        site_visits: [],
+        matching_requests: [],
+        developers: []
+      });
+
+      alert('🗑️ All current records inside have been deleted! Workspace and MongoDB Atlas are now 100% clean.');
     }
   };
 
@@ -6889,22 +6942,54 @@ export default function App() {
               } catch (e) {}
             }
             if (Array.isArray(mData.customers)) {
-              const clean = mData.customers.filter((c: any) => 
+              const cleanMongo = mData.customers.filter((c: any) => 
                 c &&
                 !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000190') &&
                 !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
+                !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000189') &&
+                !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000189') &&
+                !(c.name && c.name.toLowerCase().includes('amit sharma')) &&
+                !(c.full_name && c.full_name.toLowerCase().includes('amit sharma')) &&
+                !(c.email && c.email.toLowerCase().includes('amit.sharma@gmail.com')) &&
                 !(c.name && c.name.toLowerCase().includes('sunil')) &&
                 !(c.full_name && c.full_name.toLowerCase().includes('sunil')) &&
                 !(c.email && c.email.toLowerCase().includes('sunil.verma@gmail.com')) &&
                 !(c.mobile && c.mobile.includes('5777564356'))
               );
 
-              const cleanDeduped = dedupeCustomerList(clean);
-              setCustomers(cleanDeduped);
-              try {
-                localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
-                localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
-              } catch (e) {}
+              setCustomers(prevLocal => {
+                let merged: any[] = [];
+                if (cleanMongo.length > 0) {
+                  merged = [...cleanMongo];
+                  (prevLocal || []).forEach((loc: any) => {
+                    if (!loc) return;
+                    const locId = (loc.id || '').toString();
+                    const locNum = (loc.customer_number || loc.customerNumber || '').toString();
+                    const locMob = (loc.mobile || '').toString().replace(/\D/g, '');
+                    const exists = merged.some((m: any) => 
+                      (locId && (m.id || '').toString() === locId) ||
+                      (locNum && (m.customer_number || m.customerNumber || '').toString() === locNum) ||
+                      (locMob && locMob.length >= 7 && (m.mobile || '').toString().replace(/\D/g, '').endsWith(locMob.slice(-10)))
+                    );
+                    if (!exists) merged.push(loc);
+                  });
+                } else if (prevLocal && prevLocal.length > 0) {
+                  merged = prevLocal;
+                }
+                const cleanDeduped = dedupeCustomerList(merged);
+                try {
+                  localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
+                  localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
+                } catch (e) {}
+
+                if (cleanDeduped.length > 0) {
+                  setTimeout(() => {
+                    syncAllToMongoDB({ customers: cleanDeduped });
+                  }, 500);
+                }
+
+                return cleanDeduped;
+              });
             }
             if (Array.isArray(mData.leads)) {
               setLeadsList(mData.leads);

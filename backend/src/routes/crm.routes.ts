@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { 
-  getCustomers, checkDuplicateCustomer, createCustomer, getCustomer360, 
+  getCustomers, checkDuplicateCustomer, createCustomer, updateCustomer, deleteCustomer, getCustomer360, 
   submitTransferRequest, handleTransferApproval, smartSearch,
   getMongoDBSync, syncMongoDB, purgeRecycledItem, purgeAllRecycledItems
 } from '../controllers/crm.controller.js';
@@ -11,6 +11,8 @@ const router = Router();
 router.get('/customers', verifyToken, getCustomers);
 router.post('/customers/check-duplicate', verifyToken, checkDuplicateCustomer);
 router.post('/customers', verifyToken, createCustomer);
+router.put('/customers/:id', verifyToken, updateCustomer);
+router.delete('/customers/:id', verifyToken, deleteCustomer);
 router.get('/customers/:id/360', verifyToken, getCustomer360);
 
 router.post('/leads/transfer-request', verifyToken, submitTransferRequest);

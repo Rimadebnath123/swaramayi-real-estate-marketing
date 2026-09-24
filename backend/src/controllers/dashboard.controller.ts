@@ -12,8 +12,8 @@ function applyGlobalFilters(data: any, filters: {
 }) {
   const { branch, team, salesperson } = filters;
   
-  let customers = data.customers || [];
-  let leads = data.leads || [];
+  let customers = (data.customers || []).filter((c: any) => c && !c.is_deleted);
+  let leads = (data.leads || []).filter((l: any) => l && !l.is_deleted);
   let properties = data.properties || [];
   let siteVisits = data.site_visits || [];
   let bookings = data.bookings || [];
@@ -44,7 +44,7 @@ function applyGlobalFilters(data: any, filters: {
 
 // 1. MAIN OVERVIEW & TOP-LEVEL KPI CARDS
 export async function getDashboardOverview(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
   const filtered = applyGlobalFilters(data, req.query);
 
@@ -88,7 +88,7 @@ export async function getDashboardOverview(req: AuthRequest, res: Response) {
 
 // 2. VISUAL 11-STAGE SALES FUNNEL & DRILL-DOWN
 export async function getSalesFunnel(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
   const filtered = applyGlobalFilters(data, req.query);
 
@@ -119,7 +119,7 @@ export async function getSalesFunnel(req: AuthRequest, res: Response) {
 
 // 3. CUSTOMER REQUIREMENT & SMART PROPERTY MATCHING ENGINE
 export async function getCustomerRequirementsIntelligence(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
   const filtered = applyGlobalFilters(data, req.query);
 
@@ -171,7 +171,7 @@ export async function getCustomerRequirementsIntelligence(req: AuthRequest, res:
 
 // 4. PROPERTY STOCK, AGING & INVENTORY ANALYTICS
 export async function getPropertyStockAnalytics(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
   const filtered = applyGlobalFilters(data, req.query);
 
@@ -229,7 +229,7 @@ export async function getPropertyStockAnalytics(req: AuthRequest, res: Response)
 
 // 5. FOLLOW-UP CONTROL CENTER & HOT LEAD CONTROL
 export async function getFollowUpControlCenter(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
 
   const overdue = data.followups.filter((f: any) => f.status === 'OVERDUE');
@@ -271,7 +271,7 @@ export async function getFollowUpControlCenter(req: AuthRequest, res: Response) 
 
 // 6. SITE VISIT DASHBOARD & CONVERSION
 export async function getSiteVisitIntelligence(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
 
   const visits = data.site_visits || [];
@@ -306,7 +306,7 @@ export async function getSiteVisitIntelligence(req: AuthRequest, res: Response) 
 
 // 7. BOOKING, BROKERAGE & PAYMENT INTELLIGENCE
 export async function getBookingAndBrokerageIntelligence(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
 
   const expectedBrokerage = data.brokerage_records.reduce((sum: number, b: any) => sum + (b.total_commission_amount || 0), 0);
@@ -342,7 +342,7 @@ export async function getBookingAndBrokerageIntelligence(req: AuthRequest, res: 
 
 // 8. TEAM PERFORMANCE & COMPARISON
 export async function getTeamPerformanceAnalytics(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
 
   const salespersonPerformance = [
@@ -367,7 +367,7 @@ export async function getTeamPerformanceAnalytics(req: AuthRequest, res: Respons
 
 // 9. DEVELOPER & PROJECT PERFORMANCE
 export async function getDeveloperAndProjectPerformance(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
 
   const developers = [
@@ -385,7 +385,7 @@ export async function getDeveloperAndProjectPerformance(req: AuthRequest, res: R
 
 // 10. LEAD SOURCE & MARKETING ROI
 export async function getLeadSourceAndMarketingROI(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
 
   return res.json({
@@ -398,7 +398,7 @@ export async function getLeadSourceAndMarketingROI(req: AuthRequest, res: Respon
 
 // 11. "NEEDS YOUR ATTENTION" ACTION CENTER
 export async function getActionCenter(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
 
   const actionItems = [
@@ -419,7 +419,7 @@ export async function getActionCenter(req: AuthRequest, res: Response) {
 
 // 12. SECURITY & EMPLOYEE ACTIVITY LOGS
 export async function getSecurityAndActivityLogs(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
 
   return res.json({
@@ -434,7 +434,7 @@ export async function getSecurityAndActivityLogs(req: AuthRequest, res: Response
 
 // 13. PREDICTIVE FORECASTING
 export async function getForecasting(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
 
   return res.json({
@@ -451,7 +451,7 @@ export async function getForecasting(req: AuthRequest, res: Response) {
 
 // 14. CUSTOMER 360 DEGREE DETAILS
 export async function getCustomer360(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
   const { id } = req.params;
 
@@ -477,7 +477,7 @@ export async function getCustomer360(req: AuthRequest, res: Response) {
 
 // 15. PROPERTY 360 DEGREE DETAILS
 export async function getProperty360(req: AuthRequest, res: Response) {
-  loadData();
+  await loadData();
   const data = dbStore.data;
   const { id } = req.params;
 

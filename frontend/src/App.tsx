@@ -3751,7 +3751,7 @@ export default function App() {
       referral_name: '',
       referral_source: '',
       investment_purpose: 'BUY / OUTRIGHT PURCHASE',
-      property_type: 'Flat / Apartment',
+      property_type: '',
       configuration: '2BHK',
       preferredArea: '',
       secondary_areas: '',
@@ -3818,7 +3818,7 @@ export default function App() {
       referral_name: '',
       referral_source: '',
       investment_purpose: 'BUY / OUTRIGHT PURCHASE',
-      property_type: 'Flat / Apartment',
+      property_type: '',
       configuration: '2BHK',
       preferredArea: '',
       secondary_areas: '',
@@ -13307,8 +13307,8 @@ export default function App() {
                       <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
                         Property Category Type (Multi-Select Allowed - Click to Toggle) *
                       </label>
-                      <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px', maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {[
+                      {(() => {
+                        const allCatOptions = [
                           "🏢 Flat / Apartment (New / Builder)",
                           "🔄 Flat / Apartment (Resale)",
                           "🔑 Flat / Apartment (For Rent)",
@@ -13323,36 +13323,48 @@ export default function App() {
                           "🛌 PG / Co-Living Space (For Rent)",
                           "📐 Open Plot / Land (New / Builder)",
                           "📐 Open Plot / Land (Resale)"
-                        ].map(cat => {
-                          const selectedList = (newCustomerForm.property_type || '').split(',').map(s => s.trim()).filter(Boolean);
-                          const cleanCatName = (str: string) => str.replace(/^[^\s]+\s*/, '').trim();
-                          const isChecked = selectedList.some(s => s === cat || cleanCatName(s) === cleanCatName(cat));
-                          return (
-                            <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: isChecked ? '#38bdf8' : isLight ? '#0f172a' : '#cbd5e1', fontWeight: isChecked ? '800' : '500', cursor: 'pointer', background: isChecked ? 'rgba(56, 189, 248, 0.12)' : 'transparent', padding: '5px 8px', borderRadius: '4px' }}>
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={(e) => {
-                                  let updated: string[];
-                                  if (e.target.checked) {
-                                    updated = [...selectedList.filter(item => item !== cat && cleanCatName(item) !== cleanCatName(cat)), cat];
-                                  } else {
-                                    updated = selectedList.filter(item => item !== cat && cleanCatName(item) !== cleanCatName(cat));
-                                  }
-                                  setNewCustomerForm({ ...newCustomerForm, property_type: updated.join(', ') });
-                                }}
-                                style={{ accentColor: '#38bdf8', width: '15px', height: '15px' }}
-                              />
-                              <span>{cat}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                      {newCustomerForm.property_type && (
-                        <div style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: '800', marginTop: '4px' }}>
-                          ✓ Selected Categories: {newCustomerForm.property_type}
-                        </div>
-                      )}
+                        ];
+                        const cleanCatName = (str: string) => str.replace(/^[^\s]+\s*/, '').trim();
+                        const selectedList = (newCustomerForm.property_type || '').split(',').map(s => s.trim()).filter(Boolean);
+
+                        const activeCheckedCats = allCatOptions.filter(cat =>
+                          selectedList.some(s => s === cat || cleanCatName(s) === cleanCatName(cat) || cleanCatName(s) === cat)
+                        );
+
+                        return (
+                          <>
+                            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px', maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {allCatOptions.map(cat => {
+                                const isChecked = activeCheckedCats.some(c => c === cat || cleanCatName(c) === cleanCatName(cat));
+                                return (
+                                  <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: isChecked ? '#38bdf8' : isLight ? '#0f172a' : '#cbd5e1', fontWeight: isChecked ? '800' : '500', cursor: 'pointer', background: isChecked ? 'rgba(56, 189, 248, 0.12)' : 'transparent', padding: '5px 8px', borderRadius: '4px' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        let updated: string[];
+                                        if (e.target.checked) {
+                                          updated = [...activeCheckedCats.filter(item => item !== cat && cleanCatName(item) !== cleanCatName(cat)), cat];
+                                        } else {
+                                          updated = activeCheckedCats.filter(item => item !== cat && cleanCatName(item) !== cleanCatName(cat));
+                                        }
+                                        setNewCustomerForm({ ...newCustomerForm, property_type: updated.join(', ') });
+                                      }}
+                                      style={{ accentColor: '#38bdf8', width: '15px', height: '15px' }}
+                                    />
+                                    <span>{cat}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            {activeCheckedCats.length > 0 && (
+                              <div style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: '800', marginTop: '4px' }}>
+                                ✓ Selected Categories: {activeCheckedCats.map(c => cleanCatName(c)).join(', ')}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
 
                     <div>
@@ -13996,8 +14008,8 @@ export default function App() {
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
                       Property Category Type (Multi-Select Allowed - Click Checkboxes to Select Multiple) *
                     </label>
-                    <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px', maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {[
+                    {(() => {
+                      const allCatOptions = [
                         "🏢 Flat / Apartment (New / Builder)",
                         "🔄 Flat / Apartment (Resale)",
                         "🔑 Flat / Apartment (For Rent)",
@@ -14012,36 +14024,48 @@ export default function App() {
                         "🛌 PG / Co-Living Space (For Rent)",
                         "📐 Open Plot / Land (New / Builder)",
                         "📐 Open Plot / Land (Resale)"
-                      ].map(cat => {
-                        const selectedList = (newCustomerForm.property_type || '').split(',').map(s => s.trim()).filter(Boolean);
-                        const cleanCatName = (str: string) => str.replace(/^[^\s]+\s*/, '').trim();
-                        const isChecked = selectedList.some(s => s === cat || cleanCatName(s) === cleanCatName(cat));
-                        return (
-                          <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: isChecked ? '#38bdf8' : isLight ? '#0f172a' : '#cbd5e1', fontWeight: isChecked ? '800' : '500', cursor: 'pointer', background: isChecked ? 'rgba(56, 189, 248, 0.14)' : 'transparent', padding: '5px 8px', borderRadius: '4px' }}>
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                let updated: string[];
-                                if (e.target.checked) {
-                                  updated = [...selectedList.filter(item => item !== cat && cleanCatName(item) !== cleanCatName(cat)), cat];
-                                } else {
-                                  updated = selectedList.filter(item => item !== cat && cleanCatName(item) !== cleanCatName(cat));
-                                }
-                                setNewCustomerForm({ ...newCustomerForm, property_type: updated.join(', ') });
-                              }}
-                              style={{ accentColor: '#38bdf8', width: '15px', height: '15px' }}
-                            />
-                            <span>{cat}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                    {newCustomerForm.property_type && (
-                      <div style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: '800', marginTop: '4px' }}>
-                        ✓ Selected Categories: {newCustomerForm.property_type}
-                      </div>
-                    )}
+                      ];
+                      const cleanCatName = (str: string) => str.replace(/^[^\s]+\s*/, '').trim();
+                      const selectedList = (newCustomerForm.property_type || '').split(',').map(s => s.trim()).filter(Boolean);
+
+                      const activeCheckedCats = allCatOptions.filter(cat =>
+                        selectedList.some(s => s === cat || cleanCatName(s) === cleanCatName(cat) || cleanCatName(s) === cat)
+                      );
+
+                      return (
+                        <>
+                          <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px', maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {allCatOptions.map(cat => {
+                              const isChecked = activeCheckedCats.some(c => c === cat || cleanCatName(c) === cleanCatName(cat));
+                              return (
+                                <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: isChecked ? '#38bdf8' : isLight ? '#0f172a' : '#cbd5e1', fontWeight: isChecked ? '800' : '500', cursor: 'pointer', background: isChecked ? 'rgba(56, 189, 248, 0.14)' : 'transparent', padding: '5px 8px', borderRadius: '4px' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      let updated: string[];
+                                      if (e.target.checked) {
+                                        updated = [...activeCheckedCats.filter(item => item !== cat && cleanCatName(item) !== cleanCatName(cat)), cat];
+                                      } else {
+                                        updated = activeCheckedCats.filter(item => item !== cat && cleanCatName(item) !== cleanCatName(cat));
+                                      }
+                                      setNewCustomerForm({ ...newCustomerForm, property_type: updated.join(', ') });
+                                    }}
+                                    style={{ accentColor: '#38bdf8', width: '15px', height: '15px' }}
+                                  />
+                                  <span>{cat}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          {activeCheckedCats.length > 0 && (
+                            <div style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: '800', marginTop: '4px' }}>
+                              ✓ Selected Categories: {activeCheckedCats.map(c => cleanCatName(c)).join(', ')}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -20015,8 +20039,8 @@ export default function App() {
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
                       Property Category Type (Multi-Select Allowed - Click Checkboxes to Select Multiple) *
                     </label>
-                    <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px', maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {[
+                    {(() => {
+                      const allCatOptions = [
                         "🏢 Flat / Apartment (New / Builder)",
                         "🔄 Flat / Apartment (Resale)",
                         "🔑 Flat / Apartment (For Rent)",
@@ -20031,36 +20055,48 @@ export default function App() {
                         "🛌 PG / Co-Living Space (For Rent)",
                         "📐 Open Plot / Land (New / Builder)",
                         "📐 Open Plot / Land (Resale)"
-                      ].map(cat => {
-                        const selectedList = (updateReqForm.propertyCategory || '').split(',').map(s => s.trim()).filter(Boolean);
-                        const cleanCatName = (str: string) => str.replace(/^[^\s]+\s*/, '').trim();
-                        const isChecked = selectedList.some(s => s === cat || cleanCatName(s) === cleanCatName(cat));
-                        return (
-                          <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: isChecked ? '#38bdf8' : isLight ? '#0f172a' : '#cbd5e1', fontWeight: isChecked ? '800' : '500', cursor: 'pointer', background: isChecked ? 'rgba(56, 189, 248, 0.14)' : 'transparent', padding: '4px 8px', borderRadius: '4px' }}>
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                let updated: string[];
-                                if (e.target.checked) {
-                                  updated = [...selectedList.filter(item => item !== cat && cleanCatName(item) !== cleanCatName(cat)), cat];
-                                } else {
-                                  updated = selectedList.filter(item => item !== cat && cleanCatName(item) !== cleanCatName(cat));
-                                }
-                                setUpdateReqForm({ ...updateReqForm, propertyCategory: updated.join(', ') });
-                              }}
-                              style={{ accentColor: '#38bdf8', width: '15px', height: '15px' }}
-                            />
-                            <span>{cat}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                    {updateReqForm.propertyCategory && (
-                      <div style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: '800', marginTop: '4px' }}>
-                        ✓ Selected Categories: {updateReqForm.propertyCategory}
-                      </div>
-                    )}
+                      ];
+                      const cleanCatName = (str: string) => str.replace(/^[^\s]+\s*/, '').trim();
+                      const selectedList = (updateReqForm.propertyCategory || '').split(',').map(s => s.trim()).filter(Boolean);
+
+                      const activeCheckedCats = allCatOptions.filter(cat =>
+                        selectedList.some(s => s === cat || cleanCatName(s) === cleanCatName(cat) || cleanCatName(s) === cat)
+                      );
+
+                      return (
+                        <>
+                          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px', maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {allCatOptions.map(cat => {
+                              const isChecked = activeCheckedCats.some(c => c === cat || cleanCatName(c) === cleanCatName(cat));
+                              return (
+                                <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: isChecked ? '#38bdf8' : isLight ? '#0f172a' : '#cbd5e1', fontWeight: isChecked ? '800' : '500', cursor: 'pointer', background: isChecked ? 'rgba(56, 189, 248, 0.14)' : 'transparent', padding: '4px 8px', borderRadius: '4px' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      let updated: string[];
+                                      if (e.target.checked) {
+                                        updated = [...activeCheckedCats.filter(item => item !== cat && cleanCatName(item) !== cleanCatName(cat)), cat];
+                                      } else {
+                                        updated = activeCheckedCats.filter(item => item !== cat && cleanCatName(item) !== cleanCatName(cat));
+                                      }
+                                      setUpdateReqForm({ ...updateReqForm, propertyCategory: updated.join(', ') });
+                                    }}
+                                    style={{ accentColor: '#38bdf8', width: '15px', height: '15px' }}
+                                  />
+                                  <span>{cat}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          {activeCheckedCats.length > 0 && (
+                            <div style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: '800', marginTop: '4px' }}>
+                              ✓ Selected Categories: {activeCheckedCats.map(c => cleanCatName(c)).join(', ')}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

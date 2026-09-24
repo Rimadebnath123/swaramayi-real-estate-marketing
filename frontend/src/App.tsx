@@ -6730,7 +6730,7 @@ export default function App() {
             if (Array.isArray(mData.users) && mData.users.length > 0) setUsers(mData.users);
             if (Array.isArray(mData.teams) && mData.teams.length > 0) setTeams(mData.teams);
             if (Array.isArray(mData.branches) && mData.branches.length > 0) setBranches(mData.branches);
-            if (Array.isArray(mData.properties) && mData.properties.length > 0) {
+            if (Array.isArray(mData.properties)) {
               const sanitizedProps = mData.properties
                 .filter((p: any) => !isItemInRecycledSet(p, recycledSet))
                 .map((p: any) => {
@@ -6853,7 +6853,7 @@ export default function App() {
               });
               setScheduledVisits(cleanVisits);
             }
-            if (Array.isArray(mData.matching_requests) && mData.matching_requests.length > 0) {
+            if (Array.isArray(mData.matching_requests)) {
               const cleanMatching = mData.matching_requests.filter((r: any) => {
                 const name = (r.customerName || r.customer_name || r.name || '').toString().toLowerCase();
                 const mob = (r.mobile || r.customer_mobile || r.phone || '').toString().replace(/\D/g, '');
@@ -6884,7 +6884,7 @@ export default function App() {
                 localStorage.setItem('swaramayi_sourcing_requests_v1', JSON.stringify(mData.sourcing_requests));
               } catch (e) {}
             }
-            if (Array.isArray(mData.developers) && mData.developers.length > 0) {
+            if (Array.isArray(mData.developers)) {
               try {
                 const cleanDevs = mData.developers
                   .filter((d: any) => !isItemInRecycledSet(d, recycledSet))

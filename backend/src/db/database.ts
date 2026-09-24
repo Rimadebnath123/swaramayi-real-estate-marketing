@@ -509,25 +509,19 @@ export async function loadData() {
   try {
     const mongoData = await loadDataFromMongoDB();
     if (mongoData) {
-      if (mongoData.users && mongoData.users.length > 0) {
-        dbStore.data.users = mongoData.users as any;
-      }
-      if (mongoData.teams && mongoData.teams.length > 0) dbStore.data.teams = mongoData.teams as any;
-      if (mongoData.branches && mongoData.branches.length > 0) dbStore.data.branches = mongoData.branches as any;
-      if (mongoData.properties) {
-        dbStore.data.properties = mongoData.properties as any;
-      }
-      if (mongoData.customers && mongoData.customers.length > 0) dbStore.data.customers = mongoData.customers as any;
-      if (mongoData.leads && mongoData.leads.length > 0) dbStore.data.leads = mongoData.leads as any;
-      if (mongoData.agreements && mongoData.agreements.length > 0) dbStore.data.agreements = mongoData.agreements as any;
-      if (mongoData.bookings && mongoData.bookings.length > 0) dbStore.data.bookings = mongoData.bookings as any;
-      if (mongoData.invoices && mongoData.invoices.length > 0) dbStore.data.invoices = mongoData.invoices as any;
-      if (mongoData.site_visits && mongoData.site_visits.length > 0) dbStore.data.site_visits = mongoData.site_visits as any;
-      if (mongoData.matching_requests && mongoData.matching_requests.length > 0) (dbStore.data as any).matching_requests = mongoData.matching_requests as any;
-      if (mongoData.developers && mongoData.developers.length > 0) (dbStore.data as any).developers = mongoData.developers as any;
-      if (mongoData.rating_invites && mongoData.rating_invites.length > 0) {
-        (dbStore.data as any).rating_invites = mongoData.rating_invites as any;
-      }
+      if (Array.isArray(mongoData.users) && mongoData.users.length > 0) dbStore.data.users = mongoData.users as any;
+      if (Array.isArray(mongoData.teams)) dbStore.data.teams = mongoData.teams as any;
+      if (Array.isArray(mongoData.branches)) dbStore.data.branches = mongoData.branches as any;
+      if (Array.isArray(mongoData.properties)) dbStore.data.properties = mongoData.properties as any;
+      if (Array.isArray(mongoData.customers)) dbStore.data.customers = mongoData.customers as any;
+      if (Array.isArray(mongoData.leads)) dbStore.data.leads = mongoData.leads as any;
+      if (Array.isArray(mongoData.agreements)) dbStore.data.agreements = mongoData.agreements as any;
+      if (Array.isArray(mongoData.bookings)) dbStore.data.bookings = mongoData.bookings as any;
+      if (Array.isArray(mongoData.invoices)) dbStore.data.invoices = mongoData.invoices as any;
+      if (Array.isArray(mongoData.site_visits)) dbStore.data.site_visits = mongoData.site_visits as any;
+      if (Array.isArray(mongoData.matching_requests)) (dbStore.data as any).matching_requests = mongoData.matching_requests as any;
+      if (Array.isArray(mongoData.developers)) (dbStore.data as any).developers = mongoData.developers as any;
+      if (Array.isArray(mongoData.rating_invites)) (dbStore.data as any).rating_invites = mongoData.rating_invites as any;
     }
   } catch (err) {}
 }

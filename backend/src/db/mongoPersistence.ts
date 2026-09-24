@@ -187,7 +187,7 @@ export async function loadDataFromMongoDB() {
     console.log(`📥 Loaded existing data from MongoDB Atlas: ${mongoUsers.length} users, ${mongoTeams.length} teams, ${mongoBranches.length} branches, ${mongoProperties.length} properties, ${mongoCustomers.length} customers, ${mongoDevelopers.length} developers, ${mongoRatingInvites.length} rating invites`);
 
     return {
-      users: mongoUsers.length > 0 ? mongoUsers : null,
+      users: mongoUsers,
       properties: mongoProperties,
       customers: mongoCustomers,
       leads: mongoLeads,
@@ -197,8 +197,8 @@ export async function loadDataFromMongoDB() {
       site_visits: mongoSiteVisits,
       brokerage_records: mongoBrokerage,
       followups: mongoFollowups,
-      teams: mongoTeams.length > 0 ? mongoTeams : null,
-      branches: mongoBranches.length > 0 ? mongoBranches : null,
+      teams: mongoTeams,
+      branches: mongoBranches,
       cost_sheets: mongoCostSheets,
       matching_requests: mongoMatchingRequests,
       pva_agreements: mongoPvaAgreements,

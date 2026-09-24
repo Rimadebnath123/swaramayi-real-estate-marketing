@@ -5025,7 +5025,10 @@ export default function App() {
     const infraNum = parsePriceToNumeric(prop.legal_doc_charge || prop.infrastructureCharge || prop.infra_legal_fees || prop.infrastructure_charge || prop.legal_charge || prop.infra_legal || 0);
     const brokerageNum = parsePriceToNumeric(prop.brokerage_charge || prop.brokerage_amount || prop.brokerage || prop.brokerage_fee || 0);
     const brokeragePct = parsePct(prop.brokerage_pct || prop.brokerage_percent, 0);
-    const computedBrokerage = brokerageNum > 0 ? brokerageNum : (brokeragePct > 0 && basePriceNum > 0 ? Math.round(basePriceNum * (brokeragePct / 100)) : 0);
+    
+    // Auto-calculate Brokerage Fee on (Base Price + Floor Rise + PLC + Parking)
+    const baseSumForBrok = basePriceNum + floorRiseNum + plcNum + parkingNum;
+    const computedBrokerage = brokeragePct > 0 && baseSumForBrok > 0 ? Math.round(baseSumForBrok * (brokeragePct / 100)) : brokerageNum;
 
     const subtotalBeforeTax = basePriceNum + floorRiseNum + plcNum + parkingNum + clubNum + maintenanceNum + infraNum + computedBrokerage;
 
@@ -5157,6 +5160,7 @@ export default function App() {
       ? parsePriceToNumeric(matchedProp.infra_legal_fees || matchedProp.infrastructure_charge)
       : (pBreakup.infrastructureStr && pBreakup.infrastructureStr !== 'N/A' && pBreakup.infrastructureStr !== '₹0' ? parsePriceToNumeric(pBreakup.infrastructureStr) : 0);
 
+    const brokeragePct = ps.brokeragePct !== undefined ? ps.brokeragePct : (matchedProp?.brokerage_pct || 0);
     const brokerage = (matchedProp && (matchedProp.brokerage_charge !== undefined || matchedProp.brokerage !== undefined))
       ? parsePriceToNumeric(matchedProp.brokerage_charge || matchedProp.brokerage)
       : (ps.brokerageCharge || (pBreakup.brokerageStr && pBreakup.brokerageStr !== 'N/A' && !pBreakup.brokerageStr.includes('Zero') ? parsePriceToNumeric(pBreakup.brokerageStr) : 0));
@@ -5184,6 +5188,7 @@ export default function App() {
       revClub: clubCharge,
       revMaintenance: maintenance,
       revInfraLegal: infraLegal,
+      revBrokeragePct: brokeragePct,
       revBrokerage: brokerage,
       revDiscount: discountAmount,
       revGstPct: gstPct,
@@ -5653,8 +5658,11 @@ export default function App() {
     const club = form.revClub || 0;
     const maint = form.revMaintenance || 0;
     const infra = form.revInfraLegal || 0;
-    const brok = form.revBrokerage || 0;
     const disc = form.revDiscount || 0;
+
+    const brokBaseSum = base + floor + plc + park;
+    const brokPct = form.revBrokeragePct !== undefined ? form.revBrokeragePct : 0;
+    const brok = (brokPct && brokPct > 0) ? Math.round((brokBaseSum * brokPct) / 100) : (form.revBrokerage || 0);
 
     const subtotal = Math.max(0, (base + floor + plc + park + club + maint + infra + brok) - disc);
     const gstPct = form.revGstPct !== undefined ? form.revGstPct : 5;
@@ -5666,7 +5674,7 @@ export default function App() {
     const reg = Math.round((subtotal * regPct) / 100);
     const grandTotal = subtotal + gst + stamp + reg;
 
-    return { subtotal, gst, stamp, reg, grandTotal };
+    return { subtotal, gst, stamp, reg, grandTotal, brok };
   };
 
   // EXECUTE COST SHEET EDIT / REVISION (FULL DETAILS REVISION - V02, V03 OR IN-PLACE EDIT)
@@ -5681,6 +5689,10 @@ export default function App() {
     const liveCalc = calculateRevisionLiveTotals(form);
     const oldTotalStr = costSheet.formattedPriceBreakup?.totalEstimatedCostStr || formatIndianRupees(costSheet.pricingSnapshot?.totalEstimatedCost || 0);
 
+    const brokBaseSum = form.revBasePrice + form.revFloorRise + form.revPlc + form.revParking;
+    const brokPct = form.revBrokeragePct !== undefined ? form.revBrokeragePct : 0;
+    const finalBrokNum = (brokPct > 0) ? Math.round((brokBaseSum * brokPct) / 100) : (form.revBrokerage || 0);
+
     // Detect changed fields for audit trail
     const changedFields: string[] = [];
     const origPs = costSheet.pricingSnapshot || {};
@@ -5691,7 +5703,7 @@ export default function App() {
     if (form.revClub !== origPs.clubCharge) changedFields.push('Clubhouse Fee');
     if (form.revMaintenance !== origPs.maintenance) changedFields.push('Maintenance Advance');
     if (form.revInfraLegal !== ((origPs.infrastructureCharge || 0) + (origPs.legalCharge || 0))) changedFields.push('Infra & Legal');
-    if (form.revBrokerage !== origPs.brokerageCharge) changedFields.push('Brokerage Charge');
+    if (finalBrokNum !== origPs.brokerageCharge || brokPct !== origPs.brokeragePct) changedFields.push('Brokerage Charge');
     if (form.revDiscount !== origPs.discountAmount) changedFields.push('Special Discount');
     if (form.revGstPct !== origPs.gstPct) changedFields.push('GST Rate');
     if (form.revStampDutyPct !== origPs.stampDutyPct) changedFields.push('Stamp Duty Rate');
@@ -5734,7 +5746,8 @@ export default function App() {
         clubCharge: form.revClub,
         maintenance: form.revMaintenance,
         infrastructureCharge: form.revInfraLegal,
-        brokerageCharge: form.revBrokerage,
+        brokeragePct: brokPct,
+        brokerageCharge: finalBrokNum,
         discountAmount: form.revDiscount,
         gstPct: form.revGstPct,
         gstAmount: liveCalc.gst,
@@ -5753,7 +5766,7 @@ export default function App() {
         clubStr: formatIndianRupees(form.revClub),
         maintenanceStr: formatIndianRupees(form.revMaintenance),
         infrastructureStr: formatIndianRupees(form.revInfraLegal),
-        brokerageStr: form.revBrokerage > 0 ? formatIndianRupees(form.revBrokerage) : '0% (Zero Brokerage for Buyer)',
+        brokerageStr: finalBrokNum > 0 ? `${formatIndianRupees(finalBrokNum)}${brokPct > 0 ? ` (${brokPct}%)` : ''}` : '0% (Zero Brokerage for Buyer)',
         legalStr: 'Included',
         otherStr: 'N/A',
         discountStr: form.revDiscount > 0 ? formatIndianRupees(form.revDiscount) : 'N/A',
@@ -16922,18 +16935,63 @@ export default function App() {
                     />
                   </div>
 
-                  {/* BROKERAGE CHARGES */}
+                  {/* BROKERAGE RATE SELECTOR */}
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
-                      9. Brokerage Fee (INR)
+                      9. Brokerage Rate Mode (%)
+                    </label>
+                    <select 
+                      value={showRevisionModal.revBrokeragePct !== undefined ? showRevisionModal.revBrokeragePct : 0} 
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        const pct = isNaN(val) ? 0 : val;
+                        const baseSum = (showRevisionModal.revBasePrice || 0) + (showRevisionModal.revFloorRise || 0) + (showRevisionModal.revPlc || 0) + (showRevisionModal.revParking || 0);
+                        const autoAmt = pct > 0 ? Math.round((baseSum * pct) / 100) : (pct === 0 ? 0 : (showRevisionModal.revBrokerage || 0));
+                        setShowRevisionModal({ 
+                          ...showRevisionModal, 
+                          revBrokeragePct: pct,
+                          revBrokerage: autoAmt
+                        });
+                      }} 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700' }}
+                    >
+                      <option value={0}>0.0% (Zero Brokerage for Buyer)</option>
+                      <option value={1}>1.0% Buyer Consultancy Fee</option>
+                      <option value={2}>2.0% Standard Agency Brokerage</option>
+                      <option value={3}>3.0% Premium Property Advisory</option>
+                      <option value={-1}>Custom Flat Amount (INR)</option>
+                    </select>
+                  </div>
+
+                  {/* BROKERAGE FEE AMOUNT (INR) */}
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      9.1 Calculated Brokerage Fee (INR)
                     </label>
                     <input 
                       type="number" 
-                      value={showRevisionModal.revBrokerage || 0} 
-                      onChange={(e) => setShowRevisionModal({ ...showRevisionModal, revBrokerage: Math.max(0, parseInt(e.target.value) || 0) })} 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                      value={(() => {
+                        const pct = showRevisionModal.revBrokeragePct;
+                        if (pct && pct > 0) {
+                          const baseSum = (showRevisionModal.revBasePrice || 0) + (showRevisionModal.revFloorRise || 0) + (showRevisionModal.revPlc || 0) + (showRevisionModal.revParking || 0);
+                          return Math.round((baseSum * pct) / 100);
+                        }
+                        return showRevisionModal.revBrokerage || 0;
+                      })()} 
+                      onChange={(e) => {
+                        const val = Math.max(0, parseInt(e.target.value) || 0);
+                        setShowRevisionModal({ 
+                          ...showRevisionModal, 
+                          revBrokeragePct: -1,
+                          revBrokerage: val 
+                        });
+                      }} 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #38bdf8', color: '#38bdf8', fontWeight: '900', padding: '8px 10px', borderRadius: '6px', fontSize: '0.85rem' }} 
                       placeholder="0 (Zero Brokerage for Buyer)"
                     />
+                    <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginTop: '2px' }}>
+                      Auto-calculated on (Base + Floor Rise + PLC + Parking)
+                    </span>
                   </div>
 
                   {/* GST RATE */}

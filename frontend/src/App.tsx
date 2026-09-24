@@ -14145,6 +14145,7 @@ export default function App() {
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Maximum Map Radius Distance (KM)</label>
                     <select value={newCustomerForm.radius_km} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, radius_km: Number(e.target.value) })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontWeight: '900', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}>
+                      <option value="2">Within 2 KM Radius</option>
                       <option value="5">Within 5 KM Radius</option>
                       <option value="10">Within 10 KM Radius</option>
                       <option value="15">Within 15 KM Radius</option>

@@ -5288,8 +5288,71 @@ export default function App() {
 
   const downloadCostSheetPDF = (costSheet: any) => {
     if (!costSheet) return;
-    alert(`📥 Preparing & printing official PDF Cost Sheet for ${costSheet.costSheetId || 'Cost Sheet'} (${costSheet.customerSnapshot?.customerName || 'Customer'})`);
-    window.print();
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  };
+
+  const sendCostSheetWhatsApp = (costSheet: any) => {
+    if (!costSheet) return;
+
+    const itemPropCode = costSheet.propertyCode || costSheet.propertySnapshot?.propertyCode;
+    const itemCustId = costSheet.customerId || costSheet.customerSnapshot?.customerNumber || costSheet.customerSnapshot?.customerId;
+    const itemCustMob = costSheet.customerSnapshot?.mobile || costSheet.mobile;
+
+    const matchedProp = (properties || []).find((p: any) => 
+      (p.property_code && itemPropCode && p.property_code === itemPropCode) ||
+      (p.id && itemPropCode && p.id === itemPropCode) ||
+      (p.property_code && costSheet.propertyId && p.property_code === costSheet.propertyId) ||
+      (p.id && costSheet.propertyId && p.id === costSheet.propertyId)
+    );
+
+    const matchedCust = (customers || []).find((c: any) => 
+      (c.customer_number && itemCustId && c.customer_number === itemCustId) ||
+      (c.id && itemCustId && c.id === itemCustId) ||
+      (itemCustMob && itemCustMob.replace(/\D/g, '').length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === itemCustMob.replace(/\D/g, ''))
+    );
+
+    const custName = costSheet.customerSnapshot?.customerName || costSheet.customerName || matchedCust?.full_name || matchedCust?.name || 'Valued Customer';
+    const custMobile = costSheet.customerSnapshot?.mobile || costSheet.mobile || matchedCust?.mobile || '';
+
+    let cleanPhone = custMobile.replace(/\D/g, '');
+    if (!cleanPhone) {
+      alert(`⚠️ Customer mobile number is missing for ${custName}. Please edit customer details first.`);
+      return;
+    }
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+
+    const rawPropTitle = costSheet.propertySnapshot?.propertyTitle || costSheet.propertySnapshot?.projectName || matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name;
+    const propTitleStr = rawPropTitle && !rawPropTitle.startsWith('1 Properties') 
+      ? rawPropTitle 
+      : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'Property Unit');
+
+    const localityStr = costSheet.propertySnapshot?.locality || matchedProp?.locality || matchedProp?.location_address || 'Location';
+    const bhkStr = costSheet.propertySnapshot?.bhk || costSheet.propertySnapshot?.configuration || matchedProp?.configuration || matchedProp?.bhk || 'N/A';
+
+    const basePriceNum = costSheet.pricingSnapshot?.basePrice || costSheet.base_price || matchedProp?.base_price;
+    const basePriceStr = costSheet.formattedPriceBreakup?.basePriceStr || (basePriceNum ? `₹${Number(basePriceNum).toLocaleString('en-IN')}` : 'N/A');
+    const totalEstNum = costSheet.pricingSnapshot?.totalEstimatedCost || costSheet.final_estimated_price || matchedProp?.final_estimated_price;
+    const totalEstStr = costSheet.formattedPriceBreakup?.totalEstimatedCostStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : basePriceStr);
+
+    const waMsg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Cost Sheet Breakdown:\n\n📄 Cost Sheet ID: ${costSheet.costSheetId} (${costSheet.version || 'V01'})\n🏢 Property: ${propTitleStr}\n📍 Locality: ${localityStr}\n📐 Configuration: ${bhkStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\nPlease review the details. Click or reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
+
+    const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(waMsg)}`;
+    window.open(waUrl, '_blank');
+
+    setIndividualCostSheets((prev: any[]) => {
+      const updated = prev.map(c => c.costSheetId === costSheet.costSheetId ? { ...c, status: 'SENT_TO_CUSTOMER' } : c);
+      try {
+        localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updated));
+      } catch (e) {}
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({ cost_sheets: updated });
+      }
+      return updated;
+    });
   };
 
   // GENERATE UNIQUE COST SHEET ID
@@ -16561,11 +16624,8 @@ export default function App() {
                   <Printer size={14} /> Print Cost Sheet
                 </button>
                 <button 
-                  onClick={() => {
-                    setIndividualCostSheets(prev => prev.map(c => c.costSheetId === showViewIndividualCostSheetModal.costSheet.costSheetId ? { ...c, status: 'SENT_TO_CUSTOMER' } : c));
-                    alert(`📲 Dispatched Individual Cost Sheet ${showViewIndividualCostSheetModal.costSheet.costSheetId} to ${showViewIndividualCostSheetModal.costSheet.customerSnapshot?.customerName} (${showViewIndividualCostSheetModal.costSheet.customerSnapshot?.mobile})!`);
-                  }} 
-                  style={{ background: '#fbbf24', color: '#0f172a', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer' }}
+                  onClick={() => sendCostSheetWhatsApp(showViewIndividualCostSheetModal.costSheet)} 
+                  style={{ background: '#fbbf24', color: '#0f172a', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                 >
                   📲 Send to Customer
                 </button>

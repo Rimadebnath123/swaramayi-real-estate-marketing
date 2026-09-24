@@ -229,4 +229,25 @@ input[type="number"] {
   appearance: textfield;
 }
 
+/* Printable Cost Sheet Media Print Rules */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #printable-cost-sheet-area, #printable-cost-sheet-area * {
+    visibility: visible !important;
+  }
+  #printable-cost-sheet-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+}
+
 

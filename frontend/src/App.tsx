@@ -6496,69 +6496,7 @@ export default function App() {
   }, [verifiedDevProjectsList]);
 
   const [invoices, setInvoices] = useState<any[]>(() => {
-    const defaultInvoices = [
-      {
-        id: 'INV-DEV-000087',
-        invoice_number: 'SRM-DEV-INV-2026-000087',
-        invoice_category: 'DEVELOPER',
-        invoice_type: 'DEVELOPER',
-        created_date: '2026-08-28',
-        customer_name: 'Ruksha Roy',
-        customer_number: 'SRM-CUS-2026-000188',
-        customer_mobile: '+91 65465 77673',
-        customer_email: 'ruksha@gmail.com',
-        cost_sheet_code: 'COST-SHEET-2026-000001',
-        costSheetId: 'COST-SHEET-2026-000001',
-        booking_code: 'SRM-BKG-2026-000087',
-        pva_code: 'SRM-PVA-2026-000001',
-        developer_name: 'Star Builders & Developers',
-        developer_gstin: '19AAACS1234F1Z5',
-        property_title: 'SHIBALAY (BARASAT, CHAPADALI)',
-        property_code: 'SRM-PROP-2026-000425',
-        particulars: '2.0% Developer Channel Partner Success Fee / Brokerage',
-        flat_price: '2080000',
-        parking_price: '0',
-        agreement_value: '2080000',
-        taxable_value: 41600,
-        cgst_rate: 9,
-        sgst_rate: 9,
-        cgst_amount: 3744,
-        sgst_amount: 3744,
-        total_invoice_amount: 49088,
-        payment_status: 'UNPAID_PENDING',
-        settlement_status: 'NOT SETTLED',
-        is_settled: false,
-        payment_mode: 'ONLINE',
-        branch_name: 'Head Office (Kolkata)'
-      },
-      {
-        id: 'INV-CUS-000088',
-        invoice_number: 'SRM-INV-2026-000088',
-        invoice_category: 'CUSTOMER',
-        invoice_type: 'CUSTOMER',
-        created_date: '2026-08-28',
-        customer_name: 'Avishek Das',
-        customer_number: 'SRM-CUS-2026-000189',
-        customer_mobile: '+91 94323 28947',
-        customer_email: 'a@gmail.com',
-        cost_sheet_code: 'COST-SHEET-2026-000002',
-        booking_code: 'SRM-BKG-2026-000088',
-        developer_name: 'Star Builders & Developers',
-        property_title: 'Star Horizon 3BHK Residence',
-        particulars: 'Property Consultation & Service Charges',
-        taxable_value: 50000,
-        cgst_rate: 9,
-        sgst_rate: 9,
-        cgst_amount: 4500,
-        sgst_amount: 4500,
-        total_invoice_amount: 59000,
-        payment_status: 'PAID_SETTLED',
-        settlement_status: 'SETTLED',
-        is_settled: true,
-        payment_mode: 'UPI',
-        branch_name: 'Kolkata Branch'
-      }
-    ];
+    const defaultInvoices: any[] = [];
 
     try {
       const saved = localStorage.getItem('swaramayi_invoices_v6');
@@ -6798,6 +6736,11 @@ export default function App() {
                 !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
                 !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000189') &&
                 !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000189') &&
+                !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000188') &&
+                !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000188') &&
+                !(c.name && c.name.toLowerCase().includes('avishek das')) &&
+                !(c.full_name && c.full_name.toLowerCase().includes('avishek das')) &&
+                !(c.mobile && c.mobile.includes('9038325675')) &&
                 !(c.name && c.name.toLowerCase().includes('amit sharma')) &&
                 !(c.full_name && c.full_name.toLowerCase().includes('amit sharma')) &&
                 !(c.email && c.email.toLowerCase().includes('amit.sharma@gmail.com')) &&
@@ -11564,6 +11507,7 @@ export default function App() {
               setProperties={setProperties}
               syncAllToMongoDB={syncAllToMongoDB}
               onRecycleItem={handleRecycleItem}
+              users={users}
             />
           )}
 
@@ -13291,6 +13235,9 @@ export default function App() {
                           "🏢 Flat / Apartment (New / Builder)",
                           "🔄 Flat / Apartment (Resale)",
                           "🔑 Flat / Apartment (For Rent)",
+                          "🏙️ Semi Complex (New / Builder)",
+                          "🔄 Semi Complex (Resale)",
+                          "🔑 Semi Complex (For Rent)",
                           "🏰 Gated Villa (New / Builder)",
                           "🔄 Gated Villa (Resale)",
                           "🔑 Gated Villa (For Rent)",
@@ -20117,6 +20064,9 @@ export default function App() {
                         "🏢 Flat / Apartment (New / Builder)",
                         "🔄 Flat / Apartment (Resale)",
                         "🔑 Flat / Apartment (For Rent)",
+                        "🏙️ Semi Complex (New / Builder)",
+                        "🔄 Semi Complex (Resale)",
+                        "🔑 Semi Complex (For Rent)",
                         "🏰 Gated Villa (New / Builder)",
                         "🔄 Gated Villa (Resale)",
                         "🔑 Gated Villa (For Rent)",

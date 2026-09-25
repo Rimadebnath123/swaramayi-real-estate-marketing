@@ -59,6 +59,7 @@ interface VisitManagementViewProps {
   syncAllToMongoDB?: (overrideData?: any) => Promise<void>;
   setShowShiftToMatchingModal?: (val: any) => void;
   onRecycleItem?: (itemData: any) => void;
+  users?: any[];
 }
 
 export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
@@ -118,13 +119,33 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
   syncAllToMongoDB,
   setShowShiftToMatchingModal,
   onRecycleItem,
+  users = [],
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
   const isSuperAdmin = isStrictSuperAdmin || roleUpper.includes('ADMIN');
 
+  const assignedAdvisors = useMemo(() => {
+    if (!Array.isArray(users)) return [];
+    return users
+      .filter((u: any) => {
+        const r = (u.role || '').toUpperCase();
+        return r !== 'SUPER_ADMIN' && r !== 'OWNER' && u.id !== 'USR-01' && u._id !== 'USR-01';
+      })
+      .map((u: any) => ({
+        id: u.id || u._id,
+        name: u.name || 'Unnamed Advisor',
+        role: u.role || 'Property Advisor',
+        phone: u.phone || u.mobile || 'N/A',
+        email: u.email || '',
+        img: u.avatar || u.img || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
+        defaultRating: '0.0',
+        properties: 'Active Inventory'
+      }));
+  }, [users]);
+
   const [showSendAdvisorRatingModal, setShowSendAdvisorRatingModal] = useState(false);
-  const [ratingAdvisorName, setRatingAdvisorName] = useState('Punita Roy');
+  const [ratingAdvisorName, setRatingAdvisorName] = useState('');
   const [ratingCustomerName, setRatingCustomerName] = useState('');
   const [ratingCustomerMobile, setRatingCustomerMobile] = useState('');
   const [ratingPropertyTitle, setRatingPropertyTitle] = useState('DHRITI APARTMENT');
@@ -527,9 +548,9 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   style={{ flex: windowWidth <= 640 ? '1 1 calc(33.33% - 6px)' : '1', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '800', padding: '8px', borderRadius: '6px', fontSize: windowWidth <= 640 ? '0.72rem' : '0.82rem' }}
                 >
                   <option value="ALL">All Execs</option>
-                  <option value="Punita Roy">Punita Roy</option>
-                  <option value="Abinash Roy">Abinash Roy</option>
-                  <option value="Priya Nair">Priya Nair</option>
+                  {assignedAdvisors.map(adv => (
+                    <option key={adv.id} value={adv.name}>{adv.name}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -2323,13 +2344,11 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
 
       // 6. Unique Execs for Filter & Leaderboard
       const allExecNames = Array.from(new Set([
+        ...assignedAdvisors.map(a => a.name),
         ...unifiedVisits.map((v: any) => v.assignedExecutive || v.assignedFieldExecutive || v.exec).filter(Boolean),
         ...(visitFeedbacks || []).map((fb: any) => fb.exec).filter(Boolean),
         ...(bookings || []).map((b: any) => b.sales_executive || b.exec || b.executive).filter(Boolean)
       ]));
-      if (allExecNames.length === 0) {
-        allExecNames.push('Punita Roy', 'Abinash Roy');
-      }
 
       // Executive Leaderboard
       const execLeaderboard = allExecNames.map((execName: string) => {
@@ -2883,7 +2902,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
           const responseRateStr = totalInvitesSent > 0 ? `${((ratedInvites.length / totalInvitesSent) * 100).toFixed(1)}% Response Rate` : '100% System Active';
           const avgTeamRatingStr = ratedInvites.length > 0 
             ? `★ ${(ratedInvites.reduce((sum: number, i: any) => sum + Number(i.rating), 0) / ratedInvites.length).toFixed(1)} / 5.0`
-            : '★ 4.8 / 5.0';
+            : '★ 0.0 / 5.0';
 
           const advScores: Record<string, { total: number; count: number }> = {};
           allRatingLogs.forEach((inv: any) => {
@@ -2894,8 +2913,8 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
             }
           });
 
-          let topAdvName = 'Punita Roy';
-          let topAdvRating = '★ 4.8 Rating';
+          let topAdvName = assignedAdvisors.length > 0 ? assignedAdvisors[0].name : 'No Advisor';
+          let topAdvRating = '★ 0.0 Rating';
           let maxAvg = -1;
           Object.keys(advScores).forEach(name => {
             const avg = advScores[name].total / advScores[name].count;
@@ -2944,57 +2963,64 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
         <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
-              <h4 style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>👤 ASSIGNED PROPERTY ADVISORS & LIVE RATINGS</h4>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>👤 ASSIGNED PROPERTY ADVISORS & LIVE RATINGS ({assignedAdvisors.length})</h4>
               <p style={{ fontSize: '0.76rem', color: isLight ? '#64748b' : '#94a3b8' }}>Directly generate and send customer rating submission links for each advisor</p>
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: windowWidth < 768 ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
-            {[
-              { name: 'Punita Roy', role: 'Sales Management', defaultRating: '4.8', properties: 'Dhriti Apartment, Gajapati Apartment', phone: '+91 90513 22932', img: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80' },
-              { name: 'Abinash Roy', role: 'Senior Property Advisor / Admin', defaultRating: '4.7', properties: 'Shibalay', phone: '+91 76970 98078', img: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&q=80' }
-            ].map((adv) => {
-              const advInvites = allRatingLogs.filter((i: any) => i.advisorName === adv.name);
-              const advRated = advInvites.filter((i: any) => i.rating !== null && i.rating !== undefined && !isNaN(Number(i.rating)));
-              const computedRating = advRated.length > 0
-                ? (advRated.reduce((s: number, i: any) => s + Number(i.rating), 0) / advRated.length).toFixed(1)
-                : adv.defaultRating;
-
-              return (
-                <div key={adv.name} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <img src={adv.img} alt={adv.name} style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #f59e0b' }} />
-                    <div>
-                      <h5 style={{ fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.95rem' }}>{adv.name}</h5>
-                      <div style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>{adv.role}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>{adv.phone}</div>
-                    </div>
-                  </div>
-
-                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', borderRadius: '10px', padding: '10px', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8' }}>Advisor Rating</span>
-                      <span style={{ background: '#fef3c7', color: '#92400e', padding: '3px 8px', borderRadius: '6px', fontWeight: '900', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Star size={12} fill="#d97706" color="#d97706" /> ★ {computedRating}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
-                      <strong>{advInvites.length}</strong> Invites Sent ({advRated.length} Reviews) • Assigned: {adv.properties}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setRatingAdvisorName(adv.name);
-                      setShowSendAdvisorRatingModal(true);
-                    }}
-                    style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%' }}
-                  >
-                    <Send size={14} /> Send Rating Link for {adv.name.split(' ')[0]}
-                  </button>
+            {assignedAdvisors.length === 0 ? (
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', borderRadius: '14px', padding: '32px', textAlign: 'center', gridColumn: '1 / -1' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📭</div>
+                <div style={{ fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', fontSize: '1rem' }}>No Assigned Property Advisors Yet</div>
+                <div style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
+                  Assign staff advisors in Role Management to list them here and track live ratings. (0 Advisors)
                 </div>
-              );
-            })}
+              </div>
+            ) : (
+              assignedAdvisors.map((adv) => {
+                const advInvites = allRatingLogs.filter((i: any) => i.advisorName === adv.name);
+                const advRated = advInvites.filter((i: any) => i.rating !== null && i.rating !== undefined && !isNaN(Number(i.rating)));
+                const computedRating = advRated.length > 0
+                  ? (advRated.reduce((s: number, i: any) => s + Number(i.rating), 0) / advRated.length).toFixed(1)
+                  : adv.defaultRating;
+
+                return (
+                  <div key={adv.id || adv.name} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <img src={adv.img} alt={adv.name} style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #f59e0b' }} />
+                      <div>
+                        <h5 style={{ fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.95rem' }}>{adv.name}</h5>
+                        <div style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>{adv.role}</div>
+                        <div style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>{adv.phone}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: isLight ? '#ffffff' : '#1e293b', borderRadius: '10px', padding: '10px', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8' }}>Advisor Rating</span>
+                        <span style={{ background: '#fef3c7', color: '#92400e', padding: '3px 8px', borderRadius: '6px', fontWeight: '900', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Star size={12} fill="#d97706" color="#d97706" /> ★ {computedRating}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
+                        <strong>{advInvites.length}</strong> Invites Sent ({advRated.length} Reviews) • Assigned: {adv.properties}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setRatingAdvisorName(adv.name);
+                        setShowSendAdvisorRatingModal(true);
+                      }}
+                      style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%' }}
+                    >
+                      <Send size={14} /> Send Rating Link for {adv.name.split(' ')[0]}
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -3162,8 +3188,13 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                 onChange={(e) => setRatingAdvisorName(e.target.value)}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', fontSize: '0.88rem' }}
               >
-                <option value="Punita Roy">Punita Roy (Sales Management - ★ 4.8 Rating)</option>
-                <option value="Abinash Roy">Abinash Roy (Senior Advisor / Admin - ★ 4.7 Rating)</option>
+                {assignedAdvisors.length === 0 ? (
+                  <option value="">No Property Advisors Available (0 Staff)</option>
+                ) : (
+                  assignedAdvisors.map(adv => (
+                    <option key={adv.id} value={adv.name}>{adv.name} ({adv.role})</option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -3369,11 +3400,13 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                     onChange={e => setRescheduleForm(prev => ({ ...prev, assignedExecutive: e.target.value }))}
                     style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '700' }}
                   >
-                    <option value="Punita Roy">Punita Roy</option>
-                    <option value="Rajesh Sharma">Rajesh Sharma</option>
-                    <option value="Amit Kumar">Amit Kumar</option>
-                    <option value="Sneha Mukherjee">Sneha Mukherjee</option>
-                    <option value="Priya Das">Priya Das</option>
+                    {assignedAdvisors.length === 0 ? (
+                      <option value="Unassigned">Unassigned (0 Staff Advisors)</option>
+                    ) : (
+                      assignedAdvisors.map(adv => (
+                        <option key={adv.id} value={adv.name}>{adv.name}</option>
+                      ))
+                    )}
                   </select>
                 </div>
 

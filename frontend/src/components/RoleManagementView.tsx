@@ -144,9 +144,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
   };
 
   const defaultUsersList = React.useMemo(() => [
-    { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-01' },
-    { id: 'USR-02', username: 'punita.roy', full_name: 'Punita Roy', email: 'punita.roy@swaramayi.com', mobile: '+91 90513 22932', role: 'SALES_EXEC', branch_name: 'Kolkata Branch', department: 'Sales Management', team_name: 'Kolkata Expansion Team', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-15' },
-    { id: 'USR-03', username: 'abinash.roy', full_name: 'Abinash Roy', email: 'abinash.roy@swaramayi.com', mobile: '+91 76970 90078', role: 'ADMIN', branch_name: 'Kolkata Branch', department: 'Residential Sales', team_name: 'Kolkata Admin & Technical Squad', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-15' }
+    { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-01' }
   ], []);
 
   const safeUsers = React.useMemo(() => {
@@ -163,55 +161,11 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       return r !== 'SUPER_ADMIN' && r !== 'OWNER' && u.id !== 'USR-01';
     });
 
-    const fallbackAdvisors = [
-      {
-        id: 'USR-02',
-        employee_id: 'SRM-EMP-2026-0012',
-        username: 'punita.roy',
-        full_name: 'Punita Roy',
-        role: 'Sales Management',
-        mobile: '+91 90513 22932',
-        email: 'punita.roy@swaramayi.com',
-        branch_name: 'Kolkata Branch',
-        department: 'Sales Management',
-        is_active: true
-      },
-      {
-        id: 'USR-03',
-        employee_id: 'SRM-EMP-2026-0018',
-        username: 'abinash.roy',
-        full_name: 'Abinash Roy',
-        role: 'Senior Property Advisor / Admin',
-        mobile: '+91 76970 90078',
-        email: 'abinash.roy@swaramayi.com',
-        branch_name: 'Kolkata Branch',
-        department: 'Residential Sales',
-        is_active: true
-      }
-    ];
-
     const userMap = new Map();
     staffFromUsers.forEach((u: any) => {
       const uNameLower = String(u.full_name || u.username || '').toLowerCase();
       userMap.set(u.id || uNameLower, u);
     });
-
-    if (!Array.isArray(users) || users.length === 0) {
-      fallbackAdvisors.forEach((fa: any) => {
-        const faNameLower = fa.full_name.toLowerCase();
-        let exists = false;
-        for (const existing of userMap.values()) {
-          const exName = String(existing.full_name || existing.username || '').toLowerCase();
-          if (exName.includes(faNameLower) || faNameLower.includes(exName) || existing.id === fa.id) {
-            exists = true;
-            break;
-          }
-        }
-        if (!exists) {
-          userMap.set(fa.id, fa);
-        }
-      });
-    }
 
     const staffList = Array.from(userMap.values());
 

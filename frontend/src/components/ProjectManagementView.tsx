@@ -1405,7 +1405,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     type="text" 
                     value={newPropertyForm.rera_id || ''} 
                     onChange={(e) => setNewPropertyForm({ ...newPropertyForm, rera_id: e.target.value })} 
-                    placeholder="e.g. WBRERA/P/NOR/2024/000842 or P02400001234" 
+                    placeholder="Enter RERA Registration No. (Optional)" 
                     style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontFamily: 'monospace', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
                   />
                 </div>
@@ -1416,7 +1416,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     type="text" 
                     value={newPropertyForm.hera_no || ''} 
                     onChange={(e) => setNewPropertyForm({ ...newPropertyForm, hera_no: e.target.value })} 
-                    placeholder="e.g. WBHERA/P/KOL/2023/000150 or HERA-2024-9981" 
+                    placeholder="Enter HERA Registration No. (Optional)" 
                     style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#a855f7', fontFamily: 'monospace', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
                   />
                 </div>
@@ -2198,7 +2198,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       type="text" 
                       value={newPropertyForm.rera_id || ''} 
                       onChange={(e) => setNewPropertyForm({ ...newPropertyForm, rera_id: e.target.value })} 
-                      placeholder="e.g. WBRERA/P/NOR/2024/000842 or P02400001234" 
+                      placeholder="Enter RERA Registration No. (Optional)" 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontFamily: 'monospace', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
                     />
                   </div>
@@ -2209,7 +2209,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       type="text" 
                       value={newPropertyForm.hera_no || ''} 
                       onChange={(e) => setNewPropertyForm({ ...newPropertyForm, hera_no: e.target.value })} 
-                      placeholder="e.g. WBHERA/P/KOL/2023/000150 or HERA-2024-9981" 
+                      placeholder="Enter HERA Registration No. (Optional)" 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#a855f7', fontFamily: 'monospace', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
                     />
                   </div>
@@ -2222,6 +2222,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       <option value="Flat / Apartment (New / Builder)">🏢 Flat / Apartment (New / Builder)</option>
                       <option value="Flat / Apartment (Resale)">🔄 Flat / Apartment (Resale)</option>
                       <option value="Flat / Apartment (For Rent)">🔑 Flat / Apartment (For Rent)</option>
+                      <option value="Semi Complex (New / Builder)">🏢 Semi Complex (New / Builder)</option>
+                      <option value="Semi Complex (Resale)">🔄 Semi Complex (Resale)</option>
+                      <option value="Semi Complex (For Rent)">🔑 Semi Complex (For Rent)</option>
                       <option value="Gated Villa (New / Builder)">🏰 Gated Villa (New / Builder)</option>
                       <option value="Gated Villa (Resale)">🔄 Gated Villa (Resale)</option>
                       <option value="Gated Villa (For Rent)">🔑 Gated Villa (For Rent)</option>

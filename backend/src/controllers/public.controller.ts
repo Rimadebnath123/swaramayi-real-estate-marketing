@@ -1028,38 +1028,7 @@ export async function getPublicAgents(req: Request, res: Response) {
   });
 }
 
-const defaultRatingInvites = [
-  {
-    id: 'SRM-RAT-INV-1789203161327-821',
-    date: 'Sep 12, 2026',
-    customerName: 'akash das',
-    customerMobile: '+91 7676500366',
-    customerPhone: '+91 7676500366',
-    advisorName: 'Abinash Roy',
-    propertyTitle: 'SHIBALAY',
-    rating: 4,
-    feedbackText: 'good',
-    comment: 'good',
-    status: 'VERIFIED_AND_RATED',
-    deliveryChannel: 'WHATSAPP',
-    created_at: '2026-09-12T12:00:00.000Z'
-  },
-  {
-    id: 'SRM-RATING-521664',
-    date: 'Sep 12, 2026',
-    customerName: 'Priya Das',
-    customerMobile: '+91 7870500387',
-    customerPhone: '+91 7870500387',
-    advisorName: 'Punita Roy',
-    propertyTitle: 'GAJAPATI APARTMENT',
-    rating: 5,
-    feedbackText: 'Very good consultation!',
-    comment: 'Very good consultation!',
-    status: 'VERIFIED_AND_RATED',
-    deliveryChannel: 'WHATSAPP',
-    created_at: '2026-09-12T12:00:00.000Z'
-  }
-];
+const defaultRatingInvites: any[] = [];
 
 export async function getPublicAdvisorRatings(req: Request, res: Response) {
   loadData();
@@ -1092,8 +1061,7 @@ export async function getPublicAdvisorRatings(req: Request, res: Response) {
         const avg = uReviews.reduce((sum: number, r: any) => sum + Number(r.rating), 0) / uReviews.length;
         u.rating = Number(avg.toFixed(1));
       } else {
-        if (uName.includes('punita')) u.rating = 5.0;
-        else if (uName.includes('abinash')) u.rating = 4.0;
+        u.rating = 0;
       }
     });
   }

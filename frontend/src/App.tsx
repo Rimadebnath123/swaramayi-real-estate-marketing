@@ -3204,6 +3204,7 @@ export default function App() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [showLeadModal, setShowLeadModal] = useState(false);
+  const [leadIngestSuccessModal, setLeadIngestSuccessModal] = useState<any>(null);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showFullContractModal, setShowFullContractModal] = useState(false);
@@ -3611,7 +3612,8 @@ export default function App() {
     family_requirements: 'East Facing, High Floor, Pool View',
     sub_source: 'Kondapur 3BHK Campaign',
     referral_source: '',
-    assigned_employee_id: 'USR-07',
+    assigned_employee_id: 'Avishek Das',
+    assigned_employee_name: 'Avishek Das — Managing Director & Founder (Head Office (Kolkata))',
     team_leader_id: 'USR-06',
     priority: 'HOT',
     score: 88,
@@ -13400,16 +13402,16 @@ export default function App() {
                       <select 
                         value={(() => {
                           const cur = newCustomerForm.assigned_employee_id || newCustomerForm.assigned_salesperson || newCustomerForm.assigned_employee_name;
-                          if (!cur) return dynamicSalesExecutives[0]?.value || 'Priya Nair';
+                          if (!cur || cur === 'USR-07') return dynamicSalesExecutives[0]?.value || 'Avishek Das';
                           const match = dynamicSalesExecutives.find((x: any) => 
                             x.value === cur || x.name === cur || x.id === cur || (x.label && x.label.includes(cur)) || (cur && cur.includes(x.name))
                           );
-                          return match ? match.value : cur;
+                          return match ? match.value : (dynamicSalesExecutives[0]?.value || 'Avishek Das');
                         })()} 
                         onChange={(e) => {
                           const val = e.target.value;
                           const match = dynamicSalesExecutives.find((x: any) => x.value === val || x.name === val);
-                          const displayName = match ? match.name : val;
+                          const displayName = match ? (match.label || match.name) : val;
                           setNewCustomerForm({ 
                             ...newCustomerForm, 
                             assigned_employee_id: val, 
@@ -14773,7 +14775,15 @@ export default function App() {
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Assigned Executive:</span>
-                      <strong style={{ display: 'block', color: '#38bdf8', fontWeight: '900' }}>{newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)'}</strong>
+                      <strong style={{ display: 'block', color: '#38bdf8', fontWeight: '900' }}>
+                        {(() => {
+                          const curExec = newCustomerForm.assigned_employee_id || newCustomerForm.assigned_salesperson || newCustomerForm.assigned_employee_name;
+                          const matchExec = dynamicSalesExecutives.find((x: any) => 
+                            x.value === curExec || x.name === curExec || x.id === curExec || (x.label && x.label.includes(curExec)) || (curExec && curExec.includes(x.name))
+                          );
+                          return matchExec ? matchExec.label : (curExec && curExec !== 'USR-07' ? curExec : (dynamicSalesExecutives[0]?.label || 'Avishek Das'));
+                        })()}
+                      </strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Budget Range:</span>
@@ -14810,16 +14820,16 @@ export default function App() {
                     <select 
                       value={(() => {
                         const cur = newCustomerForm.assigned_employee_id || newCustomerForm.assigned_salesperson || newCustomerForm.assigned_employee_name;
-                        if (!cur) return dynamicSalesExecutives[0]?.value || 'Priya Nair';
+                        if (!cur || cur === 'USR-07') return dynamicSalesExecutives[0]?.value || 'Avishek Das';
                         const match = dynamicSalesExecutives.find((x: any) => 
                           x.value === cur || x.name === cur || x.id === cur || (x.label && x.label.includes(cur)) || (cur && cur.includes(x.name))
                         );
-                        return match ? match.value : cur;
+                        return match ? match.value : (dynamicSalesExecutives[0]?.value || 'Avishek Das');
                       })()} 
                       onChange={(e) => {
                         const val = e.target.value;
                         const match = dynamicSalesExecutives.find((x: any) => x.value === val || x.name === val);
-                        const displayName = match ? match.name : val;
+                        const displayName = match ? (match.label || match.name) : val;
                         setNewCustomerForm({ 
                           ...newCustomerForm, 
                           assigned_employee_id: val, 
@@ -14852,6 +14862,14 @@ export default function App() {
                       const targetMobile = mobileStr.replace(/[^0-9]/g, '');
                       const targetCustCode = newCustomerForm.customer_number;
                       const cleanName = nameStr.trim().toLowerCase();
+
+                      // Resolve real dynamic executive selection
+                      const curExec = newCustomerForm.assigned_employee_id || newCustomerForm.assigned_salesperson || newCustomerForm.assigned_employee_name;
+                      const matchExec = dynamicSalesExecutives.find((x: any) => 
+                        x.value === curExec || x.name === curExec || x.id === curExec || (x.label && x.label.includes(curExec)) || (curExec && curExec.includes(x.name))
+                      );
+                      const selectedExecLabel = matchExec ? matchExec.label : (curExec && curExec !== 'USR-07' ? curExec : (dynamicSalesExecutives[0]?.label || dynamicSalesExecutives[0]?.name || 'Avishek Das'));
+                      const selectedExecName = matchExec ? matchExec.name : (curExec && curExec !== 'USR-07' ? curExec : (dynamicSalesExecutives[0]?.name || 'Avishek Das'));
 
                       const existingCustomer = customers.find(c => 
                         (targetCustCode && c.customer_number === targetCustCode) ||
@@ -14936,8 +14954,8 @@ export default function App() {
                         call_disposition: 'CONNECTED_INTERESTED',
                         next_action: 'Send Cost Sheet & Schedule Site Visit',
                         next_followup: new Date(Date.now() + 24 * 3600000).toISOString(),
-                        assigned_employee_id: newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)',
-                        assigned_employee_name: newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)',
+                        assigned_employee_id: selectedExecName,
+                        assigned_employee_name: selectedExecLabel,
                         created_by: 'USR-01',
                         quality_score: dynamicScore,
                         last_completed_step: 9,
@@ -14991,7 +15009,7 @@ export default function App() {
                         completenessScore: dynamicScore,
                         priority: 'HOT',
                         leadScore: dynamicScore,
-                        assignedExecutive: newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)',
+                        assignedExecutive: selectedExecLabel,
                         status: 'MATCHING_PENDING',
                         version: 'Snapshot V1'
                       };
@@ -15053,7 +15071,8 @@ export default function App() {
                         amenities: newCustomerForm.amenities || '',
                         brokerage_rate: newCustomerForm.brokerage_rate || '2.0%',
                         brokerage_payer: newCustomerForm.brokerage_payer || 'CUSTOMER',
-                        assigned_salesperson: newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)',
+                        assigned_salesperson: selectedExecLabel,
+                        assigned_employee_id: selectedExecName,
                         priority: 'HOT',
                         score: dynamicScore,
                         last_completed_step: 9,
@@ -15076,11 +15095,14 @@ export default function App() {
                         console.error('Error saving customer to localStorage', err);
                       }
 
-                      setSelectedMatchingId(reqId);
-                      setShowLeadModal(false);
-                      setShowAddCustomerModal(false);
-                      setActiveTab('matching_management');
-                      alert(`🎉 INGESTED & UPDATED LEAD SUCCESSFULLY!\n\n• Lead ID: ${leadNum}\n• Customer ID: ${finalCustomerCode}\n• Matching ID: ${reqId}\n• Dynamic Audit Score: ${dynamicScore}%\n• Assigned CRM Executive: ${newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)'}\n${isDuplicateDetected ? '\n⚠️ DUPLICATE MATCH DETECTED: Pre-existing lead/customer profile updated in place (No duplicate record created)!\n' : ''}\nNavigating to Matching Management Engine...`);
+                      setLeadIngestSuccessModal({
+                        leadNum,
+                        finalCustomerCode,
+                        reqId,
+                        dynamicScore,
+                        assignedExecutive: selectedExecLabel,
+                        isDuplicateDetected
+                      });
                     }}
                     style={{ flex: 2, minWidth: '220px', background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '900', fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
@@ -20395,6 +20417,121 @@ export default function App() {
         </div>
       )}
 
+      {/* LEAD INGESTION SUCCESS POPUP MODAL WITH CANCEL BUTTON */}
+      {leadIngestSuccessModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', maxWidth: '520px', width: '100%', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            
+            {/* HEADER */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.6rem' }}>🎉</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '900', color: '#22c55e' }}>
+                    INGESTED & UPDATED LEAD SUCCESSFULLY!
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                    Real Estate CRM Qualification & Matching Handoff
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setLeadIngestSuccessModal(null)} 
+                style={{ background: 'transparent', border: 'none', color: isLight ? '#64748b' : '#94a3b8', fontSize: '1.3rem', cursor: 'pointer', padding: '4px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* DETAILS CONTENT */}
+            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b', paddingBottom: '6px' }}>
+                <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>• Lead ID:</span>
+                <strong style={{ color: '#38bdf8', fontFamily: 'monospace', fontWeight: '800' }}>{leadIngestSuccessModal.leadNum}</strong>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b', paddingBottom: '6px' }}>
+                <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>• Customer ID:</span>
+                <strong style={{ color: '#fbbf24', fontFamily: 'monospace', fontWeight: '800' }}>{leadIngestSuccessModal.finalCustomerCode}</strong>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b', paddingBottom: '6px' }}>
+                <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>• Matching ID:</span>
+                <strong style={{ color: '#a855f7', fontFamily: 'monospace', fontWeight: '800' }}>{leadIngestSuccessModal.reqId}</strong>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b', paddingBottom: '6px' }}>
+                <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>• Dynamic Audit Score:</span>
+                <strong style={{ color: '#22c55e', fontWeight: '900' }}>{leadIngestSuccessModal.dynamicScore}%</strong>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b', paddingBottom: '6px' }}>
+                <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>• Assigned CRM Executive:</span>
+                <strong style={{ color: '#38bdf8', fontWeight: '800', textAlign: 'right', maxWidth: '240px', wordBreak: 'break-word' }}>
+                  {leadIngestSuccessModal.assignedExecutive}
+                </strong>
+              </div>
+
+              {leadIngestSuccessModal.isDuplicateDetected && (
+                <div style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid #f59e0b', padding: '8px 10px', borderRadius: '8px', color: '#f59e0b', fontSize: '0.78rem', marginTop: '4px' }}>
+                  ⚠️ <strong>DUPLICATE MATCH DETECTED:</strong> Pre-existing lead/customer profile updated in place (No duplicate record created)!
+                </div>
+              )}
+            </div>
+
+            <div style={{ fontSize: '0.82rem', color: isLight ? '#64748b' : '#94a3b8', fontStyle: 'italic', textAlign: 'center' }}>
+              Navigating to Matching Management Engine...
+            </div>
+
+            {/* ACTION BUTTONS WITH CANCEL AND OK */}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '4px' }}>
+              <button 
+                type="button"
+                onClick={() => setLeadIngestSuccessModal(null)}
+                style={{ 
+                  flex: 1, 
+                  background: isLight ? '#cbd5e1' : '#334155', 
+                  color: isLight ? '#0f172a' : '#ffffff', 
+                  border: 'none', 
+                  padding: '10px 16px', 
+                  borderRadius: '8px', 
+                  fontWeight: '800', 
+                  fontSize: '0.88rem', 
+                  cursor: 'pointer' 
+                }}
+              >
+                ✕ Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  const reqId = leadIngestSuccessModal.reqId;
+                  setLeadIngestSuccessModal(null);
+                  setSelectedMatchingId(reqId);
+                  setShowLeadModal(false);
+                  setShowAddCustomerModal(false);
+                  setActiveTab('matching_management');
+                }}
+                style={{ 
+                  flex: 2, 
+                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', 
+                  color: '#ffffff', 
+                  border: 'none', 
+                  padding: '10px 18px', 
+                  borderRadius: '8px', 
+                  fontWeight: '900', 
+                  fontSize: '0.88rem', 
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)'
+                }}
+              >
+                OK (Go to Matching Engine)
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

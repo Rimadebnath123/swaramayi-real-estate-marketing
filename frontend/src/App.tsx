@@ -5970,7 +5970,7 @@ export default function App() {
 
     const scheduledDateVal = followupDate || todayStr;
     const scheduledTimeVal = followupTime || '11:00';
-    const customRemarks = followupRemarks || (disp === 'NO_RESPONSE' ? '1st Call Unanswered, retry callback scheduled' : disp === 'CALL_BACK_LATER' ? 'Customer busy, callback requested' : 'Initial call disposition logged during lead intake wizard');
+    const customRemarks = followupRemarks || (disp === 'NO_RESPONSE' ? '1st Call Unanswered, retry callback scheduled' : disp === 'CALL_BACK_LATER' ? 'Customer busy, callback requested' : disp === 'PENDING_CALL' ? 'Call pending, executive follow-up queued' : 'Initial call disposition logged during lead intake wizard');
 
     let leadStatus = 'NEW';
     let priority = 'WARM';
@@ -5992,6 +5992,11 @@ export default function App() {
       priority = 'HIGH';
       status = 'SCHEDULED_CALLBACK';
       notes = customRemarks || 'Customer requested call back later / busy; scheduled for follow-up retry (steps 3–9 bypassed)';
+    } else if (disp === 'PENDING_CALL') {
+      leadStatus = 'PENDING_CALL';
+      priority = 'HIGH';
+      status = 'PENDING_CALL';
+      notes = customRemarks || 'Call pending logged during initial intake; scheduled for executive follow-up (steps 3–9 bypassed)';
     }
 
     const newCustObj = {
@@ -6040,7 +6045,7 @@ export default function App() {
       notes: notes,
       next_followup: scheduledDateVal,
       next_followup_time: scheduledTimeVal,
-      next_action: disp === 'NO_RESPONSE' ? 'Retry Unanswered Call' : disp === 'CALL_BACK_LATER' ? 'Call Back Customer' : 'N/A',
+      next_action: disp === 'NO_RESPONSE' ? 'Retry Unanswered Call' : (disp === 'CALL_BACK_LATER' || disp === 'PENDING_CALL') ? 'Call Back Customer' : 'N/A',
       last_completed_step: 2,
       created_at: existingCustomer ? existingCustomer.created_at : new Date().toLocaleString()
     };
@@ -6122,9 +6127,9 @@ export default function App() {
       return nextCusts;
     });
 
-    // Create or Update System Call Notification Alert for NO_RESPONSE and CALL_BACK_LATER
-    if (disp === 'NO_RESPONSE' || disp === 'CALL_BACK_LATER') {
-      const notifTitle = disp === 'NO_RESPONSE' ? '📵 Call Alert: No Response Retry Needed' : '⏳ Call Alert: Scheduled Callback Due';
+    // Create or Update System Call Notification Alert for NO_RESPONSE, CALL_BACK_LATER and PENDING_CALL
+    if (disp === 'NO_RESPONSE' || disp === 'CALL_BACK_LATER' || disp === 'PENDING_CALL') {
+      const notifTitle = disp === 'NO_RESPONSE' ? '📵 Call Alert: No Response Retry Needed' : disp === 'PENDING_CALL' ? '📞 Call Alert: Pending Call Due' : '⏳ Call Alert: Scheduled Callback Due';
       const newNotifObj = {
         id: `NOTIF-${Date.now()}`,
         type: 'CALL_ALERT',
@@ -6136,7 +6141,7 @@ export default function App() {
         scheduled_date: scheduledDateVal,
         scheduled_time: scheduledTimeVal,
         message: `Call ${newCustObj.name} (${newCustObj.phone}) scheduled for ${scheduledDateVal} at ${scheduledTimeVal}. Note: ${notes}`,
-        priority: disp === 'CALL_BACK_LATER' ? 'HIGH' : 'MEDIUM',
+        priority: (disp === 'CALL_BACK_LATER' || disp === 'PENDING_CALL') ? 'HIGH' : 'MEDIUM',
         is_read: false,
         assigned_executive: newCustObj.assigned_salesperson,
         created_at: new Date().toLocaleString()
@@ -6173,14 +6178,14 @@ export default function App() {
       setLeadInboxTab('not_interested');
     } else if (disp === 'NO_RESPONSE') {
       setLeadInboxTab('no_response');
-    } else if (disp === 'CALL_BACK_LATER') {
+    } else if (disp === 'CALL_BACK_LATER' || disp === 'PENDING_CALL') {
       setLeadInboxTab('call_back_later');
     } else {
       setLeadInboxTab('all');
     }
 
-    const dispLabel = disp === 'NOT_INTERESTED' ? '❌ NOT INTERESTED' : disp === 'NO_RESPONSE' ? '📵 NO RESPONSE' : '⏳ CALL BACK LATER';
-    const notifMsg = (disp === 'NO_RESPONSE' || disp === 'CALL_BACK_LATER') 
+    const dispLabel = disp === 'NOT_INTERESTED' ? '❌ NOT INTERESTED' : disp === 'NO_RESPONSE' ? '📵 NO RESPONSE' : disp === 'PENDING_CALL' ? '📞 PENDING CALL' : '⏳ CALL BACK LATER';
+    const notifMsg = (disp === 'NO_RESPONSE' || disp === 'CALL_BACK_LATER' || disp === 'PENDING_CALL') 
       ? `\n\n🔔 AUTOMATED CALL ALERT & NOTIFICATION CREATED!\n• Scheduled Date: ${scheduledDateVal}\n• Scheduled Time: ${scheduledTimeVal}\n• Follow-up Alert queued for executive call!` 
       : '';
 
@@ -13723,7 +13728,7 @@ export default function App() {
                   <label style={{ fontSize: '0.78rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', display: 'block' }}>
                     📞 Initial Customer Engagement & Call Disposition Status *
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '8px' }}>
                     <button 
                       type="button" 
                       onClick={() => setNewLeadForm({ ...newLeadForm, call_disposition: 'CONNECTED_INTERESTED' })} 
@@ -13775,6 +13780,19 @@ export default function App() {
                     >
                       ⏳ Call Back Later / Busy
                     </button>
+
+                    <button 
+                      type="button" 
+                      onClick={() => setNewLeadForm({ ...newLeadForm, call_disposition: 'PENDING_CALL' })} 
+                      style={{ 
+                        background: (newLeadForm as any).call_disposition === 'PENDING_CALL' ? 'rgba(168, 85, 247, 0.25)' : (isLight ? '#ffffff' : '#1e293b'), 
+                        border: (newLeadForm as any).call_disposition === 'PENDING_CALL' ? '2px solid #a855f7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), 
+                        color: (newLeadForm as any).call_disposition === 'PENDING_CALL' ? '#c084fc' : (isLight ? '#0f172a' : '#ffffff'), 
+                        padding: '10px 8px', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', textAlign: 'center' 
+                      }}
+                    >
+                      📞 Pending Call
+                    </button>
                   </div>
 
                   {(((newLeadForm as any).call_disposition || 'CONNECTED_INTERESTED') === 'CONNECTED_INTERESTED') && (
@@ -13798,6 +13816,12 @@ export default function App() {
                   {(newLeadForm as any).call_disposition === 'CALL_BACK_LATER' && (
                     <div style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1.5px solid #38bdf8', color: '#38bdf8', padding: '10px 14px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '800' }}>
                       ⏳ <strong>CALL BACK LATER / BUSY SELECTED</strong>: Requirements profiling (Steps 3–9) is <strong>NOT APPLICABLE</strong>. Click "Save Lead & Exit" below to record this customer into the <strong>Scheduled Callback Queue</strong> for follow-up.
+                    </div>
+                  )}
+
+                  {(newLeadForm as any).call_disposition === 'PENDING_CALL' && (
+                    <div style={{ background: 'rgba(168, 85, 247, 0.12)', border: '1.5px solid #a855f7', color: '#c084fc', padding: '10px 14px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '800' }}>
+                      📞 <strong>PENDING CALL SELECTED</strong>: Requirements profiling (Steps 3–9) is <strong>NOT APPLICABLE</strong>. Click "Save Lead & Exit" below to record this customer into the <strong>Pending Call Queue</strong> for executive follow-up.
                     </div>
                   )}
                 </div>
@@ -13854,8 +13878,8 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* SCHEDULED FOLLOW-UP & CALL ALERT REMINDER PANEL FOR NO_RESPONSE & CALL_BACK_LATER */}
-                {(((newLeadForm as any).call_disposition === 'NO_RESPONSE') || ((newLeadForm as any).call_disposition === 'CALL_BACK_LATER')) && (
+                {/* SCHEDULED FOLLOW-UP & CALL ALERT REMINDER PANEL FOR NO_RESPONSE, CALL_BACK_LATER & PENDING_CALL */}
+                {(((newLeadForm as any).call_disposition === 'NO_RESPONSE') || ((newLeadForm as any).call_disposition === 'CALL_BACK_LATER') || ((newLeadForm as any).call_disposition === 'PENDING_CALL')) && (
                   <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #0284c7', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <label style={{ fontSize: '0.8rem', color: '#fbbf24', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -13990,6 +14014,9 @@ export default function App() {
                         "🏰 Gated Villa (New / Builder)",
                         "🔄 Gated Villa (Resale)",
                         "🔑 Gated Villa (For Rent)",
+                        "🏙️ Semi Complex (New / Builder)",
+                        "🔄 Semi Complex (Resale)",
+                        "🔑 Semi Complex (For Rent)",
                         "🏡 Independent House (Resale)",
                         "🔑 Independent House (For Rent)",
                         "🏢 Commercial Space (New / Builder)",

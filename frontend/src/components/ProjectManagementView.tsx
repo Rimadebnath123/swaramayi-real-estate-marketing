@@ -348,6 +348,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const [newDevMobileInput, setNewDevMobileInput] = React.useState<string>('');
   const [newDevAltMobileInput, setNewDevAltMobileInput] = React.useState<string>('');
   const [newDevProjectTitleInput, setNewDevProjectTitleInput] = React.useState<string>('');
+  const [newDevEmailInput, setNewDevEmailInput] = React.useState<string>('');
   const [viewPropertyModal, setViewPropertyModal] = React.useState<any | null>(null);
 
   const handleStartEditProjectDeveloper = React.useCallback((p: any) => {
@@ -361,6 +362,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       property_code: p.property_code || p.code || '',
       developer_id: p.developer_id || p.developerId || '',
       developer: p.developer || p.developer_name || p.name || '',
+      developer_email: p.developer_email || p.email || '',
       title: p.title || p.project_name || '',
       locality: p.locality || '',
       city: p.city || '',
@@ -804,6 +806,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       id: assignedProjCode,
       code: assignedProjCode,
       title: newPropertyForm.title,
+      developer_email: newPropertyForm.developer_email || '',
       locality: newPropertyForm.locality || 'Locality Hub',
       lat: newPropertyForm.latitude || '22.722361',
       lng: newPropertyForm.longitude || '88.493403',
@@ -824,6 +827,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     
     if (existingDevIdx >= 0) {
       const devObj = updatedDevs[existingDevIdx];
+      if (newPropertyForm.developer_email) devObj.email = newPropertyForm.developer_email;
       const projList = devObj.projects || [];
       if (!projList.some((p: any) => (p.id === assignedProjCode || p.code === assignedProjCode || p.title.toLowerCase().trim() === newPropertyForm.title.toLowerCase().trim()))) {
         devObj.projects = [newProjEntry, ...projList];
@@ -833,7 +837,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         id: `SRM-DEV-2026-${String(Math.floor(100000 + Math.random() * 900000))}`,
         name: newPropertyForm.developer,
         mobile: devProjectMobile || '+91 98490 88776',
-        email: `${newPropertyForm.developer.toLowerCase().replace(/\s+/g, '')}@builder.com`,
+        email: newPropertyForm.developer_email || '',
         projects: [newProjEntry]
       };
       updatedDevs = [newDevObj, ...updatedDevs];
@@ -1305,7 +1309,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     type="text" 
                     value={newPropertyForm.developer} 
                     onChange={(e) => {
-                      setNewPropertyForm({ ...newPropertyForm, developer: e.target.value });
+                      const val = e.target.value;
+                      const matchDev = developerMasterList.find((d: any) => d.name.toLowerCase().trim() === val.toLowerCase().trim());
+                      setNewPropertyForm((prev: any) => ({
+                        ...prev,
+                        developer: val,
+                        developer_email: matchDev && matchDev.email ? matchDev.email : prev.developer_email
+                      }));
+                      if (matchDev && matchDev.mobile && !devProjectMobile) setDevProjectMobile(matchDev.mobile);
                     }} 
                     placeholder="e.g. My Home Constructions / Dhriti Builders / Aparna" 
                     style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '700' }} 
@@ -1335,7 +1346,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '14px' }}>
                 <div>
                   <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>Developer Mobile Phone (for OTP) *</label>
                   <input 
@@ -1359,6 +1370,17 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       setNewPropertyForm({ ...newPropertyForm, developer_alt_mobile: val });
                     }} 
                     placeholder="e.g. +91 70442 93951" 
+                    style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '700' }} 
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>✉️ Developer Email Address</label>
+                  <input 
+                    type="email" 
+                    value={newPropertyForm.developer_email || ''} 
+                    onChange={(e) => setNewPropertyForm({ ...newPropertyForm, developer_email: e.target.value })} 
+                    placeholder="e.g. developer@buildercompany.com" 
                     style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '700' }} 
                   />
                 </div>
@@ -2203,6 +2225,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       <option value="Gated Villa (New / Builder)">🏰 Gated Villa (New / Builder)</option>
                       <option value="Gated Villa (Resale)">🔄 Gated Villa (Resale)</option>
                       <option value="Gated Villa (For Rent)">🔑 Gated Villa (For Rent)</option>
+                      <option value="Semi Complex (New / Builder)">🏙️ Semi Complex (New / Builder)</option>
+                      <option value="Semi Complex (Resale)">🔄 Semi Complex (Resale)</option>
+                      <option value="Semi Complex (For Rent)">🔑 Semi Complex (For Rent)</option>
                       <option value="Independent House (Resale)">🔄 Independent House (Resale)</option>
                       <option value="Independent House (For Rent)">🔑 Independent House (For Rent)</option>
                       <option value="Commercial Space (New / Builder)">🏢 Commercial Space (New / Builder)</option>
@@ -3512,7 +3537,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             {/* ADD NEW DEVELOPER FORM */}
             <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <h4 style={{ fontSize: '0.88rem', fontWeight: '900', color: '#38bdf8' }}>➕ Register New Developer ID & Master Project</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(5, 1fr)', gap: '10px' }}>
                 <input 
                   type="text" 
                   value={newDevNameInput} 
@@ -3535,6 +3560,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700' }} 
                 />
                 <input 
+                  type="email" 
+                  value={newDevEmailInput} 
+                  onChange={(e) => setNewDevEmailInput(e.target.value)} 
+                  placeholder="Email Address (Optional)" 
+                  style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700' }} 
+                />
+                <input 
                   type="text" 
                   value={newDevProjectTitleInput} 
                   onChange={(e) => setNewDevProjectTitleInput(e.target.value)} 
@@ -3550,14 +3582,21 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     id: `SRM-DEV-2026-000${developerMasterList.length + 105}`,
                     name: newDevNameInput,
                     mobile: newDevAltMobileInput ? `${newDevMobileInput} / ${newDevAltMobileInput}` : newDevMobileInput,
-                    email: `${newDevNameInput.toLowerCase().replace(/[^a-z0-9]/g, '')}@builder.com`,
+                    email: newDevEmailInput || '',
                     projects: newDevProjectTitleInput ? [{ id: `PRJ-${Date.now()}`, title: newDevProjectTitleInput, locality: 'Kondapur Hub' }] : []
                   };
                   setDeveloperMasterList([newDevObj, ...developerMasterList]);
                   setNewDevNameInput('');
                   setNewDevMobileInput('');
                   setNewDevAltMobileInput('');
+                  setNewDevEmailInput('');
                   setNewDevProjectTitleInput('');
+                  try {
+                    localStorage.setItem('swaramayi_developers_v1', JSON.stringify([newDevObj, ...developerMasterList]));
+                  } catch (e) {}
+                  if (syncAllToMongoDB) {
+                    syncAllToMongoDB({ developers: [newDevObj, ...developerMasterList] });
+                  }
                   alert(`🎉 REGISTERED NEW DEVELOPER MASTER!\n\n• Developer ID: ${newDevObj.id}\n• Builder Name: ${newDevObj.name}\n• Phone: ${newDevObj.mobile}`);
                 }}
                 style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', alignSelf: 'flex-end' }}
@@ -3906,26 +3945,24 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         const layoutPhotosList: string[] = Array.from(new Set([
           ...(Array.isArray(viewPropertyModal.layout_photos) && viewPropertyModal.layout_photos.length > 0 ? viewPropertyModal.layout_photos : []),
           ...(viewPropertyModal.layout_photo ? [viewPropertyModal.layout_photo] : []),
-          ...(matchedMaster?.layout_photos || []),
-          'https://images.unsplash.com/photo-1524813686514-a57563d77965?auto=format&fit=crop&w=800&q=80'
+          ...(matchedMaster?.layout_photos || [])
         ])).filter(Boolean);
 
         // 🗺️ ARCHITECTURAL UNIT FLOOR PLAN DIAGRAMS
         const floorPlanPhotosList: string[] = Array.from(new Set([
           ...(Array.isArray(viewPropertyModal.floor_plan_photos) && viewPropertyModal.floor_plan_photos.length > 0 ? viewPropertyModal.floor_plan_photos : []),
-          ...(viewPropertyModal.floor_plan_photo ? [viewPropertyModal.floor_plan_photo] : []),
-          'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=800&q=80'
+          ...(viewPropertyModal.floor_plan_photo ? [viewPropertyModal.floor_plan_photo] : [])
         ])).filter(Boolean);
 
         const superBuiltupDisp = viewPropertyModal.super_builtup_area 
           ? (viewPropertyModal.super_builtup_area.toString().toLowerCase().includes('sq') ? viewPropertyModal.super_builtup_area : `${viewPropertyModal.super_builtup_area} Sq.Ft.`)
-          : '1,283 Sq.Ft.';
+          : 'N/A';
 
         const parkingPriceDisp = viewPropertyModal.parking_price 
           ? `₹${parseInt(viewPropertyModal.parking_price.toString().replace(/[^0-9]/g, ''), 10).toLocaleString('en-IN')}` 
-          : '₹3,00,000';
+          : 'N/A';
 
-        const primaryDevMobile = viewPropertyModal.developer_mobile || devObj?.mobile || devProjectMobile || '9051216631';
+        const primaryDevMobile = viewPropertyModal.developer_mobile || devObj?.mobile || devProjectMobile || 'N/A';
         const altDevMobile = viewPropertyModal.developer_alt_mobile || devObj?.altMobile || devProjectAltMobile || primaryDevMobile;
 
         return (
@@ -3966,7 +4003,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     {viewPropertyModal.title}
                   </h2>
                   <span style={{ fontSize: '0.85rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>
-                    📍 {viewPropertyModal.locality || 'PANIHATI SODEPUR'}
+                    📍 {viewPropertyModal.locality || 'N/A'}
                   </span>
                 </div>
                 <button onClick={() => setViewPropertyModal(null)} style={{ background: isLight ? '#f1f5f9' : '#0f172a', border: 'none', color: isLight ? '#64748b' : '#94a3b8', padding: '8px', borderRadius: '10px', cursor: 'pointer' }}>
@@ -3985,31 +4022,55 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(4, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Developer Name</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.95rem' }}>{viewPropertyModal.developer || 'Mr. JAYANTA GHOSH'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.95rem' }}>{viewPropertyModal.developer || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Developer ID Code</span>
-                      <strong style={{ color: '#fbbf24', fontFamily: 'monospace' }}>{devIdCode}</strong>
+                      <strong style={{ color: '#fbbf24', fontFamily: 'monospace' }}>{devIdCode || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Developer Primary Mobile</span>
-                      <strong style={{ color: '#4ade80' }}>📱 {primaryDevMobile}</strong>
+                      <strong style={{ color: '#4ade80' }}>📱 {primaryDevMobile || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Alternative Phone Number</span>
-                      <strong style={{ color: '#38bdf8' }}>📞 {altDevMobile}</strong>
+                      <strong style={{ color: '#38bdf8' }}>📞 {altDevMobile || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Developer Email Address</span>
-                      <strong style={{ color: '#a855f7', fontFamily: 'monospace' }}>{viewPropertyModal.developer_email || devObj?.email || `${(viewPropertyModal.developer || 'developer').toLowerCase().replace(/\s+/g, '')}@builder.com`}</strong>
+                      {(() => {
+                        const rawEmail = viewPropertyModal.developer_email || devObj?.email || devObj?.developer_email || matchedMaster?.developer_email || matchedMaster?.email || '';
+                        const devEmailDisp = (rawEmail && !rawEmail.includes('@builder.com') && !rawEmail.includes('biswajitdas')) ? rawEmail : '';
+                        return (
+                          <strong style={{ color: devEmailDisp ? '#a855f7' : (isLight ? '#64748b' : '#94a3b8'), fontFamily: 'monospace' }}>
+                            {devEmailDisp || 'N/A'}
+                          </strong>
+                        );
+                      })()}
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>WBRERA Registration ID</span>
-                      <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{viewPropertyModal.rera_id || devObj?.rera_id || 'WBRERA/P/NOR/2024/000842'}</strong>
+                      {(() => {
+                        const rawRera = viewPropertyModal.rera_id || viewPropertyModal.reraNo || viewPropertyModal.rera || devObj?.rera_id || devObj?.reraNo || devObj?.rera || matchedMaster?.rera_id || matchedMaster?.reraNo || matchedMaster?.rera || '';
+                        const devReraDisp = (rawRera && rawRera !== 'WBRERA/P/NOR/2024/000842') ? rawRera : '';
+                        return (
+                          <strong style={{ color: devReraDisp ? '#38bdf8' : (isLight ? '#64748b' : '#94a3b8'), fontFamily: 'monospace' }}>
+                            {devReraDisp || 'N/A'}
+                          </strong>
+                        );
+                      })()}
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>HERA / Municipal Clearance</span>
-                      <strong style={{ color: '#4ade80', fontFamily: 'monospace' }}>{viewPropertyModal.hera_no || devObj?.hera_no || 'HERA-WB-2026-9901'}</strong>
+                      {(() => {
+                        const rawHera = viewPropertyModal.hera_no || viewPropertyModal.heraNo || viewPropertyModal.hera || devObj?.hera_no || devObj?.heraNo || devObj?.hera || matchedMaster?.hera_no || matchedMaster?.heraNo || matchedMaster?.hera || '';
+                        const devHeraDisp = (rawHera && rawHera !== 'HERA-WB-2026-9901' && rawHera !== 'HERA-MB-2026-9901') ? rawHera : '';
+                        return (
+                          <strong style={{ color: devHeraDisp ? '#4ade80' : (isLight ? '#64748b' : '#94a3b8'), fontFamily: 'monospace' }}>
+                            {devHeraDisp || 'N/A'}
+                          </strong>
+                        );
+                      })()}
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>OTP Verification Protocol</span>
@@ -4024,31 +4085,33 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     <h4 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                       📍 GPS LOCATION & EXACT GEOLOCATION COORDINATES
                     </h4>
-                    <a 
-                      href={`https://www.google.com/maps?q=${viewPropertyModal.latitude || '22.694318'},${viewPropertyModal.longitude || '88.400659'}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ background: '#0284c7', color: '#ffffff', textDecoration: 'none', padding: '4px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      🗺️ Open Direct Google Maps View
-                    </a>
+                    {viewPropertyModal.latitude && viewPropertyModal.longitude ? (
+                      <a 
+                        href={`https://www.google.com/maps?q=${viewPropertyModal.latitude},${viewPropertyModal.longitude}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ background: '#0284c7', color: '#ffffff', textDecoration: 'none', padding: '4px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        🗺️ Open Direct Google Maps View
+                      </a>
+                    ) : null}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(4, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Locality Hub / Sector</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.locality || 'PANIHATI SODEPUR'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.locality || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>GPS Latitude (Exact Map Lat)</span>
-                      <strong style={{ color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.92rem' }}>{viewPropertyModal.latitude || '22.694318'}</strong>
+                      <strong style={{ color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.92rem' }}>{viewPropertyModal.latitude || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>GPS Longitude (Exact Map Long)</span>
-                      <strong style={{ color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.92rem' }}>{viewPropertyModal.longitude || '88.400659'}</strong>
+                      <strong style={{ color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.92rem' }}>{viewPropertyModal.longitude || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Full Physical Address</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.78rem' }}>{viewPropertyModal.full_address || viewPropertyModal.address || `${viewPropertyModal.locality || 'Jessore Road, Barasat'}, North 24 Parganas, Kolkata, West Bengal - 700124`}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.78rem' }}>{viewPropertyModal.full_address || viewPropertyModal.address || viewPropertyModal.locality || 'N/A'}</strong>
                     </div>
                   </div>
                 </div>
@@ -4061,15 +4124,15 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Property Type</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.property_type || viewPropertyModal.type || 'Flat / Apartment'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.property_type || viewPropertyModal.type || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Configuration</span>
-                      <strong style={{ color: '#38bdf8', fontWeight: '900' }}>{viewPropertyModal.configuration || '2BHK'}</strong>
+                      <strong style={{ color: '#38bdf8', fontWeight: '900' }}>{viewPropertyModal.configuration || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Carpet Area</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.carpet_area || '629.25 Sq.Ft.'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.carpet_area ? (viewPropertyModal.carpet_area.toString().toLowerCase().includes('sq') ? viewPropertyModal.carpet_area : `${viewPropertyModal.carpet_area} Sq.Ft.`) : 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Super Built-up Area</span>
@@ -4077,28 +4140,28 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Tower / Block Name</span>
-                      <strong style={{ color: '#a855f7', fontWeight: '900' }}>{viewPropertyModal.tower_block || viewPropertyModal.tower || 'Tower A'}</strong>
+                      <strong style={{ color: '#a855f7', fontWeight: '900' }}>{viewPropertyModal.tower_block || viewPropertyModal.tower || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Floor Number (Unit Floor)</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.floor_num || viewPropertyModal.floor_number || '2nd Floor'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.floor_num || viewPropertyModal.floor_number || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Total Floors in Building</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.total_floors || 'G+4 Floors (5 Storey)'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.total_floors || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Facing Direction</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.facing || 'North Facing'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.facing || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Furnishing Status</span>
-                      <strong style={{ color: '#38bdf8', fontWeight: '800' }}>{viewPropertyModal.furnishing || 'Semi-Furnished'}</strong>
+                      <strong style={{ color: '#38bdf8', fontWeight: '800' }}>{viewPropertyModal.furnishing || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Possession Status</span>
                       <strong style={{ color: '#22c55e', fontWeight: '900' }}>
-                        {viewPropertyModal.possession_status || viewPropertyModal.possession || viewPropertyModal.possession_timeline || '🔑 Ready to Move In (Immediate)'}
+                        {viewPropertyModal.possession_status || viewPropertyModal.possession || viewPropertyModal.possession_timeline || 'N/A'}
                       </strong>
                     </div>
                   </div>
@@ -4112,15 +4175,15 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Total Inventory Final Price</span>
-                      <strong style={{ color: '#4ade80', fontSize: '1.1rem', fontWeight: '900' }}>{viewPropertyModal.final_price || '₹34,23,000'}</strong>
+                      <strong style={{ color: '#4ade80', fontSize: '1.1rem', fontWeight: '900' }}>{viewPropertyModal.final_price || (viewPropertyModal.price ? `₹${parseInt(viewPropertyModal.price.toString().replace(/[^0-9]/g, ''), 10).toLocaleString('en-IN')}` : 'N/A')}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Rate Per Sq.Ft.</span>
-                      <strong style={{ color: '#38bdf8', fontWeight: '900' }}>{viewPropertyModal.price_sqft || '₹5,020/Sq.Ft.'}</strong>
+                      <strong style={{ color: '#38bdf8', fontWeight: '900' }}>{viewPropertyModal.price_sqft ? (viewPropertyModal.price_sqft.toString().startsWith('₹') ? viewPropertyModal.price_sqft : `₹${viewPropertyModal.price_sqft}/Sq.Ft.`) : 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Parking Slot Allocation</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.car_parking || '1 Covered Parking Slot'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.car_parking || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Parking Price Tag</span>
@@ -4128,7 +4191,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Physical Keys / Custody</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.key_custody || 'Builder Site Office'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.key_custody || 'N/A'}</strong>
                     </div>
                   </div>
 
@@ -4160,7 +4223,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     {(() => {
                       const amenitiesList = Array.isArray(viewPropertyModal.selected_amenities) && viewPropertyModal.selected_amenities.length > 0 
                         ? viewPropertyModal.selected_amenities 
-                        : (Array.isArray(viewPropertyModal.amenities) && viewPropertyModal.amenities.length > 0 ? viewPropertyModal.amenities : ['🛗 Automatic Elevator / Lift', '🛡️ 24x7 Security Guard', '⚡ 100% Power Backup', '📹 CCTV Surveillance', '📞 Intercom Facility', '💧 Water Treatment Plant', '🧯 Fire Safety System', '🧘 Vastu Compliant', '🚗 Reserved Covered Parking', '🏋️ Gymnasium']);
+                        : (Array.isArray(viewPropertyModal.amenities) && viewPropertyModal.amenities.length > 0 ? viewPropertyModal.amenities : []);
+                      
+                      if (amenitiesList.length === 0) {
+                        return (
+                          <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontStyle: 'italic', fontSize: '0.82rem' }}>
+                            No specific property amenities configured yet.
+                          </span>
+                        );
+                      }
+
                       return amenitiesList.map((am: string, i: number) => (
                         <span key={i} style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid #0284c7', color: isLight ? '#0369a1' : '#38bdf8', padding: '5px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800' }}>
                           {am}
@@ -4187,11 +4259,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                         </div>
                         <div>
                           <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Booked Customer / Allottee</span>
-                          <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.booked_customer || viewPropertyModal.customer_name || 'Sumon Halder'}</strong>
+                          <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.booked_customer || viewPropertyModal.customer_name || 'N/A'}</strong>
                         </div>
                         <div>
                           <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Associated Booking Code</span>
-                          <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{viewPropertyModal.booking_code || 'SRM-BKG-2026-000087'}</strong>
+                          <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{viewPropertyModal.booking_code || 'N/A'}</strong>
                         </div>
                       </div>
                     </div>
@@ -4340,63 +4412,71 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       📐 PROPERTY LAYOUT & ARCHITECTURAL FLOOR PLAN GALLERY ({layoutPhotosList.length + floorPlanPhotosList.length} Diagrams Listed)
                     </h4>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          [...layoutPhotosList, ...floorPlanPhotosList].forEach((url, idx) => {
-                            downloadImage(url, `${(viewPropertyModal.property_code || 'layout').replace(/\s+/g, '_')}_diagram_${idx + 1}.jpg`);
-                          });
-                        }}
-                        style={{ background: '#a855f7', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '900', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <Download size={13} /> 📥 Download All Layout & Floor Plans
-                      </button>
+                      {(layoutPhotosList.length + floorPlanPhotosList.length > 0) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            [...layoutPhotosList, ...floorPlanPhotosList].forEach((url, idx) => {
+                              downloadImage(url, `${(viewPropertyModal.property_code || 'layout').replace(/\s+/g, '_')}_diagram_${idx + 1}.jpg`);
+                            });
+                          }}
+                          style={{ background: '#a855f7', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '900', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <Download size={13} /> 📥 Download All Layout & Floor Plans
+                        </button>
+                      )}
                       <span style={{ fontSize: '0.72rem', background: 'rgba(168, 85, 247, 0.2)', color: '#a855f7', padding: '2px 8px', borderRadius: '4px', fontWeight: '800' }}>
                         📐 Master Site & Unit Floor Plan Diagrams
                       </span>
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '10px' }}>
-                    {layoutPhotosList.map((url, idx) => (
-                      <div key={`layout_${idx}`} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid #a855f7', background: '#000000', cursor: 'pointer', height: '120px' }}>
-                        <img src={url} alt={`Property Layout ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={() => window.open(url, '_blank')} />
-                        <span style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(15, 23, 42, 0.85)', color: '#a855f7', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
-                          📐 Property Layout #{idx + 1}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            downloadImage(url, `${(viewPropertyModal.title || 'layout').replace(/\s+/g, '_')}_master_layout_${idx + 1}.jpg`);
-                          }}
-                          title="Download Layout Image"
-                          style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(168, 85, 247, 0.95)', color: '#ffffff', border: 'none', padding: '3px 7px', borderRadius: '5px', fontSize: '0.68rem', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}
-                        >
-                          <Download size={11} /> Download
-                        </button>
-                      </div>
-                    ))}
-                    {floorPlanPhotosList.map((url, idx) => (
-                      <div key={`floor_${idx}`} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid #38bdf8', background: '#000000', cursor: 'pointer', height: '120px' }}>
-                        <img src={url} alt={`Floor Plan ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={() => window.open(url, '_blank')} />
-                        <span style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(15, 23, 42, 0.85)', color: '#38bdf8', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
-                          🗺️ Floor Plan #{idx + 1}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            downloadImage(url, `${(viewPropertyModal.property_code || 'floorplan').replace(/\s+/g, '_')}_floor_plan_${idx + 1}.jpg`);
-                          }}
-                          title="Download Floor Plan Image"
-                          style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(56, 189, 248, 0.95)', color: '#0f172a', border: 'none', padding: '3px 7px', borderRadius: '5px', fontSize: '0.68rem', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}
-                        >
-                          <Download size={11} /> Download
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  {(layoutPhotosList.length + floorPlanPhotosList.length > 0) ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '10px' }}>
+                      {layoutPhotosList.map((url, idx) => (
+                        <div key={`layout_${idx}`} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid #a855f7', background: '#000000', cursor: 'pointer', height: '120px' }}>
+                          <img src={url} alt={`Property Layout ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={() => window.open(url, '_blank')} />
+                          <span style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(15, 23, 42, 0.85)', color: '#a855f7', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
+                            📐 Property Layout #{idx + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadImage(url, `${(viewPropertyModal.title || 'layout').replace(/\s+/g, '_')}_master_layout_${idx + 1}.jpg`);
+                            }}
+                            title="Download Layout Image"
+                            style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(168, 85, 247, 0.95)', color: '#ffffff', border: 'none', padding: '3px 7px', borderRadius: '5px', fontSize: '0.68rem', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}
+                          >
+                            <Download size={11} /> Download
+                          </button>
+                        </div>
+                      ))}
+                      {floorPlanPhotosList.map((url, idx) => (
+                        <div key={`floor_${idx}`} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid #38bdf8', background: '#000000', cursor: 'pointer', height: '120px' }}>
+                          <img src={url} alt={`Floor Plan ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={() => window.open(url, '_blank')} />
+                          <span style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(15, 23, 42, 0.85)', color: '#38bdf8', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
+                            🗺️ Floor Plan #{idx + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadImage(url, `${(viewPropertyModal.property_code || 'floorplan').replace(/\s+/g, '_')}_floor_plan_${idx + 1}.jpg`);
+                            }}
+                            title="Download Floor Plan Image"
+                            style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(56, 189, 248, 0.95)', color: '#0f172a', border: 'none', padding: '3px 7px', borderRadius: '5px', fontSize: '0.68rem', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}
+                          >
+                            <Download size={11} /> Download
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px dashed #a855f7', borderRadius: '8px', padding: '16px', color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.82rem', textAlign: 'center', fontWeight: '700' }}>
+                      📐 No layout or architectural floor plan diagrams uploaded for this property yet.
+                    </div>
+                  )}
                 </div>
 
                 {/* SECTION 6: 👤 SITE CONTACT PERSON & PROPERTY HIGHLIGHTS */}
@@ -4407,15 +4487,15 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(3, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Site Incharge Person Name</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.site_person_name || 'Rajesh Kumar (Site Manager)'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.site_person_name || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Site Person Contact Phone</span>
-                      <strong style={{ color: '#22c55e' }}>📞 {viewPropertyModal.site_person_contact || '+91 98490 77665'}</strong>
+                      <strong style={{ color: '#22c55e' }}>{viewPropertyModal.site_person_contact ? `📞 ${viewPropertyModal.site_person_contact}` : 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Property Highlights & Notes</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.description || 'Pool facing Vastu East, 3 balconies'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.description || 'N/A'}</strong>
                     </div>
                   </div>
                 </div>

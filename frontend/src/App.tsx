@@ -3792,8 +3792,8 @@ export default function App() {
       brokerage_payer: 'CUSTOMER',
       preferred_projects: '',
       family_requirements: '',
-      assigned_employee_id: 'Priya Nair (Sales Exec)',
-      assigned_employee_name: 'Priya Nair (Sales Exec)',
+      assigned_employee_id: 'Avishek Das',
+      assigned_employee_name: 'Avishek Das — Managing Director & Founder (Head Office (Kolkata))',
       team_leader_id: 'USR-06',
       priority: 'HOT',
       score: 85
@@ -3859,8 +3859,8 @@ export default function App() {
       brokerage_payer: 'CUSTOMER',
       preferred_projects: '',
       family_requirements: '',
-      assigned_employee_id: 'Priya Nair (Sales Exec)',
-      assigned_employee_name: 'Priya Nair (Sales Exec)',
+      assigned_employee_id: 'Avishek Das',
+      assigned_employee_name: 'Avishek Das — Managing Director & Founder (Head Office (Kolkata))',
       team_leader_id: 'USR-06',
       priority: 'HOT',
       score: 85
@@ -14767,31 +14767,42 @@ export default function App() {
                   <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 640 ? '12px' : '16px', display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : windowWidth <= 1024 ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', gap: '12px', fontSize: '0.82rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Customer Name:</span>
-                      <strong style={{ display: 'block', color: isLight ? '#0f172a' : '#ffffff' }}>{newCustomerForm.name || 'Sumanth Varma'}</strong>
+                      <strong style={{ display: 'block', color: newCustomerForm.name ? (isLight ? '#0f172a' : '#ffffff') : '#f59e0b' }}>
+                        {newCustomerForm.name ? newCustomerForm.name : '— (Pending Step 2)'}
+                      </strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Mobile Phone:</span>
-                      <strong style={{ display: 'block', color: '#4ade80' }}>{newCustomerForm.mobile || '+91 98490 88888'}</strong>
+                      <strong style={{ display: 'block', color: newCustomerForm.mobile ? '#4ade80' : '#f87171' }}>
+                        {newCustomerForm.mobile ? newCustomerForm.mobile : '— (Pending Step 2)'}
+                      </strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Assigned Executive:</span>
                       <strong style={{ display: 'block', color: '#38bdf8', fontWeight: '900' }}>
                         {(() => {
                           const curExec = newCustomerForm.assigned_employee_id || newCustomerForm.assigned_salesperson || newCustomerForm.assigned_employee_name;
+                          if (!curExec || curExec === 'USR-07' || curExec === 'Priya Nair (Sales Exec)') {
+                            return dynamicSalesExecutives[0]?.label || dynamicSalesExecutives[0]?.name || 'Avishek Das';
+                          }
                           const matchExec = dynamicSalesExecutives.find((x: any) => 
                             x.value === curExec || x.name === curExec || x.id === curExec || (x.label && x.label.includes(curExec)) || (curExec && curExec.includes(x.name))
                           );
-                          return matchExec ? matchExec.label : (curExec && curExec !== 'USR-07' ? curExec : (dynamicSalesExecutives[0]?.label || 'Avishek Das'));
+                          return matchExec ? matchExec.label : curExec;
                         })()}
                       </strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Budget Range:</span>
-                      <strong style={{ display: 'block', color: '#fbbf24' }}>{newCustomerForm.budget_min} - {newCustomerForm.budget_max}</strong>
+                      <strong style={{ display: 'block', color: (newCustomerForm.budget_min || newCustomerForm.budget_max) ? '#fbbf24' : '#f59e0b' }}>
+                        {(newCustomerForm.budget_min || newCustomerForm.budget_max) ? `${newCustomerForm.budget_min || ''} - ${newCustomerForm.budget_max || ''}`.trim() : '—'}
+                      </strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Preferred Area:</span>
-                      <strong style={{ display: 'block', color: '#38bdf8' }}>{newCustomerForm.preferredArea} ({newCustomerForm.configuration})</strong>
+                      <strong style={{ display: 'block', color: newCustomerForm.preferredArea ? '#38bdf8' : '#f59e0b' }}>
+                        {newCustomerForm.preferredArea ? `${newCustomerForm.preferredArea} ${newCustomerForm.configuration ? `(${newCustomerForm.configuration})` : ''}` : (newCustomerForm.configuration ? `(${newCustomerForm.configuration})` : '—')}
+                      </strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Agreed Brokerage:</span>
@@ -14820,7 +14831,7 @@ export default function App() {
                     <select 
                       value={(() => {
                         const cur = newCustomerForm.assigned_employee_id || newCustomerForm.assigned_salesperson || newCustomerForm.assigned_employee_name;
-                        if (!cur || cur === 'USR-07') return dynamicSalesExecutives[0]?.value || 'Avishek Das';
+                        if (!cur || cur === 'USR-07' || cur === 'Priya Nair (Sales Exec)') return dynamicSalesExecutives[0]?.value || 'Avishek Das';
                         const match = dynamicSalesExecutives.find((x: any) => 
                           x.value === cur || x.name === cur || x.id === cur || (x.label && x.label.includes(cur)) || (cur && cur.includes(x.name))
                         );
@@ -14857,19 +14868,19 @@ export default function App() {
                   <button 
                     type="button" 
                     onClick={() => {
-                      const mobileStr = newCustomerForm.mobile || newCustomerForm.phone || '+91 98490 88888';
-                      const nameStr = newCustomerForm.name || 'Inbound Prospect';
+                      const mobileStr = (newCustomerForm.mobile || newCustomerForm.phone || '').trim();
+                      const nameStr = (newCustomerForm.name || '').trim();
                       const targetMobile = mobileStr.replace(/[^0-9]/g, '');
                       const targetCustCode = newCustomerForm.customer_number;
-                      const cleanName = nameStr.trim().toLowerCase();
+                      const cleanName = nameStr.toLowerCase();
 
                       // Resolve real dynamic executive selection
                       const curExec = newCustomerForm.assigned_employee_id || newCustomerForm.assigned_salesperson || newCustomerForm.assigned_employee_name;
                       const matchExec = dynamicSalesExecutives.find((x: any) => 
                         x.value === curExec || x.name === curExec || x.id === curExec || (x.label && x.label.includes(curExec)) || (curExec && curExec.includes(x.name))
                       );
-                      const selectedExecLabel = matchExec ? matchExec.label : (curExec && curExec !== 'USR-07' ? curExec : (dynamicSalesExecutives[0]?.label || dynamicSalesExecutives[0]?.name || 'Avishek Das'));
-                      const selectedExecName = matchExec ? matchExec.name : (curExec && curExec !== 'USR-07' ? curExec : (dynamicSalesExecutives[0]?.name || 'Avishek Das'));
+                      const selectedExecLabel = matchExec ? matchExec.label : (curExec && curExec !== 'USR-07' && curExec !== 'Priya Nair (Sales Exec)' ? curExec : (dynamicSalesExecutives[0]?.label || dynamicSalesExecutives[0]?.name || 'Avishek Das'));
+                      const selectedExecName = matchExec ? matchExec.name : (curExec && curExec !== 'USR-07' && curExec !== 'Priya Nair (Sales Exec)' ? curExec : (dynamicSalesExecutives[0]?.name || 'Avishek Das'));
 
                       const existingCustomer = customers.find(c => 
                         (targetCustCode && c.customer_number === targetCustCode) ||

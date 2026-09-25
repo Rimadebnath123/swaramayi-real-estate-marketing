@@ -229,14 +229,14 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
         });
 
         if (!updated) {
-          const custNum = activeTargetCust?.customer_number || activeTargetCust?.customer_id || 'SRM-CUS-2026-000188';
+          const custNum = activeTargetCust?.customer_number || activeTargetCust?.customer_id || 'SRM-CUS-2026-000000';
           const newInv = {
-            id: invIdOrNum || `SRM-INV-2026-${custNum.replace(/[^0-9]/g, '').slice(-6) || '000087'}`,
-            invoice_number: invIdOrNum || `SRM-INV-2026-${custNum.replace(/[^0-9]/g, '').slice(-6) || '000087'}`,
+            id: invIdOrNum || (custNum ? `SRM-INV-2026-${custNum.replace(/[^0-9]/g, '').slice(-6)}` : 'SRM-INV-NEW'),
+            invoice_number: invIdOrNum || (custNum ? `SRM-INV-2026-${custNum.replace(/[^0-9]/g, '').slice(-6)}` : 'SRM-INV-NEW'),
             customer_number: custNum,
-            customer_name: activeTargetCust?.name || activeTargetCust?.full_name || 'Ruksha Roy',
-            customer_mobile: activeTargetCust?.mobile || '6646577673',
-            party_name: activeTargetCust?.name || activeTargetCust?.full_name || 'Ruksha Roy',
+            customer_name: activeTargetCust?.name || activeTargetCust?.full_name || 'Customer',
+            customer_mobile: activeTargetCust?.mobile || '',
+            party_name: activeTargetCust?.name || activeTargetCust?.full_name || 'Customer',
             total_invoice_amount: 590000,
             settlement_status: newSettlementStatus,
             is_settled: newIsSettled,
@@ -503,13 +503,13 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
 
       if (custNum && rNum) {
         if (rNum.toLowerCase() === custNum.toLowerCase()) return true;
-        if (cleanCustNum && rCleanNum && (rCleanNum === cleanCustNum || rCleanNum.endsWith(cleanCustNum) || cleanCustNum.endsWith(rCleanNum))) return true;
+        if (cleanCustNum && rCleanNum && cleanCustNum.length >= 6 && rCleanNum.length >= 6 && rCleanNum === cleanCustNum) return true;
       }
       if (cleanMobile && rMob) {
-        if (rMob === cleanMobile || rMob.endsWith(cleanMobile) || cleanMobile.endsWith(rMob)) return true;
+        if (cleanMobile.length >= 10 && rMob.length >= 10 && rMob === cleanMobile) return true;
       }
       if (cleanCustName && rName) {
-        if (rName === cleanCustName || rName.includes(cleanCustName) || cleanCustName.includes(rName)) return true;
+        if (rName === cleanCustName) return true;
       }
       return false;
     };
@@ -564,34 +564,35 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
 
     // 2. Linked Visits (Deduplicated & Real Visits Prioritized)
     const visitPlansMapped = (visitPlans || []).map((p: any) => ({
-      visitId: p.visitPlanId || p.visitScheduleId || 'SRM-VS-2026-000087',
+      visitId: p.visitPlanId || p.visitScheduleId || (p.id ? `SRM-VS-${String(p.id).slice(-6)}` : ''),
       customerNumber: p.customerNumber,
       customerName: p.customerName,
       mobile: p.mobile,
       propertyTitle: (p.stops && p.stops[0]?.propertyTitle) || 'Planned Visit Property',
-      status: p.status || 'COMPLETED',
+      status: p.status || 'SCHEDULED',
       otpVerified: p.status === 'OTP_VERIFIED' || p.status === 'VISIT_DONE' || (p.stops && p.stops.some((s: any) => s.otpVerified || s.status === 'VISIT_COMPLETED')),
-      checkedIn: true,
-      feedback: true,
-      feedbackRating: '5-STAR HIGH'
-    })).filter((v: any) => matchesCustomer(v.customerNumber, v.customerName, v.mobile));
+      checkedIn: p.status === 'COMPLETED' || p.status === 'CHECKED_IN',
+      feedback: p.status === 'COMPLETED' || p.feedbackLogged === true,
+      feedbackRating: p.feedbackRating || (p.status === 'COMPLETED' ? 'COMPLETED' : undefined)
+    })).filter((v: any) => v.visitId && matchesCustomer(v.customerNumber, v.customerName, v.mobile));
 
     const rawVisits = (scheduledVisits || []).filter((v: any) =>
       matchesCustomer(v.customerNumber || v.customerId || v.id, v.customerName || v.name, v.mobile || v.phone)
     );
 
-    const pvaVisitsMapped = linkedAgreements.filter((a: any) => (a.projectVisitAgreementId || a.agreement_code || '').toString().startsWith('SRM-PVA')).map((a: any) => ({
-      visitId: a.visitScheduleId || `SRM-VS-${(a.projectVisitAgreementId || a.agreement_code || '000087').replace(/\D/g, '').slice(-6) || '2026-000087'}`,
-      propertyTitle: a.projectTitle || a.property_details || 'Verified Site Visit',
-      status: 'COMPLETED',
-      otpVerified: true,
-      checkedIn: true,
-      feedback: true,
-      feedbackRating: '5-STAR HIGH'
-    }));
+    const pvaVisitsMapped = linkedAgreements
+      .filter((a: any) => (a.projectVisitAgreementId || a.agreement_code || '').toString().startsWith('SRM-PVA') && a.visitScheduleId)
+      .map((a: any) => ({
+        visitId: a.visitScheduleId,
+        propertyTitle: a.projectTitle || a.property_details || 'Verified Site Visit',
+        status: a.status || 'COMPLETED',
+        otpVerified: true,
+        checkedIn: true,
+        feedback: true,
+        feedbackRating: '5-STAR HIGH'
+      }));
 
-    const candidateVisits = [...rawVisits, ...visitPlansMapped];
-    const finalCandidateVisits = candidateVisits.length > 0 ? candidateVisits : pvaVisitsMapped;
+    const finalCandidateVisits = [...rawVisits, ...visitPlansMapped, ...pvaVisitsMapped];
 
     const seenVisitKeys = new Set<string>();
     const linkedVisits: any[] = [];
@@ -1338,31 +1339,31 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
               const cMob = (custObj?.mobile || custObj?.phone || custObj?.customerMobile || '').toString().replace(/\D/g, '');
 
               const matchId = (idVal: any) => {
-                if (!idVal) return false;
+                if (!idVal || !cNum) return false;
                 const str = idVal.toString().trim().toLowerCase();
-                if (cNum && (str === cNum || str.includes(cNum) || cNum.includes(str))) return true;
+                if (str === cNum) return true;
                 const cleanStr = str.replace(/\D/g, '');
-                if (cCleanNum && cleanStr && cCleanNum.length >= 5 && (cleanStr === cCleanNum || cleanStr.endsWith(cCleanNum) || cCleanNum.endsWith(cleanStr))) return true;
+                if (cCleanNum && cleanStr && cCleanNum.length >= 6 && cleanStr.length >= 6 && cCleanNum === cleanStr) return true;
                 return false;
               };
 
               const matchPhone = (phoneVal: any) => {
-                if (!phoneVal) return false;
+                if (!phoneVal || !cMob) return false;
                 const str = phoneVal.toString().replace(/\D/g, '');
-                if (cMob && str && cMob.length >= 7 && str.length >= 7 && (cMob === str || cMob.endsWith(str) || str.endsWith(cMob))) return true;
+                if (cMob.length >= 10 && str.length >= 10 && cMob === str) return true;
                 return false;
               };
 
               const matchName = (nameVal: any) => {
                 if (!nameVal || !cName) return false;
                 const str = nameVal.toString().trim().toLowerCase();
-                if (str === cName || (str.length >= 4 && (str.includes(cName) || cName.includes(str)))) return true;
+                if (str === cName) return true;
                 return false;
               };
 
               const isCustMatch = (obj: any) => {
                 if (!obj) return false;
-                if (matchId(obj.customerNumber || obj.customerId || obj.customer_number || obj.customer_id || obj.custCode || obj.id)) return true;
+                if (matchId(obj.customerNumber || obj.customerId || obj.customer_number || obj.customer_id || obj.custCode)) return true;
                 if (matchPhone(obj.mobile || obj.customerMobile || obj.customer_mobile || obj.phone || obj.party_contact || obj.client_mobile)) return true;
                 if (matchName(obj.customerName || obj.customer_name || obj.name || obj.party_name || obj.client_name || obj.custName)) return true;
                 return false;
@@ -1408,9 +1409,9 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                 }))
               ];
               const directVisit = allVisits.find(isCustMatch);
-              const visitFromPva = matchingPva ? {
-                visitId: matchingPva.visitScheduleId || (matchingPva.projectVisitAgreementId ? `SRM-VS-${matchingPva.projectVisitAgreementId.replace(/\D/g, '').slice(-6) || '2026-000087'}` : 'SRM-VS-2026-000087'),
-                status: 'OTP_VERIFIED',
+              const visitFromPva = (matchingPva && matchingPva.visitScheduleId) ? {
+                visitId: matchingPva.visitScheduleId,
+                status: matchingPva.status || 'OTP_VERIFIED',
                 otpVerified: true
               } : null;
 
@@ -1692,11 +1693,11 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
 
                           {matchingPva ? (
                             <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', borderRadius: '4px', padding: '4px 8px', color: '#4ade80', fontWeight: '800' }}>
-                              🚗 Site Visit: PVA OTP Verified ({matchingPva.projectVisitAgreementId || matchingPva.id || matchingPva.agreement_code || 'SRM-PVA-2026-000001'})
+                              🚗 Site Visit: PVA OTP Verified ({matchingPva.projectVisitAgreementId || matchingPva.id || matchingPva.agreement_code})
                             </div>
                           ) : matchingVisit ? (
                             <div style={{ background: matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? 'rgba(34, 197, 94, 0.15)' : 'rgba(56, 189, 248, 0.15)', border: matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? '1px solid #22c55e' : '1px solid #0284c7', borderRadius: '4px', padding: '4px 8px', color: matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? '#4ade80' : '#38bdf8', fontWeight: '800' }}>
-                              🚗 Site Visit: {matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? 'OTP Verified' : 'Scheduled'} ({matchingVisit.visitId || matchingVisit.id || 'SRM-VS-2026-000087'})
+                              🚗 Site Visit: {matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? 'OTP Verified' : 'Scheduled'} ({matchingVisit.visitId || matchingVisit.id || 'VS-SCHEDULED'})
                             </div>
                           ) : (
                             <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', borderRadius: '4px', padding: '4px 8px', color: isLight ? '#94a3b8' : '#64748b', fontWeight: '700' }}>
@@ -1864,15 +1865,11 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                               {/* 3. VISIT STAGE */}
                               {matchingPva ? (
                                 <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', borderRadius: '4px', padding: '3px 8px', color: '#4ade80', fontWeight: '800' }}>
-                                  🚗 Site Visit: PVA OTP Verified ({matchingPva.projectVisitAgreementId || matchingPva.id || matchingPva.agreement_code || 'SRM-PVA-2026-000001'})
+                                  🚗 Site Visit: PVA OTP Verified ({matchingPva.projectVisitAgreementId || matchingPva.id || matchingPva.agreement_code})
                                 </div>
                               ) : matchingVisit ? (
                                 <div style={{ background: matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? 'rgba(34, 197, 94, 0.15)' : 'rgba(56, 189, 248, 0.15)', border: matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? '1px solid #22c55e' : '1px solid #0284c7', borderRadius: '4px', padding: '3px 8px', color: matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? '#4ade80' : '#38bdf8', fontWeight: '800' }}>
-                                  🚗 Site Visit: {matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? 'OTP Verified' : 'Scheduled'} ({matchingVisit.visitId || matchingVisit.id || 'SRM-VS-2026-000087'})
-                                </div>
-                              ) : (matchingBooking || matchingInvoice) ? (
-                                <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', borderRadius: '4px', padding: '3px 8px', color: '#4ade80', fontWeight: '800' }}>
-                                  🚗 Site Visit: OTP Verified ({matchingBooking?.booking_code ? `SRM-VS-${matchingBooking.booking_code.replace(/\D/g, '').slice(-6) || '2026-000087'}` : 'SRM-VS-2026-000087'})
+                                  🚗 Site Visit: {matchingVisit.status === 'OTP_VERIFIED' || matchingVisit.status === 'COMPLETED' || matchingVisit.status === 'VISIT_DONE' || matchingVisit.status === 'DONE' || matchingVisit.otpVerified ? 'OTP Verified' : 'Scheduled'} ({matchingVisit.visitId || matchingVisit.id || 'VS-SCHEDULED'})
                                 </div>
                               ) : (
                                 <div style={{ background: isLight ? '#f1f5f9' : '#0f172a', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', borderRadius: '4px', padding: '3px 8px', color: isLight ? '#94a3b8' : '#64748b', fontWeight: '700' }}>

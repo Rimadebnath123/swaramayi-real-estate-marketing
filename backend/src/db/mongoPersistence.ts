@@ -91,23 +91,27 @@ async function syncCollection(model: mongoose.Model<any>, records: any[]) {
 
     // Upsert remaining active records
     const ops = records.map(rec => {
-      const filter: any = rec.id 
-        ? { id: rec.id } 
-        : (rec.visitId ? { visitId: rec.visitId }
-        : (rec.visitScheduleId ? { visitScheduleId: rec.visitScheduleId }
-        : (rec.visitPlanId ? { visitPlanId: rec.visitPlanId }
-        : (rec.planId ? { planId: rec.planId }
-        : (rec.booking_code ? { booking_code: rec.booking_code } 
-        : (rec.invoice_number ? { invoice_number: rec.invoice_number } 
-        : (rec.agreement_code ? { agreement_code: rec.agreement_code } 
-        : (rec.customer_number ? { customer_number: rec.customer_number } 
-        : (rec.property_code ? { property_code: rec.property_code } 
-        : (rec.lead_number ? { lead_number: rec.lead_number } 
-        : (rec.costSheetId ? { costSheetId: rec.costSheetId } 
-        : (rec.projectVisitAgreementId ? { projectVisitAgreementId: rec.projectVisitAgreementId } 
-        : (rec.team_name ? { team_name: rec.team_name } 
-        : (rec.branch_name ? { branch_name: rec.branch_name } 
-        : (rec.name ? { name: rec.name } : rec)))))))))))))));
+      let filter: any;
+      if (model.modelName === 'Customer' && rec.customer_number) {
+        filter = { customer_number: String(rec.customer_number) };
+      } else if (model.modelName === 'Lead' && rec.lead_number) {
+        filter = { lead_number: String(rec.lead_number) };
+      } else if (model.modelName === 'Property' && rec.property_code) {
+        filter = { property_code: String(rec.property_code) };
+      } else if (model.modelName === 'Booking' && rec.booking_code) {
+        filter = { booking_code: String(rec.booking_code) };
+      } else if (model.modelName === 'Invoice' && rec.invoice_number) {
+        filter = { invoice_number: String(rec.invoice_number) };
+      } else if (model.modelName === 'Agreement' && rec.agreement_code) {
+        filter = { agreement_code: String(rec.agreement_code) };
+      } else if (rec.id) {
+        filter = { id: String(rec.id) };
+      } else {
+        filter = rec.visitId ? { visitId: rec.visitId }
+          : (rec.visitScheduleId ? { visitScheduleId: rec.visitScheduleId }
+          : (rec.costSheetId ? { costSheetId: rec.costSheetId }
+          : (rec.name ? { name: rec.name } : rec)));
+      }
       
       return {
         updateOne: {
@@ -120,6 +124,27 @@ async function syncCollection(model: mongoose.Model<any>, records: any[]) {
 
     if (ops.length > 0) {
       await model.bulkWrite(ops);
+    }
+
+    if (model.modelName === 'Customer') {
+      try {
+        const allCustDocs = await model.find({});
+        const seenCustNums = new Set<string>();
+        const toDelete: any[] = [];
+        for (const doc of allCustDocs) {
+          const num = doc.customer_number;
+          if (num) {
+            if (seenCustNums.has(num)) {
+              toDelete.push(doc._id);
+            } else {
+              seenCustNums.add(num);
+            }
+          }
+        }
+        if (toDelete.length > 0) {
+          await model.deleteMany({ _id: { $in: toDelete } });
+        }
+      } catch (e) {}
     }
   } catch (err: any) {
     console.warn(`MongoDB Sync Note [${model.modelName}]:`, err.message);

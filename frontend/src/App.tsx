@@ -6290,7 +6290,7 @@ export default function App() {
     };
 
     const draftCustObj = {
-      id: existingCustomer ? existingCustomer.id : `CUS-DRAFT-${Date.now()}`,
+      id: existingCustomer ? existingCustomer.id : `CUS-${finalCustomerCode}`,
       customer_number: finalCustomerCode,
       name: custName,
       phone: targetMobile || newCustomerForm.phone || '',

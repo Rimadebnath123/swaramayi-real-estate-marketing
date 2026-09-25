@@ -596,8 +596,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             return (individualCostSheets || []).find((cs: any) => {
               if (cs.status === 'CONVERTED_TO_VISIT' || cs.status === 'SHIFTED_TO_MATCHING' || cs.status === 'CANCELLED') return false;
 
-              const csCustId = (cs.customerId || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber || cs.customerNumber || '').toString().trim().toLowerCase();
-              const csMatchId = (cs.matchingRequestId || cs.matchId || cs.requestId || '').toString().trim().toLowerCase();
+              const csCustId = (cs.customerId || cs.customerNumber || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber || '').toString().trim().toLowerCase();
+              const csMatchId = (cs.matchingRequestId || cs.matchId || cs.requestId || cs.parentMatchingId || cs.matchSnapshot?.matchId || '').toString().trim().toLowerCase();
               const csName = (cs.customerName || cs.name || cs.customerSnapshot?.customerName || '').toString().toLowerCase().trim();
               const csMob = (cs.mobile || cs.customerMobile || cs.customerSnapshot?.mobile || cs.customerSnapshot?.alternateMobile || '').toString().replace(/\D/g, '');
 
@@ -622,14 +622,13 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             if (custNum) seenCustNums.add(custNum);
             if (mob) seenMobiles.add(mob);
 
-            const isPendingExplicit = r.status === 'PENDING' || r.status === 'SHIFTED_TO_MATCHING' || !r.costSheetId;
-            const actualCostSheet = isPendingExplicit ? null : findActualCostSheet(r.requestId, r.customerNumber, r.customerName, r.mobile);
-            const isCreated = !isPendingExplicit && !!actualCostSheet;
+            const actualCostSheet = findActualCostSheet(r.requestId || r.id, r.customerNumber || r.customerId, r.customerName || r.name, r.mobile) || (r.costSheetId ? { costSheetId: r.costSheetId } : null);
+            const isCreated = !!actualCostSheet;
 
             list.push({
               ...r,
-              status: isPendingExplicit ? 'PENDING' : (isCreated ? 'COST_SHEET_CREATED' : (r.status || 'PENDING')),
-              costSheetId: isPendingExplicit ? undefined : (actualCostSheet?.costSheetId || r.costSheetId)
+              status: isCreated ? 'COST_SHEET_CREATED' : (r.status || 'PENDING'),
+              costSheetId: actualCostSheet?.costSheetId || actualCostSheet?.id || r.costSheetId || undefined
             });
           });
 

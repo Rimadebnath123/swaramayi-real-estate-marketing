@@ -130,19 +130,13 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
           <div style={{ display: 'flex', gap: windowWidth <= 640 ? '4px' : '6px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '10px', overflowX: 'auto', flexWrap: 'nowrap', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'thin', maxWidth: '100%' }}>
             {[
               { id: 'all', label: 'All Leads', count: activeVaultLeadsList.length, color: '#38bdf8' },
-              { id: 'unassigned', label: 'New & Unassigned', count: activeVaultLeadsList.filter(l => !l.assigned_employee_id || l.assigned_employee_id === 'Unassigned').length, color: '#a855f7' },
-              { id: 'my_leads', label: 'My Leads', count: activeVaultLeadsList.filter(l => l.assigned_employee_id === 'USR-07' || l.assigned_employee_name?.includes('Priya')).length, color: '#38bdf8' },
               { id: 'today_followups', label: "Today's Follow-ups", count: activeVaultLeadsList.filter(l => l.next_followup && l.next_followup.startsWith(new Date().toISOString().split('T')[0])).length, color: '#fbbf24', badgeBg: '#eab308' },
               { id: 'overdue_followups', label: 'Overdue Follow-ups', count: activeVaultLeadsList.filter(l => l.next_followup && new Date(l.next_followup) < new Date() && !l.next_followup.startsWith(new Date().toISOString().split('T')[0])).length, color: '#ef4444', badgeBg: '#ef4444' },
               { id: 'interested', label: 'Interested Leads', count: activeVaultLeadsList.filter(l => ['INTERESTED', 'CONNECTED_INTERESTED'].includes(l.lead_status) || ['INTERESTED', 'CONNECTED_INTERESTED'].includes(l.call_disposition)).length, color: '#4ade80' },
               { id: 'not_interested', label: '❌ Not Interested', count: activeVaultLeadsList.filter(l => l.lead_status === 'NOT_INTERESTED' || l.call_disposition === 'NOT_INTERESTED').length, color: '#ef4444', badgeBg: '#ef4444' },
               { id: 'no_response', label: '📵 No Response', count: activeVaultLeadsList.filter(l => l.lead_status === 'NO_RESPONSE' || l.call_disposition === 'NO_RESPONSE').length, color: '#eab308', badgeBg: '#eab308' },
               { id: 'call_back_later', label: '⏳ Call Back Later', count: activeVaultLeadsList.filter(l => l.lead_status === 'CALL_BACK_LATER' || l.call_disposition === 'CALL_BACK_LATER').length, color: '#38bdf8', badgeBg: '#0284c7' },
-              { id: 'matching', label: 'Matching Pending', count: uniqueLeadsList.filter(l => ['MATCHING_PENDING', 'MATCHING_DONE'].includes(l.lead_status)).length, color: '#c084fc' },
-              { id: 'visit', label: 'Visit Leads', count: activeVaultLeadsList.filter(l => ['VISIT_PLANNED', 'VISIT_COMPLETED'].includes(l.lead_status)).length, color: '#38bdf8' },
-              { id: 'converted', label: 'Converted Leads', count: activeVaultLeadsList.filter(l => ['CONVERTED', 'BOOKING_PROCESS'].includes(l.lead_status)).length, color: '#22c55e' },
-              { id: 'nurture', label: 'Nurture / Recycle', count: activeVaultLeadsList.filter(l => l.lead_status === 'NURTURE' || l.lead_status === 'RECYCLE').length, color: isLight ? '#64748b' : '#94a3b8' },
-              { id: 'lost_closed', label: 'Lost / Closed', count: activeVaultLeadsList.filter(l => ['LOST', 'CANCELLED'].includes(l.lead_status)).length, color: '#64748b' }
+              { id: 'matching', label: 'Matching Pending', count: uniqueLeadsList.filter(l => ['MATCHING_PENDING', 'MATCHING_DONE'].includes(l.lead_status)).length, color: '#c084fc' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -261,19 +255,13 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                 <tbody>
                   {(leadInboxTab === 'matching' ? uniqueLeadsList : activeVaultLeadsList)
                     .filter(l => {
-                      if (leadInboxTab === 'unassigned') return !l.assigned_employee_id || l.assigned_employee_id === 'Unassigned';
-                      if (leadInboxTab === 'my_leads') return l.assigned_employee_id === 'USR-07' || l.assigned_employee_name?.includes('Priya');
                       if (leadInboxTab === 'today_followups') return l.next_followup && l.next_followup.startsWith(new Date().toISOString().split('T')[0]);
                       if (leadInboxTab === 'overdue_followups') return l.next_followup && new Date(l.next_followup) < new Date() && !l.next_followup.startsWith(new Date().toISOString().split('T')[0]);
-                      if (leadInboxTab === 'nurture') return l.lead_status === 'NURTURE' || l.lead_status === 'RECYCLE';
                       if (leadInboxTab === 'interested') return ['INTERESTED', 'CONNECTED_INTERESTED'].includes(l.lead_status) || ['INTERESTED', 'CONNECTED_INTERESTED'].includes(l.call_disposition);
                       if (leadInboxTab === 'not_interested') return l.lead_status === 'NOT_INTERESTED' || l.call_disposition === 'NOT_INTERESTED';
                       if (leadInboxTab === 'no_response') return l.lead_status === 'NO_RESPONSE' || l.call_disposition === 'NO_RESPONSE';
                       if (leadInboxTab === 'call_back_later') return l.lead_status === 'CALL_BACK_LATER' || l.call_disposition === 'CALL_BACK_LATER';
                       if (leadInboxTab === 'matching') return ['MATCHING_PENDING', 'MATCHING_DONE'].includes(l.lead_status);
-                      if (leadInboxTab === 'visit') return ['VISIT_PLANNED', 'VISIT_COMPLETED'].includes(l.lead_status);
-                      if (leadInboxTab === 'converted') return ['CONVERTED', 'BOOKING_PROCESS'].includes(l.lead_status);
-                      if (leadInboxTab === 'lost_closed') return ['LOST', 'CANCELLED'].includes(l.lead_status);
                       return true;
                     })
                     .filter(l => leadSourceFilter === 'ALL' || l.source === leadSourceFilter)
@@ -609,7 +597,7 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
             <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(3, 1fr)', gap: '14px', width: '100%', maxWidth: '850px' }}>
               
               <div 
-                onClick={() => { setLeadInboxTab('unassigned'); setLeadViewMode('inbox'); }}
+                onClick={() => { setLeadInboxTab('all'); setLeadViewMode('inbox'); }}
                 style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #a855f7', borderRadius: '12px', padding: '12px', textAlign: 'center', cursor: 'pointer' }}
               >
                 <span style={{ fontSize: '0.7rem', color: '#c084fc', fontWeight: '900' }}>1. UNASSIGNED QUEUE</span>
@@ -618,7 +606,7 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
               </div>
 
               <div 
-                onClick={() => { setLeadInboxTab('my_leads'); setLeadViewMode('inbox'); }}
+                onClick={() => { setLeadInboxTab('all'); setLeadViewMode('inbox'); }}
                 style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #38bdf8', borderRadius: '12px', padding: '12px', textAlign: 'center', cursor: 'pointer' }}
               >
                 <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: '900' }}>2. CRM ASSIGNED</span>
@@ -669,7 +657,7 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                     📄 3. COST SHEET
                   </div>
                   <div style={{ textAlign: 'center', color: '#4ade80', fontWeight: '900' }}>↓</div>
-                  <div onClick={() => { setLeadInboxTab('visit'); setLeadViewMode('inbox'); }} style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #38bdf8', padding: '8px 12px', borderRadius: '8px', color: '#38bdf8', fontWeight: '900', textAlign: 'center', cursor: 'pointer' }}>
+                  <div onClick={() => { setActiveTab('visit_management'); }} style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #38bdf8', padding: '8px 12px', borderRadius: '8px', color: '#38bdf8', fontWeight: '900', textAlign: 'center', cursor: 'pointer' }}>
                     🚘 4. SITE VISIT
                   </div>
                   <div style={{ textAlign: 'center', color: '#4ade80', fontWeight: '900' }}>↓</div>
@@ -677,7 +665,7 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                     📜 5. AGREEMENT
                   </div>
                   <div style={{ textAlign: 'center', color: '#4ade80', fontWeight: '900' }}>↓</div>
-                  <div onClick={() => { setLeadInboxTab('converted'); setLeadViewMode('inbox'); }} style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', padding: '10px 12px', borderRadius: '10px', fontWeight: '900', textAlign: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)' }}>
+                  <div onClick={() => { setActiveTab('booking_management'); }} style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', padding: '10px 12px', borderRadius: '10px', fontWeight: '900', textAlign: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)' }}>
                     🎉 6. BOOKING CONFIRMED
                   </div>
                 </div>
@@ -691,10 +679,10 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
 
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.78rem', marginTop: '14px' }}>
                   <div style={{ textAlign: 'center', color: '#fbbf24', fontWeight: '900' }}>↓</div>
-                  <div onClick={() => { setLeadInboxTab('nurture'); setLeadViewMode('inbox'); }} style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #fbbf24', padding: '16px 12px', borderRadius: '10px', color: '#fbbf24', fontWeight: '900', textAlign: 'center', cursor: 'pointer' }}>
+                  <div onClick={() => { setLeadInboxTab('call_back_later'); setLeadViewMode('inbox'); }} style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #fbbf24', padding: '16px 12px', borderRadius: '10px', color: '#fbbf24', fontWeight: '900', textAlign: 'center', cursor: 'pointer' }}>
                     ⏰ RE-CALL LATER
                     <br />
-                    <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '600' }}>(Nurture & Recycle Vault)</span>
+                    <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '600' }}>(Call Back Queue)</span>
                   </div>
                   <p style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'center', marginTop: '10px', lineHeight: '1.4' }}>
                     Automated callback timer scheduled in 30-90 days for market re-engagement.

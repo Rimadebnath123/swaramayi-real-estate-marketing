@@ -283,6 +283,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             locality: proj.locality || '',
             latitude: proj.lat || proj.latitude || '22.722361',
             longitude: proj.lng || proj.longitude || '88.493403',
+            rera_id: proj.rera_id || proj.reraId || proj.rera || dev.rera_id || dev.reraId || dev.rera || dev.developer_rera_id || '',
+            hera_no: proj.hera_no || proj.heraId || proj.hera || dev.hera_no || dev.heraId || dev.hera || dev.developer_hera_no || '',
             amenities: proj.amenities || [],
             building_photos: proj.building_photos || [],
             total_covered_parking_capacity: proj.total_covered_parking_capacity !== undefined ? proj.total_covered_parking_capacity : 24,
@@ -319,6 +321,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           locality: prop.locality || '',
           latitude: prop.latitude || '',
           longitude: prop.longitude || '',
+          rera_id: prop.rera_id || prop.reraId || prop.rera || '',
+          hera_no: prop.hera_no || prop.heraId || prop.hera || '',
           amenities: prop.selected_amenities || [],
           building_photos: prop.building_photos || [],
           total_covered_parking_capacity: prop.total_covered_parking_capacity !== undefined ? prop.total_covered_parking_capacity : 0,
@@ -803,6 +807,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       locality: newPropertyForm.locality || 'Locality Hub',
       lat: newPropertyForm.latitude || '22.722361',
       lng: newPropertyForm.longitude || '88.493403',
+      rera_id: newPropertyForm.rera_id || '',
+      hera_no: newPropertyForm.hera_no || '',
       amenities: newPropertyForm.selected_amenities || [],
       building_photos: newPropertyForm.building_photos || [],
       total_covered_parking_capacity: newPropertyForm.total_covered_parking_capacity !== undefined ? newPropertyForm.total_covered_parking_capacity : 24,
@@ -1998,7 +2004,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                               const allProjs = getAllMasterProjects();
                               const found = allProjs.find(p => p.id?.toLowerCase() === cleanText.toLowerCase() || p.code?.toLowerCase() === cleanText.toLowerCase());
                               if (found) {
-                                setNewPropertyForm((prev: any) => ({
+                                 setNewPropertyForm((prev: any) => ({
                                   ...prev,
                                   project_id: found.id || found.code,
                                   developer: found.developer || prev.developer,
@@ -2006,6 +2012,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                   locality: found.locality || prev.locality,
                                   latitude: found.latitude || prev.latitude,
                                   longitude: found.longitude || prev.longitude,
+                                  rera_id: found.rera_id || found.reraId || found.rera || prev.rera_id,
+                                  hera_no: found.hera_no || found.heraId || found.hera || prev.hera_no,
                                   selected_amenities: found.amenities && found.amenities.length > 0 ? found.amenities : prev.selected_amenities,
                                   building_photos: found.building_photos && found.building_photos.length > 0 ? found.building_photos : prev.building_photos
                                 }));
@@ -2040,6 +2048,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             locality: found.locality || prev.locality,
                             latitude: found.latitude || prev.latitude,
                             longitude: found.longitude || prev.longitude,
+                            rera_id: found.rera_id || found.reraId || found.rera || prev.rera_id,
+                            hera_no: found.hera_no || found.heraId || found.hera || prev.hera_no,
                             selected_amenities: found.amenities && found.amenities.length > 0 ? found.amenities : prev.selected_amenities,
                             building_photos: found.building_photos && found.building_photos.length > 0 ? found.building_photos : prev.building_photos
                           }));
@@ -2072,6 +2082,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             locality: found.locality || prev.locality,
                             latitude: found.latitude || prev.latitude,
                             longitude: found.longitude || prev.longitude,
+                            rera_id: found.rera_id || found.reraId || found.rera || prev.rera_id,
+                            hera_no: found.hera_no || found.heraId || found.hera || prev.hera_no,
                             selected_amenities: found.amenities && found.amenities.length > 0 ? found.amenities : prev.selected_amenities,
                             building_photos: found.building_photos && found.building_photos.length > 0 ? found.building_photos : prev.building_photos
                           }));

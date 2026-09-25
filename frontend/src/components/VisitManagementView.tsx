@@ -266,6 +266,122 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
   const [analyticsTimeFilter, setAnalyticsTimeFilter] = useState<string>('ALL');
   const [analyticsExecFilter, setAnalyticsExecFilter] = useState<string>('ALL');
 
+  const [showRescheduleStayModal, setShowRescheduleStayModal] = useState<{ open: boolean; visit: any } | null>(null);
+  const [rescheduleForm, setRescheduleForm] = useState({
+    visitDate: '',
+    visitTime: '10:00 AM',
+    assignedExecutive: 'Punita Roy',
+    transport: '🚗 Cab Pick & Drop Needed',
+    rescheduleReason: 'Customer requested date change',
+    stayType: 'NO_STAY',
+    stayNotes: '',
+  });
+
+  const handleOpenRescheduleStayModal = (v: any) => {
+    setShowRescheduleStayModal({ open: true, visit: v });
+    setRescheduleForm({
+      visitDate: v.visitDate || new Date().toISOString().split('T')[0],
+      visitTime: v.visitTime || '10:00 AM',
+      assignedExecutive: v.assignedExecutive || 'Punita Roy',
+      transport: v.transport || '🚗 Cab Pick & Drop Needed',
+      rescheduleReason: v.rescheduleReason || 'Customer requested schedule adjustment',
+      stayType: v.stayType || 'NO_STAY',
+      stayNotes: v.stayNotes || '',
+    });
+  };
+
+  const handleSaveRescheduleStay = async () => {
+    if (!showRescheduleStayModal || !showRescheduleStayModal.visit) return;
+    const targetVisit = showRescheduleStayModal.visit;
+    const targetId = targetVisit.visitId || targetVisit.id || targetVisit.site_visit_code;
+
+    let updatedScheduledVisits = (scheduledVisits || []).map((sv: any) => {
+      const isMatch = (sv.visitId && (sv.visitId === targetId || sv.visitScheduleId === targetId)) ||
+                      (sv.id && sv.id === targetId) ||
+                      (sv.customerNumber && sv.customerNumber === targetVisit.customerNumber && sv.visitDate === targetVisit.visitDate);
+      if (isMatch) {
+        const prevRescheduledCount = sv.rescheduledCount || 0;
+        return {
+          ...sv,
+          visitDate: rescheduleForm.visitDate,
+          visitTime: rescheduleForm.visitTime,
+          assignedExecutive: rescheduleForm.assignedExecutive,
+          transport: rescheduleForm.transport,
+          rescheduleReason: rescheduleForm.rescheduleReason,
+          rescheduledCount: prevRescheduledCount + 1,
+          status: sv.status === 'COMPLETED' ? 'COMPLETED' : 'RESCHEDULED',
+          visit_status: sv.status === 'COMPLETED' ? 'COMPLETED' : 'RESCHEDULED',
+          stayType: rescheduleForm.stayType,
+          stayNotes: rescheduleForm.stayNotes,
+          lastUpdated: new Date().toISOString(),
+        };
+      }
+      return sv;
+    });
+
+    const existsInSv = updatedScheduledVisits.some((sv: any) => (sv.visitId && (sv.visitId === targetId || sv.visitScheduleId === targetId)) || (sv.id && sv.id === targetId));
+    if (!existsInSv) {
+      updatedScheduledVisits.push({
+        ...targetVisit,
+        visitDate: rescheduleForm.visitDate,
+        visitTime: rescheduleForm.visitTime,
+        assignedExecutive: rescheduleForm.assignedExecutive,
+        transport: rescheduleForm.transport,
+        rescheduleReason: rescheduleForm.rescheduleReason,
+        rescheduledCount: (targetVisit.rescheduledCount || 0) + 1,
+        status: targetVisit.status === 'COMPLETED' ? 'COMPLETED' : 'RESCHEDULED',
+        visit_status: targetVisit.status === 'COMPLETED' ? 'COMPLETED' : 'RESCHEDULED',
+        stayType: rescheduleForm.stayType,
+        stayNotes: rescheduleForm.stayNotes,
+        lastUpdated: new Date().toISOString(),
+      });
+    }
+
+    if (setScheduledVisits) {
+      setScheduledVisits(updatedScheduledVisits);
+    }
+
+    if (setVisitPlans && visitPlans) {
+      const updatedPlans = visitPlans.map((vp: any) => {
+        const isMatch = (vp.visitPlanId && (vp.visitPlanId === targetId || vp.visitScheduleId === targetId)) ||
+                        (vp.customerNumber && vp.customerNumber === targetVisit.customerNumber);
+        if (isMatch) {
+          return {
+            ...vp,
+            visitDate: rescheduleForm.visitDate,
+            startTime: rescheduleForm.visitTime,
+            assignedExecutive: rescheduleForm.assignedExecutive,
+            transport: rescheduleForm.transport,
+            rescheduleReason: rescheduleForm.rescheduleReason,
+            rescheduledCount: (vp.rescheduledCount || 0) + 1,
+            status: vp.status === 'COMPLETED' ? 'COMPLETED' : 'RESCHEDULED',
+            stayType: rescheduleForm.stayType,
+            stayNotes: rescheduleForm.stayNotes,
+          };
+        }
+        return vp;
+      });
+      setVisitPlans(updatedPlans);
+      try {
+        localStorage.setItem('swaramayi_visit_plans_v4_clean', JSON.stringify(updatedPlans));
+      } catch (e) {}
+    }
+
+    try {
+      localStorage.setItem('swaramayi_scheduled_visits_v7_clean', JSON.stringify(updatedScheduledVisits));
+    } catch (e) {}
+
+    if (syncAllToMongoDB) {
+      try {
+        await syncAllToMongoDB({ scheduledVisits: updatedScheduledVisits });
+      } catch (err) {
+        console.warn('Sync to mongo failed:', err);
+      }
+    }
+
+    setShowRescheduleStayModal(null);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: windowWidth <= 640 ? '10px' : '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: windowWidth <= 640 ? '12px' : '16px', padding: windowWidth <= 640 ? '12px' : '20px' }}>
@@ -1183,6 +1299,18 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                       <td style={{ padding: '10px', color: '#cbd5e1' }}>
                         <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800' }}>📅 {v.visitDate}</span>
                         <br /><span style={{ color: '#fbbf24', fontWeight: '800' }}>⏰ {v.visitTime}</span>
+                        {(v.rescheduledCount > 0 || v.status === 'RESCHEDULED') && (
+                          <div style={{ marginTop: '4px' }}>
+                            <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid #ef4444', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '900' }}>
+                              📅 RESCHEDULED {v.rescheduledCount ? `(${v.rescheduledCount}x)` : ''}
+                            </span>
+                            {v.rescheduleReason && (
+                              <div style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px', fontStyle: 'italic' }}>
+                                "{v.rescheduleReason}"
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '10px', color: '#38bdf8', fontWeight: '800' }}>
                         {v.assignedExecutive}
@@ -1247,9 +1375,30 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                         <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', padding: '3px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800' }}>
                           {v.transport || 'Direct Arrival'}
                         </span>
+                        {v.stayType && v.stayType !== 'NO_STAY' && (
+                          <div style={{ marginTop: '4px' }}>
+                            <span style={{ background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid #a855f7', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '900', display: 'inline-block' }}>
+                              {v.stayType === 'HOTEL_STAY' && '🏨 Hotel Stay'}
+                              {v.stayType === 'GUEST_HOUSE' && '🏡 Guest House'}
+                              {v.stayType === 'SITE_LOUNGE' && '🛋️ Site Lounge'}
+                            </span>
+                            {v.stayNotes && (
+                              <div style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
+                                📝 {v.stayNotes}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '10px', textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'wrap', flexDirection: stopsList.length > 1 ? 'column' : 'row', alignItems: 'center' }}>
+                          <button
+                            onClick={() => handleOpenRescheduleStayModal(v)}
+                            style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}
+                            title="Reschedule Visit Date/Time and Log Customer Stay / Accommodation Details"
+                          >
+                            📅 Reschedule & 🏨 Stay
+                          </button>
                           <button
                             onClick={() => handleMarkVisitDoneAndNotifyDeveloper(v)}
                             style={{ 
@@ -3156,6 +3305,157 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
               <Send size={16} /> Dispatch Rating Link Now
             </button>
           </div>
+        </div>
+      </div>
+    )}
+
+    {/* RESCHEDULE VISIT & LOG CUSTOMER STAY MODAL */}
+    {showRescheduleStayModal?.open && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 999999, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '16px', maxWidth: '580px', width: '100%', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', display: 'flex', flexDirection: 'column', gap: '18px', maxHeight: '90vh', overflowY: 'auto' }}>
+          
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontWeight: '900', fontSize: '1.2rem' }}>
+                📅
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>Reschedule Visit & Log Customer Stay</h3>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                  Customer: <strong style={{ color: '#38bdf8' }}>{showRescheduleStayModal.visit?.customerName}</strong> ({showRescheduleStayModal.visit?.mobile || showRescheduleStayModal.visit?.customerNumber})
+                </p>
+              </div>
+            </div>
+            <button onClick={() => setShowRescheduleStayModal(null)} style={{ background: 'transparent', border: 'none', color: isLight ? '#64748b' : '#94a3b8', fontSize: '1.2rem', cursor: 'pointer', fontWeight: '900' }}>✕</button>
+          </div>
+
+          {/* Form Fields */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            
+            {/* RESCHEDULE SECTION */}
+            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: '900', color: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                📅 RESCHEDULE DATE & TIME LOGISTICS
+              </h4>
+
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>New Visit Date</label>
+                  <input 
+                    type="date"
+                    value={rescheduleForm.visitDate}
+                    onChange={e => setRescheduleForm(prev => ({ ...prev, visitDate: e.target.value }))}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '700' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>New Visit Time</label>
+                  <input 
+                    type="text"
+                    value={rescheduleForm.visitTime}
+                    onChange={e => setRescheduleForm(prev => ({ ...prev, visitTime: e.target.value }))}
+                    placeholder="e.g. 11:30 AM"
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '700' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>Assigned Field Executive</label>
+                  <select
+                    value={rescheduleForm.assignedExecutive}
+                    onChange={e => setRescheduleForm(prev => ({ ...prev, assignedExecutive: e.target.value }))}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '700' }}
+                  >
+                    <option value="Punita Roy">Punita Roy</option>
+                    <option value="Rajesh Sharma">Rajesh Sharma</option>
+                    <option value="Amit Kumar">Amit Kumar</option>
+                    <option value="Sneha Mukherjee">Sneha Mukherjee</option>
+                    <option value="Priya Das">Priya Das</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>Transport Logistics</label>
+                  <select
+                    value={rescheduleForm.transport}
+                    onChange={e => setRescheduleForm(prev => ({ ...prev, transport: e.target.value }))}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '700' }}
+                  >
+                    <option value="🚗 Cab Pick & Drop Needed">🚗 Cab Pick & Drop Needed</option>
+                    <option value="🚘 Executive Car Pickup">🚘 Executive Car Pickup</option>
+                    <option value="🚶 Self Drive / Direct Arrival">🚶 Self Drive / Direct Arrival</option>
+                    <option value="🚌 Shuttle Service">🚌 Shuttle Service</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>Reason for Rescheduling</label>
+                <input 
+                  type="text"
+                  value={rescheduleForm.rescheduleReason}
+                  onChange={e => setRescheduleForm(prev => ({ ...prev, rescheduleReason: e.target.value }))}
+                  placeholder="Reason for changing visit date/time..."
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '700' }}
+                />
+              </div>
+            </div>
+
+            {/* STAY / ACCOMMODATION SECTION */}
+            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: '900', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                🏨 CUSTOMER STAY & ACCOMMODATION MANAGEMENT
+              </h4>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>Customer Accommodation Choice</label>
+                <select
+                  value={rescheduleForm.stayType}
+                  onChange={e => setRescheduleForm(prev => ({ ...prev, stayType: e.target.value }))}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '700' }}
+                >
+                  <option value="NO_STAY">🚫 No Stay Needed - Single Day Tour</option>
+                  <option value="HOTEL_STAY">🏨 Overnight Hotel Stay Requested</option>
+                  <option value="GUEST_HOUSE">🏡 Guest House / Resort Stay Arranged</option>
+                  <option value="SITE_LOUNGE">🛋️ Site Lounge & Refreshment Rest</option>
+                </select>
+              </div>
+
+              {rescheduleForm.stayType !== 'NO_STAY' && (
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>Accommodation Booking Details & Notes</label>
+                  <textarea
+                    value={rescheduleForm.stayNotes}
+                    onChange={e => setRescheduleForm(prev => ({ ...prev, stayNotes: e.target.value }))}
+                    placeholder="Enter hotel name, room number, check-in date/time, guest preferences..."
+                    rows={3}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '600', resize: 'vertical' }}
+                  />
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          {/* Footer Buttons */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '14px' }}>
+            <button
+              onClick={() => setShowRescheduleStayModal(null)}
+              style={{ padding: '10px 18px', borderRadius: '10px', background: isLight ? '#f1f5f9' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', color: isLight ? '#475569' : '#cbd5e1', fontWeight: '800', fontSize: '0.85rem', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveRescheduleStay}
+              style={{ padding: '10px 22px', borderRadius: '10px', background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', color: '#ffffff', border: 'none', fontWeight: '900', fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)' }}
+            >
+              💾 Save Schedule & Stay Details
+            </button>
+          </div>
+
         </div>
       </div>
     )}

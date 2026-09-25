@@ -1902,6 +1902,47 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                 </div>
               </div>
 
+              {/* SECTION 5: KEYS CUSTODY & ARCHITECTURAL DESCRIPTION */}
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <h4 style={{ fontSize: '0.95rem', fontWeight: '800', color: isLight ? '#7e22ce' : '#a855f7', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '8px' }}>
+                  5. Keys Custody & Architectural Description
+                </h4>
+
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '14px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Physical Keys / Custody Location</label>
+                    <input type="text" value={newPropertyForm.key_custody} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, key_custody: e.target.value })} placeholder="Builder Lounge / Company Office" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Property Highlights & Notes</label>
+                    <input type="text" value={newPropertyForm.description} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, description: e.target.value })} placeholder="Pool facing Vastu East, 3 balconies" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#0284c7' : '#38bdf8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>👤 Site Person Contact Name *</label>
+                    <input 
+                      type="text" 
+                      value={newPropertyForm.site_person_name || ''} 
+                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, site_person_name: e.target.value })} 
+                      placeholder="e.g. Rajesh Kumar (Site Manager / Security Incharge)" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: '#22c55e', fontWeight: '800', display: 'block', marginBottom: '6px' }}>📞 Site Person Contact Phone Number *</label>
+                    <input 
+                      type="text" 
+                      value={newPropertyForm.site_person_contact || ''} 
+                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, site_person_contact: e.target.value })} 
+                      placeholder="e.g. +91 98490 77665" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', color: isLight ? '#16a34a' : '#4ade80', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* BOTTOM ACTION FOOTER FOR ADD PROJECT & DEVELOPER MASTER */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '2px solid #cbd5e1' : '2px solid #334155', paddingTop: '20px', flexWrap: 'wrap', gap: '14px', marginTop: '10px' }}>
                 <button 

@@ -3513,10 +3513,10 @@ export default function App() {
   const [routePlannerMode, setRoutePlannerMode] = useState<'create_plan' | 'exec_cockpit' | 'visual_map'>('exec_cockpit');
 
   const [newRoutePlanForm, setNewRoutePlanForm] = useState({
-    customerId: 'SRM-CUS-2026-000184',
-    customerName: 'Rohan Deshmukh',
-    mobile: '+91 98490 12345',
-    matchingId: 'SRM-MAT-2026-000421',
+    customerId: '',
+    customerName: '',
+    mobile: '',
+    matchingId: '',
     assignedExecutive: 'Ramesh Pawar (Field Exec - Kondapur)',
     visitDate: '2026-08-22',
     startTime: '10:00 AM',
@@ -5762,6 +5762,7 @@ export default function App() {
   const handleDeleteAllCurrentInside = () => {
     if (window.confirm('⚠️ Are you sure you want to delete ALL current customer records, cost sheet shares, property matches, and site visits inside? This will reset the workspace to a 100% clean state.')) {
       setCustomers([]);
+      setLeadsList([]);
       setMatchingRequestsQueue([]);
       setCostSheetShares([]);
       setIndividualCostSheets([]);
@@ -5773,24 +5774,38 @@ export default function App() {
       setVisitPlans([]);
       setSourcingRequests([]);
       setDevelopers([]);
+      setVisitFeedbacks([]);
       setSelectedPropertyIds([]);
       setSelectedCust(null);
       setActiveSelectionRecord(null);
-      localStorage.removeItem('swaramayi_customers_v7_clean');
-      localStorage.removeItem('swaramayi_customers_master_v3_clean');
-      localStorage.removeItem('swaramayi_indiv_cost_sheets_v7_clean');
-      localStorage.removeItem('swaramayi_indiv_cost_sheets_v5_clean');
-      localStorage.removeItem('swaramayi_indiv_cost_sheets_v4');
-      localStorage.removeItem('swaramayi_matching_queue_v4_clean');
-      localStorage.removeItem('swaramayi_leads_v5_clean');
-      localStorage.removeItem('swaramayi_project_visit_agreements_v2_clean');
-      localStorage.removeItem('swaramayi_agreements_vault_v5_clean');
-      localStorage.removeItem('swaramayi_bookings_v3_clean');
-      localStorage.removeItem('swaramayi_invoices_v6');
-      localStorage.removeItem('swaramayi_scheduled_visits_v4_clean');
-      localStorage.removeItem('swaramayi_visit_plans_v4_clean');
-      localStorage.removeItem('swaramayi_sourcing_requests_v1');
-      localStorage.removeItem('swaramayi_developers_v1');
+
+      const keysToRemove = [
+        'swaramayi_customers_v7_clean',
+        'swaramayi_customers_master_v3_clean',
+        'swaramayi_indiv_cost_sheets_v7_clean',
+        'swaramayi_indiv_cost_sheets_v5_clean',
+        'swaramayi_indiv_cost_sheets_v4',
+        'swaramayi_matching_queue_v7_clean',
+        'swaramayi_matching_queue_v4_clean',
+        'matchingRequestsQueue',
+        'swaramayi_leads_v7_clean',
+        'swaramayi_leads_v5_clean',
+        'swaramayi_project_visit_agreements_v2_clean',
+        'swaramayi_agreements_vault_v5_clean',
+        'swaramayi_bookings_v3_clean',
+        'swaramayi_invoices_v6',
+        'swaramayi_scheduled_visits_v7_clean',
+        'swaramayi_scheduled_visits_v4_clean',
+        'swaramayi_visit_plans_v7_clean',
+        'swaramayi_visit_plans_v4_clean',
+        'swaramayi_sourcing_requests_v1',
+        'swaramayi_developers_v1',
+        'swaramayi_visit_feedbacks_v2'
+      ];
+
+      keysToRemove.forEach(k => {
+        try { localStorage.removeItem(k); } catch (e) {}
+      });
 
       syncAllToMongoDB({
         customers: [],
@@ -6736,11 +6751,6 @@ export default function App() {
                 !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
                 !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000189') &&
                 !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000189') &&
-                !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000188') &&
-                !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000188') &&
-                !(c.name && c.name.toLowerCase().includes('avishek das')) &&
-                !(c.full_name && c.full_name.toLowerCase().includes('avishek das')) &&
-                !(c.mobile && c.mobile.includes('9038325675')) &&
                 !(c.name && c.name.toLowerCase().includes('amit sharma')) &&
                 !(c.full_name && c.full_name.toLowerCase().includes('amit sharma')) &&
                 !(c.email && c.email.toLowerCase().includes('amit.sharma@gmail.com')) &&
@@ -7195,18 +7205,18 @@ export default function App() {
   const [showNewBookingModal, setShowNewBookingModal] = useState<boolean>(false);
   const [showAllotmentModal, setShowAllotmentModal] = useState<{ open: boolean; booking: any } | null>(null);
   const [newBookingForm, setNewBookingForm] = useState({
-    customer_name: 'Rohan Deshmukh',
-    customer_number: 'SRM-CUS-2026-000184',
-    customer_mobile: '+91 98490 12345',
-    project_name: 'Aparna Zenon',
-    developer_name: 'Aparna Constructions',
-    property_title: 'Aparna Zenon Premium 3BHK Residence',
-    tower_unit: 'Tower A - Unit A-504',
-    agreement_value: '8400000',
-    token_amount: '500000',
+    customer_name: '',
+    customer_number: '',
+    customer_mobile: '',
+    project_name: '',
+    developer_name: '',
+    property_title: '',
+    tower_unit: '',
+    agreement_value: '',
+    token_amount: '',
     payment_mode: 'Bank Transfer / NEFT',
-    payment_ref: 'NEFT-AXIS-994821',
-    sales_executive: 'Priya Nair (Sales Exec)'
+    payment_ref: '',
+    sales_executive: 'Unassigned'
   });
 
   // VISIT SATISFACTION, REQUIREMENT UPDATE & ALTERNATIVE PROPERTY RECOMMENDATION STATES
@@ -7439,11 +7449,11 @@ export default function App() {
     developer_place_of_supply: '36 - Telangana',
     property_locality: 'Kondapur, Hyderabad',
     property_configuration: '3 BHK Luxury Apartment',
-    customer_name: 'Rohan Deshmukh',
-    customer_number: 'SRM-CUS-2026-000184',
-    customer_mobile: '+91 90490 12345',
-    customer_email: 'rohan.deshmukh@gmail.com',
-    customer_address: 'Flat 402, Royal Heights, Jubilee Hills, Hyderabad - 500033',
+    customer_name: '',
+    customer_number: '',
+    customer_mobile: '',
+    customer_email: '',
+    customer_address: '',
     place_of_supply: '36 - Telangana',
     customer_gstin_pan: '36ABCDE1234F1Z5',
     particulars: 'Property Consultation & Processing Charges',

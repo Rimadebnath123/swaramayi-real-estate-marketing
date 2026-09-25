@@ -4833,7 +4833,35 @@ export default function App() {
     const rawPrice = prop.final_price || prop.base_price;
     const basePriceNum = rawPrice ? parsePriceToNumeric(rawPrice) : 0;
     const superAreaNum = parseSqftToNumeric(prop.super_builtup_area || prop.carpet_area || 1250);
-    const ratePerSqftNum = (superAreaNum > 0 && basePriceNum > 0) ? Math.round(basePriceNum / superAreaNum) : 0;
+    
+    // Check if property explicitly specifies Rate Per Sq.Ft
+    const explicitRateRaw = prop.price_sqft || prop.price_per_sqft || prop.rate_per_sqft || prop.rate_per_sq_ft || prop.rate_sqft || prop.ratePerSqft || prop.asking_rate || prop.asking_rate_per_sqft;
+
+    let ratePerSqftNum = 0;
+    let ratePerSqftStr = '';
+
+    if (explicitRateRaw !== undefined && explicitRateRaw !== null && explicitRateRaw !== '') {
+      if (typeof explicitRateRaw === 'number' && !isNaN(explicitRateRaw) && explicitRateRaw > 0) {
+        ratePerSqftNum = Math.round(explicitRateRaw);
+        ratePerSqftStr = `₹${ratePerSqftNum.toLocaleString('en-IN')}/Sq.Ft.`;
+      } else {
+        const s = String(explicitRateRaw).trim();
+        const parsed = parseFloat(s.replace(/,/g, '').replace(/[^\d.]/g, ''));
+        if (!isNaN(parsed) && parsed > 0) {
+          ratePerSqftNum = Math.round(parsed);
+          if (s.toLowerCase().includes('/sq') || s.toLowerCase().includes('/ sq')) {
+            ratePerSqftStr = s;
+          } else {
+            ratePerSqftStr = `₹${ratePerSqftNum.toLocaleString('en-IN')}/Sq.Ft.`;
+          }
+        }
+      }
+    }
+
+    if (ratePerSqftNum <= 0) {
+      ratePerSqftNum = (superAreaNum > 0 && basePriceNum > 0) ? Math.round(basePriceNum / superAreaNum) : 0;
+      ratePerSqftStr = ratePerSqftNum > 0 ? `₹${ratePerSqftNum.toLocaleString('en-IN')}/Sq.Ft.` : '₹0/Sq.Ft.';
+    }
 
     const parsePct = (val: any, fallback: number) => {
       if (typeof val === 'number') return isNaN(val) ? fallback : val;
@@ -4925,7 +4953,7 @@ export default function App() {
       totalEstimatedCost,
 
       basePriceStr: basePriceNum > 0 ? formatIndianRupees(basePriceNum) : '',
-      ratePerSqftStr: ratePerSqftNum > 0 ? `₹${ratePerSqftNum.toLocaleString('en-IN')}/Sq.Ft.` : '₹0/Sq.Ft.',
+      ratePerSqftStr,
       floorRiseStr: formatFloorPlcStr(floorRiseNum, prop.floor_rise_charge || prop.floorRise || prop.floor_rise),
       plcStr: formatFloorPlcStr(plcNum, prop.plc_charge || prop.plc || prop.plc_facing_charge),
       parkingStr: formatChargeStr(parkingNum, prop.parking_price || prop.parking_charge || prop.parkingCharge || prop.parking),
@@ -5198,7 +5226,9 @@ export default function App() {
         facing: prop.facing || 'East Facing',
         propertyOrientation: prop.facing || 'East Facing',
         possessionStatus: prop.possession_status || 'Ready to Move',
-        possessionDate: 'Immediate Possession'
+        possessionDate: 'Immediate Possession',
+        price_sqft: prop.price_sqft || prop.price_per_sqft || prop.rate_per_sqft || prop.rate_per_sq_ft || prop.rate_sqft || prop.ratePerSqft || prop.asking_rate || calculated.ratePerSqftStr,
+        ratePerSqft: calculated.ratePerSqftStr
       },
 
       customerSnapshot: {

@@ -2191,29 +2191,40 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     <h4 style={{ fontSize: '0.95rem', fontWeight: '800', color: isLight ? '#d97706' : '#fbbf24', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '8px' }}>
                       2. Property Specifications & Unit Details
                     </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '14px' }}>
-                  <div>
-                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>🏛️ RERA Registration No. (RERA ID)</label>
-                    <input 
-                      type="text" 
-                      value={newPropertyForm.rera_id || ''} 
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, rera_id: e.target.value })} 
-                      placeholder="Enter RERA Registration No. (Optional)" 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontFamily: 'monospace', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
-                    />
-                  </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(3, 1fr)', gap: '14px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.78rem', color: isLight ? '#0284c7' : '#38bdf8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>🆔 Project Posting ID</label>
+                        <input 
+                          type="text" 
+                          value={newPropertyForm.project_posting_id !== undefined ? newPropertyForm.project_posting_id : (newPropertyForm.campaign_id || 'PRJ-POST-2026-8802')} 
+                          onChange={(e) => setNewPropertyForm({ ...newPropertyForm, project_posting_id: e.target.value })} 
+                          placeholder="e.g. PRJ-POST-2026-8802" 
+                          style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', color: '#fbbf24', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                        />
+                      </div>
 
-                  <div>
-                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>📜 HERA Registration No. (HERA ID)</label>
-                    <input 
-                      type="text" 
-                      value={newPropertyForm.hera_no || ''} 
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, hera_no: e.target.value })} 
-                      placeholder="Enter HERA Registration No. (Optional)" 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#a855f7', fontFamily: 'monospace', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
-                    />
-                  </div>
-                </div>
+                      <div>
+                        <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>🏛️ RERA Registration No. (RERA ID)</label>
+                        <input 
+                          type="text" 
+                          value={newPropertyForm.rera_id || ''} 
+                          onChange={(e) => setNewPropertyForm({ ...newPropertyForm, rera_id: e.target.value })} 
+                          placeholder="Enter RERA Registration No. (Optional)" 
+                          style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontFamily: 'monospace', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>📜 HERA Registration No. (HERA ID)</label>
+                        <input 
+                          type="text" 
+                          value={newPropertyForm.hera_no || ''} 
+                          onChange={(e) => setNewPropertyForm({ ...newPropertyForm, hera_no: e.target.value })} 
+                          placeholder="Enter HERA Registration No. (Optional)" 
+                          style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#a855f7', fontFamily: 'monospace', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                        />
+                      </div>
+                    </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '14px' }}>
                   <div>
@@ -2939,18 +2950,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   5. Keys Custody & Architectural Description
                 </h4>
 
-                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(3, 1fr)', gap: '14px' }}>
-                  <div>
-                    <label style={{ fontSize: '0.78rem', color: isLight ? '#0284c7' : '#38bdf8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>🆔 Project Posting ID</label>
-                    <input 
-                      type="text" 
-                      value={newPropertyForm.project_posting_id !== undefined ? newPropertyForm.project_posting_id : (newPropertyForm.campaign_id || 'PRJ-POST-2026-8802')} 
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, project_posting_id: e.target.value })} 
-                      placeholder="e.g. PRJ-POST-2026-8802" 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', color: '#fbbf24', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
-                    />
-                  </div>
-
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '14px' }}>
                   <div>
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Physical Keys / Custody Location</label>
                     <input type="text" value={newPropertyForm.key_custody} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, key_custody: e.target.value })} placeholder="Builder Lounge / Company Office" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} />

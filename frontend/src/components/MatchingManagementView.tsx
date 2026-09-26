@@ -669,7 +669,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                 budget_max: c.budget_max || 5000000,
                 preferredArea: c.preferredArea || c.preferred_location || c.locality || 'Madhyamgram, Kolkata',
                 secondaryAreas: c.secondary_areas || '',
-                radiusKm: 10,
+                radiusKm: (c.radius_km !== undefined && c.radius_km !== null) ? c.radius_km : ((c.radiusKm !== undefined && c.radiusKm !== null) ? c.radiusKm : 2),
                 possessionStatus: c.possession_status || 'Ready to Move',
                 carpetArea: c.carpet_area_min && c.carpet_area_max ? `${c.carpet_area_min} – ${c.carpet_area_max} Sq.Ft.` : '650 – 1000 Sq.Ft.',
                 facing: c.facing || 'East Facing',
@@ -879,7 +879,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                           <div>
                             <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Requirement & Location:</span>
                             <span style={{ color: '#fbbf24', fontWeight: '800' }}>{req.configuration} {req.propertyType}</span>
-                            <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>{req.preferredArea} (Radius: {req.radiusKm || 10} KM)</span>
+                            <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>{req.preferredArea} (Radius: {(req.radiusKm !== undefined && req.radiusKm !== null) ? req.radiusKm : ((req.radius_km !== undefined && req.radius_km !== null) ? req.radius_km : 2)} KM)</span>
                           </div>
 
                           <div>
@@ -1008,7 +1008,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                                   </span>
                                 </div>
                               )}
-                              <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>{req.preferredArea} (Radius: {req.radiusKm || 10} KM)</span>
+                              <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>{req.preferredArea} (Radius: {(req.radiusKm !== undefined && req.radiusKm !== null) ? req.radiusKm : ((req.radius_km !== undefined && req.radius_km !== null) ? req.radius_km : 2)} KM)</span>
                             </td>
                             <td style={{ padding: '10px', color: '#4ade80', fontWeight: '900' }}>
                               {req.budget}
@@ -1214,7 +1214,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     <div><span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Property Type:</span> <strong style={{ color: isLight ? '#0f172a' : '#ffffff', display: 'block' }}>{activeMatchingReq.propertyType || 'Apartment / Flat'}</strong></div>
                     <div><span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>BHK Config:</span> <strong style={{ color: '#fbbf24', display: 'block' }}>{activeMatchingReq.configuration || '3 BHK'}</strong></div>
                     <div><span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Budget Range:</span> <strong style={{ color: '#4ade80', display: 'block' }}>{activeMatchingReq.budget}</strong></div>
-                    <div><span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Preferred Location:</span> <strong style={{ color: isLight ? '#0f172a' : '#ffffff', display: 'block' }}>{activeMatchingReq.preferredArea} ({activeMatchingReq.radiusKm || 10} KM)</strong></div>
+                    <div><span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Preferred Location:</span> <strong style={{ color: isLight ? '#0f172a' : '#ffffff', display: 'block' }}>{activeMatchingReq.preferredArea} ({(activeMatchingReq.radiusKm !== undefined && activeMatchingReq.radiusKm !== null) ? activeMatchingReq.radiusKm : ((activeMatchingReq.radius_km !== undefined && activeMatchingReq.radius_km !== null) ? activeMatchingReq.radius_km : 2)} KM)</strong></div>
                     <div><span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem' }}>Possession & Facing:</span> <strong style={{ color: isLight ? '#0f172a' : '#ffffff', display: 'block' }}>{activeMatchingReq.possessionStatus || 'Ready to Move'} | {activeMatchingReq.facing || 'East Facing'}</strong></div>
                   </div>
 

@@ -3672,7 +3672,7 @@ export default function App() {
     budget_flexibility: '+10% Negotiable',
     preferredArea: 'Kondapur / Gachibowli',
     secondary_areas: 'Hitec City, Financial District',
-    radius_km: 10,
+    radius_km: 2,
     facing: 'East Facing',
     floor_pref: '10th Floor or Higher',
     non_preferred_floor: 'No Ground Floor',
@@ -3852,6 +3852,7 @@ export default function App() {
       configuration: '2BHK',
       preferredArea: '',
       secondary_areas: '',
+      radius_km: 2,
       floor_pref: 'Mid Floor (4th - 8th)',
       non_preferred_floor: 'Ground Floor / Top Floor',
       budget_min: '',
@@ -3919,6 +3920,7 @@ export default function App() {
       configuration: '2BHK',
       preferredArea: '',
       secondary_areas: '',
+      radius_km: 2,
       floor_pref: 'Mid Floor (4th - 8th)',
       non_preferred_floor: 'Ground Floor / Top Floor',
       budget_min: '',
@@ -4010,7 +4012,7 @@ export default function App() {
         budget_max: foundCust.budget_max || 5000000,
         preferredArea: foundCust.preferredArea || foundCust.preferred_location || foundCust.locality || 'Madhyamgram, Kolkata',
         secondaryAreas: foundCust.secondary_areas || '',
-        radiusKm: 10,
+        radiusKm: (foundCust.radius_km !== undefined && foundCust.radius_km !== null) ? foundCust.radius_km : ((foundCust.radiusKm !== undefined && foundCust.radiusKm !== null) ? foundCust.radiusKm : 2),
         possessionStatus: foundCust.possession_status || 'Ready to Move',
         carpetArea: foundCust.carpet_area_min && foundCust.carpet_area_max ? `${foundCust.carpet_area_min} – ${foundCust.carpet_area_max} Sq.Ft.` : '650 – 1000 Sq.Ft.',
         facing: foundCust.facing || 'East Facing',
@@ -4048,7 +4050,7 @@ export default function App() {
         budget_max: selectedCust.budget_max || 5000000,
         preferredArea: selectedCust.preferredArea || selectedCust.preferred_location || selectedCust.locality || 'Madhyamgram, Kolkata',
         secondaryAreas: selectedCust.secondary_areas || '',
-        radiusKm: 10,
+        radiusKm: (selectedCust.radius_km !== undefined && selectedCust.radius_km !== null) ? selectedCust.radius_km : ((selectedCust.radiusKm !== undefined && selectedCust.radiusKm !== null) ? selectedCust.radiusKm : 2),
         possessionStatus: selectedCust.possession_status || 'Ready to Move',
         carpetArea: selectedCust.carpet_area_min && selectedCust.carpet_area_max ? `${selectedCust.carpet_area_min} – ${selectedCust.carpet_area_max} Sq.Ft.` : '650 – 1000 Sq.Ft.',
         facing: selectedCust.facing || 'East Facing',
@@ -6591,7 +6593,7 @@ export default function App() {
       floor_preference: lead.floor_pref || lead.floor_preference || '',
       non_preferred_floor: lead.non_preferred_floor || lead.avoided_floors || '',
       avoided_floors: lead.non_preferred_floor || lead.avoided_floors || '',
-      radius_km: lead.radius_km || lead.radiusKm || 5,
+      radius_km: (lead.radius_km !== undefined && lead.radius_km !== null) ? lead.radius_km : ((lead.radiusKm !== undefined && lead.radiusKm !== null) ? lead.radiusKm : 2),
       budget_min: lead.budget_min || '',
       budget_max: lead.budget_max || '',
       budget_flexibility: lead.budget_flexibility !== undefined && lead.budget_flexibility !== null ? lead.budget_flexibility : '',
@@ -15149,7 +15151,7 @@ export default function App() {
                         floor_preference: newCustomerForm.floor_pref || '',
                         non_preferred_floor: newCustomerForm.non_preferred_floor || '',
                         avoided_floors: newCustomerForm.non_preferred_floor || '',
-                        radius_km: newCustomerForm.radius_km || 5,
+                        radius_km: (newCustomerForm.radius_km !== undefined && newCustomerForm.radius_km !== null) ? newCustomerForm.radius_km : 2,
                         property_type: newCustomerForm.property_type || 'Flat / Apartment',
                         bhk: newCustomerForm.configuration || '2BHK',
                         configuration: newCustomerForm.configuration || '2BHK',
@@ -15222,7 +15224,7 @@ export default function App() {
                         floor_pref: newCustomerForm.floor_pref,
                         avoidedFloors: newCustomerForm.non_preferred_floor,
                         non_preferred_floor: newCustomerForm.non_preferred_floor,
-                        radiusKm: newCustomerForm.radius_km,
+                        radiusKm: (newCustomerForm.radius_km !== undefined && newCustomerForm.radius_km !== null) ? newCustomerForm.radius_km : 2,
                         possessionStatus: newCustomerForm.possession_status,
                         carpetArea: `${newCustomerForm.carpet_area_min} – ${newCustomerForm.carpet_area_max}`,
                         facing: newCustomerForm.facing,
@@ -15638,7 +15640,7 @@ export default function App() {
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>Search Radius (KM):</span>
-                      <strong style={{ display: 'block', color: isLight ? '#0f172a' : '#ffffff' }}>{viewIdDetailsModal.data.radiusKm || 10} KM</strong>
+                      <strong style={{ display: 'block', color: isLight ? '#0f172a' : '#ffffff' }}>{(viewIdDetailsModal.data.radiusKm !== undefined && viewIdDetailsModal.data.radiusKm !== null) ? viewIdDetailsModal.data.radiusKm : ((viewIdDetailsModal.data.radius_km !== undefined && viewIdDetailsModal.data.radius_km !== null) ? viewIdDetailsModal.data.radius_km : 2)} KM</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>Carpet Area:</span>
@@ -17912,7 +17914,7 @@ export default function App() {
                       configuration: lead.bhk || '3BHK',
                       budget: `${lead.budget_min || 7000000} - ${lead.budget_max || 8500000}`,
                       preferredArea: lead.preferred_location || 'Kondapur',
-                      radiusKm: 10,
+                      radiusKm: (lead.radius_km !== undefined && lead.radius_km !== null) ? lead.radius_km : ((lead.radiusKm !== undefined && lead.radiusKm !== null) ? lead.radiusKm : 2),
                       possessionStatus: 'Ready to Move',
                       priority: 'HOT',
                       assignedExecutive: lead.assigned_employee_name || 'Priya Nair (Sales Exec)',

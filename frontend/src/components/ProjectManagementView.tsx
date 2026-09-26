@@ -3562,11 +3562,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
       {/* DEVELOPER MASTER VAULT MODAL */}
       {showDevVaultModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: windowWidth <= 640 ? '10px' : '16px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: windowWidth <= 640 ? '16px' : '20px', width: '100%', maxWidth: '850px', maxHeight: '92vh', overflowY: 'auto', padding: windowWidth <= 640 ? '14px' : '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: windowWidth <= 768 ? '10px' : '16px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: windowWidth <= 768 ? '16px' : '20px', width: '100%', maxWidth: '850px', maxHeight: '92vh', overflowY: 'auto', padding: windowWidth <= 768 ? '14px' : '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
               <div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: windowWidth <= 768 ? '1.05rem' : '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   🏢 DEVELOPER MASTER ID VAULT & REGISTERED PROJECTS REGISTRY
                 </h3>
                 <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
@@ -3579,74 +3579,74 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             </div>
 
             {/* ADD NEW DEVELOPER FORM */}
-            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '12px', padding: windowWidth <= 768 ? '12px' : '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <h4 style={{ fontSize: '0.88rem', fontWeight: '900', color: '#38bdf8' }}>➕ Register New Developer ID & Master Project</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(5, 1fr)', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(3, 1fr)', gap: '10px', alignItems: 'center' }}>
                 <input 
                   type="text" 
                   value={newDevNameInput} 
                   onChange={(e) => setNewDevNameInput(e.target.value)} 
                   placeholder="Developer / Builder Name *" 
-                  style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700' }} 
+                  style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700' }} 
                 />
                 <input 
                   type="text" 
                   value={newDevMobileInput} 
                   onChange={(e) => setNewDevMobileInput(e.target.value)} 
                   placeholder="Primary Mobile Phone *" 
-                  style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700' }} 
+                  style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700' }} 
                 />
                 <input 
                   type="text" 
                   value={newDevAltMobileInput} 
                   onChange={(e) => setNewDevAltMobileInput(e.target.value)} 
                   placeholder="Alternative Phone (Optional)" 
-                  style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700' }} 
+                  style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700' }} 
                 />
                 <input 
                   type="email" 
                   value={newDevEmailInput} 
                   onChange={(e) => setNewDevEmailInput(e.target.value)} 
                   placeholder="Email Address (Optional)" 
-                  style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700' }} 
+                  style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700' }} 
                 />
                 <input 
                   type="text" 
                   value={newDevProjectTitleInput} 
                   onChange={(e) => setNewDevProjectTitleInput(e.target.value)} 
                   placeholder="Initial Project Title *" 
-                  style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700' }} 
+                  style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700' }} 
                 />
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    if (!newDevNameInput || !newDevMobileInput) return alert('Please enter Developer Name & Primary Mobile Phone');
+                    const newDevObj = {
+                      id: `SRM-DEV-2026-000${developerMasterList.length + 105}`,
+                      name: newDevNameInput,
+                      mobile: newDevAltMobileInput ? `${newDevMobileInput} / ${newDevAltMobileInput}` : newDevMobileInput,
+                      email: newDevEmailInput || '',
+                      projects: newDevProjectTitleInput ? [{ id: `PRJ-${Date.now()}`, title: newDevProjectTitleInput, locality: 'Kondapur Hub' }] : []
+                    };
+                    setDeveloperMasterList([newDevObj, ...developerMasterList]);
+                    setNewDevNameInput('');
+                    setNewDevMobileInput('');
+                    setNewDevAltMobileInput('');
+                    setNewDevEmailInput('');
+                    setNewDevProjectTitleInput('');
+                    try {
+                      localStorage.setItem('swaramayi_developers_v1', JSON.stringify([newDevObj, ...developerMasterList]));
+                    } catch (e) {}
+                    if (syncAllToMongoDB) {
+                      syncAllToMongoDB({ developers: [newDevObj, ...developerMasterList] });
+                    }
+                    alert(`🎉 REGISTERED NEW DEVELOPER MASTER!\n\n• Developer ID: ${newDevObj.id}\n• Builder Name: ${newDevObj.name}\n• Phone: ${newDevObj.mobile}`);
+                  }}
+                  style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '9px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', width: '100%', textAlign: 'center', height: '100%', minHeight: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap' }}
+                >
+                  🚀 CREATE DEVELOPER ID & SAVE MASTER
+                </button>
               </div>
-              <button 
-                type="button" 
-                onClick={() => {
-                  if (!newDevNameInput || !newDevMobileInput) return alert('Please enter Developer Name & Primary Mobile Phone');
-                  const newDevObj = {
-                    id: `SRM-DEV-2026-000${developerMasterList.length + 105}`,
-                    name: newDevNameInput,
-                    mobile: newDevAltMobileInput ? `${newDevMobileInput} / ${newDevAltMobileInput}` : newDevMobileInput,
-                    email: newDevEmailInput || '',
-                    projects: newDevProjectTitleInput ? [{ id: `PRJ-${Date.now()}`, title: newDevProjectTitleInput, locality: 'Kondapur Hub' }] : []
-                  };
-                  setDeveloperMasterList([newDevObj, ...developerMasterList]);
-                  setNewDevNameInput('');
-                  setNewDevMobileInput('');
-                  setNewDevAltMobileInput('');
-                  setNewDevEmailInput('');
-                  setNewDevProjectTitleInput('');
-                  try {
-                    localStorage.setItem('swaramayi_developers_v1', JSON.stringify([newDevObj, ...developerMasterList]));
-                  } catch (e) {}
-                  if (syncAllToMongoDB) {
-                    syncAllToMongoDB({ developers: [newDevObj, ...developerMasterList] });
-                  }
-                  alert(`🎉 REGISTERED NEW DEVELOPER MASTER!\n\n• Developer ID: ${newDevObj.id}\n• Builder Name: ${newDevObj.name}\n• Phone: ${newDevObj.mobile}`);
-                }}
-                style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', alignSelf: 'flex-end' }}
-              >
-                🚀 CREATE DEVELOPER ID & SAVE MASTER
-              </button>
             </div>
 
             {/* DEVELOPERS MASTER LIST TABLE */}
@@ -3657,7 +3657,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                 </div>
               ) : (
                 developerMasterList.map((dev) => (
-                  <div key={dev.id} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div key={dev.id} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 768 ? '12px' : '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {editingDevId === dev.id ? (
                       <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #f59e0b', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -3668,7 +3668,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             <X size={18} />
                           </button>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '10px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : windowWidth <= 900 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px' }}>
                           <div>
                             <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>Developer / Builder Name *</label>
                             <input 
@@ -3754,10 +3754,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             🏢 {dev.name}
                           </h4>
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', textAlign: windowWidth <= 768 ? 'left' : 'right', width: windowWidth <= 640 ? '100%' : 'auto' }}>
                           <div>📱 Phone (for OTP): <strong style={{ color: '#4ade80' }}>{dev.mobile}</strong></div>
                           <div>📧 Email: {dev.email}</div>
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '6px' }}>
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: windowWidth <= 768 ? 'flex-start' : 'flex-end', marginTop: '6px', flexWrap: 'wrap' }}>
                             <button
                               onClick={() => {
                                 setEditingDevId(dev.id);
@@ -3862,8 +3862,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                               borderRadius: '8px', 
                               padding: '8px 12px', 
                               display: 'flex', 
-                              alignItems: 'center', 
+                              alignItems: windowWidth <= 768 ? 'flex-start' : 'center', 
                               justifyContent: 'space-between',
+                              flexDirection: windowWidth <= 640 ? 'column' : 'row',
                               gap: '8px', 
                               flexWrap: 'wrap',
                               boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)'
@@ -3886,7 +3887,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                               </span>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '6px' }}>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: windowWidth <= 640 ? 'flex-end' : 'flex-start' }}>
                               <button
                                 onClick={() => {
                                   setShowDevVaultModal(false);
@@ -3919,7 +3920,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '14px' }}>
-              <button onClick={() => setShowDevVaultModal(false)} style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '8px 20px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
+              <button onClick={() => setShowDevVaultModal(false)} style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '8px 20px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', width: windowWidth <= 640 ? '100%' : 'auto' }}>
                 Close Vault
               </button>
             </div>
@@ -4063,7 +4064,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   <h4 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                     🏢 DEVELOPER IDENTIFICATION & LEGAL CREDENTIALS
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(4, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : windowWidth <= 900 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Developer Name</span>
                       <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.95rem' }}>{viewPropertyModal.developer || 'N/A'}</strong>
@@ -4140,7 +4141,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       </a>
                     ) : null}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(4, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : windowWidth <= 900 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Locality Hub / Sector</span>
                       <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.locality || 'N/A'}</strong>
@@ -4165,7 +4166,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   <h4 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                     📐 PROPERTY SPECIFICATIONS, FLOORS & AREA METRICS
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : windowWidth <= 900 ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Property Type</span>
                       <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.property_type || viewPropertyModal.type || 'N/A'}</strong>
@@ -4216,7 +4217,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   <h4 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#a855f7', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                     💰 FINANCIAL VALUATION, CAR PARKING & COST SHEET
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : windowWidth <= 900 ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Total Inventory Final Price</span>
                       <strong style={{ color: '#4ade80', fontSize: '1.1rem', fontWeight: '900' }}>{viewPropertyModal.final_price || (viewPropertyModal.price ? `₹${parseInt(viewPropertyModal.price.toString().replace(/[^0-9]/g, ''), 10).toLocaleString('en-IN')}` : 'N/A')}</strong>
@@ -4244,7 +4245,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     <span style={{ fontSize: '0.78rem', color: '#fbbf24', fontWeight: '900', display: 'block', marginBottom: '8px' }}>
                       🚗 PROJECT PARKING STOCK STATUS ({viewPropertyModal.title})
                     </span>
-                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(3, 1fr)', gap: '10px', fontSize: '0.8rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : windowWidth <= 900 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px', fontSize: '0.8rem' }}>
                       <div style={{ background: 'rgba(56, 189, 248, 0.1)', padding: '8px 12px', borderRadius: '6px', border: '1px solid #0284c7' }}>
                         <span style={{ color: '#38bdf8', fontWeight: '800' }}>🚗 Covered Stock:</span> <strong style={{ color: '#4ade80' }}>{modalAvailCovered} / {totalCoveredCap} Available</strong> (₹{coveredRateStr})
                       </div>

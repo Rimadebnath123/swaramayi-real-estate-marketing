@@ -92,6 +92,7 @@ import { LeadManagementView } from './components/LeadManagementView';
 import { BulkLeadUploadModal } from './components/BulkLeadUploadModal';
 import { MatchingManagementView } from './components/MatchingManagementView';
 import { PropertySourcingRequestsView } from './components/PropertySourcingRequestsView';
+import { CrmReportView } from './components/CrmReportView';
 import { MultiSelectFloorSelector } from './components/MultiSelectFloorSelector';
 import { loadGoogleMapsApi, geocodeAddress, getGoogleMapsApiKey } from './utils/googleMapsLoader';
 
@@ -9366,6 +9367,10 @@ export default function App() {
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('map_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'map_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'map_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'map_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <MapIcon size={18} /> <span>Location Map</span>
           </button>
+          {/* 13. Report */}
+          <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('crm_report' as any); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === ('crm_report' as any) ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === ('crm_report' as any) ? '#38bdf8' : '#94a3b8', border: activeTab === ('crm_report' as any) ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
+            <BarChart2 size={18} /> <span>Report</span>
+          </button>
           {/* 13. Role and Management */}
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('role_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'role_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'role_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'role_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <UserCog size={18} /> <span>Role and Management</span>
@@ -11676,6 +11681,19 @@ export default function App() {
               handleStartEditProperty={handleStartEditProperty}
               handleDeleteProperty={handleDeleteProperty}
               InteractiveLeafletMap={InteractiveLeafletMap}
+            />
+          )}
+
+          {/* DEDICATED CRM ANALYTICS & REPORT CATEGORY */}
+          {activeTab === ('crm_report' as any) && (
+            <CrmReportView
+              isLight={isLight}
+              windowWidth={windowWidth}
+              customers={customers}
+              properties={properties}
+              projectVisitAgreements={projectVisitAgreements}
+              developerMasterList={developers}
+              bookings={bookings}
             />
           )}
 

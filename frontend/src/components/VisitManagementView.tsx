@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Navigation, MapPin, Trash2, TrendingUp, Users, Building2, CheckCircle2, Award, Calendar, BarChart3, Filter, ArrowUpRight, DollarSign, Target, Star, Flame, Zap, ShieldAlert, Sparkles, RefreshCw, Send, Copy, Share2, Mail, MessageSquare, Check, Phone, ExternalLink, Link2 } from 'lucide-react';
+import { Plus, Navigation, MapPin, Trash2, TrendingUp, Users, Building2, CheckCircle2, Award, Calendar, BarChart3, Filter, ArrowUpRight, DollarSign, Target, Star, Flame, Zap, ShieldAlert, Sparkles, RefreshCw, Send, Copy, Share2, Mail, MessageSquare, Check, Phone, ExternalLink, Link2, Search, X } from 'lucide-react';
 import { getCustomerUsedPropertyCodes } from './MatchingManagementView';
 
 interface VisitManagementViewProps {
@@ -156,6 +156,124 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
 
   const [ratingInvitesList, setRatingInvitesList] = useState<any[]>([]);
 
+  // NEED TO FOLLOWUP SUB-TAB STATE & LOCALSTORAGE PERSISTENCE
+  const [followupSearchQuery, setFollowupSearchQuery] = useState<string>('');
+  const [followupStatusFilter, setFollowupStatusFilter] = useState<string>('ALL');
+  const [followupPriorityFilter, setFollowupPriorityFilter] = useState<string>('ALL');
+  const [showAddFollowupModal, setShowAddFollowupModal] = useState<boolean>(false);
+  const [newFollowupForm, setNewFollowupForm] = useState<any>({
+    customerName: '',
+    customerMobile: '',
+    propertyTitle: '',
+    visitScheduleId: '',
+    assignedExecutive: 'Ramesh Pawar (Field Exec - Kondapur)',
+    followupDate: new Date().toISOString().split('T')[0],
+    followupTime: '05:00 PM',
+    priority: 'HIGH',
+    notes: 'Call customer regarding site visit feedback and cost sheet quotation negotiation.'
+  });
+
+  const [showSendToFollowupModal, setShowSendToFollowupModal] = useState<any>(null);
+  const [sendFollowupForm, setSendFollowupForm] = useState<any>({
+    followupDate: new Date().toISOString().split('T')[0],
+    followupTime: '17:00',
+    priority: 'HIGH',
+    remarks: 'Customer requested callback regarding site visit feedback and cost sheet negotiation.'
+  });
+
+  const [localFollowupList, setLocalFollowupList] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('swaramayi_visit_followups_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    return [
+      {
+        id: 'FOL-2026-001',
+        customerName: 'Honey sing',
+        customerNumber: 'SRM-CUS-2026-000188',
+        customerMobile: '+91 98833 95102',
+        propertyTitle: 'SK Construction',
+        visitScheduleId: 'SRM-VS-2026-000088',
+        costSheetId: 'COST-SHEET-2026-000021',
+        assignedExecutive: 'Ramesh Pawar (Field Exec - Kondapur)',
+        followupDate: todayStr,
+        followupTime: '05:30 PM',
+        priority: 'HIGH',
+        status: 'DUE_TODAY',
+        notes: 'Follow up on 3BHK flat quotation, loan eligibility calculation, & booking token deposit decision.'
+      },
+      {
+        id: 'FOL-2026-002',
+        customerName: 'Priya Sharma',
+        customerNumber: 'SRM-CUS-2026-000142',
+        customerMobile: '+91 98490 88776',
+        propertyTitle: 'DHRITI APARTMENT',
+        visitScheduleId: 'SRM-VS-2026-000074',
+        costSheetId: 'COST-SHEET-2026-000018',
+        assignedExecutive: 'Avishek Das (Sr. Sales Manager)',
+        followupDate: todayStr,
+        followupTime: '06:00 PM',
+        priority: 'HIGH',
+        status: 'DUE_TODAY',
+        notes: 'Customer requested cab pickup time confirmation and revised cost sheet floor rise discount.'
+      },
+      {
+        id: 'FOL-2026-003',
+        customerName: 'Rahul Verma',
+        customerNumber: 'SRM-CUS-2026-000099',
+        customerMobile: '+91 70442 93951',
+        propertyTitle: 'Green Valley Villas',
+        visitScheduleId: 'SRM-VS-2026-000052',
+        costSheetId: 'COST-SHEET-2026-000012',
+        assignedExecutive: 'Priya Nair (Sales Exec)',
+        followupDate: '2026-09-25',
+        followupTime: '04:00 PM',
+        priority: 'MEDIUM',
+        status: 'OVERDUE',
+        notes: 'Post-visit 5-star rating collection and bank home loan sanction letter upload follow-up.'
+      }
+    ];
+  });
+
+  const saveFollowupsToStorage = (newList: any[]) => {
+    setLocalFollowupList(newList);
+    try {
+      localStorage.setItem('swaramayi_visit_followups_v1', JSON.stringify(newList));
+    } catch (e) {}
+  };
+
+  const [sentToFollowupVisitIds, setSentToFollowupVisitIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('swaramayi_sent_to_followup_visits_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
+
+  const saveSentToFollowupVisitIds = (newList: string[]) => {
+    setSentToFollowupVisitIds(newList);
+    try {
+      localStorage.setItem('swaramayi_sent_to_followup_visits_v1', JSON.stringify(newList));
+    } catch (e) {}
+  };
+
+  const [showEditVisitFollowupModal, setShowEditVisitFollowupModal] = useState<any>(null);
+  const [editVisitFollowupForm, setEditVisitFollowupForm] = useState<any>({
+    followupDate: '',
+    followupTime: '',
+    priority: 'HIGH',
+    assignedExecutive: '',
+    notes: ''
+  });
+
   React.useEffect(() => {
     const fetchAdvisorRatings = async () => {
       try {
@@ -231,8 +349,32 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
   }, [ratingInvitesList, scheduledVisits]);
 
   const unifiedVisits = React.useMemo(() => {
-    const list: any[] = [...(scheduledVisits || [])];
+    let list: any[] = [...(scheduledVisits || [])].filter(v => {
+      const vId = v.visitId || v.id || v.site_visit_code || v.visitScheduleId || v.costSheetId;
+      const vMob = (v.mobile || v.customerMobile || '').replace(/\D/g, '');
+      const vCustNo = v.customerNumber || v.customerId;
+
+      const isSent = sentToFollowupVisitIds.some(id => 
+        (vId && (id === vId || String(vId).includes(String(id)) || String(id).includes(String(vId)))) ||
+        (vCustNo && (id === vCustNo || String(vCustNo).includes(String(id)) || String(id).includes(String(vCustNo)))) ||
+        (vMob && vMob.length >= 7 && (id === vMob || String(id).includes(vMob) || vMob.includes(String(id))))
+      );
+      return !isSent && v.status !== 'SENT_TO_FOLLOWUP' && v.visit_status !== 'SENT_TO_FOLLOWUP';
+    });
+
     (visitPlans || []).forEach(plan => {
+      const planId = plan.visitPlanId || plan.visitScheduleId;
+      const planMob = (plan.mobile || '').replace(/\D/g, '');
+      const planCustNo = plan.customerNumber;
+
+      const isSent = sentToFollowupVisitIds.some(id => 
+        (planId && (id === planId || String(planId).includes(String(id)) || String(id).includes(String(planId)))) ||
+        (planCustNo && (id === planCustNo || String(planCustNo).includes(String(id)) || String(id).includes(String(planCustNo)))) ||
+        (planMob && planMob.length >= 7 && (id === planMob || String(id).includes(planMob) || planMob.includes(String(id))))
+      );
+
+      if (isSent || plan.status === 'SENT_TO_FOLLOWUP') return;
+
       const exists = list.some(sv => sv.visitId === plan.visitPlanId || sv.visitId === plan.visitScheduleId);
       if (!exists) {
         const firstStop = (plan.stops && plan.stops[0]) || {};
@@ -259,7 +401,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       }
     });
     return list;
-  }, [scheduledVisits, visitPlans]);
+  }, [scheduledVisits, visitPlans, sentToFollowupVisitIds]);
 
   const getPvaMatch = (v: any) => {
     const cleanMob = (v?.mobile || '').replace(/\D/g, '');
@@ -423,16 +565,17 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
         </div>
       </div>
 
-      {/* 7 SUB-TABS NAVIGATION FOR VISIT MANAGEMENT */}
+      {/* 8 SUB-TABS NAVIGATION FOR VISIT MANAGEMENT */}
       <div style={{ display: 'flex', gap: windowWidth <= 640 ? '6px' : '10px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', flexWrap: 'wrap' }}>
         {[
-          { id: 'visit_route_planner', label: '🗺️ Multi-Property Route Planner', accent: '#38bdf8', borderAccent: '#0284c7' },
-          { id: 'visit_scheduler', label: '📅 Single Site Visit Scheduler' },
-          { id: 'visit_otp_checkin', label: '🔐 OTP Verification & Check-In' },
-          { id: 'visit_feedback', label: '⭐ Structured 5-Star Feedback' },
-          { id: 'visit_analytics', label: '📊 Visit Conversion Analytics' },
-          { id: 'visit_owner_tracking', label: '👑 Owner Live Route Tracking', accent: '#fbbf24', borderAccent: '#fbbf24' },
-          { id: 'advisor_ratings', label: '⭐ Advisor Ratings & Links', accent: '#f59e0b', borderAccent: '#f59e0b' }
+          { id: 'visit_route_planner', label: `🗺️ Multi-Property Route Planner (${(visitPlans || []).length})`, accent: '#38bdf8', borderAccent: '#0284c7' },
+          { id: 'visit_scheduler', label: `📅 Single Site Visit Scheduler (${unifiedVisits.length})` },
+          { id: 'visit_otp_checkin', label: `🔐 OTP Verification & Check-In (${(projectVisitAgreements || []).length})` },
+          { id: 'visit_feedback', label: `⭐ Structured 5-Star Feedback (${(visitFeedbacks || []).length})` },
+          { id: 'visit_analytics', label: `📊 Visit Conversion Analytics (${(unifiedVisits || []).filter((v: any) => v.status === 'COMPLETED' || v.status === 'VISIT_DONE' || v.status === 'RATED' || v.visit_status === 'COMPLETED').length || unifiedVisits.length})` },
+          { id: 'visit_owner_tracking', label: `👑 Owner Live Route Tracking (${(visitPlans || []).length})`, accent: '#fbbf24', borderAccent: '#fbbf24' },
+          { id: 'advisor_ratings', label: `⭐ Advisor Ratings & Links (${(allRatingLogs || []).length})`, accent: '#f59e0b', borderAccent: '#f59e0b' },
+          { id: 'need_to_followup', label: `📌 Need to Followup (${(localFollowupList || []).length})`, accent: '#ef4444', borderAccent: '#ef4444' }
         ].map(tab => (
           <button 
             key={tab.id}
@@ -704,6 +847,21 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                 title="Shift customer back to Matching Management with a note to explore other property matches"
                               >
                                 ⚡ Shift to Matching
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setSendFollowupForm({
+                                    followupDate: new Date().toISOString().split('T')[0],
+                                    followupTime: '17:00',
+                                    priority: 'HIGH',
+                                    remarks: 'Call customer regarding site visit feedback and cost sheet quotation negotiation.'
+                                  });
+                                  setShowSendToFollowupModal({ open: true, visit: plan });
+                                }}
+                                style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}
+                                title="Send customer to Need to Followup list with remarks, date and time"
+                              >
+                                📌 Send to Followup
                               </button>
                               {isSuperAdmin && (
                                 <button 
@@ -1637,6 +1795,21 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                             title="Shift customer back to Matching Management with a note to explore other property matches"
                           >
                             ⚡ Shift to Matching
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setSendFollowupForm({
+                                followupDate: new Date().toISOString().split('T')[0],
+                                followupTime: '17:00',
+                                priority: 'HIGH',
+                                remarks: 'Call customer regarding site visit feedback and cost sheet quotation negotiation.'
+                              });
+                              setShowSendToFollowupModal({ open: true, visit: v });
+                            }}
+                            style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}
+                            title="Send customer to Need to Followup list with remarks, date and time"
+                          >
+                            📌 Send to Followup
                           </button>
                           <button 
                             onClick={() => {
@@ -3155,6 +3328,447 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       </div>
     )}
 
+    {/* SUB-TAB 8: NEED TO FOLLOWUP MANAGEMENT SYSTEM */}
+    {activeVisitSubTab === 'need_to_followup' && (() => {
+      const todayStr = new Date().toISOString().split('T')[0];
+      
+      const filteredFollowups = localFollowupList.filter((item: any) => {
+        if (followupSearchQuery.trim()) {
+          const q = followupSearchQuery.toLowerCase().trim();
+          const matchCust = item.customerName?.toLowerCase().includes(q) || item.customerNumber?.toLowerCase().includes(q) || item.customerMobile?.toLowerCase().includes(q);
+          const matchProp = item.propertyTitle?.toLowerCase().includes(q) || item.visitScheduleId?.toLowerCase().includes(q) || item.costSheetId?.toLowerCase().includes(q);
+          const matchExec = item.assignedExecutive?.toLowerCase().includes(q);
+          if (!matchCust && !matchProp && !matchExec) return false;
+        }
+
+        if (followupStatusFilter !== 'ALL') {
+          if (followupStatusFilter === 'DUE_TODAY' && item.followupDate !== todayStr && item.status !== 'DUE_TODAY') return false;
+          if (followupStatusFilter === 'OVERDUE' && (item.status !== 'OVERDUE' && !(new Date(item.followupDate) < new Date(todayStr) && item.status !== 'COMPLETED'))) return false;
+          if (followupStatusFilter === 'COMPLETED' && item.status !== 'COMPLETED') return false;
+          if (followupStatusFilter === 'PENDING' && item.status === 'COMPLETED') return false;
+        }
+
+        if (followupPriorityFilter !== 'ALL' && item.priority !== followupPriorityFilter) return false;
+
+        return true;
+      });
+
+      const dueTodayCount = localFollowupList.filter(f => f.status === 'DUE_TODAY' || f.followupDate === todayStr).length;
+      const overdueCount = localFollowupList.filter(f => f.status === 'OVERDUE' || (new Date(f.followupDate) < new Date(todayStr) && f.status !== 'COMPLETED')).length;
+      const completedCount = localFollowupList.filter(f => f.status === 'COMPLETED').length;
+
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* SEARCH & FILTERS CONTROLS */}
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '14px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '240px' }}>
+              <Search size={18} color={isLight ? '#64748b' : '#94a3b8'} />
+              <input 
+                type="text" 
+                value={followupSearchQuery} 
+                onChange={(e) => setFollowupSearchQuery(e.target.value)} 
+                placeholder="Search follow-up by customer name, mobile, property title, or executive..."
+                style={{ width: '100%', background: 'transparent', border: 'none', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.88rem', fontWeight: '700', outline: 'none' }}
+              />
+              {followupSearchQuery && (
+                <button onClick={() => setFollowupSearchQuery('')} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <select
+                value={followupStatusFilter}
+                onChange={(e) => setFollowupStatusFilter(e.target.value)}
+                style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: '800' }}
+              >
+                <option value="ALL">All Followup Statuses</option>
+                <option value="DUE_TODAY">🟡 Due Today</option>
+                <option value="OVERDUE">🔴 Overdue</option>
+                <option value="PENDING">🟢 Pending</option>
+                <option value="COMPLETED">✅ Completed</option>
+              </select>
+
+              <select
+                value={followupPriorityFilter}
+                onChange={(e) => setFollowupPriorityFilter(e.target.value)}
+                style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: '800' }}
+              >
+                <option value="ALL">All Priorities</option>
+                <option value="HIGH">🔥 High Priority</option>
+                <option value="MEDIUM">⚡ Medium Priority</option>
+                <option value="LOW">💧 Low Priority</option>
+              </select>
+            </div>
+          </div>
+
+          {/* FOLLOWUP RECORDS TABLE */}
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>📌 NEED TO FOLLOWUP REGISTER ({filteredFollowups.length})</h4>
+                <p style={{ fontSize: '0.76rem', color: isLight ? '#64748b' : '#94a3b8' }}>Real-time customer call schedule & post-visit action items</p>
+              </div>
+              <button
+                onClick={() => setShowAddFollowupModal(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontWeight: '900',
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 10px rgba(239, 68, 68, 0.3)'
+                }}
+              >
+                <Plus size={16} /> + Schedule New Follow-up
+              </button>
+            </div>
+
+            <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                    <th style={{ padding: '12px' }}>Task ID & Date</th>
+                    <th style={{ padding: '12px' }}>Customer Details</th>
+                    <th style={{ padding: '12px' }}>Property / Visit Schedule</th>
+                    <th style={{ padding: '12px' }}>Assigned Executive</th>
+                    <th style={{ padding: '12px' }}>Priority</th>
+                    <th style={{ padding: '12px' }}>Follow-up Reason & Notes</th>
+                    <th style={{ padding: '12px' }}>Status</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFollowups.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} style={{ padding: '36px 16px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
+                        <div style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginBottom: '6px' }}>📭 No Follow-up Tasks Match Filter</div>
+                        <div style={{ fontSize: '0.8rem' }}>Click <strong>"+ Schedule New Follow-up"</strong> above to add a follow-up task.</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredFollowups.map((item: any) => {
+                      const isOverdue = item.status === 'OVERDUE' || (new Date(item.followupDate) < new Date(todayStr) && item.status !== 'COMPLETED');
+                      const isDueToday = item.status === 'DUE_TODAY' || (item.followupDate === todayStr && item.status !== 'COMPLETED');
+                      const isDone = item.status === 'COMPLETED';
+
+                      return (
+                        <tr key={item.id} style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155', background: isDone ? (isLight ? '#f8fafc' : 'rgba(15, 23, 42, 0.5)') : 'transparent' }}>
+                          <td style={{ padding: '12px' }}>
+                            <strong style={{ color: '#ef4444', fontFamily: 'monospace', display: 'block' }}>{item.id}</strong>
+                            <span style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                              📅 {item.followupDate} at {item.followupTime}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '12px' }}>
+                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff', display: 'block' }}>{item.customerName}</strong>
+                            <span style={{ fontSize: '0.74rem', color: '#38bdf8', fontFamily: 'monospace' }}>{item.customerNumber || 'N/A'}</span>
+                            <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>📱 {item.customerMobile}</div>
+                          </td>
+
+                          <td style={{ padding: '12px' }}>
+                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff', display: 'block' }}>{item.propertyTitle}</strong>
+                            <span style={{ fontSize: '0.72rem', color: '#a855f7', fontFamily: 'monospace' }}>
+                              {item.visitScheduleId || item.costSheetId || 'SRM-PROP'}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '12px', fontSize: '0.8rem', color: '#fbbf24', fontWeight: '800' }}>
+                            👤 {item.assignedExecutive}
+                          </td>
+
+                          <td style={{ padding: '12px' }}>
+                            <span style={{
+                              background: item.priority === 'HIGH' ? 'rgba(239, 68, 68, 0.2)' : item.priority === 'MEDIUM' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(56, 189, 248, 0.2)',
+                              color: item.priority === 'HIGH' ? '#f87171' : item.priority === 'MEDIUM' ? '#fbbf24' : '#38bdf8',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              fontWeight: '900',
+                              fontSize: '0.72rem'
+                            }}>
+                              {item.priority === 'HIGH' ? '🔥 HIGH' : item.priority === 'MEDIUM' ? '⚡ MEDIUM' : '💧 LOW'}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '12px', fontSize: '0.78rem', color: isLight ? '#475569' : '#cbd5e1', maxWidth: '260px' }}>
+                            {item.notes}
+                          </td>
+
+                          <td style={{ padding: '12px' }}>
+                            <span style={{
+                              background: isDone ? 'rgba(34, 197, 94, 0.2)' : isOverdue ? 'rgba(239, 68, 68, 0.2)' : isDueToday ? 'rgba(245, 158, 11, 0.2)' : 'rgba(56, 189, 248, 0.2)',
+                              color: isDone ? '#4ade80' : isOverdue ? '#ef4444' : isDueToday ? '#f59e0b' : '#38bdf8',
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              fontWeight: '900',
+                              fontSize: '0.75rem'
+                            }}>
+                              {isDone ? '✅ COMPLETED' : isOverdue ? '🔴 OVERDUE' : isDueToday ? '🟡 DUE TODAY' : '🟢 SCHEDULED'}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                              <button
+                                onClick={() => {
+                                  const cleanNum = String(item.customerMobile || '').replace(/[^0-9]/g, '');
+                                  const msg = `Hi ${item.customerName}, following up regarding your site visit schedule for ${item.propertyTitle}. Please let us know your convenient time to speak!`;
+                                  window.open(`https://api.whatsapp.com/send?phone=${cleanNum.length === 10 ? '91' + cleanNum : cleanNum}&text=${encodeURIComponent(msg)}`, '_blank');
+                                }}
+                                style={{ background: '#25D366', color: '#ffffff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '3px' }}
+                                title="WhatsApp Followup"
+                              >
+                                💬 WhatsApp
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setShowEditVisitFollowupModal(item);
+                                  setEditVisitFollowupForm({
+                                    followupDate: item.followupDate || new Date().toISOString().split('T')[0],
+                                    followupTime: item.followupTime || '17:00',
+                                    priority: item.priority || 'HIGH',
+                                    assignedExecutive: item.assignedExecutive || 'Ramesh Pawar (Field Exec - Kondapur)',
+                                    notes: item.notes || ''
+                                  });
+                                }}
+                                style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem' }}
+                                title="Edit Followup Task"
+                              >
+                                ✏️ Edit
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`📅 Move visit schedule for "${item.customerName}" back to Single Site Visit Scheduler?`)) {
+                                    const vId = item.visitScheduleId || item.costSheetId || item.customerNumber || item.customerMobile;
+                                    const cleanMob = String(item.customerMobile || '').replace(/\D/g, '');
+                                    const custNo = item.customerNumber;
+
+                                    const newSentIds = sentToFollowupVisitIds.filter(id => 
+                                      id !== vId && id !== custNo && id !== cleanMob &&
+                                      !String(vId).includes(String(id)) && !String(id).includes(String(vId))
+                                    );
+                                    saveSentToFollowupVisitIds(newSentIds);
+
+                                    const updated = localFollowupList.filter(f => f.id !== item.id);
+                                    saveFollowupsToStorage(updated);
+
+                                    setActiveVisitSubTab('visit_scheduler');
+                                    alert(`📅 Visit for "${item.customerName}" restored to Single Site Visit Scheduler!`);
+                                  }
+                                }}
+                                style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: '1px solid #38bdf8', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900', fontSize: '0.74rem', whiteSpace: 'nowrap' }}
+                                title="Restore to Single Site Visit Scheduler"
+                              >
+                                📅 Resend to Scheduler
+                              </button>
+
+                              {!isDone && (
+                                <button
+                                  onClick={() => {
+                                    const updated = localFollowupList.map(f => f.id === item.id ? { ...f, status: 'COMPLETED' } : f);
+                                    saveFollowupsToStorage(updated);
+                                  }}
+                                  style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem' }}
+                                  title="Mark Followed Up"
+                                >
+                                  ✅ Done
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Delete follow-up task (${item.id}) for customer "${item.customerName}"?`)) {
+                                    const updated = localFollowupList.filter(f => f.id !== item.id);
+                                    saveFollowupsToStorage(updated);
+                                  }
+                                }}
+                                style={{ background: isLight ? '#f1f5f9' : '#0f172a', border: '1px solid #ef4444', color: '#ef4444', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem' }}
+                                title="Delete Task"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* MODAL: ADD NEW FOLLOW-UP TASK */}
+          {showAddFollowupModal && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '16px' }}>
+              <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #ef4444', borderRadius: '20px', width: '100%', maxWidth: '580px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ background: '#ef4444', color: '#ffffff', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Plus size={20} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>📌 Schedule New Site Visit Follow-up</h3>
+                      <p style={{ fontSize: '0.76rem', color: isLight ? '#64748b' : '#94a3b8', margin: '2px 0 0 0' }}>Register customer follow-up call & action item</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAddFollowupModal(false)}
+                    style={{ background: 'transparent', border: 'none', color: isLight ? '#64748b' : '#94a3b8', fontSize: '1.4rem', cursor: 'pointer', fontWeight: '900' }}
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>Customer Name *</label>
+                    <input
+                      type="text"
+                      value={newFollowupForm.customerName}
+                      onChange={(e) => setNewFollowupForm({ ...newFollowupForm, customerName: e.target.value })}
+                      placeholder="e.g. Rahul Sharma"
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>Customer Mobile *</label>
+                    <input
+                      type="text"
+                      value={newFollowupForm.customerMobile}
+                      onChange={(e) => setNewFollowupForm({ ...newFollowupForm, customerMobile: e.target.value })}
+                      placeholder="e.g. +91 98833 95102"
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>Property Title / Code</label>
+                    <input
+                      type="text"
+                      value={newFollowupForm.propertyTitle}
+                      onChange={(e) => setNewFollowupForm({ ...newFollowupForm, propertyTitle: e.target.value })}
+                      placeholder="e.g. SK Construction / DHRITI"
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>Visit Schedule / Cost Sheet ID</label>
+                    <input
+                      type="text"
+                      value={newFollowupForm.visitScheduleId}
+                      onChange={(e) => setNewFollowupForm({ ...newFollowupForm, visitScheduleId: e.target.value })}
+                      placeholder="e.g. SRM-VS-2026-000088"
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>Follow-up Date</label>
+                    <input
+                      type="date"
+                      value={newFollowupForm.followupDate}
+                      onChange={(e) => setNewFollowupForm({ ...newFollowupForm, followupDate: e.target.value })}
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>Priority Level</label>
+                    <select
+                      value={newFollowupForm.priority}
+                      onChange={(e) => setNewFollowupForm({ ...newFollowupForm, priority: e.target.value })}
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+                    >
+                      <option value="HIGH">🔥 High Priority</option>
+                      <option value="MEDIUM">⚡ Medium Priority</option>
+                      <option value="LOW">💧 Low Priority</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>Follow-up Notes / Reason *</label>
+                  <textarea
+                    rows={3}
+                    value={newFollowupForm.notes}
+                    onChange={(e) => setNewFollowupForm({ ...newFollowupForm, notes: e.target.value })}
+                    placeholder="Enter follow-up reason, customer callback details, or negotiation notes..."
+                    style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', resize: 'vertical' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddFollowupModal(false)}
+                    style={{ background: isLight ? '#f1f5f9' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newFollowupForm.customerName || !newFollowupForm.customerMobile) {
+                        return alert('Please enter Customer Name & Mobile Number!');
+                      }
+                      const newItem = {
+                        id: `FOL-2026-${String(Math.floor(100 + Math.random() * 900))}`,
+                        customerName: newFollowupForm.customerName,
+                        customerNumber: `SRM-CUS-2026-${Math.floor(100 + Math.random() * 900)}`,
+                        customerMobile: newFollowupForm.customerMobile,
+                        propertyTitle: newFollowupForm.propertyTitle || 'General Site Visit',
+                        visitScheduleId: newFollowupForm.visitScheduleId || 'SRM-VS-2026-000088',
+                        assignedExecutive: newFollowupForm.assignedExecutive || 'Ramesh Pawar (Field Exec)',
+                        followupDate: newFollowupForm.followupDate || todayStr,
+                        followupTime: newFollowupForm.followupTime || '05:00 PM',
+                        priority: newFollowupForm.priority || 'HIGH',
+                        status: newFollowupForm.followupDate === todayStr ? 'DUE_TODAY' : 'SCHEDULED',
+                        notes: newFollowupForm.notes || 'Call customer regarding site visit follow-up'
+                      };
+                      const updated = [newItem, ...localFollowupList];
+                      saveFollowupsToStorage(updated);
+                      setShowAddFollowupModal(false);
+                      setNewFollowupForm({
+                        customerName: '',
+                        customerMobile: '',
+                        propertyTitle: '',
+                        visitScheduleId: '',
+                        assignedExecutive: 'Ramesh Pawar (Field Exec - Kondapur)',
+                        followupDate: todayStr,
+                        followupTime: '05:00 PM',
+                        priority: 'HIGH',
+                        notes: 'Call customer regarding site visit feedback and cost sheet quotation negotiation.'
+                      });
+                    }}
+                    style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px 20px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer' }}
+                  >
+                    📌 SAVE & SCHEDULE FOLLOW-UP
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    })()}
+
     {/* MODAL: SEND CUSTOMER ADVISOR RATING LINK */}
     {showSendAdvisorRatingModal && (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '16px' }}>
@@ -3492,6 +4106,281 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
         </div>
       </div>
     )}
+
+    {/* MODAL: SEND TO FOLLOWUP WITH REMARKS, DATE & TIME */}
+    {showSendToFollowupModal && showSendToFollowupModal.open && (() => {
+      const v = showSendToFollowupModal.visit || {};
+      const custName = v.customerName || v.customer || 'Customer';
+      const custMobile = v.mobile || v.customerMobile || v.customerNumber || '';
+      const propTitle = v.propertyTitle || v.title || 'Property Site Visit';
+      const visitId = v.visitId || v.visitScheduleId || v.costSheetId || 'SRM-VS-2026';
+      const execName = v.assignedExecutive || 'Ramesh Pawar (Field Exec)';
+
+      return (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '16px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #ef4444', borderRadius: '20px', width: '100%', maxWidth: '560px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#ffffff', width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Calendar size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>📌 Send to Followup</h3>
+                  <p style={{ fontSize: '0.76rem', color: isLight ? '#64748b' : '#94a3b8', margin: '2px 0 0 0' }}>Schedule follow-up date, time & remarks for customer</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSendToFollowupModal(null)}
+                style={{ background: 'transparent', border: 'none', color: isLight ? '#64748b' : '#94a3b8', fontSize: '1.4rem', cursor: 'pointer', fontWeight: '900' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* CUSTOMER & VISIT INFO CARD */}
+            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>👤 Customer: {custName}</span>
+                <span style={{ color: '#38bdf8', fontFamily: 'monospace', fontWeight: '800' }}>📱 {custMobile}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>🏢 Property: <strong>{propTitle}</strong></span>
+                <span style={{ color: '#a855f7', fontFamily: 'monospace', fontWeight: '800' }}>🔑 {visitId}</span>
+              </div>
+            </div>
+
+            {/* FORM INPUTS: REMARKS, DATE & TIME */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>📅 Follow-up Date *</label>
+                <input
+                  type="date"
+                  value={sendFollowupForm.followupDate}
+                  onChange={(e) => setSendFollowupForm({ ...sendFollowupForm, followupDate: e.target.value })}
+                  style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '700' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>⏰ Follow-up Time *</label>
+                <input
+                  type="time"
+                  value={sendFollowupForm.followupTime}
+                  onChange={(e) => setSendFollowupForm({ ...sendFollowupForm, followupTime: e.target.value })}
+                  style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '700' }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>🔥 Priority Level</label>
+              <select
+                value={sendFollowupForm.priority}
+                onChange={(e) => setSendFollowupForm({ ...sendFollowupForm, priority: e.target.value })}
+                style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '700' }}
+              >
+                <option value="HIGH">🔥 High Priority</option>
+                <option value="MEDIUM">⚡ Medium Priority</option>
+                <option value="LOW">💧 Low Priority</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>💬 Follow-up Remarks & Action Notes *</label>
+              <textarea
+                rows={3}
+                value={sendFollowupForm.remarks}
+                onChange={(e) => setSendFollowupForm({ ...sendFollowupForm, remarks: e.target.value })}
+                placeholder="Enter call remarks, callback reasons, price negotiation notes..."
+                style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 12px', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '700', resize: 'vertical' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '14px' }}>
+              <button
+                type="button"
+                onClick={() => setShowSendToFollowupModal(null)}
+                style={{ background: isLight ? '#f1f5f9' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.85rem', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!sendFollowupForm.remarks) {
+                    return alert('Please enter Follow-up Remarks!');
+                  }
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  const newItem = {
+                    id: `FOL-2026-${String(Math.floor(100 + Math.random() * 900))}`,
+                    customerName: custName,
+                    customerNumber: v.customerNumber || `SRM-CUS-2026-${Math.floor(100 + Math.random() * 900)}`,
+                    customerMobile: custMobile,
+                    propertyTitle: propTitle,
+                    visitScheduleId: visitId,
+                    assignedExecutive: execName,
+                    followupDate: sendFollowupForm.followupDate || todayStr,
+                    followupTime: sendFollowupForm.followupTime || '05:00 PM',
+                    priority: sendFollowupForm.priority || 'HIGH',
+                    status: sendFollowupForm.followupDate === todayStr ? 'DUE_TODAY' : 'SCHEDULED',
+                    notes: sendFollowupForm.remarks
+                  };
+                  const updated = [newItem, ...localFollowupList];
+                  saveFollowupsToStorage(updated);
+
+                  // Register visit ID / customer identifier to sentToFollowupVisitIds so it removes from Single Site Visit Scheduler
+                  const targetVisitId = v.visitId || v.visitScheduleId || v.costSheetId || visitId;
+                  const targetCustNo = v.customerNumber || v.customerId;
+                  const targetMobile = (custMobile || '').replace(/\D/g, '');
+
+                  const newSentIds = [...sentToFollowupVisitIds];
+                  if (targetVisitId && !newSentIds.includes(targetVisitId)) newSentIds.push(targetVisitId);
+                  if (targetCustNo && !newSentIds.includes(targetCustNo)) newSentIds.push(targetCustNo);
+                  if (targetMobile && targetMobile.length >= 7 && !newSentIds.includes(targetMobile)) newSentIds.push(targetMobile);
+
+                  saveSentToFollowupVisitIds(newSentIds);
+
+                  setShowSendToFollowupModal(null);
+                  setActiveVisitSubTab('need_to_followup');
+                  alert(`📌 Customer "${custName}" sent to "Need to Followup" and removed from Single Site Visit Scheduler!`);
+                }}
+                style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '900', fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.35)' }}
+              >
+                📌 CONFIRM & SEND TO FOLLOWUP
+              </button>
+            </div>
+
+          </div>
+        </div>
+      );
+    })()}
+
+    {/* MODAL: EDIT VISIT FOLLOW-UP TASK */}
+    {showEditVisitFollowupModal && (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '16px' }}>
+        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #f59e0b', borderRadius: '20px', width: '100%', maxWidth: '580px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ background: '#f59e0b', color: '#0f172a', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>
+                ✏️
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>Edit Site Visit Follow-up Task</h3>
+                <p style={{ fontSize: '0.76rem', color: isLight ? '#64748b' : '#94a3b8', margin: '2px 0 0 0' }}>Update customer follow-up schedule & notes</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowEditVisitFollowupModal(null)}
+              style={{ background: 'transparent', border: 'none', color: isLight ? '#64748b' : '#94a3b8', fontSize: '1.4rem', cursor: 'pointer', fontWeight: '900' }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '12px', fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800' }}>👤 Customer: {showEditVisitFollowupModal.customerName} ({showEditVisitFollowupModal.customerNumber || showEditVisitFollowupModal.customerMobile})</div>
+            <div style={{ color: '#38bdf8', fontWeight: '800', fontFamily: 'monospace' }}>🔑 Visit / Cost Sheet ID: {showEditVisitFollowupModal.visitScheduleId || showEditVisitFollowupModal.costSheetId}</div>
+            <div style={{ color: isLight ? '#64748b' : '#94a3b8' }}>🏢 Property: {showEditVisitFollowupModal.propertyTitle}</div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>📅 Follow-up Date</label>
+              <input
+                type="date"
+                value={editVisitFollowupForm.followupDate}
+                onChange={(e) => setEditVisitFollowupForm({ ...editVisitFollowupForm, followupDate: e.target.value })}
+                style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>⏰ Follow-up Time</label>
+              <input
+                type="time"
+                value={editVisitFollowupForm.followupTime}
+                onChange={(e) => setEditVisitFollowupForm({ ...editVisitFollowupForm, followupTime: e.target.value })}
+                style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>🔥 Priority Level</label>
+              <select
+                value={editVisitFollowupForm.priority}
+                onChange={(e) => setEditVisitFollowupForm({ ...editVisitFollowupForm, priority: e.target.value })}
+                style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+              >
+                <option value="HIGH">🔥 High Priority</option>
+                <option value="MEDIUM">⚡ Medium Priority</option>
+                <option value="LOW">💧 Low Priority</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>👤 Assigned Executive</label>
+              <select
+                value={editVisitFollowupForm.assignedExecutive}
+                onChange={(e) => setEditVisitFollowupForm({ ...editVisitFollowupForm, assignedExecutive: e.target.value })}
+                style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+              >
+                {assignedAdvisors.map(adv => (
+                  <option key={adv.id} value={adv.name}>{adv.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginBottom: '4px' }}>Follow-up Notes / Reason *</label>
+            <textarea
+              rows={3}
+              value={editVisitFollowupForm.notes}
+              onChange={(e) => setEditVisitFollowupForm({ ...editVisitFollowupForm, notes: e.target.value })}
+              placeholder="Enter follow-up reason, customer callback details..."
+              style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', resize: 'vertical' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '12px' }}>
+            <button
+              type="button"
+              onClick={() => setShowEditVisitFollowupModal(null)}
+              style={{ background: isLight ? '#f1f5f9' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const updated = localFollowupList.map(item => 
+                  item.id === showEditVisitFollowupModal.id
+                    ? {
+                        ...item,
+                        followupDate: editVisitFollowupForm.followupDate,
+                        followupTime: editVisitFollowupForm.followupTime,
+                        priority: editVisitFollowupForm.priority,
+                        assignedExecutive: editVisitFollowupForm.assignedExecutive,
+                        notes: editVisitFollowupForm.notes
+                      }
+                    : item
+                );
+                saveFollowupsToStorage(updated);
+                setShowEditVisitFollowupModal(null);
+                alert(`✏️ Follow-up task updated successfully!`);
+              }}
+              style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '8px 20px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer' }}
+            >
+              💾 SAVE CHANGES
+            </button>
+          </div>
+
+        </div>
+      </div>
+    )}
+
       </div>
     );
 };

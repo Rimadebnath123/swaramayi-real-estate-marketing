@@ -384,7 +384,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       building_photo: p.building_photo || '',
       rera_id: p.rera_id || '',
       hera_no: p.hera_no || '',
-      description: p.description || ''
+      key_custody: p.key_custody || p.keys_custody || p.keysCustody || '',
+      keys_custody: p.key_custody || p.keys_custody || p.keysCustody || '',
+      architectural_description: p.architectural_description || p.architecturalDescription || p.description || '',
+      description: p.description || p.architectural_description || p.architecturalDescription || ''
     }));
 
     if (setDevProjectMobile) setDevProjectMobile(devMobile);
@@ -812,6 +815,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       lng: newPropertyForm.longitude || '88.493403',
       rera_id: newPropertyForm.rera_id || '',
       hera_no: newPropertyForm.hera_no || '',
+      key_custody: newPropertyForm.key_custody || newPropertyForm.keys_custody || '',
+      keys_custody: newPropertyForm.key_custody || newPropertyForm.keys_custody || '',
+      architectural_description: newPropertyForm.architectural_description || newPropertyForm.description || '',
+      description: newPropertyForm.architectural_description || newPropertyForm.description || '',
       amenities: newPropertyForm.selected_amenities || [],
       building_photos: newPropertyForm.building_photos || [],
       total_covered_parking_capacity: newPropertyForm.total_covered_parking_capacity !== undefined ? newPropertyForm.total_covered_parking_capacity : 24,
@@ -865,6 +872,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       locality: newPropertyForm.locality,
       latitude: newPropertyForm.latitude,
       longitude: newPropertyForm.longitude,
+      key_custody: newPropertyForm.key_custody || newPropertyForm.keys_custody || prev.key_custody || '',
+      keys_custody: newPropertyForm.key_custody || newPropertyForm.keys_custody || prev.keys_custody || '',
+      architectural_description: newPropertyForm.architectural_description || prev.architectural_description || '',
+      description: newPropertyForm.architectural_description || prev.description || '',
       selected_amenities: newPropertyForm.selected_amenities || [],
       building_photos: newPropertyForm.building_photos || [],
       total_covered_parking_capacity: newPropertyForm.total_covered_parking_capacity !== undefined ? newPropertyForm.total_covered_parking_capacity : prev.total_covered_parking_capacity,
@@ -1902,46 +1913,66 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                 </div>
               </div>
 
-              {/* SECTION 5: KEYS CUSTODY & ARCHITECTURAL DESCRIPTION */}
-              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: '800', color: isLight ? '#7e22ce' : '#a855f7', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '8px' }}>
-                  5. Keys Custody & Architectural Description
-                </h4>
-
-                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '14px' }}>
+              {/* 🔑 KEYS CUSTODY & ARCHITECTURAL DESCRIPTION SECTION */}
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #a855f7', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
-                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Physical Keys / Custody Location</label>
-                    <input type="text" value={newPropertyForm.key_custody} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, key_custody: e.target.value })} placeholder="Builder Lounge / Company Office" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} />
+                    <h4 style={{ fontSize: '1rem', fontWeight: '900', color: '#a855f7', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      🔑 Keys Custody & Architectural Description
+                    </h4>
+                    <p style={{ fontSize: '0.76rem', color: isLight ? '#64748b' : '#94a3b8', margin: '2px 0 0 0' }}>
+                      Specify project key custody storage location & overall architectural structural design specifications.
+                    </p>
                   </div>
+                  <span style={{ fontSize: '0.74rem', background: 'rgba(168, 85, 247, 0.18)', color: '#a855f7', border: '1px solid #a855f7', padding: '3px 10px', borderRadius: '20px', fontWeight: '900' }}>
+                    PROJECT CUSTODY & SPECIFICATIONS
+                  </span>
+                </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
                   <div>
-                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Property Highlights & Notes</label>
-                    <input type="text" value={newPropertyForm.description} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, description: e.target.value })} placeholder="Pool facing Vastu East, 3 balconies" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.78rem', color: isLight ? '#0284c7' : '#38bdf8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>👤 Site Person Contact Name *</label>
-                    <input 
-                      type="text" 
-                      value={newPropertyForm.site_person_name || ''} 
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, site_person_name: e.target.value })} 
-                      placeholder="e.g. Rajesh Kumar (Site Manager / Security Incharge)" 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
+                      🔑 Key Custody Location / Handler
+                    </label>
+                    <input
+                      type="text"
+                      value={newPropertyForm.key_custody || newPropertyForm.keys_custody || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewPropertyForm((prev: any) => ({
+                          ...prev,
+                          key_custody: val,
+                          keys_custody: val
+                        }));
+                      }}
+                      placeholder="e.g. Builder Site Office / Security Gate / Sales Desk / Company Office"
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '700' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.78rem', color: '#22c55e', fontWeight: '800', display: 'block', marginBottom: '6px' }}>📞 Site Person Contact Phone Number *</label>
-                    <input 
-                      type="text" 
-                      value={newPropertyForm.site_person_contact || ''} 
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, site_person_contact: e.target.value })} 
-                      placeholder="e.g. +91 98490 77665" 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', color: isLight ? '#16a34a' : '#4ade80', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
+                      🏛️ Architectural & Structural Design Description
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={newPropertyForm.architectural_description || newPropertyForm.description || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewPropertyForm((prev: any) => ({
+                          ...prev,
+                          architectural_description: val,
+                          description: val
+                        }));
+                      }}
+                      placeholder="e.g. Modern RCC Frame Structure, Vastu compliant layouts, Premium Italian Marble flooring, Glass Elevation Façade, Earthquake Resistant Zone III construction."
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '700', resize: 'vertical' }}
                     />
                   </div>
                 </div>
               </div>
+
+
 
               {/* BOTTOM ACTION FOOTER FOR ADD PROJECT & DEVELOPER MASTER */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '2px solid #cbd5e1' : '2px solid #334155', paddingTop: '20px', flexWrap: 'wrap', gap: '14px', marginTop: '10px' }}>
@@ -2985,46 +3016,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                 </div>
               </div>
 
-              {/* SECTION 5: KEYS CUSTODY & PROPERTY DESCRIPTION */}
-              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: '800', color: isLight ? '#7e22ce' : '#a855f7', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '8px' }}>
-                  5. Keys Custody & Architectural Description
-                </h4>
 
-                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '14px' }}>
-                  <div>
-                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Physical Keys / Custody Location</label>
-                    <input type="text" value={newPropertyForm.key_custody} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, key_custody: e.target.value })} placeholder="Builder Lounge / Company Office" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Property Highlights & Notes</label>
-                    <input type="text" value={newPropertyForm.description} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, description: e.target.value })} placeholder="Pool facing Vastu East, 3 balconies" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.78rem', color: isLight ? '#0284c7' : '#38bdf8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>👤 Site Person Contact Name *</label>
-                    <input 
-                      type="text" 
-                      value={newPropertyForm.site_person_name || ''} 
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, site_person_name: e.target.value })} 
-                      placeholder="e.g. Rajesh Kumar (Site Manager / Security Incharge)" 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.78rem', color: '#22c55e', fontWeight: '800', display: 'block', marginBottom: '6px' }}>📞 Site Person Contact Phone Number *</label>
-                    <input 
-                      type="text" 
-                      value={newPropertyForm.site_person_contact || ''} 
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, site_person_contact: e.target.value })} 
-                      placeholder="e.g. +91 98490 77665" 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', color: isLight ? '#16a34a' : '#4ade80', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
-                    />
-                  </div>
-                </div>
-              </div>
             </>
           )}
 

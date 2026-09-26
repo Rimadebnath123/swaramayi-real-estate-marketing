@@ -1105,7 +1105,7 @@ function ScheduleVisitModalContent({
   const [pickupAddress, setPickupAddress] = useState<string>(custHomeAddress);
   const [pickupTime, setPickupTime] = useState<string>('10:00 AM');
   const [dropAddress, setDropAddress] = useState<string>(custHomeAddress);
-  const [visitDate, setVisitDate] = useState<string>('2026-08-22');
+  const [visitDate, setVisitDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState<string>('10:00 AM');
   const [assignedExec, setAssignedExec] = useState<string>('Ramesh Pawar (Field Exec - Kondapur)');
   const [transportMode, setTransportMode] = useState<string>('🚗 Cab Pick & Drop Needed');
@@ -1311,14 +1311,25 @@ function ScheduleVisitModalContent({
       <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
         <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #22c55e', width: '640px', borderRadius: '16px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '16px' }}>
-            <CheckCircle2 size={36} color="#22c55e" />
-            <div>
-              <h2 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '1.3rem' }}>VISIT SCHEDULE CREATED SUCCESSFULLY!</h2>
-              <span style={{ color: '#4ade80', fontWeight: '800', fontSize: '0.82rem' }}>
-                ONE Visit Schedule ID generated for {(createdSuccess.stops || []).length} properties
-              </span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <CheckCircle2 size={36} color="#22c55e" />
+              <div>
+                <h2 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '1.3rem' }}>VISIT SCHEDULE CREATED SUCCESSFULLY!</h2>
+                <span style={{ color: '#4ade80', fontWeight: '800', fontSize: '0.82rem' }}>
+                  ONE Visit Schedule ID generated for {(createdSuccess.stops || []).length} properties
+                </span>
+              </div>
             </div>
+            <X 
+              size={24} 
+              color={isLight ? '#64748b' : '#94a3b8'} 
+              style={{ cursor: 'pointer' }} 
+              onClick={() => {
+                setCreatedSuccess(null);
+                setShowScheduleVisitModal(null);
+              }} 
+            />
           </div>
 
           <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.85rem' }}>
@@ -1353,6 +1364,16 @@ function ScheduleVisitModalContent({
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '16px' }}>
             <button 
               onClick={() => {
+                setCreatedSuccess(null);
+                setShowScheduleVisitModal(null);
+              }}
+              style={{ background: isLight ? '#f1f5f9' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer' }}
+            >
+              ✖ CLOSE
+            </button>
+            <button 
+              onClick={() => {
+                setCreatedSuccess(null);
                 setShowScheduleVisitModal(null);
                 setSelectedVisitPlanId(createdSuccess.visitScheduleId);
                 setActiveTab('visit_management');
@@ -1364,6 +1385,7 @@ function ScheduleVisitModalContent({
             </button>
             <button 
               onClick={() => {
+                setCreatedSuccess(null);
                 setShowScheduleVisitModal(null);
                 setSelectedVisitPlanId(createdSuccess.visitScheduleId);
                 setActiveTab('visit_management');
@@ -1538,10 +1560,29 @@ function ScheduleVisitModalContent({
           </div>
 
           <div>
-            <label style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: '900', display: 'block', marginBottom: '4px' }}>2. Pickup Time</label>
+            <label style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: '900', display: 'block', marginBottom: '4px' }}>2. Customer Drop Address</label>
+            <input type="text" value={dropAddress} onChange={(e) => setDropAddress(e.target.value)} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.82rem' }} />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: '900', display: 'block', marginBottom: '4px' }}>3. Visit Schedule Date *</label>
+            <input 
+              type="date" 
+              value={visitDate} 
+              onChange={(e) => setVisitDate(e.target.value)} 
+              style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#fbbf24', fontWeight: '800', padding: '8px 10px', borderRadius: '6px', fontSize: '0.82rem' }} 
+              required
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: '900', display: 'block', marginBottom: '4px' }}>4. Pickup & Visit Time *</label>
             <select 
               value={pickupTime} 
-              onChange={(e) => setPickupTime(e.target.value)} 
+              onChange={(e) => {
+                setPickupTime(e.target.value);
+                setStartTime(e.target.value);
+              }} 
               style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#fbbf24', fontWeight: '800', padding: '8px 10px', borderRadius: '6px', fontSize: '0.82rem' }}
             >
               {[
@@ -1557,7 +1598,7 @@ function ScheduleVisitModalContent({
           </div>
 
           <div>
-            <label style={{ fontSize: '0.75rem', color: '#4ade80', fontWeight: '900', display: 'block', marginBottom: '4px' }}>3. Assigned Sales Executive</label>
+            <label style={{ fontSize: '0.75rem', color: '#4ade80', fontWeight: '900', display: 'block', marginBottom: '4px' }}>5. Assigned Sales Executive</label>
             <select value={assignedExec || (execList[0]?.value || 'Priya Nair')} onChange={(e) => setAssignedExec(e.target.value)} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontWeight: '800', padding: '8px 10px', borderRadius: '6px', fontSize: '0.82rem' }}>
               {execList.map((exec: any) => (
                 <option key={exec.id || exec.name} value={exec.value}>
@@ -1568,7 +1609,7 @@ function ScheduleVisitModalContent({
           </div>
 
           <div>
-            <label style={{ fontSize: '0.75rem', color: '#4ade80', fontWeight: '900', display: 'block', marginBottom: '4px' }}>4. Transport Logistics Mode</label>
+            <label style={{ fontSize: '0.75rem', color: '#4ade80', fontWeight: '900', display: 'block', marginBottom: '4px' }}>6. Transport Logistics Mode</label>
             <select value={transportMode} onChange={(e) => setTransportMode(e.target.value)} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '800', padding: '8px 10px', borderRadius: '6px', fontSize: '0.82rem' }}>
               <option value="Cab Pick & Drop Needed">🚗 Cab Pick & Drop Needed</option>
               <option value="Self Driving / Direct Arrival">🚗 Self Driving / Direct Arrival at Site</option>
@@ -3030,7 +3071,7 @@ export default function App() {
 
   // Sub-Tabs States across Categories
   const [activeLeadSubTab, setActiveLeadSubTab] = useState<'lead_ingestion' | 'lead_ownership' | 'lead_transfer' | 'lead_scoring'>('lead_ingestion');
-  const [activeVisitSubTab, setActiveVisitSubTab] = useState<'visit_scheduler' | 'visit_route_planner' | 'visit_otp_checkin' | 'visit_feedback' | 'visit_analytics' | 'visit_owner_tracking' | 'advisor_ratings'>('visit_route_planner');
+  const [activeVisitSubTab, setActiveVisitSubTab] = useState<'visit_scheduler' | 'visit_route_planner' | 'visit_otp_checkin' | 'visit_feedback' | 'visit_analytics' | 'visit_owner_tracking' | 'advisor_ratings' | 'need_to_followup'>('visit_route_planner');
   const [activeMatchingSubTab, setActiveMatchingSubTab] = useState<'ai_matching_engine' | 'req_inventory_matrix' | 'portfolio_dispatcher'>('ai_matching_engine');
   const [activeCostSheetShareSubTab, setActiveCostSheetShareSubTab] = useState<'individual_cost_sheets' | 'dispatcher' | 'delivery_analytics' | 'portal_tokens' | 'interest_handoff'>('individual_cost_sheets');
   const [activeRoleSubTab, setActiveRoleSubTab] = useState<'user_directory' | 'permission_matrix' | 'org_hierarchy' | 'teams_directory' | 'approval_queue' | 'session_security' | 'exit_handover'>('user_directory');

@@ -1079,7 +1079,7 @@ function ScheduleVisitModalContent({
   const execList = Array.isArray(dynamicSalesExecutives) && dynamicSalesExecutives.length > 0
     ? dynamicSalesExecutives
     : [
-        { id: 'EXE-01', name: 'Priya Nair (Sales Exec)', value: 'Priya Nair (Sales Exec)', label: 'Priya Nair (Sales Exec)' },
+        { id: 'EXE-01', name: 'Avishek Das (Super Admin)', value: 'Avishek Das (Super Admin)', label: 'Avishek Das (Super Admin)' },
         { id: 'EXE-02', name: 'Ramesh Pawar (Field Exec)', value: 'Ramesh Pawar (Field Exec)', label: 'Ramesh Pawar (Field Exec)' },
         { id: 'EXE-03', name: 'Sanjay Dutt (Senior Consultant)', value: 'Sanjay Dutt (Senior Consultant)', label: 'Sanjay Dutt (Senior Consultant)' }
       ];
@@ -3235,50 +3235,73 @@ export default function App() {
     try {
       const keysToClean = [
         'swaramayi_leads_v4',
-        'swaramayi_leads_v5_clean',
-        'swaramayi_leads_v6_clean',
-        'swaramayi_leads_v7_clean',
         'swaramayi_customers_v3',
-        'swaramayi_customers_v4_clean',
-        'swaramayi_customers_v5_clean',
-        'swaramayi_customers_v6_clean',
-        'swaramayi_customers_v7_clean',
-        'swaramayi_customers_master_v3_clean',
         'swaramayi_properties_v3',
-        'swaramayi_properties_v4_clean',
-        'swaramayi_properties_v5_clean',
         'swaramayi_cost_sheet_shares_v3',
-        'swaramayi_cost_sheet_shares_v4_clean',
-        'swaramayi_cost_sheet_shares_v5_clean',
         'swaramayi_indiv_cost_sheets_v4',
-        'swaramayi_indiv_cost_sheets_v5_clean',
-        'swaramayi_indiv_cost_sheets_v6_clean',
-        'swaramayi_indiv_cost_sheets_v7_clean',
         'swaramayi_bookings_v2',
-        'swaramayi_bookings_v3_clean',
         'swaramayi_agreements_vault_v4',
-        'swaramayi_agreements_vault_v5_clean',
         'swaramayi_invoices_v4',
-        'swaramayi_invoices_v5_clean',
-        'swaramayi_invoices_v6',
         'swaramayi_matching_queue_v3',
-        'swaramayi_matching_queue_v5_clean',
-        'swaramayi_matching_queue_v6_clean',
-        'swaramayi_matching_queue_v7_clean',
         'swaramayi_scheduled_visits_v3',
-        'swaramayi_scheduled_visits_v4_clean',
-        'swaramayi_scheduled_visits_v7_clean',
         'swaramayi_visit_plans_v3',
-        'swaramayi_visit_plans_v4_clean',
-        'swaramayi_visit_plans_v7_clean',
         'swaramayi_project_visit_agreements_v1',
-        'swaramayi_project_visit_agreements_v2_clean',
-        'swaramayi_project_visit_agreements_v7_clean',
         'swaramayi_developers_v1',
-        'swaramayi_users_v6',
-        'swaramayi_users_v7'
+        'swaramayi_users_v6'
       ];
       keysToClean.forEach(k => localStorage.removeItem(k));
+    } catch (e) {}
+
+    // Scrub stale demo records from local storage and update SRM-CUS-2026-000188 / SRM-LEAD-2026-000188
+    try {
+      ['swaramayi_customers_master_v3_clean', 'swaramayi_customers_v7_clean'].forEach(key => {
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed.filter((c: any) => {
+              const name = (c.name || c.full_name || '').toString().toLowerCase();
+              const num = (c.customer_number || c.id || '').toString().toUpperCase();
+              return !(name.includes('rohan deshmukh') || num === 'SRM-CUS-2026-000184' || name.includes('sumanth varma') || num === 'SRM-CUS-2026-000186' || (name.includes('avishek das') && num !== 'SRM-CUS-2026-000188'));
+            }).map((c: any) => {
+              const num = (c.customer_number || c.id || '').toString().toUpperCase();
+              const name = (c.name || c.full_name || '').toString().toLowerCase();
+              if (num === 'SRM-CUS-2026-000188' && (name.includes('avishek') || name.includes('ingested'))) {
+                return {
+                  ...c,
+                  name: 'Honey sing',
+                  full_name: 'Honey sing',
+                  mobile: '6567788888',
+                  phone: '6567788888',
+                  email: ''
+                };
+              }
+              return c;
+            });
+            localStorage.setItem(key, JSON.stringify(cleaned));
+          }
+        }
+      });
+      ['swaramayi_leads_v7_clean', 'swaramayi_leads_v5_clean'].forEach(key => {
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed.filter((l: any) => {
+              const name = (l.name || l.customer_name || l.full_name || '').toString().toLowerCase();
+              const mob = (l.mobile || l.phone || '').toString().replace(/\D/g, '');
+              const num = (l.customer_number || l.lead_number || l.id || '').toString().toUpperCase();
+              return !(
+                name.includes('rohan deshmukh') || num.includes('000184') ||
+                name.includes('sumanth varma') || num.includes('000186') ||
+                name.includes('avishek das') || mob.includes('9432328947') ||
+                name.includes('honey sing') || mob.includes('6567788888') || num.includes('000188')
+              );
+            });
+            localStorage.setItem(key, JSON.stringify(cleaned));
+          }
+        }
+      });
     } catch (e) {}
   }, []);
 
@@ -3294,12 +3317,11 @@ export default function App() {
         if (Array.isArray(parsed)) {
           return parsed.filter((r: any) => {
             const name = (r.customerName || r.name || '').toString().toLowerCase();
-            const mob = (r.mobile || '').toString().replace(/\D/g, '');
             const custNum = (r.customerNumber || '').toString().toUpperCase();
             const reqId = (r.requestId || r.id || '').toString().toUpperCase();
             if (
-              name.includes('rishita') || mob.includes('8876697975') || custNum === 'SRM-CUS-2026-000188' || reqId === 'SRM-MAT-2026-000422' ||
-              name.includes('sunil') || mob.includes('5777564356') || custNum === 'SRM-CUS-2026-000190' || reqId === 'SRM-MAT-2026-000190'
+              name.includes('rohan deshmukh') || custNum === 'SRM-CUS-2026-000184' || reqId === 'SRM-MAT-2026-000184' ||
+              name.includes('sumanth varma') || custNum === 'SRM-CUS-2026-000186' || reqId === 'SRM-MAT-2026-000186'
             ) {
               return false;
             }
@@ -3318,6 +3340,58 @@ export default function App() {
       localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(matchingRequestsQueue));
     } catch (e) {
       console.error('Error saving matching queue to localStorage:', e);
+    }
+
+    if (Array.isArray(matchingRequestsQueue) && matchingRequestsQueue.length > 0) {
+      setCustomers(prevCusts => {
+        let updated = [...(prevCusts || [])];
+        let changed = false;
+        matchingRequestsQueue.forEach((m: any) => {
+          const custNo = m.customerNumber || m.customerId || m.customer_number;
+          const mob = (m.mobile || m.phone || '').replace(/\D/g, '');
+          const name = m.customerName || m.name || m.customer_name;
+          if (!custNo && !mob && !name) return;
+
+          const exists = updated.some((c: any) => 
+            (custNo && (c.customer_number === custNo || c.id === custNo)) ||
+            (mob && mob.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === mob) ||
+            (name && (c.name || '').toLowerCase() === name.toLowerCase())
+          );
+
+          if (!exists && name && name.toLowerCase() !== 'customer') {
+            changed = true;
+            updated.unshift({
+              id: `CUS-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+              customer_number: custNo || `SRM-CUS-2026-${mob.slice(-6) || '000188'}`,
+              name: name,
+              full_name: name,
+              mobile: m.mobile || m.phone || '',
+              phone: m.mobile || m.phone || '',
+              email: m.email || '',
+              city: 'Kolkata',
+              locality: m.preferredArea || 'Barasat',
+              property_type: m.propertyType || 'Flat / Apartment',
+              budget: m.budget || '₹25 Lakhs - ₹50 Lakhs',
+              priority: m.priority || 'HOT',
+              score: 88,
+              lead_score: 88,
+              status: m.status || 'NEW_LEAD',
+              assigned_salesperson: m.assignedExecutive || '',
+              assigned_to: m.assignedExecutive || '',
+              is_new_today: true,
+              created_at: m.requestDate || new Date().toISOString()
+            });
+          }
+        });
+        if (changed) {
+          try {
+            localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
+            localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        }
+        return prevCusts;
+      });
     }
   }, [matchingRequestsQueue]);
 
@@ -3999,10 +4073,10 @@ export default function App() {
     // Resolve matching request from current queue, customer list, or selected matching ID
     const currentReq = resolveCurrentMatchingReq(selectedMatchingId);
 
-    const custName = currentReq?.customerName || selectedCust?.name || 'Avishek Das';
-    const custNum = currentReq?.customerNumber || selectedCust?.customer_number || 'SRM-CUS-2026-000189';
-    const custMobile = currentReq?.mobile || selectedCust?.mobile || '9432328947';
-    const matchingReqId = currentReq?.requestId || selectedMatchingId || 'SRM-MAT-2026-988588';
+    const custName = currentReq?.customerName || selectedCust?.name || '';
+    const custNum = currentReq?.customerNumber || selectedCust?.customer_number || '';
+    const custMobile = currentReq?.mobile || selectedCust?.mobile || '';
+    const matchingReqId = currentReq?.requestId || selectedMatchingId || '';
 
     const newShare = {
       shareId: newShareId,
@@ -4368,10 +4442,6 @@ export default function App() {
       const id = (c.id || c._id || '').toString().toLowerCase().trim();
       const name = (c.name || c.full_name || '').toString().toLowerCase().trim();
 
-      if (name.includes('rishita') || mob.includes('8876697975') || num.toUpperCase() === 'SRM-CUS-2026-000188') {
-        return;
-      }
-
       const key = num || (mob && mob.length >= 7 ? `mob:${mob.slice(-10)}` : '') || (id ? `id:${id}` : `name:${name}`);
       if (key && !seen.has(key)) {
         seen.add(key);
@@ -4384,15 +4454,86 @@ export default function App() {
     return deduped;
   };
 
-  // 6. CUSTOMERS MASTER VAULT (Direct MongoDB Source)
-  const [customers, setCustomers] = useState<any[]>([]);
+  // Helper to sanitize customer list and fix SRM-CUS-2026-000188 to user's real customer Honey sing
+  const sanitizeCustomerRecords = (list: any[]) => {
+    if (!Array.isArray(list)) return [];
+    return list.filter((c: any) => {
+      if (!c) return false;
+      const name = (c.name || c.full_name || '').toString().toLowerCase();
+      const email = (c.email || '').toString().toLowerCase();
+      const mob = (c.mobile || c.phone || '').toString().replace(/\D/g, '');
+      const num = (c.customer_number || c.id || '').toString().toUpperCase();
+
+      if (name.includes('rohan deshmukh') || num === 'SRM-CUS-2026-000184') return false;
+      if (name.includes('sumanth varma') || num === 'SRM-CUS-2026-000186') return false;
+      if ((name.includes('avishek das') || email.includes('avishek@swaramayi.com') || mob.includes('9432328947')) && num !== 'SRM-CUS-2026-000188') return false;
+      return true;
+    }).map((c: any) => {
+      const name = (c.name || c.full_name || '').toString().toLowerCase();
+      const email = (c.email || '').toString().toLowerCase();
+      const num = (c.customer_number || c.id || '').toString().toUpperCase();
+      if (num === 'SRM-CUS-2026-000188' && (name.includes('avishek') || email.includes('avishek@swaramayi.com'))) {
+        return {
+          ...c,
+          name: 'Honey sing',
+          full_name: 'Honey sing',
+          mobile: '6567788888',
+          phone: '6567788888',
+          email: ''
+        };
+      }
+      return c;
+    });
+  };
+
+  // 6. CUSTOMERS MASTER VAULT (Direct MongoDB & Local Storage Source)
+  const [customers, setCustomers] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('swaramayi_customers_master_v3_clean') || localStorage.getItem('swaramayi_customers_v7_clean');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return sanitizeCustomerRecords(parsed);
+        }
+      }
+    } catch (e) {}
+    return [];
+  });
 
   const [rawSelectedCust, setSelectedCust] = useState<any>(null);
   const selectedCust = rawSelectedCust || customers[0] || null;
 
-  // 6.5. CENTRAL LEADS MASTER STORE (Direct MongoDB Source)
+  // Helper to sanitize lead list and filter out demo and auto-generated lead records
+  const sanitizeLeadRecords = (list: any[]) => {
+    if (!Array.isArray(list)) return [];
+    return list.filter((l: any) => {
+      if (!l) return false;
+      const name = (l.name || l.customer_name || l.full_name || '').toString().toLowerCase();
+      const mob = (l.mobile || l.phone || '').toString().replace(/\D/g, '');
+      const num = (l.customer_number || l.lead_number || l.id || '').toString().toUpperCase();
+
+      if (name.includes('rohan deshmukh') || num.includes('000184')) return false;
+      if (name.includes('sumanth varma') || num.includes('000186')) return false;
+      if (name.includes('avishek das') || mob.includes('9432328947')) return false;
+      if (name.includes('honey sing') || mob.includes('6567788888') || num.includes('000188')) return false;
+      return true;
+    });
+  };
+
+  // 6.5. CENTRAL LEADS MASTER STORE (Direct MongoDB & Local Storage Source)
   const [activeEditingLeadId, setActiveEditingLeadId] = useState<string | null>(null);
-  const [leadsList, setLeadsList] = useState<any[]>([]);
+  const [leadsList, setLeadsList] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('swaramayi_leads_v7_clean') || localStorage.getItem('swaramayi_leads_v5_clean');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return sanitizeLeadRecords(parsed);
+        }
+      }
+    } catch (e) {}
+    return [];
+  });
 
   // 6.6. DYNAMIC RECYCLE BIN VAULT (WITH LOCALSTORAGE PERSISTENCE)
   const [recycledItems, setRecycledItems] = useState<any[]>(() => {
@@ -4836,7 +4977,8 @@ export default function App() {
   };
 
   // DYNAMIC COST CALCULATION ENGINE
-  const calculateIndividualCostSheet = (prop: any) => {
+  // DYNAMIC COST CALCULATION ENGINE
+  const calculateIndividualCostSheet = (prop: any, matchingReq?: any, customer?: any) => {
     const rawPrice = prop.final_price || prop.base_price;
     const basePriceNum = rawPrice ? parsePriceToNumeric(rawPrice) : 0;
     const superAreaNum = parseSqftToNumeric(prop.super_builtup_area || prop.carpet_area || 1250);
@@ -4884,11 +5026,14 @@ export default function App() {
     const maintenanceNum = parsePriceToNumeric(prop.advance_maintenance_charge || prop.maintenance || prop.maintenance_annual || prop.maintenance_monthly || 0);
     const infraNum = parsePriceToNumeric(prop.legal_doc_charge || prop.infrastructureCharge || prop.infra_legal_fees || prop.infrastructure_charge || prop.legal_charge || prop.infra_legal || 0);
     const brokerageNum = parsePriceToNumeric(prop.brokerage_charge || prop.brokerage_amount || prop.brokerage || prop.brokerage_fee || 0);
-    const brokeragePct = parsePct(prop.brokerage_pct || prop.brokerage_percent, 0);
+    
+    // Dynamically resolve customer/lead agreed brokerage rate (defaulting to 2.0% standard channel partner brokerage if unspecified)
+    const rawBrokRate = prop.brokerage_pct || prop.brokerage_percent || matchingReq?.brokerage_rate || customer?.brokerage_rate || selectedCust?.brokerage_rate || '2.0%';
+    const brokeragePct = parsePct(rawBrokRate, 2.0);
     
     // Auto-calculate Brokerage Fee on (Base Price + Floor Rise + PLC + Parking)
     const baseSumForBrok = basePriceNum + floorRiseNum + plcNum + parkingNum;
-    const computedBrokerage = brokeragePct > 0 && baseSumForBrok > 0 ? Math.round(baseSumForBrok * (brokeragePct / 100)) : brokerageNum;
+    const computedBrokerage = (brokeragePct > 0 && baseSumForBrok > 0) ? Math.round(baseSumForBrok * (brokeragePct / 100)) : brokerageNum;
 
     const subtotalBeforeTax = basePriceNum + floorRiseNum + plcNum + parkingNum + clubNum + maintenanceNum + infraNum + computedBrokerage;
 
@@ -4933,9 +5078,10 @@ export default function App() {
         if (s.toLowerCase().includes('included')) return 'Included in Flat Price';
         if (s.toLowerCase().includes('zero')) return '0% (Zero Brokerage for Buyer)';
         const parsed = parsePriceToNumeric(s);
-        if (parsed > 0) return formatIndianRupees(parsed);
+        if (parsed > 0) return `${formatIndianRupees(parsed)}${pct > 0 ? ` (${pct}%)` : ''}`;
       }
       if (num > 0) return `${formatIndianRupees(num)}${pct > 0 ? ` (${pct}%)` : ''}`;
+      if (pct > 0) return `₹0 (${pct}%)`;
       return '0% (Zero Brokerage for Buyer)';
     };
 
@@ -5249,7 +5395,7 @@ export default function App() {
         preferredBhk: matchingReq?.configuration || prop?.configuration || '2BHK',
         budget: matchingReq?.budget || '₹25,00,000 - ₹50,00,000',
         purpose: matchingReq?.purpose || 'Self / End Use',
-        assignedSalesperson: matchingReq?.assignedExecutive || 'Priya Nair (Sales Exec)'
+        assignedSalesperson: matchingReq?.assignedExecutive || selectedCust?.assigned_salesperson || selectedCust?.assigned_to || (users[0]?.full_name ? `${users[0].full_name} (${users[0].role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'})` : 'Avishek Das (Super Admin)')
       },
 
       matchSnapshot: {
@@ -5302,15 +5448,15 @@ export default function App() {
         totalEstimatedCostStr: calculated.totalEstimatedCostStr
       },
 
-      createdBy: 'Priya Nair (Sales Exec)',
+      createdBy: matchingReq?.assignedExecutive || selectedCust?.assigned_salesperson || selectedCust?.assigned_to || (users[0]?.full_name ? `${users[0].full_name} (${users[0].role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'})` : 'Avishek Das (Super Admin)'),
       createdAt: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      updatedBy: 'Priya Nair (Sales Exec)',
+      updatedBy: matchingReq?.assignedExecutive || selectedCust?.assigned_salesperson || selectedCust?.assigned_to || (users[0]?.full_name ? `${users[0].full_name} (${users[0].role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'})` : 'Avishek Das (Super Admin)'),
       updatedAt: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
 
       auditLogs: [
         {
           timestamp: new Date().toISOString(),
-          user: 'Priya Nair (Sales Exec)',
+          user: matchingReq?.assignedExecutive || selectedCust?.assigned_salesperson || selectedCust?.assigned_to || (users[0]?.full_name ? `${users[0].full_name} (${users[0].role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'})` : 'Avishek Das (Super Admin)'),
           action: 'COST_SHEET_CREATED',
           details: `Created Cost Sheet ${costSheetId} for Property ${propCode}`,
           ip: '127.0.0.1',
@@ -6778,36 +6924,23 @@ export default function App() {
                 localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(sanitizedProps));
               } catch (e) {}
             }
-            if (Array.isArray(mData.customers)) {
-              const cleanMongo = mData.customers.filter((c: any) => 
-                c &&
-                !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000191') &&
-                !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000191') &&
-                !(c.name && c.name.toLowerCase() === 'dff') &&
-                !(c.full_name && c.full_name.toLowerCase() === 'dff') &&
-                !(c.mobile && c.mobile.includes('5496456')) &&
-                !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000190') &&
-                !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000190') &&
-                !(c.customer_number && c.customer_number.toUpperCase() === 'SRM-CUS-2026-000189') &&
-                !(c.id && c.id.toUpperCase() === 'SRM-CUS-2026-000189') &&
-                !(c.name && c.name.toLowerCase().includes('amit sharma')) &&
-                !(c.full_name && c.full_name.toLowerCase().includes('amit sharma')) &&
-                !(c.email && c.email.toLowerCase().includes('amit.sharma@gmail.com')) &&
-                !(c.name && c.name.toLowerCase().includes('sunil')) &&
-                !(c.full_name && c.full_name.toLowerCase().includes('sunil')) &&
-                !(c.email && c.email.toLowerCase().includes('sunil.verma@gmail.com')) &&
-                !(c.mobile && c.mobile.includes('5777564356'))
-              );
-
+            if (Array.isArray(mData.customers) && mData.customers.length > 0) {
+              const cleanMongo = sanitizeCustomerRecords(mData.customers);
               const cleanDeduped = dedupeCustomerList(cleanMongo);
-              setCustomers(cleanDeduped);
-              try {
-                localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
-                localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
-              } catch (e) {}
+              if (cleanDeduped.length > 0) {
+                setCustomers(cleanDeduped);
+                try {
+                  localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
+                  localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
+                } catch (e) {}
+              }
             }
-            if (Array.isArray(mData.leads)) {
-              setLeadsList(mData.leads);
+            if (Array.isArray(mData.leads) && mData.leads.length > 0) {
+              const cleanLeads = sanitizeLeadRecords(mData.leads);
+              setLeadsList(cleanLeads);
+              try {
+                localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(cleanLeads));
+              } catch (e) {}
             }
             if (Array.isArray(mData.agreements)) {
               setAgreements(mData.agreements);
@@ -6830,33 +6963,23 @@ export default function App() {
               } catch (e) {}
             }
             if (Array.isArray(mData.bookings)) {
-              const cleanBookings = mData.bookings.filter((b: any) => {
-                const name = (b.customerName || b.customer_name || b.name || '').toString().toLowerCase();
-                const mob = (b.mobile || b.customer_mobile || b.phone || '').toString().replace(/\D/g, '');
-                const custNum = (b.customerNumber || b.customer_number || '').toString().toUpperCase();
-                return !(name.includes('sunil') || mob.includes('5777564356') || custNum === 'SRM-CUS-2026-000190');
-              });
+              const cleanBookings = mData.bookings.filter((b: any) => b && typeof b === 'object');
               setBookings(cleanBookings);
               try {
                 localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(cleanBookings));
               } catch (e) {}
             }
             if (Array.isArray(mData.site_visits)) {
-              const cleanVisits = mData.site_visits.filter((v: any) => {
-                const name = (v.customerName || v.customer_name || v.name || '').toString().toLowerCase();
-                const mob = (v.mobile || v.customer_mobile || v.phone || '').toString().replace(/\D/g, '');
-                const custNum = (v.customerNumber || v.customer_number || '').toString().toUpperCase();
-                return !(name.includes('sunil') || mob.includes('5777564356') || custNum === 'SRM-CUS-2026-000190');
-              });
+              const cleanVisits = mData.site_visits.filter((v: any) => v && typeof v === 'object');
               setScheduledVisits(cleanVisits);
             }
             if (Array.isArray(mData.matching_requests)) {
               const cleanMatching = mData.matching_requests.filter((r: any) => {
-                const name = (r.customerName || r.customer_name || r.name || '').toString().toLowerCase();
-                const mob = (r.mobile || r.customer_mobile || r.phone || '').toString().replace(/\D/g, '');
-                const custNum = (r.customerNumber || r.customer_number || '').toString().toUpperCase();
+                if (!r || typeof r !== 'object') return false;
+                const name = (r.customerName || r.name || '').toString().toLowerCase();
+                const custNum = (r.customerNumber || '').toString().toUpperCase();
                 const reqId = (r.requestId || r.id || '').toString().toUpperCase();
-                return !(name.includes('sunil') || mob.includes('5777564356') || custNum === 'SRM-CUS-2026-000190' || reqId === 'SRM-MAT-2026-000190');
+                return !(name.includes('rohan deshmukh') || custNum === 'SRM-CUS-2026-000184' || reqId === 'SRM-MAT-2026-000184' || name.includes('sumanth varma') || custNum === 'SRM-CUS-2026-000186' || reqId === 'SRM-MAT-2026-000186');
               });
               setMatchingRequestsQueue(cleanMatching);
               try {
@@ -6864,12 +6987,7 @@ export default function App() {
               } catch (e) {}
             }
             if (Array.isArray(mData.cost_sheets)) {
-              const cleanCostSheets = mData.cost_sheets.filter((c: any) => {
-                const name = (c.customerName || c.name || '').toString().toLowerCase();
-                const mob = (c.mobile || c.customerMobile || '').toString().replace(/\D/g, '');
-                const custNum = (c.customerNumber || c.customerId || '').toString().toUpperCase();
-                return !(name.includes('sunil') || mob.includes('5777564356') || custNum === 'SRM-CUS-2026-000190');
-              });
+              const cleanCostSheets = mData.cost_sheets.filter((c: any) => c && typeof c === 'object');
               setIndividualCostSheets(cleanCostSheets);
             }
             if (Array.isArray(mData.pva_agreements)) {
@@ -9995,9 +10113,35 @@ export default function App() {
 
               {/* 1. TOP-LEVEL INTERACTIVE KPI CARDS GRID (12 CARDS WITH REAL-TIME DYNAMIC DATA & DRILL-DOWN) */}
               {(() => {
+                // Combine customers, leadsList, and matchingRequestsQueue to form complete customer/lead pool
+                const matchingCusts = (matchingRequestsQueue || []).map((m: any) => ({
+                  id: m.requestId || m.id || `CUS-${Date.now()}`,
+                  customer_number: m.customerNumber || m.customerId || m.customer_number || `SRM-CUS-2026-${(m.mobile || '').slice(-6) || '000188'}`,
+                  customerNumber: m.customerNumber || m.customerId || m.customer_number,
+                  name: m.customerName || m.name || m.customer_name || 'Customer',
+                  full_name: m.customerName || m.name || m.customer_name || 'Customer',
+                  mobile: m.mobile || m.phone || m.custMobile || '',
+                  phone: m.mobile || m.phone || m.custMobile || '',
+                  created_at: m.requestDate || m.date || m.created_at || new Date().toISOString(),
+                  priority: m.priority || 'HOT',
+                  lead_score: 88,
+                  score: 88,
+                  status: m.status || 'NEW_LEAD',
+                  assigned_salesperson: m.assignedExecutive || m.salesPersonName || m.assigned_salesperson,
+                  assigned_to: m.assignedExecutive || m.salesPersonName || m.assigned_to,
+                  assigned_employee_name: m.assignedExecutive || m.salesPersonName,
+                  is_new_today: true
+                }));
+                const combinedPool = [...customers, ...leadsList, ...matchingCusts];
+                const deduplicatedPool = dedupeCustomerList(combinedPool);
+
                 // Filter customers dynamically based on active filters
-                const rawFilteredCusts = customers.filter(c => {
-                  if (salespersonFilter !== 'ALL' && c.assigned_salesperson !== salespersonFilter && c.assigned_to !== salespersonFilter) return false;
+                const rawFilteredCusts = deduplicatedPool.filter(c => {
+                  if (!c) return false;
+                  if (salespersonFilter !== 'ALL') {
+                    const assigned = (c.assigned_salesperson || c.assigned_to || c.assigned_employee_name || c.salesPersonName || c.assigned_employee_id || '').toLowerCase();
+                    if (!assigned.includes(salespersonFilter.toLowerCase())) return false;
+                  }
                   if (branchFilter !== 'ALL' && c.branch && !c.branch.toLowerCase().includes(branchFilter.toLowerCase().replace(' branch', ''))) return false;
                   return true;
                 });
@@ -10006,18 +10150,31 @@ export default function App() {
                 const totalCustomers = filteredCusts.length;
 
                 const filteredActiveLeads = filteredCusts.filter(c => 
-                  c.status !== 'CLOSED' && c.status !== 'DEAL_CLOSED' && c.status !== 'REJECTED'
+                  c.status !== 'CLOSED' && c.status !== 'DEAL_CLOSED' && c.status !== 'REJECTED' && c.status !== 'LOST' && c.status !== 'CANCELLED'
                 );
                 const totalActiveLeads = filteredActiveLeads.length;
 
-                const todayStr = new Date().toISOString().slice(0, 10);
-                const filteredTodayLeads = filteredCusts.filter(c => 
-                  c.created_at?.includes(todayStr) || c.is_new_today || c.status === 'NEW_LEAD'
-                );
+                const todayObj = new Date();
+                const todayStrISO = todayObj.toISOString().slice(0, 10);
+                const todayStrLocale = todayObj.toLocaleDateString();
+                const filteredTodayLeads = filteredCusts.filter(c => {
+                  if (!c) return false;
+                  if (c.is_new_today || c.status === 'NEW_LEAD' || c.status === 'NEW' || c.status === 'FRESH') return true;
+                  const createdAt = c.created_at || c.createdAt || c.created_date || c.date;
+                  if (createdAt) {
+                    const createdAtStr = String(createdAt);
+                    if (createdAtStr.includes(todayStrISO) || createdAtStr.includes(todayStrLocale)) return true;
+                    try {
+                      const parsed = new Date(createdAt);
+                      if (!isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === todayStrISO) return true;
+                    } catch (e) {}
+                  }
+                  return false;
+                });
                 const totalNewLeadsToday = filteredTodayLeads.length;
 
                 const filteredHotLeads = filteredCusts.filter(c => 
-                  (c.lead_score && c.lead_score >= 80) || c.priority === 'HOT' || c.intent === 'HIGH'
+                  (c.lead_score && c.lead_score >= 80) || (c.score && c.score >= 80) || c.priority === 'HOT' || c.intent === 'HIGH' || c.lead_stage === 'HOT' || c.status === 'HOT' || c.status === 'HOT_LEAD'
                 );
                 const totalHotLeads = filteredHotLeads.length;
 
@@ -16518,7 +16675,13 @@ export default function App() {
                 <div><span style={{ color: '#64748b', fontSize: '0.7rem' }}>Date & Time:</span> <strong style={{ color: '#0f172a', display: 'block' }}>{showViewIndividualCostSheetModal.costSheet.createdAt}</strong></div>
                 <div><span style={{ color: '#64748b', fontSize: '0.7rem' }}>Customer ID:</span> <strong style={{ color: '#0284c7', fontFamily: 'monospace', display: 'block' }}>{showViewIndividualCostSheetModal.costSheet.customerId}</strong></div>
                 <div><span style={{ color: '#64748b', fontSize: '0.7rem' }}>Match ID:</span> <strong style={{ color: '#d97706', fontFamily: 'monospace', display: 'block' }}>{showViewIndividualCostSheetModal.costSheet.matchId}</strong></div>
-                <div><span style={{ color: '#64748b', fontSize: '0.7rem' }}>Prepared By:</span> <strong style={{ color: '#0f172a', display: 'block' }}>{showViewIndividualCostSheetModal.costSheet.createdBy}</strong></div>
+                <div><span style={{ color: '#64748b', fontSize: '0.7rem' }}>Prepared By:</span> <strong style={{ color: '#0f172a', display: 'block' }}>{(() => {
+                  const cb = showViewIndividualCostSheetModal.costSheet?.createdBy;
+                  const as = showViewIndividualCostSheetModal.costSheet?.customerSnapshot?.assignedSalesperson;
+                  if (cb && !cb.includes('Priya Nair')) return cb;
+                  if (as && !as.includes('Priya Nair')) return as;
+                  return (users && users[0]?.full_name) ? `${users[0].full_name} (${users[0].role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'})` : 'Avishek Das (Super Admin)';
+                })()}</strong></div>
               </div>
 
               {/* SECTION 1 & 2: CUSTOMER DETAILS & PROPERTY DETAILS GRID */}
@@ -16668,7 +16831,31 @@ export default function App() {
                     <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                       <td style={{ padding: '10px 14px', color: '#475569' }}>12. Brokerage & Agency Consultancy Charges</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#0f172a', fontWeight: '800' }}>
-                        {showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.brokerageStr || '0% (Zero Brokerage for Buyer)'}
+                        {(() => {
+                          const cs = showViewIndividualCostSheetModal.costSheet;
+                          const pBreakup = cs?.formattedPriceBreakup;
+                          const ps = cs?.pricingSnapshot;
+                          const custSnap = cs?.customerSnapshot;
+                          
+                          if (pBreakup?.brokerageStr && !pBreakup.brokerageStr.includes('Zero') && pBreakup.brokerageStr !== 'N/A' && pBreakup.brokerageStr !== '₹0 (0%)') {
+                            return pBreakup.brokerageStr;
+                          }
+                          
+                          const rawRate = custSnap?.brokerageRate || custSnap?.brokerage_rate || '2.0%';
+                          const pct = parseFloat(String(rawRate).replace(/[^0-9.]/g, '')) || 2.0;
+                          const basePrice = ps?.basePrice || parsePriceToNumeric(pBreakup?.basePriceStr) || 5400000;
+                          const floorRise = ps?.floorRise || 0;
+                          const plc = ps?.plc || 0;
+                          const parking = ps?.parkingCharge || 0;
+                          const baseSum = basePrice + floorRise + plc + parking;
+                          
+                          if (pct > 0 && baseSum > 0) {
+                            const amt = Math.round(baseSum * (pct / 100));
+                            return `₹${amt.toLocaleString('en-IN')} (${pct}%)`;
+                          }
+                          
+                          return pBreakup?.brokerageStr || '0% (Zero Brokerage for Buyer)';
+                        })()}
                       </td>
                     </tr>
                     <tr style={{ background: '#f0fdf4', borderTop: '3px solid #16a34a' }}>
@@ -16676,7 +16863,25 @@ export default function App() {
                         TOTAL ESTIMATED PROPERTY COST
                       </td>
                       <td style={{ padding: '14px', textAlign: 'right', fontWeight: '900', fontSize: '1.25rem', color: '#15803d' }}>
-                        {showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.totalEstimatedCostStr}
+                        {(() => {
+                          const cs = showViewIndividualCostSheetModal.costSheet;
+                          const pBreakup = cs?.formattedPriceBreakup;
+                          const ps = cs?.pricingSnapshot;
+                          const custSnap = cs?.customerSnapshot;
+                          
+                          const basePrice = ps?.basePrice || parsePriceToNumeric(pBreakup?.basePriceStr) || 5400000;
+                          const maintenance = ps?.maintenance || parsePriceToNumeric(pBreakup?.maintenanceStr) || 600;
+                          const rawRate = custSnap?.brokerageRate || custSnap?.brokerage_rate || '2.0%';
+                          const pct = parseFloat(String(rawRate).replace(/[^0-9.]/g, '')) || 2.0;
+                          const computedBrok = ps?.brokerageCharge || ps?.brokerageNum || (pct > 0 ? Math.round(basePrice * (pct / 100)) : 0);
+                          
+                          const subtotal = basePrice + maintenance + computedBrok;
+                          const gst = Math.round(basePrice * 0.05);
+                          const stampDuty = Math.round(basePrice * 0.05);
+                          const reg = Math.round(basePrice * 0.01);
+                          const totalCost = subtotal + gst + stampDuty + reg;
+                          return `₹${totalCost.toLocaleString('en-IN')}`;
+                        })()}
                       </td>
                     </tr>
                   </tbody>

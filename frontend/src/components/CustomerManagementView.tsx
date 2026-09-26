@@ -2382,14 +2382,16 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                   <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginTop: '2px' }}>
                     Enterprise CRM Solution • Immutable Journey Transaction Certificate
                   </span>
-                  <p style={{ fontSize: '0.75rem', color: '#475569', margin: '4px 0 0 0' }}>
-                    Hitec City Sector, Hyderabad, Telangana 500084 • Phone: +91 40 6688 9999
+                  <p style={{ fontSize: '0.74rem', color: '#475569', margin: '4px 0 0 0', lineHeight: '1.4' }}>
+                    4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129
+                    <br />
+                    <span>Phone: +91 88021 30791</span> • <span>RERA Reg No: WBRERA/A/NOR/2025/000737</span>
                   </p>
                 </div>
 
-                <div style={{ textAlign: 'right', background: '#f8fafc', padding: '10px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ textAlign: 'right', background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', flexShrink: 0, minWidth: 'fit-content' }}>
                   <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block' }}>TRANSACTION ID</span>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: '#0284c7', fontFamily: 'monospace', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: '#0284c7', fontFamily: 'monospace', margin: 0, whiteSpace: 'nowrap' }}>
                     {selectedTransactionPdf.item.id}
                   </h3>
                   <span style={{ background: (selectedTransactionPdf.item.status === 'SETTLED' || selectedTransactionPdf.item.status === 'PAID / RECEIVED') ? '#dcfce7' : '#fef3c7', color: (selectedTransactionPdf.item.status === 'SETTLED' || selectedTransactionPdf.item.status === 'PAID / RECEIVED') ? '#15803d' : '#b45309', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '900', display: 'inline-block', marginTop: '4px' }}>

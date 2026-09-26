@@ -813,11 +813,11 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                               bank_account_number: i.bank_account_number || '50200018942109',
                               bank_ifsc_code: i.bank_ifsc_code || 'HDFC0000128',
                               bank_upi_id: i.bank_upi_id || 'swaramayi@hdfcbank',
-                              company_address: i.company_address || 'Swaramayi Corporate Office, Jessore Road, Barasat, Kolkata - 700124, West Bengal',
-                              company_rera_no: i.company_rera_no || 'WBRERA/A/KOL/2024/000128',
-                              company_email: i.company_email || 'billing@swaramayi.com',
-                              company_mobile: i.company_mobile || '+91 98300 98765',
-                              company_website: i.company_website || 'https://www.swaramayi.com',
+                              company_address: i.company_address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, North 24 Parganas, Madhyamgram, Kolkata - 700129',
+                              company_rera_no: i.company_rera_no || 'WBRERA/A/NOR/2025/000737',
+                              company_email: i.company_email || 'avishek@swaramayi.info',
+                              company_mobile: i.company_mobile || '+91 88021 30791',
+                              company_website: i.company_website || 'https://swaramayi-website.vercel.app/',
                               payment_status: i.payment_status || 'UNPAID_PENDING',
                               payment_mode: i.payment_mode || '',
                               payment_ref: i.payment_ref || '',
@@ -2214,9 +2214,9 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                         <input 
                           type="text" 
                           disabled={!isUserSuperAdmin}
-                          value={editInvoiceForm.company_address || 'Suite 402, Swaramayi Corporate Tower, Jubilee Hills, Hyderabad - 500033, Telangana'} 
+                          value={editInvoiceForm.company_address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, North 24 Parganas, Madhyamgram, Kolkata - 700129'} 
                           onChange={(e) => isUserSuperAdmin && setEditInvoiceForm({ ...editInvoiceForm, company_address: e.target.value })} 
-                          placeholder="Suite 402, Swaramayi Corporate Tower, Jubilee Hills, Hyderabad - 500033" 
+                          placeholder="4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129" 
                           style={{ width: '100%', background: !isUserSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', cursor: !isUserSuperAdmin ? 'not-allowed' : 'text', opacity: !isUserSuperAdmin ? 0.75 : 1 }} 
                         />
                       </div>

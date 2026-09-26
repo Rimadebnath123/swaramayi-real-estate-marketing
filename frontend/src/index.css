@@ -229,24 +229,118 @@ input[type="number"] {
   appearance: textfield;
 }
 
-/* Printable Cost Sheet Media Print Rules */
+/* Printable Cost Sheet Media Print Rules (Enforced 1-Page A4 PDF Output) */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 4mm 6mm 4mm 6mm !important;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   body * {
     visibility: hidden !important;
   }
-  #printable-cost-sheet-area, #printable-cost-sheet-area * {
+
+  #printable-cost-sheet-area,
+  #printable-cost-sheet-area * {
     visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
+
   #printable-cost-sheet-area {
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;
+    max-width: 100% !important;
     margin: 0 !important;
-    padding: 24px !important;
+    padding: 6px 12px !important;
+    gap: 6px !important;
     box-shadow: none !important;
+    border-radius: 0 !important;
     background: #ffffff !important;
     color: #0f172a !important;
+    font-size: 0.74rem !important;
+    line-height: 1.15 !important;
+    box-sizing: border-box !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Compact document header in print */
+  #printable-cost-sheet-area h1 {
+    font-size: 1.25rem !important;
+    margin: 0 !important;
+    line-height: 1.15 !important;
+  }
+
+  #printable-cost-sheet-area h3 {
+    font-size: 1.05rem !important;
+    margin: 0 !important;
+  }
+
+  #printable-cost-sheet-area h4 {
+    font-size: 0.80rem !important;
+    margin-top: 0 !important;
+    margin-bottom: 2px !important;
+    padding-bottom: 2px !important;
+    line-height: 1.15 !important;
+  }
+
+  #printable-cost-sheet-area p {
+    margin: 2px 0 0 0 !important;
+    font-size: 0.68rem !important;
+  }
+
+  /* Compact section boxes in print */
+  #printable-cost-sheet-area > div {
+    padding: 5px 8px !important;
+    margin-bottom: 0 !important;
+    gap: 5px !important;
+  }
+
+  #printable-cost-sheet-area div {
+    border-radius: 6px !important;
+  }
+
+  /* Compact table formatting */
+  #printable-cost-sheet-area table {
+    margin: 0 !important;
+  }
+
+  #printable-cost-sheet-area table th,
+  #printable-cost-sheet-area table td {
+    padding: 2.5px 6px !important;
+    font-size: 0.71rem !important;
+    line-height: 1.12 !important;
+  }
+
+  #printable-cost-sheet-area table td span {
+    font-size: 0.60rem !important;
+    margin-top: 0 !important;
+    line-height: 1.05 !important;
+  }
+
+  #printable-cost-sheet-area .table-responsive-wrapper {
+    overflow: visible !important;
+    margin: 0 !important;
   }
 }
 

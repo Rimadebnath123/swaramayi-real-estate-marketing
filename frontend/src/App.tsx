@@ -2602,7 +2602,10 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
             <h2 style={{ fontSize: '1.3rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '4px' }}>
               SWARAMAYI REAL ESTATE MARKETING
             </h2>
-            <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+            <p style={{ fontSize: '0.73rem', color: isLight ? '#475569' : '#94a3b8', margin: '2px 0 0 0' }}>
+              4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129 • Phone: +91 88021 30791 • RERA Reg No: WBRERA/A/NOR/2025/000737
+            </p>
+            <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
               Enterprise Real Estate Operating System • Project Visit Acknowledgement Document
             </p>
           </div>
@@ -4395,7 +4398,7 @@ export default function App() {
       console.error('Error reading branches from localStorage:', e);
     }
     return [
-      { id: 'BR-01', branch_name: 'Head Office (Kolkata)', city: 'Kolkata', manager_name: 'Avishek Das (Super Admin)', address: 'Camac Street, Kolkata - 700017', target_revenue: '₹15,00,00,000', teams: ['Corporate Leadership Squad'], created_at: '2026-01-15' },
+      { id: 'BR-01', branch_name: 'Head Office (Kolkata)', city: 'Kolkata', manager_name: 'Avishek Das (Super Admin)', address: '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, North 24 Parganas, Madhyamgram, Kolkata - 700129', target_revenue: '₹15,00,00,000', teams: ['Corporate Leadership Squad'], created_at: '2026-01-15' },
       { id: 'BR-02', branch_name: 'Kolkata Branch', city: 'Kolkata', manager_name: 'Abinash Roy (Admin)', address: 'Park Street, Kolkata - 700016', target_revenue: '₹5,00,00,000', teams: ['Kolkata Expansion Team'], created_at: '2026-03-10' }
     ];
   });
@@ -5380,6 +5383,14 @@ export default function App() {
     const matchId = matchingReq?.requestId || selectedMatchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : `SRM-MAT-2026-000999`);
     const propCode = prop.property_code || prop.id || 'SRM-PROP-2026-000421';
 
+    const rawBhkVal = matchingReq?.configuration || prop?.configuration || prop?.bhk || selectedCust?.configuration || '2BHK';
+    const bhkMatch = String(rawBhkVal).match(/\d+\s*BHK/i);
+    const cleanBhkVal = bhkMatch ? bhkMatch[0].toUpperCase().replace(/\s+/, ' ') : String(rawBhkVal).split(/\s+/)[0].toUpperCase();
+    const displayBhkVal = cleanBhkVal.includes('BHK') ? cleanBhkVal : `${cleanBhkVal} BHK`;
+
+    const radiusVal = matchingReq?.radiusKm || matchingReq?.radius_km || selectedCust?.radius_km || selectedCust?.radiusKm || 2;
+    const possVal = prop?.possession_status || matchingReq?.possessionStatus || 'Ready to Move';
+
     return {
       costSheetId: costSheetId,
       version: `V0${versionNum}`,
@@ -5443,10 +5454,17 @@ export default function App() {
 
       matchSnapshot: {
         matchId: matchId,
-        matchDate: matchingReq?.date || '18 Aug 2026',
+        matchDate: matchingReq?.date || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         matchScore: prop.matchTotal || 85,
         matchRank: 'Top Recommended Match',
-        matchFactors: ['✓ Preferred Location', '✓ Within 10 KM Radius', '✓ Within Budget', '✓ 3 BHK Satisfied', '✓ Ready-to-Move']
+        radiusKm: radiusVal,
+        matchFactors: [
+          '✓ Preferred Location',
+          `✓ Within ${radiusVal} KM Radius`,
+          '✓ Within Budget',
+          `✓ ${displayBhkVal} Satisfied`,
+          `✓ ${possVal}`
+        ]
       },
 
       pricingSnapshot: {
@@ -12107,9 +12125,15 @@ export default function App() {
               <span style={{ background: selectedAgreement.category === 'DEVELOPER' ? '#16a34a' : '#0284c7', color: '#ffffff', padding: '3px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '900', letterSpacing: '1px' }}>
                 {selectedAgreement.category === 'DEVELOPER' ? 'OFFICIAL CHANNEL PARTNER BROKERAGE TIE-UP AGREEMENT' : 'CUSTOMER SITE VISIT & NON-CIRCUMVENTION AGREEMENT'}
               </span>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: '900', marginTop: '6px' }}>
-                {selectedAgreement.category === 'DEVELOPER' ? `🏢 ${selectedAgreement.project_name || selectedAgreement.title} (${selectedAgreement.party_name})` : selectedAgreement.title}
+              <h2 style={{ fontSize: '1.3rem', fontWeight: '900', color: '#0284c7', marginTop: '6px', marginBottom: '2px' }}>
+                SWARAMAYI REAL ESTATE MARKETING
               </h2>
+              <p style={{ fontSize: '0.72rem', color: '#475569', margin: '0 0 6px 0', fontWeight: '600' }}>
+                4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129 • Phone: +91 88021 30791 • RERA Reg No: WBRERA/A/NOR/2025/000737
+              </p>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: '#0f172a', margin: '4px 0' }}>
+                {selectedAgreement.category === 'DEVELOPER' ? `🏢 ${selectedAgreement.project_name || selectedAgreement.title} (${selectedAgreement.party_name})` : selectedAgreement.title}
+              </h3>
               {selectedAgreement.locality_hub && (
                 <div style={{ fontSize: '0.82rem', color: '#0284c7', fontWeight: '800', marginTop: '2px' }}>
                   📍 {selectedAgreement.locality_hub}
@@ -16692,14 +16716,16 @@ export default function App() {
                   <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>
                     Enterprise Real Estate Solution • Official Property Cost Sheet
                   </span>
-                  <p style={{ fontSize: '0.75rem', color: '#475569', marginTop: '4px' }}>
-                    Hitec City Sector, Hyderabad, Telangana 500084 • Phone: +91 40 6688 9999
+                  <p style={{ fontSize: '0.74rem', color: '#475569', marginTop: '4px', lineHeight: '1.4' }}>
+                    4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129
+                    <br />
+                    <span>Phone: +91 88021 30791</span> • <span>RERA Reg No: WBRERA/A/NOR/2025/000737</span>
                   </p>
                 </div>
 
-                <div style={{ textAlign: 'right', background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ textAlign: 'right', background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', flexShrink: 0, minWidth: 'fit-content' }}>
                   <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block' }}>COST SHEET ID</span>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: '#0284c7', fontFamily: 'monospace', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: '#0284c7', fontFamily: 'monospace', margin: 0, whiteSpace: 'nowrap' }}>
                     {showViewIndividualCostSheetModal.costSheet.costSheetId}
                   </h3>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
@@ -16715,7 +16741,32 @@ export default function App() {
 
               {/* METADATA STRIP: DATE, CUSTOMER ID, MATCH ID */}
               <div style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '12px 16px', display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', fontSize: '0.8rem' }}>
-                <div><span style={{ color: '#64748b', fontSize: '0.7rem' }}>Date & Time:</span> <strong style={{ color: '#0f172a', display: 'block' }}>{showViewIndividualCostSheetModal.costSheet.createdAt}</strong></div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.7rem', fontWeight: '800', display: 'block' }}>Date & Time:</span>
+                  {(() => {
+                    const raw = showViewIndividualCostSheetModal.costSheet?.createdAt || '';
+                    if (!raw) return <strong style={{ color: '#0f172a' }}>N/A</strong>;
+                    let dateStr = '';
+                    let timeStr = '';
+                    if (raw.includes('T')) {
+                      const parts = raw.split('T');
+                      dateStr = parts[0];
+                      timeStr = parts[1]?.replace('Z', '').split('.')[0] || '';
+                    } else if (raw.includes(' ')) {
+                      const parts = raw.split(' ');
+                      dateStr = parts[0];
+                      timeStr = parts.slice(1).join(' ');
+                    } else {
+                      dateStr = raw;
+                    }
+                    return (
+                      <div style={{ marginTop: '2px', lineHeight: '1.25' }}>
+                        <strong style={{ color: '#0f172a', display: 'block', whiteSpace: 'nowrap', fontSize: '0.78rem' }}>{dateStr}</strong>
+                        {timeStr && <strong style={{ color: '#0284c7', display: 'block', whiteSpace: 'nowrap', fontSize: '0.74rem' }}>{timeStr}</strong>}
+                      </div>
+                    );
+                  })()}
+                </div>
                 <div><span style={{ color: '#64748b', fontSize: '0.7rem' }}>Customer ID:</span> <strong style={{ color: '#0284c7', fontFamily: 'monospace', display: 'block' }}>{showViewIndividualCostSheetModal.costSheet.customerId}</strong></div>
                 <div><span style={{ color: '#64748b', fontSize: '0.7rem' }}>Match ID:</span> <strong style={{ color: '#d97706', fontFamily: 'monospace', display: 'block' }}>{showViewIndividualCostSheetModal.costSheet.matchId}</strong></div>
                 <div><span style={{ color: '#64748b', fontSize: '0.7rem' }}>Prepared By:</span> <strong style={{ color: '#0f172a', display: 'block' }}>{(() => {
@@ -16769,22 +16820,55 @@ export default function App() {
                 <div>
                   <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>MATCHING COMPATIBILITY SCORE</span>
                   <h4 style={{ fontSize: '1rem', fontWeight: '900', color: '#16a34a', margin: '2px 0 0 0' }}>
-                    🔥 {showViewIndividualCostSheetModal.costSheet.matchSnapshot?.matchScore || 85}% COMPATIBILITY MATCH
+                    {showViewIndividualCostSheetModal.costSheet.matchSnapshot?.matchScore || 85}% COMPATIBILITY MATCH
                   </h4>
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {(showViewIndividualCostSheetModal.costSheet.matchSnapshot?.matchFactors || ['✓ Preferred Location', '✓ Within Budget', '✓ 3 BHK Satisfied', '✓ Ready-to-Move']).map((factor: string, idx: number) => (
-                    <span key={idx} style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '700' }}>
-                      {factor}
-                    </span>
-                  ))}
+                  {(() => {
+                    const csObj = showViewIndividualCostSheetModal.costSheet;
+                    const matchSnap = csObj?.matchSnapshot;
+                    const custSnap = csObj?.customerSnapshot;
+                    const propSnap = csObj?.propertySnapshot;
+
+                    const rawBhk = custSnap?.preferredBhk || custSnap?.configuration || propSnap?.bhk || propSnap?.configuration || '2BHK';
+                    const bhkMatch = String(rawBhk).match(/\d+\s*BHK/i);
+                    const cleanBhk = bhkMatch ? bhkMatch[0].toUpperCase().replace(/\s+/, ' ') : String(rawBhk).split(/\s+/)[0].toUpperCase();
+                    const displayBhk = cleanBhk.includes('BHK') ? cleanBhk : `${cleanBhk} BHK`;
+
+                    const custRadius = custSnap?.radius_km || custSnap?.radiusKm || matchSnap?.radiusKm || 2;
+
+                    const rawFactors = matchSnap?.matchFactors;
+                    const displayFactors = (Array.isArray(rawFactors) && rawFactors.length > 0)
+                      ? rawFactors.map((f: string) => {
+                          if (f.includes('Satisfied') && f.includes('BHK')) {
+                            return `✓ ${displayBhk} Satisfied`;
+                          }
+                          if (f.includes('Radius') && (f.includes('10 KM') || f.includes('5 KM') || f.includes('15 KM') || f.includes('25 KM'))) {
+                            return `✓ Within ${custRadius} KM Radius`;
+                          }
+                          return f;
+                        })
+                      : [
+                          '✓ Preferred Location',
+                          `✓ Within ${custRadius} KM Radius`,
+                          '✓ Within Budget',
+                          `✓ ${displayBhk} Satisfied`,
+                          '✓ Ready-to-Move'
+                        ];
+
+                    return displayFactors.map((factor: string, idx: number) => (
+                      <span key={idx} style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '700' }}>
+                        {factor}
+                      </span>
+                    ));
+                  })()}
                 </div>
               </div>
 
               {/* SECTION 3: ITEMIZED PRICE BREAKUP TABLE */}
               <div>
                 <h4 style={{ fontSize: '1rem', fontWeight: '900', color: '#0284c7', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>💰 ITEMIZED PROPERTY PRICE & TAX BREAKUP</span>
+                  <span>ITEMIZED PROPERTY PRICE & TAX BREAKUP</span>
                   <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: '800', background: '#e0f2fe', padding: '4px 12px', borderRadius: '6px', border: '1px solid #7dd3fc' }}>
                     Rate per Sq.Ft.: {showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.ratePerSqftStr || (showViewIndividualCostSheetModal.costSheet.pricingSnapshot?.ratePerSqft ? `₹${Number(showViewIndividualCostSheetModal.costSheet.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A')}
                   </span>
@@ -19725,9 +19809,9 @@ export default function App() {
                         <input 
                           type="text" 
                           disabled={!isSuperAdmin}
-                          value={createInvoiceForm.company_address || 'Suite 402, Swaramayi Corporate Tower, Jubilee Hills, Hyderabad - 500033, Telangana'} 
+                          value={createInvoiceForm.company_address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, North 24 Parganas, Madhyamgram, Kolkata - 700129'} 
                           onChange={(e) => isSuperAdmin && setCreateInvoiceForm({ ...createInvoiceForm, company_address: e.target.value })} 
-                          placeholder="Suite 402, Swaramayi Corporate Tower, Jubilee Hills, Hyderabad - 500033" 
+                          placeholder="4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129" 
                           style={{ width: '100%', background: !isSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', cursor: !isSuperAdmin ? 'not-allowed' : 'text', opacity: !isSuperAdmin ? 0.75 : 1 }} 
                         />
                       </div>
@@ -20058,13 +20142,13 @@ export default function App() {
                 <div>
                   🏛️ <strong>Issuing Enterprise Branch:</strong> <span style={{ fontWeight: '900', color: activeT.cardTitle }}>{showPrintInvoiceModal.invoice.branch_name || 'Kolkata Branch'}</span>
                   <span style={{ margin: '0 8px', opacity: 0.5 }}>|</span>
-                  🏢 <strong>Registered Corporate Office:</strong> {showPrintInvoiceModal.invoice.company_address || 'Suite 402, Swaramayi Corporate Tower, Jubilee Hills, Hyderabad - 500033, Telangana'}
+                  🏢 <strong>Registered Corporate Office:</strong> {showPrintInvoiceModal.invoice.company_address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, North 24 Parganas, Madhyamgram, Kolkata - 700129'}
                 </div>
                 <div style={{ display: 'flex', gap: '10px', fontWeight: '700', color: activeT.subHeaderLink, flexWrap: 'wrap' }}>
-                  <span>🆔 TS-RERA: {showPrintInvoiceModal.invoice.company_rera_no || 'P02400008492'}</span>
-                  <span>📧 Email: {showPrintInvoiceModal.invoice.company_email || 'billing@swaramayi.com'}</span>
-                  <span>📱 Phone: {showPrintInvoiceModal.invoice.company_mobile || '+91 98490 12345'}</span>
-                  <span>🌐 Web: {showPrintInvoiceModal.invoice.company_website || 'https://www.swaramayi.com'}</span>
+                  <span>🆔 WBRERA: {showPrintInvoiceModal.invoice.company_rera_no || 'WBRERA/A/NOR/2025/000737'}</span>
+                  <span>📧 Email: {showPrintInvoiceModal.invoice.company_email || 'avishek@swaramayi.info'}</span>
+                  <span>📱 Phone: {showPrintInvoiceModal.invoice.company_mobile || '+91 88021 30791'}</span>
+                  <span>🌐 Web: {showPrintInvoiceModal.invoice.company_website || 'https://swaramayi-website.vercel.app/'}</span>
                 </div>
               </div>
 

@@ -1,6 +1,12 @@
 import React from 'react';
 import { GitMerge, Calendar, Sparkles, UserPlus, Search, X, ArrowDown, FileSpreadsheet } from 'lucide-react';
 
+const cleanExecutiveName = (val?: string): string => {
+  if (!val) return 'Priya Nair (Sales Exec)';
+  const str = String(val).trim();
+  return str.split(/\s+[—\-]\s+/)[0].trim();
+};
+
 interface LeadManagementViewProps {
   isLight: boolean;
   windowWidth: number;
@@ -387,7 +393,7 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                           </td>
 
                           <td style={{ padding: '12px' }}>
-                            <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.78rem' }}>{lead.assigned_employee_name || 'Priya Nair (Sales Exec)'}</span>
+                            <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.78rem' }}>{cleanExecutiveName(lead.assigned_employee_name || 'Priya Nair (Sales Exec)')}</span>
                           </td>
 
                           <td style={{ padding: '12px', textAlign: 'center' }}>

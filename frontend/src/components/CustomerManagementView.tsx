@@ -121,7 +121,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
         return {
           id: u.id || cleanName,
           value: cleanName,
-          label: `${cleanName} — ${roleStr}${branchStr}`
+          label: cleanName
         };
       });
     }

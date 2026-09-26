@@ -77,6 +77,12 @@ export const isItemInRecycledSet = (targetItem: any, recycledSet: Set<string>): 
   return false;
 };
 
+export const cleanExecutiveName = (val?: string): string => {
+  if (!val) return 'Avishek Das';
+  const str = String(val).trim();
+  return str.split(/\s+[—\-]\s+/)[0].trim();
+};
+
 import { ProfileView } from './components/ProfileView';
 import { RecycleBinView } from './components/RecycleBinView';
 import { RoleManagementView } from './components/RoleManagementView';
@@ -3614,7 +3620,7 @@ export default function App() {
     sub_source: 'Kondapur 3BHK Campaign',
     referral_source: '',
     assigned_employee_id: 'Avishek Das',
-    assigned_employee_name: 'Avishek Das — Managing Director & Founder (Head Office (Kolkata))',
+    assigned_employee_name: 'Avishek Das',
     team_leader_id: 'USR-06',
     priority: 'HOT',
     score: 88,
@@ -3794,7 +3800,7 @@ export default function App() {
       preferred_projects: '',
       family_requirements: '',
       assigned_employee_id: 'Avishek Das',
-      assigned_employee_name: 'Avishek Das — Managing Director & Founder (Head Office (Kolkata))',
+      assigned_employee_name: 'Avishek Das',
       team_leader_id: 'USR-06',
       priority: 'HOT',
       score: 85
@@ -3861,7 +3867,7 @@ export default function App() {
       preferred_projects: '',
       family_requirements: '',
       assigned_employee_id: 'Avishek Das',
-      assigned_employee_name: 'Avishek Das — Managing Director & Founder (Head Office (Kolkata))',
+      assigned_employee_name: 'Avishek Das',
       team_leader_id: 'USR-06',
       priority: 'HOT',
       score: 85
@@ -5911,7 +5917,7 @@ export default function App() {
           const roleTitle = u.role ? String(u.role).replace(/_/g, ' ') : '';
           const desigStr = u.designation || (roleTitle ? roleTitle : 'Executive');
           const branchStr = u.branch_name ? ` (${u.branch_name})` : '';
-          const label = `${cleanName} — ${desigStr}${branchStr}`;
+          const label = cleanName;
           if (!execMap.has(cleanName)) {
             execMap.set(cleanName, { id: u.id || cleanName, value: cleanName, name: cleanName, label, designation: desigStr });
           }
@@ -5925,7 +5931,7 @@ export default function App() {
         id: 'USR-01',
         value: 'Avishek Das',
         name: 'Avishek Das',
-        label: 'Avishek Das — SUPER ADMIN (Head Office)',
+        label: 'Avishek Das',
         designation: 'Super Admin'
       });
     }
@@ -20527,7 +20533,7 @@ export default function App() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b', paddingBottom: '6px' }}>
                 <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>• Assigned CRM Executive:</span>
                 <strong style={{ color: '#38bdf8', fontWeight: '800', textAlign: 'right', maxWidth: '240px', wordBreak: 'break-word' }}>
-                  {leadIngestSuccessModal.assignedExecutive}
+                  {cleanExecutiveName(leadIngestSuccessModal.assignedExecutive)}
                 </strong>
               </div>
 

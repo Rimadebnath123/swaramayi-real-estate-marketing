@@ -12,6 +12,7 @@ interface LocationMapViewProps {
   setShowAllOnMap: (val: boolean) => void;
   filteredProperties: any[];
   allProperties?: any[];
+  developers?: any[];
   setSelectedProperty: (prop: any) => void;
   handleStartEditProperty: (prop: any) => void;
   handleDeleteProperty: (id: string, code: string) => void;
@@ -91,6 +92,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
   setShowAllOnMap,
   filteredProperties = [],
   allProperties = [],
+  developers = [],
   setSelectedProperty,
   handleStartEditProperty,
   handleDeleteProperty,
@@ -122,10 +124,80 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
   const [isSearchingLocation, setIsSearchingLocation] = useState<boolean>(false);
   const [showSuggestionsDropdown, setShowSuggestionsDropdown] = useState<boolean>(false);
 
-  // Use all available properties if provided, else fallback to filteredProperties
+  // STRICTLY extract valid projects with latitude & longitude, filtering dummy/empty placeholder entries
   const basePropertiesList = useMemo(() => {
-    return allProperties.length > 0 ? allProperties : filteredProperties;
-  }, [allProperties, filteredProperties]);
+    const combined: any[] = [];
+    const seenKeys = new Set<string>();
+
+    const addIfValid = (item: any) => {
+      if (!item) return;
+      const rawTitle = item.title || item.projectName || item.project_name || item.name || item.propertyTitle;
+      if (!rawTitle || typeof rawTitle !== 'string') return;
+      const cleanTitle = rawTitle.trim();
+
+      // Skip dummy / placeholder records
+      if (
+        cleanTitle.toLowerCase().includes('no properties available') ||
+        cleanTitle.toLowerCase().includes('prop-empty') ||
+        item.id === 'PROP-EMPTY' ||
+        item.property_code === 'NO_PROPERTIES'
+      ) {
+        return;
+      }
+
+      const rawLat = item.latitude || item.lat || item.gps_lat;
+      const rawLng = item.longitude || item.lng || item.lon || item.gps_lng;
+
+      if (!rawLat || !rawLng) return;
+
+      const latNum = parseFloat(String(rawLat).replace(/[^\d.-]/g, ''));
+      const lngNum = parseFloat(String(rawLng).replace(/[^\d.-]/g, ''));
+
+      if (isNaN(latNum) || isNaN(lngNum) || (latNum === 0 && lngNum === 0)) return;
+
+      const key = `${cleanTitle.toLowerCase()}_${latNum.toFixed(4)}_${lngNum.toFixed(4)}`;
+      if (seenKeys.has(key)) return;
+      seenKeys.add(key);
+
+      const localityStr = item.locality || item.location || item.address || item.city || 'Location';
+      const devStr = item.developer || item.developer_name || item.builder || item.developerName || 'Developer Partner';
+      const codeStr = item.property_code || item.propertyCode || item.project_code || item.id || `PROJ-${Date.now()}`;
+
+      combined.push({
+        ...item,
+        id: item.id || key,
+        title: cleanTitle,
+        locality: localityStr,
+        developer: devStr,
+        property_code: codeStr,
+        latitude: latNum,
+        longitude: lngNum,
+        parsedLat: latNum,
+        parsedLng: lngNum,
+      });
+    };
+
+    const pool = allProperties.length > 0 ? allProperties : filteredProperties;
+    pool.forEach(p => addIfValid(p));
+
+    let devList = developers;
+    if (!devList || devList.length === 0) {
+      try {
+        const saved = localStorage.getItem('swaramayi_developers_v1');
+        if (saved) devList = JSON.parse(saved);
+      } catch (e) {}
+    }
+    if (Array.isArray(devList)) {
+      devList.forEach((d: any) => {
+        const devName = d.developer_name || d.name || d.developer || 'Developer';
+        if (Array.isArray(d.projects)) {
+          d.projects.forEach((proj: any) => addIfValid({ ...proj, developer: devName }));
+        }
+      });
+    }
+
+    return combined;
+  }, [allProperties, filteredProperties, developers]);
 
   // Live Location Geocoding API fetch (OpenStreetMap Nominatim)
   useEffect(() => {
@@ -442,10 +514,10 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
                 cursor: 'pointer'
               }}
             >
-              <option value="">-- Select Project / Pin --</option>
+              <option value="">{basePropertiesList.length > 0 ? `-- Select Project / Pin (${basePropertiesList.length} GPS Synced Projects) --` : '-- No Projects with GPS Lat/Lng Found --'}</option>
               {basePropertiesList.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.property_code ? `[${p.property_code}] ` : ''}{p.title || 'Untitled'} ({p.locality || 'Location'})
+                  {p.property_code ? `[${p.property_code}] ` : ''}🏢 {p.title} — 📍 {p.locality} (GPS: {p.latitude}, {p.longitude})
                 </option>
               ))}
             </select>
@@ -690,40 +762,40 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
                   ✓ GPS Synced
                 </span>
               </div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', wordBreak: 'break-word', overflowWrap: 'break-word', lineHeight: '1.3' }}>
-                {selectedProperty?.title || 'No Property Selected'}
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', wordBreak: 'break-word', overflowWrap: 'break-word', lineHeight: '1.3' }}>
+                🏢 {selectedProperty?.title || (basePropertiesList.length > 0 ? basePropertiesList[0].title : 'No GPS Project Selected')}
               </h3>
-              <p style={{ fontSize: '0.82rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
-                📍 {selectedProperty?.locality || 'Barasat Core'}, West Bengal
+              <p style={{ fontSize: '0.82rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px', fontWeight: '800' }}>
+                📍 Location: <span style={{ color: '#0284c7' }}>{selectedProperty?.locality || (basePropertiesList.length > 0 ? basePropertiesList[0].locality : 'N/A')}</span>
               </p>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', background: isLight ? '#f8fafc' : '#0f172a', padding: '10px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
               <div>
                 <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Asking Price</span>
-                <span style={{ fontSize: '1.2rem', color: '#4ade80', fontWeight: '900' }}>{formatPropertyPrice(selectedProperty)}</span>
+                <span style={{ fontSize: '1.2rem', color: '#4ade80', fontWeight: '900' }}>{formatPropertyPrice(selectedProperty || basePropertiesList[0])}</span>
               </div>
               <div>
                 <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Rate / Sq.Ft.</span>
-                <span style={{ fontSize: '0.88rem', color: '#38bdf8', fontWeight: '800' }}>{formatPropertyRateSqft(selectedProperty)}</span>
+                <span style={{ fontSize: '0.88rem', color: '#38bdf8', fontWeight: '800' }}>{formatPropertyRateSqft(selectedProperty || basePropertiesList[0])}</span>
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '0.78rem' }}>
               <div style={{ background: isLight ? '#f8fafc' : '#0f172a', padding: '8px 10px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', overflow: 'hidden' }}>
                 <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block', fontSize: '0.65rem' }}>Developer</span>
-                <strong style={{ color: isLight ? '#0f172a' : '#ffffff', wordBreak: 'break-word' }}>{selectedProperty?.developer || 'N/A'}</strong>
+                <strong style={{ color: isLight ? '#0f172a' : '#ffffff', wordBreak: 'break-word' }}>👤 {selectedProperty?.developer || basePropertiesList[0]?.developer || 'N/A'}</strong>
               </div>
               <div style={{ background: isLight ? '#f8fafc' : '#0f172a', padding: '8px 10px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-                <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block', fontSize: '0.65rem' }}>Config</span>
-                <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{selectedProperty?.configuration || 'N/A'}</strong>
+                <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block', fontSize: '0.65rem' }}>Exact GPS Coordinates</span>
+                <strong style={{ color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.72rem' }}>📍 {selectedProperty?.latitude || basePropertiesList[0]?.latitude || 'N/A'}, {selectedProperty?.longitude || basePropertiesList[0]?.longitude || ''}</strong>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '8px', paddingTop: '4px' }}>
-              <button onClick={() => handleStartEditProperty(selectedProperty)} style={{ flex: 1, background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' }}>Edit Record</button>
+              <button onClick={() => handleStartEditProperty(selectedProperty || basePropertiesList[0])} style={{ flex: 1, background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' }}>Edit Record</button>
               {isStrictSuperAdmin && (
-                <button onClick={() => handleDeleteProperty(selectedProperty?.id, selectedProperty?.property_code)} style={{ flex: 1, background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' }}>Delete</button>
+                <button onClick={() => handleDeleteProperty((selectedProperty || basePropertiesList[0])?.id, (selectedProperty || basePropertiesList[0])?.property_code)} style={{ flex: 1, background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' }}>Delete</button>
               )}
             </div>
           </div>

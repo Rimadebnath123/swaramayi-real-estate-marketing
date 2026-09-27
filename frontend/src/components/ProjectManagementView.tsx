@@ -281,18 +281,18 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             mobile: dev.mobile || '',
             altMobile: dev.altMobile || '',
             locality: proj.locality || '',
-            latitude: proj.lat || proj.latitude || '22.722361',
-            longitude: proj.lng || proj.longitude || '88.493403',
+            latitude: proj.lat || proj.latitude || '',
+            longitude: proj.lng || proj.longitude || '',
             rera_id: proj.rera_id || proj.reraId || proj.rera || dev.rera_id || dev.reraId || dev.rera || dev.developer_rera_id || '',
             hera_no: proj.hera_no || proj.heraId || proj.hera || dev.hera_no || dev.heraId || dev.hera || dev.developer_hera_no || '',
             amenities: proj.amenities || [],
             building_photos: proj.building_photos || [],
-            total_covered_parking_capacity: proj.total_covered_parking_capacity !== undefined ? proj.total_covered_parking_capacity : 24,
-            covered_parking_rate: proj.covered_parking_rate || '300000',
-            total_ev_parking_capacity: proj.total_ev_parking_capacity !== undefined ? proj.total_ev_parking_capacity : 6,
-            ev_parking_rate: proj.ev_parking_rate || '450000',
-            total_open_parking_capacity: proj.total_open_parking_capacity !== undefined ? proj.total_open_parking_capacity : 12,
-            open_parking_rate: proj.open_parking_rate || '150000'
+            total_covered_parking_capacity: proj.total_covered_parking_capacity !== undefined ? proj.total_covered_parking_capacity : 0,
+            covered_parking_rate: proj.covered_parking_rate || '',
+            total_ev_parking_capacity: proj.total_ev_parking_capacity !== undefined ? proj.total_ev_parking_capacity : 0,
+            ev_parking_rate: proj.ev_parking_rate || '',
+            total_open_parking_capacity: proj.total_open_parking_capacity !== undefined ? proj.total_open_parking_capacity : 0,
+            open_parking_rate: proj.open_parking_rate || ''
           });
         }
       });
@@ -810,9 +810,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       code: assignedProjCode,
       title: newPropertyForm.title,
       developer_email: newPropertyForm.developer_email || '',
-      locality: newPropertyForm.locality || 'Locality Hub',
-      lat: newPropertyForm.latitude || '22.722361',
-      lng: newPropertyForm.longitude || '88.493403',
+      locality: newPropertyForm.locality || '',
+      lat: newPropertyForm.latitude || '',
+      lng: newPropertyForm.longitude || '',
       rera_id: newPropertyForm.rera_id || '',
       hera_no: newPropertyForm.hera_no || '',
       key_custody: newPropertyForm.key_custody || newPropertyForm.keys_custody || '',
@@ -821,12 +821,12 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       description: newPropertyForm.architectural_description || newPropertyForm.description || '',
       amenities: newPropertyForm.selected_amenities || [],
       building_photos: newPropertyForm.building_photos || [],
-      total_covered_parking_capacity: newPropertyForm.total_covered_parking_capacity !== undefined ? newPropertyForm.total_covered_parking_capacity : 24,
-      covered_parking_rate: newPropertyForm.covered_parking_rate || '300000',
-      total_ev_parking_capacity: newPropertyForm.total_ev_parking_capacity !== undefined ? newPropertyForm.total_ev_parking_capacity : 6,
-      ev_parking_rate: newPropertyForm.ev_parking_rate || '450000',
-      total_open_parking_capacity: newPropertyForm.total_open_parking_capacity !== undefined ? newPropertyForm.total_open_parking_capacity : 12,
-      open_parking_rate: newPropertyForm.open_parking_rate || '150000'
+      total_covered_parking_capacity: newPropertyForm.total_covered_parking_capacity !== undefined ? newPropertyForm.total_covered_parking_capacity : 0,
+      covered_parking_rate: newPropertyForm.covered_parking_rate || '',
+      total_ev_parking_capacity: newPropertyForm.total_ev_parking_capacity !== undefined ? newPropertyForm.total_ev_parking_capacity : 0,
+      ev_parking_rate: newPropertyForm.ev_parking_rate || '',
+      total_open_parking_capacity: newPropertyForm.total_open_parking_capacity !== undefined ? newPropertyForm.total_open_parking_capacity : 0,
+      open_parking_rate: newPropertyForm.open_parking_rate || ''
     };
 
     let updatedDevs = [...developerMasterList];
@@ -997,26 +997,48 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   });
 
   const handleOpenNewProjectDeveloperForm = React.useCallback(() => {
-    setNewPropertyForm((prev: any) => ({
-      ...prev,
+    setNewPropertyForm({
       project_id: '',
-      developer: '',
+      property_code: '',
       developer_id: '',
-      title: '',
-      locality: '',
+      developer: '',
+      developer_email: '',
       developer_mobile: '',
       developer_alt_mobile: '',
-      latitude: '22.722361',
-      longitude: '88.493403',
+      title: '',
+      locality: '',
+      latitude: '',
+      longitude: '',
+      rera_id: '',
+      hera_no: '',
+      total_covered_parking_capacity: 0,
+      covered_parking_rate: '',
+      total_ev_parking_capacity: 0,
+      ev_parking_rate: '',
+      total_open_parking_capacity: 0,
+      open_parking_rate: '',
+      amenity_charges: '',
+      clubhouse_charge: '',
+      parking_price: '',
+      floor_rise_charge: '',
+      plc_charge: '',
+      advance_maintenance_charge: '',
+      legal_doc_charge: '',
+      total_all_inclusive_price: '',
+      key_custody: '',
+      keys_custody: '',
+      architectural_description: '',
+      description: '',
+      site_person_name: '',
+      site_person_contact: '',
       selected_amenities: [],
       building_photos: [],
-      total_covered_parking_capacity: 24,
-      covered_parking_rate: '300000',
-      total_ev_parking_capacity: 6,
-      ev_parking_rate: '450000',
-      total_open_parking_capacity: 12,
-      open_parking_rate: '150000'
-    }));
+      building_photo: '',
+      layout_photos: [],
+      layout_photo: '',
+      floor_plan_photos: [],
+      floor_plan_photo: ''
+    });
     if (setDevProjectMobile) setDevProjectMobile('');
     if (setDevProjectAltMobile) setDevProjectAltMobile('');
     if (setDevProjectOtpVerified) setDevProjectOtpVerified(false);
@@ -1031,6 +1053,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       property_code: '',
       developer_id: '',
       developer: '',
+      developer_email: '',
+      developer_mobile: '',
+      developer_alt_mobile: '',
       title: '',
       locality: '',
       configuration: '',
@@ -1044,8 +1069,21 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       price_sqft: '',
       car_parking: '',
       parking_price: '',
-      latitude: '22.722361',
-      longitude: '88.493403',
+      total_covered_parking_capacity: 0,
+      covered_parking_rate: '',
+      total_ev_parking_capacity: 0,
+      ev_parking_rate: '',
+      total_open_parking_capacity: 0,
+      open_parking_rate: '',
+      amenity_charges: '',
+      clubhouse_charge: '',
+      floor_rise_charge: '',
+      plc_charge: '',
+      advance_maintenance_charge: '',
+      legal_doc_charge: '',
+      total_all_inclusive_price: '',
+      latitude: '',
+      longitude: '',
       selected_amenities: [],
       building_photos: [],
       building_photo: '',
@@ -1054,6 +1092,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       unit_videos: [],
       project_posting_id: '',
       key_custody: '',
+      keys_custody: '',
       description: '',
       site_person_name: '',
       site_person_contact: '',
@@ -1813,7 +1852,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       </label>
                       <input 
                         type="number"
-                        value={newPropertyForm.total_covered_parking_capacity !== undefined ? newPropertyForm.total_covered_parking_capacity : 24}
+                        value={newPropertyForm.total_covered_parking_capacity !== undefined && newPropertyForm.total_covered_parking_capacity !== null ? newPropertyForm.total_covered_parking_capacity : 0}
                         onChange={(e) => setNewPropertyForm({ ...newPropertyForm, total_covered_parking_capacity: parseInt(e.target.value, 10) || 0 })}
                         placeholder="e.g. 24"
                         style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #0284c7', color: '#0284c7', fontWeight: '900', padding: '8px 12px', borderRadius: '6px', fontSize: '0.92rem' }}
@@ -1826,7 +1865,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       </label>
                       <input 
                         type="text"
-                        value={newPropertyForm.covered_parking_rate !== undefined ? newPropertyForm.covered_parking_rate : '300000'}
+                        value={newPropertyForm.covered_parking_rate || ''}
                         onChange={(e) => setNewPropertyForm({ ...newPropertyForm, covered_parking_rate: e.target.value })}
                         placeholder="e.g. 300000"
                         style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #cbd5e1', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.88rem' }}
@@ -1851,7 +1890,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       </label>
                       <input 
                         type="number"
-                        value={newPropertyForm.total_ev_parking_capacity !== undefined ? newPropertyForm.total_ev_parking_capacity : 6}
+                        value={newPropertyForm.total_ev_parking_capacity !== undefined && newPropertyForm.total_ev_parking_capacity !== null ? newPropertyForm.total_ev_parking_capacity : 0}
                         onChange={(e) => setNewPropertyForm({ ...newPropertyForm, total_ev_parking_capacity: parseInt(e.target.value, 10) || 0 })}
                         placeholder="e.g. 6"
                         style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #eab308', color: '#eab308', fontWeight: '900', padding: '8px 12px', borderRadius: '6px', fontSize: '0.92rem' }}
@@ -1864,7 +1903,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       </label>
                       <input 
                         type="text"
-                        value={newPropertyForm.ev_parking_rate !== undefined ? newPropertyForm.ev_parking_rate : '450000'}
+                        value={newPropertyForm.ev_parking_rate || ''}
                         onChange={(e) => setNewPropertyForm({ ...newPropertyForm, ev_parking_rate: e.target.value })}
                         placeholder="e.g. 450000"
                         style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #cbd5e1', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.88rem' }}
@@ -1889,7 +1928,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       </label>
                       <input 
                         type="number"
-                        value={newPropertyForm.total_open_parking_capacity !== undefined ? newPropertyForm.total_open_parking_capacity : 12}
+                        value={newPropertyForm.total_open_parking_capacity !== undefined && newPropertyForm.total_open_parking_capacity !== null ? newPropertyForm.total_open_parking_capacity : 0}
                         onChange={(e) => setNewPropertyForm({ ...newPropertyForm, total_open_parking_capacity: parseInt(e.target.value, 10) || 0 })}
                         placeholder="e.g. 12"
                         style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #22c55e', color: '#22c55e', fontWeight: '900', padding: '8px 12px', borderRadius: '6px', fontSize: '0.92rem' }}
@@ -1902,7 +1941,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       </label>
                       <input 
                         type="text"
-                        value={newPropertyForm.open_parking_rate !== undefined ? newPropertyForm.open_parking_rate : '150000'}
+                        value={newPropertyForm.open_parking_rate || ''}
                         onChange={(e) => setNewPropertyForm({ ...newPropertyForm, open_parking_rate: e.target.value })}
                         placeholder="e.g. 150000"
                         style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #cbd5e1', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.88rem' }}
@@ -2106,8 +2145,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                   locality: found.locality || prev.locality,
                                   latitude: found.latitude || prev.latitude,
                                   longitude: found.longitude || prev.longitude,
-                                  rera_id: found.rera_id || found.reraId || found.rera || prev.rera_id,
-                                  hera_no: found.hera_no || found.heraId || found.hera || prev.hera_no,
+                                  rera_id: found.rera_id || found.reraId || found.rera || '',
+                                  hera_no: found.hera_no || found.heraId || found.hera || '',
                                   selected_amenities: found.amenities && found.amenities.length > 0 ? found.amenities : prev.selected_amenities,
                                   building_photos: found.building_photos && found.building_photos.length > 0 ? found.building_photos : prev.building_photos
                                 }));
@@ -2142,8 +2181,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             locality: found.locality || prev.locality,
                             latitude: found.latitude || prev.latitude,
                             longitude: found.longitude || prev.longitude,
-                            rera_id: found.rera_id || found.reraId || found.rera || prev.rera_id,
-                            hera_no: found.hera_no || found.heraId || found.hera || prev.hera_no,
+                            rera_id: found.rera_id || found.reraId || found.rera || '',
+                            hera_no: found.hera_no || found.heraId || found.hera || '',
                             selected_amenities: found.amenities && found.amenities.length > 0 ? found.amenities : prev.selected_amenities,
                             building_photos: found.building_photos && found.building_photos.length > 0 ? found.building_photos : prev.building_photos
                           }));
@@ -2176,8 +2215,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             locality: found.locality || prev.locality,
                             latitude: found.latitude || prev.latitude,
                             longitude: found.longitude || prev.longitude,
-                            rera_id: found.rera_id || found.reraId || found.rera || prev.rera_id,
-                            hera_no: found.hera_no || found.heraId || found.hera || prev.hera_no,
+                            rera_id: found.rera_id || found.reraId || found.rera || '',
+                            hera_no: found.hera_no || found.heraId || found.hera || '',
                             selected_amenities: found.amenities && found.amenities.length > 0 ? found.amenities : prev.selected_amenities,
                             building_photos: found.building_photos && found.building_photos.length > 0 ? found.building_photos : prev.building_photos
                           }));
@@ -2436,9 +2475,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     >
                       <option value="Ready to Move In (Immediate)">🔑 Ready to Move In (Immediate)</option>
                       <option value="Under Construction">🏗️ Under Construction</option>
-                      <option value="Under Construction (Dec 2026)">🏗️ Under Construction (Dec 2026)</option>
-                      <option value="Under Construction (June 2027)">🏗️ Under Construction (June 2027)</option>
-                      <option value="Under Construction (Dec 2027)">🏗️ Under Construction (Dec 2027)</option>
                       <option value="Newly Launched Project">🌟 Newly Launched Project</option>
                     </select>
                   </div>
@@ -2924,7 +2960,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Amenity & Clubhouse Charges (INR) *</label>
                     <input 
                       type="text" 
-                      value={newPropertyForm.amenity_charges !== undefined ? newPropertyForm.amenity_charges : '150000'} 
+                      value={newPropertyForm.amenity_charges !== undefined ? newPropertyForm.amenity_charges : ''} 
                       onChange={(e) => setNewPropertyForm({ ...newPropertyForm, amenity_charges: e.target.value })} 
                       placeholder="e.g. 150000"
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#fbbf24', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
@@ -2954,8 +2990,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     >
                       <option value="Ready to Move">Ready to Move</option>
                       <option value="Under Construction">Under Construction</option>
-                      <option value="Under Construction (Dec 2026)">Under Construction (Dec 2026)</option>
-                      <option value="Under Construction (June 2027)">Under Construction (June 2027)</option>
                       <option value="New Pre-Launch">New Pre-Launch</option>
                     </select>
                   </div>

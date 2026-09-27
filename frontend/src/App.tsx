@@ -100,6 +100,7 @@ import { MatchingManagementView } from './components/MatchingManagementView';
 import { PropertySourcingRequestsView } from './components/PropertySourcingRequestsView';
 import { CrmReportView } from './components/CrmReportView';
 import { MultiSelectFloorSelector } from './components/MultiSelectFloorSelector';
+import { LocationAutocompleteInput } from './components/LocationAutocompleteInput';
 import { loadGoogleMapsApi, geocodeAddress, getGoogleMapsApiKey } from './utils/googleMapsLoader';
 
 function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: { plan: any; isLight?: boolean; autoStart?: boolean }) {
@@ -2715,10 +2716,14 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
 }
 
 const getPropLatLng = (p: any) => {
-  if (p && p.latitude && p.longitude) {
-    const lat = parseFloat(String(p.latitude).replace(/[^\d.-]/g, ''));
-    const lng = parseFloat(String(p.longitude).replace(/[^\d.-]/g, ''));
-    if (!isNaN(lat) && !isNaN(lng) && lat > 0 && lng > 0) {
+  if (!p) return { lat: null, lng: null };
+  if (p.parsedLat && p.parsedLng) return { lat: p.parsedLat, lng: p.parsedLng };
+  const rawLat = p.latitude || p.lat || p.gps_lat;
+  const rawLng = p.longitude || p.lng || p.lon || p.gps_lng;
+  if (rawLat && rawLng) {
+    const lat = parseFloat(String(rawLat).replace(/[^\d.-]/g, ''));
+    const lng = parseFloat(String(rawLng).replace(/[^\d.-]/g, ''));
+    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
       return { lat, lng };
     }
   }
@@ -2735,21 +2740,21 @@ const getPropLatLng = (p: any) => {
     'Kolkata': { lat: 22.572646, lng: 88.363895 },
     'New Town': { lat: 22.575000, lng: 88.475000 },
     'Salt Lake': { lat: 22.580000, lng: 88.420000 },
-    'Kondapur': { lat: 22.722361, lng: 88.493403 },
-    'Gachibowli': { lat: 22.715420, lng: 88.479150 },
-    'Hitec City': { lat: 22.710000, lng: 88.475000 },
-    'Financial District': { lat: 22.723000, lng: 88.490000 },
-    'Tellapur': { lat: 22.720500, lng: 88.485000 },
-    'Kokapet': { lat: 22.725000, lng: 88.498000 }
+    'Kondapur': { lat: 17.4622, lng: 78.3568 },
+    'Gachibowli': { lat: 17.4401, lng: 78.3489 },
+    'Hitec City': { lat: 17.4435, lng: 78.3772 },
+    'Financial District': { lat: 17.4144, lng: 78.3444 },
+    'Tellapur': { lat: 17.4728, lng: 78.2917 },
+    'Kokapet': { lat: 17.3878, lng: 78.3307 }
   };
 
-  const loc = p ? (p.locality || p.title || '') : '';
+  const loc = p ? (p.locality || p.location || p.title || '') : '';
   const match = Object.keys(localityCoords).find(k => loc.toLowerCase().includes(k.toLowerCase()));
   if (match) {
     return localityCoords[match];
   }
 
-  return { lat: 22.722361, lng: 88.493403 };
+  return { lat: null, lng: null };
 };
 
 function InteractiveLeafletMap({
@@ -2892,14 +2897,18 @@ function InteractiveLeafletMap({
       if (!lat || !lng) return;
 
       bounds.push([lat, lng]);
-      const isSelected = selectedProperty && selectedProperty.id === p.id;
+      const isSelected = selectedProperty && (selectedProperty.id === p.id || selectedProperty.title === p.title);
+      const projName = p.title || p.projectName || p.project_name || p.name || 'Project';
+      const locName = p.locality || p.location || p.address || 'Location';
 
       const customIcon = L.divIcon({
         className: 'leaflet-custom-marker-wrapper',
         html: `
           <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); cursor: pointer;">
-            <div style="background: ${isSelected ? '#0284c7' : 'rgba(15, 23, 42, 0.92)'}; color: #ffffff; border: ${isSelected ? '2px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.3)'}; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 900; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.5); margin-bottom: 2px;">
-              <span style="color: #4ade80">${p.final_price || ''}</span> | ${p.locality || ''}
+            <div style="background: ${isSelected ? '#0284c7' : 'rgba(15, 23, 42, 0.94)'}; color: #ffffff; border: ${isSelected ? '2px solid #38bdf8' : '1.5px solid rgba(56, 189, 248, 0.5)'}; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 900; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,0.6); margin-bottom: 2px; display: flex; align-items: center; gap: 5px;">
+              <span style="color: #38bdf8">🏢 ${projName}</span>
+              <span style="color: rgba(255,255,255,0.3)">|</span>
+              <span style="color: #4ade80">📍 ${locName}</span>
             </div>
             <div style="width: ${isSelected ? '32px' : '26px'}; height: ${isSelected ? '32px' : '26px'}; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; border: 2px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.4);">
               <div style="width: ${isSelected ? '10px' : '8px'}; height: ${isSelected ? '10px' : '8px'}; background: #ffffff; border-radius: 50%; transform: rotate(45deg);"></div>
@@ -2911,10 +2920,22 @@ function InteractiveLeafletMap({
       });
 
       const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+
+      const popupHtml = `
+        <div style="font-family: system-ui, sans-serif; padding: 6px; color: #0f172a; min-width: 190px;">
+          <div style="font-size: 13px; font-weight: 900; color: #0284c7; margin-bottom: 3px;">🏢 ${projName}</div>
+          <div style="font-size: 11px; font-weight: 800; color: #334155; margin-bottom: 3px;">📍 Location: <span style="color: #0284c7;">${locName}</span></div>
+          <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">👤 Developer: <strong>${p.developer || 'N/A'}</strong></div>
+          <div style="font-size: 11px; color: #16a34a; font-weight: 900; margin-bottom: 4px;">💰 ${p.final_price || 'Price on Request'}</div>
+          <div style="font-size: 10px; font-family: monospace; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px; display: inline-block;">📍 GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}</div>
+        </div>
+      `;
+      marker.bindPopup(popupHtml);
+
       marker.on('click', () => {
         setSelectedProperty(p);
       });
-      markersRef.current[p.id] = marker;
+      markersRef.current[p.id || projName] = marker;
     });
 
     // Determine center coordinates for radius circle (Searched Location Pin takes priority, else selectedProperty)
@@ -4215,31 +4236,40 @@ export default function App() {
   // Advanced Property Master Inventory Form State
   const [newPropertyForm, setNewPropertyForm] = useState({
     title: '',
-    developer: 'My Home Constructions',
-    developer_mobile: '+91 98490 88778',
+    developer: '',
+    developer_mobile: '',
+    developer_alt_mobile: '',
+    developer_email: '',
     rera_id: '',
     hera_no: '',
     layout_photos: [],
     layout_photo: '',
     floor_plan_photos: [],
     floor_plan_photo: '',
+    building_photos: [],
     building_photo: '',
-    latitude: '22.722361° N',
-    longitude: '88.493403° E',
-    locality: 'Barasat',
+    latitude: '',
+    longitude: '',
+    locality: '',
     property_type: 'Flat / Apartment',
     configuration: '3BHK',
-    carpet_area: '1,850 Sq.Ft.',
-    super_builtup_area: '2,350 Sq.Ft.',
-    deduction_pct: '35%',
+    carpet_area: '',
+    super_builtup_area: '',
+    deduction_pct: '',
     facing: 'East Facing',
-    floor_no: '14th Floor out of 32',
-    unit_floor: '1st Floor',
-    total_floors: '4 Floors',
-    tower_block: 'Tower B - Sapphire',
+    floor_no: '',
+    unit_floor: '',
+    total_floors: '',
+    tower_block: '',
     final_price: '',
     total_all_inclusive_price: '',
     price_sqft: '',
+    total_covered_parking_capacity: 0,
+    covered_parking_rate: '',
+    total_ev_parking_capacity: 0,
+    ev_parking_rate: '',
+    total_open_parking_capacity: 0,
+    open_parking_rate: '',
     parking_availability: 'Covered Car Parking (1 Slot Included)',
     parking_price: '',
     amenity_charges: '',
@@ -4251,26 +4281,17 @@ export default function App() {
     gst_pct: '5.0%',
     stamp_duty_pct: '5.0%',
     registration_fee_pct: '1.0%',
-    selected_amenities: [
-      '24/7 Power Backup',
-      'Water Supply',
-      'Security',
-      'CCTV cameras',
-      'Elevators',
-      'Fire Safety',
-      'Gymnasium',
-      'Swimming Pool',
-      'Clubhouse',
-      'Children\'s Play Area'
-    ],
-    commission_pct: '2.0% (₹3,00,000 Brokerage)',
-    maintenance_monthly: '₹4,500/Month',
+    selected_amenities: [],
+    commission_pct: '2.0%',
+    maintenance_monthly: '',
     possession_status: 'Ready to Move',
     status: 'AVAILABLE',
-    key_custody: 'Builder Lounge / Company Office',
-    site_person_name: 'Rajesh Kumar (Site Incharge)',
-    site_person_contact: '+91 98490 77665',
-    description: 'Vastu compliant, East facing corner flat with 3 balconies and pool view.'
+    key_custody: '',
+    keys_custody: '',
+    site_person_name: '',
+    site_person_contact: '',
+    architectural_description: '',
+    description: ''
   });
 
   // Edit Modals
@@ -7946,18 +7967,42 @@ export default function App() {
     setEditingProperty(null);
     setGpsCaptureStatus(null);
     setNewPropertyForm({
+      project_id: '',
+      property_code: '',
       title: '',
       developer: '',
+      developer_mobile: '',
+      developer_alt_mobile: '',
+      developer_email: '',
       locality: '',
+      rera_id: '',
+      hera_no: '',
       property_type: 'Flat / Apartment',
       configuration: '3BHK',
       carpet_area: '',
       super_builtup_area: '',
+      deduction_pct: '',
       facing: 'East Facing',
       floor_no: '',
+      unit_floor: '',
+      total_floors: '',
       tower_block: '',
       final_price: '',
       price_sqft: '',
+      total_covered_parking_capacity: 0,
+      covered_parking_rate: '',
+      total_ev_parking_capacity: 0,
+      ev_parking_rate: '',
+      total_open_parking_capacity: 0,
+      open_parking_rate: '',
+      amenity_charges: '',
+      clubhouse_charge: '',
+      parking_price: '',
+      floor_rise_charge: '',
+      plc_charge: '',
+      advance_maintenance_charge: '',
+      legal_doc_charge: '',
+      total_all_inclusive_price: '',
       commission_pct: '2%',
       possession_status: 'Ready to Move',
       maintenance_monthly: '',
@@ -7965,7 +8010,18 @@ export default function App() {
       latitude: '',
       longitude: '',
       key_custody: '',
-      description: ''
+      keys_custody: '',
+      architectural_description: '',
+      description: '',
+      site_person_name: '',
+      site_person_contact: '',
+      selected_amenities: [],
+      building_photos: [],
+      building_photo: '',
+      layout_photos: [],
+      layout_photo: '',
+      floor_plan_photos: [],
+      floor_plan_photo: ''
     });
     setShowAddPropertyModal(false);
     setShowPropertyModal(false);
@@ -8604,8 +8660,8 @@ export default function App() {
         price_sqft: newPropertyForm.price_sqft || p.price_sqft,
         parking_required: newPropertyForm.parking_required || p.parking_required || 'YES',
         car_parking: newPropertyForm.car_parking || p.car_parking,
-        parking_price: newPropertyForm.parking_price !== undefined ? newPropertyForm.parking_price : (p.parking_price || '300000'),
-        amenity_charges: newPropertyForm.amenity_charges !== undefined ? newPropertyForm.amenity_charges : (p.amenity_charges || '150000'),
+        parking_price: newPropertyForm.parking_price !== undefined ? newPropertyForm.parking_price : (p.parking_price || ''),
+        amenity_charges: newPropertyForm.amenity_charges !== undefined ? newPropertyForm.amenity_charges : (p.amenity_charges || ''),
         gst_pct: newPropertyForm.gst_pct || p.gst_pct || '5%',
         total_all_inclusive_price: newPropertyForm.total_all_inclusive_price || p.total_all_inclusive_price || '',
         commission_pct: newPropertyForm.commission_pct || p.commission_pct,
@@ -8669,13 +8725,13 @@ export default function App() {
       furnishing: newPropertyForm.furnishing || 'Semi-Furnished',
       parking_required: newPropertyForm.parking_required || 'YES',
       car_parking: newPropertyForm.car_parking || '1 Covered Parking Slot',
-      parking_price: newPropertyForm.parking_required === 'NO' ? '0' : (newPropertyForm.parking_price !== undefined ? newPropertyForm.parking_price : '300000'),
-      amenity_charges: newPropertyForm.amenity_charges !== undefined ? newPropertyForm.amenity_charges : '150000',
+      parking_price: newPropertyForm.parking_required === 'NO' ? '0' : (newPropertyForm.parking_price !== undefined ? newPropertyForm.parking_price : ''),
+      amenity_charges: newPropertyForm.amenity_charges !== undefined ? newPropertyForm.amenity_charges : '',
       gst_pct: newPropertyForm.gst_pct || '5%',
       total_all_inclusive_price: newPropertyForm.total_all_inclusive_price || '',
       possession_status: newPropertyForm.possession_status || 'Ready to Move',
-      latitude: newPropertyForm.latitude || '22.722361',
-      longitude: newPropertyForm.longitude || '88.493403',
+      latitude: newPropertyForm.latitude || '',
+      longitude: newPropertyForm.longitude || '',
       building_photos: newPropertyForm.building_photos && newPropertyForm.building_photos.length > 0 ? newPropertyForm.building_photos : [],
       building_photo: newPropertyForm.building_photo || (newPropertyForm.building_photos && newPropertyForm.building_photos[0]) || '',
       unit_photos: newPropertyForm.unit_photos && newPropertyForm.unit_photos.length > 0 ? newPropertyForm.unit_photos : [],
@@ -14371,11 +14427,23 @@ export default function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Primary Preferred Locality *</label>
-                    <input type="text" value={newCustomerForm.preferredArea} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, preferredArea: e.target.value })} placeholder="e.g. Kondapur / Gachibowli or Madhyamgram" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
+                    <LocationAutocompleteInput
+                      isLight={isLight}
+                      value={newCustomerForm.preferredArea || ''}
+                      onChange={(val) => setNewCustomerForm({ ...newCustomerForm, preferredArea: val })}
+                      placeholder="e.g. Kondapur / Gachibowli or Madhyamgram"
+                      required={true}
+                    />
                   </div>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Secondary Preferred Localities</label>
-                    <input type="text" value={newCustomerForm.secondary_areas} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, secondary_areas: e.target.value })} placeholder="e.g. Hitec City, Barasat, Sodepur" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} />
+                    <LocationAutocompleteInput
+                      isLight={isLight}
+                      isMulti={true}
+                      value={newCustomerForm.secondary_areas || ''}
+                      onChange={(val) => setNewCustomerForm({ ...newCustomerForm, secondary_areas: val })}
+                      placeholder="e.g. Hitec City, Barasat, Sodepur"
+                    />
                   </div>
                 </div>
 

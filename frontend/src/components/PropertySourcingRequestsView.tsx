@@ -5,6 +5,7 @@ import {
   Edit3, Trash2, Tag, Eye, RefreshCw, Send, AlertTriangle
 } from 'lucide-react';
 import { getCustomerUsedPropertyCodes } from './MatchingManagementView';
+import { LocationAutocompleteInput } from './LocationAutocompleteInput';
 
 interface PropertySourcingRequestsViewProps {
   isLight: boolean;
@@ -811,11 +812,23 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
               <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Primary Preferred Locality *</label>
-                  <input type="text" value={newRequestForm.preferred_locality} onChange={(e) => setNewRequestForm({ ...newRequestForm, preferred_locality: e.target.value })} placeholder="e.g. Madhamgram" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
+                  <LocationAutocompleteInput
+                    isLight={isLight}
+                    value={newRequestForm.preferred_locality || ''}
+                    onChange={(val) => setNewRequestForm({ ...newRequestForm, preferred_locality: val })}
+                    placeholder="e.g. Madhyamgram, Barasat, Kondapur"
+                    required={true}
+                  />
                 </div>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Secondary Preferred Localities</label>
-                  <input type="text" value={newRequestForm.secondary_areas} onChange={(e) => setNewRequestForm({ ...newRequestForm, secondary_areas: e.target.value })} placeholder="e.g. Barasat, New Town, Hitec City" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} />
+                  <LocationAutocompleteInput
+                    isLight={isLight}
+                    isMulti={true}
+                    value={newRequestForm.secondary_areas || ''}
+                    onChange={(val) => setNewRequestForm({ ...newRequestForm, secondary_areas: val })}
+                    placeholder="e.g. Barasat, New Town, Hitec City"
+                  />
                 </div>
               </div>
 

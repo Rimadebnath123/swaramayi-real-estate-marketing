@@ -5300,12 +5300,151 @@ export default function App() {
 
   const downloadCostSheetPDF = (costSheet: any) => {
     if (!costSheet) return;
-    setTimeout(() => {
+
+    const csId = costSheet.costSheetId || costSheet.id || 'COST-SHEET-001';
+    const version = costSheet.version || 'V01';
+    const custName = costSheet.customerSnapshot?.customerName || costSheet.customerName || 'Valued Customer';
+    const custMobile = costSheet.customerSnapshot?.mobile || costSheet.mobile || 'N/A';
+    const custEmail = costSheet.customerSnapshot?.email || 'N/A';
+    const custLoc = costSheet.customerSnapshot?.preferredLocation || 'N/A';
+
+    const propCode = costSheet.propertySnapshot?.propertyCode || costSheet.propertyCode || 'PROP-001';
+    const propTitle = costSheet.propertySnapshot?.propertyTitle || costSheet.propertySnapshot?.projectName || costSheet.propertyTitle || 'Property Unit';
+    const tower = costSheet.propertySnapshot?.tower || 'Tower A';
+    const floor = costSheet.propertySnapshot?.floor || 'Floor';
+    const unitNum = costSheet.propertySnapshot?.unitNumber || 'Unit';
+    const superArea = costSheet.propertySnapshot?.superBuiltupArea || costSheet.propertySnapshot?.super_builtup_area || '1,283 Sq.Ft.';
+
+    const pBreakup = costSheet.formattedPriceBreakup || {};
+    const rateSqft = pBreakup.ratePerSqftStr || (costSheet.pricingSnapshot?.ratePerSqft ? `₹${Number(costSheet.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A');
+    const basePrice = pBreakup.basePriceStr || (costSheet.pricingSnapshot?.basePrice ? `₹${Number(costSheet.pricingSnapshot.basePrice).toLocaleString('en-IN')}` : 'N/A');
+    const floorRise = pBreakup.floorRiseStr || '₹0';
+    const plc = pBreakup.plcStr || '₹0';
+    const parking = pBreakup.parkingStr || '₹0';
+    const club = pBreakup.clubStr || '₹0';
+    const maintenance = pBreakup.maintenanceStr || '₹0';
+    const gst = pBreakup.gstStr || '₹0';
+    const stampDuty = pBreakup.stampDutyStr || '₹0';
+    const registration = pBreakup.registrationStr || '₹0';
+    const grandTotal = pBreakup.grandTotalStr || pBreakup.allInclusiveTotalStr || (costSheet.pricingSnapshot?.totalEstimatedCost ? `₹${Number(costSheet.pricingSnapshot.totalEstimatedCost).toLocaleString('en-IN')}` : 'N/A');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Cost Sheet - ${csId}</title>
+  <style>
+    @page { size: A4 portrait; margin: 10mm; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; color: #0f172a; background: #ffffff; }
+    .header { text-align: center; border-bottom: 3px solid #0284c7; padding-bottom: 16px; margin-bottom: 24px; }
+    .header h1 { color: #0284c7; margin: 0; font-size: 24px; font-weight: 900; }
+    .header p { color: #64748b; margin: 4px 0 0 0; font-size: 13px; font-weight: 700; }
+    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+    .card-title { font-size: 14px; font-weight: 800; color: #0284c7; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 12px; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+    th { background: #f1f5f9; color: #475569; font-weight: 800; }
+    .total-row td { background: #f0fdf4; font-weight: 900; color: #15803d; font-size: 15px; border-top: 2px solid #22c55e; }
+    .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>SWARAMAYI REAL ESTATE MARKETING</h1>
+    <p>Enterprise Real Estate Solution • Official Property Cost Sheet Breakdown</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Document & Customer Info</div>
+    <table>
+      <tr>
+        <td><strong>Cost Sheet ID:</strong> ${csId}</td>
+        <td><strong>Version:</strong> ${version}</td>
+      </tr>
+      <tr>
+        <td><strong>Customer Name:</strong> ${custName}</td>
+        <td><strong>Mobile:</strong> ${custMobile}</td>
+      </tr>
+      <tr>
+        <td><strong>Email:</strong> ${custEmail}</td>
+        <td><strong>Preferred Locality:</strong> ${custLoc}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Property Details</div>
+    <table>
+      <tr>
+        <td><strong>Property Code:</strong> ${propCode}</td>
+        <td><strong>Project / Title:</strong> ${propTitle}</td>
+      </tr>
+      <tr>
+        <td><strong>Tower / Block:</strong> ${tower}</td>
+        <td><strong>Floor / Unit:</strong> ${floor} - ${unitNum}</td>
+      </tr>
+      <tr>
+        <td><strong>Super Built-Up Area:</strong> ${superArea}</td>
+        <td><strong>Rate / Sq.Ft.:</strong> ${rateSqft}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Financial Breakdown</div>
+    <table>
+      <thead>
+        <tr><th>Component Item</th><th style="text-align: right;">Amount (INR)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Asking Base Price</td><td style="text-align: right;">${basePrice}</td></tr>
+        <tr><td>Floor Rise Charges</td><td style="text-align: right;">${floorRise}</td></tr>
+        <tr><td>PLC / Preferred Location Charges</td><td style="text-align: right;">${plc}</td></tr>
+        <tr><td>Car Parking Slot Charges</td><td style="text-align: right;">${parking}</td></tr>
+        <tr><td>Clubhouse & Amenity Charges</td><td style="text-align: right;">${club}</td></tr>
+        <tr><td>Advance Maintenance Charges</td><td style="text-align: right;">${maintenance}</td></tr>
+        <tr><td>GST / Goods & Services Tax</td><td style="text-align: right;">${gst}</td></tr>
+        <tr><td>Stamp Duty Estimate</td><td style="text-align: right;">${stampDuty}</td></tr>
+        <tr><td>Registration & Legal Charges</td><td style="text-align: right;">${registration}</td></tr>
+        <tr class="total-row">
+          <td><strong>Grand Total Estimated Investment</strong></td>
+          <td style="text-align: right;"><strong>${grandTotal}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    <p>Swaramayi Real Estate Marketing | 4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129</p>
+    <p>Phone: +91 88021 30791 | RERA Reg No: WBRERA/A/NOR/2025/000737 | Official Computer Generated Document</p>
+  </div>
+  <script>
+    window.onload = function() {
       window.print();
-    }, 100);
+    };
+  </script>
+</body>
+</html>`;
+
+    const printWin = window.open('', '_blank');
+    if (printWin) {
+      printWin.document.open();
+      printWin.document.write(html);
+      printWin.document.close();
+    } else {
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Cost_Sheet_${csId}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   };
 
-  const sendCostSheetWhatsApp = (costSheet: any, autoPrintPdf: boolean = true) => {
+  const sendCostSheetWhatsApp = (costSheet: any, autoPrintPdf: boolean = false) => {
     if (!costSheet) return;
 
     if (autoPrintPdf) {
@@ -5349,10 +5488,16 @@ export default function App() {
       ? rawPropTitle 
       : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'Property Unit');
 
+    const localityStr = costSheet.propertySnapshot?.localityHub || costSheet.propertySnapshot?.locality || costSheet.propertySnapshot?.city || matchedProp?.locality || 'Locality Hub';
+    const bhkStr = costSheet.propertySnapshot?.configuration || costSheet.propertySnapshot?.bhk || matchedProp?.configuration || matchedProp?.bhk || 'Standard Unit';
     const superBuiltStr = costSheet.propertySnapshot?.superBuiltupArea || costSheet.propertySnapshot?.super_builtup_area || matchedProp?.super_builtup_area || '1,283 Sq.Ft.';
     const rateSqftStr = costSheet.formattedPriceBreakup?.ratePerSqftStr || (costSheet.pricingSnapshot?.ratePerSqft ? `₹${Number(costSheet.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A');
+    const basePriceNum = costSheet.pricingSnapshot?.basePrice || costSheet.base_price || matchedProp?.base_price;
+    const basePriceStr = costSheet.formattedPriceBreakup?.basePriceStr || (basePriceNum ? `₹${Number(basePriceNum).toLocaleString('en-IN')}` : 'N/A');
+    const totalEstNum = costSheet.pricingSnapshot?.totalEstimatedCost || costSheet.pricingSnapshot?.grandTotal || costSheet.final_estimated_price || costSheet.totalEstimatedCost || matchedProp?.final_estimated_price;
+    const totalEstStr = costSheet.formattedPriceBreakup?.totalEstimatedCostStr || costSheet.formattedPriceBreakup?.grandTotalStr || costSheet.formattedPriceBreakup?.allInclusiveTotalStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : 'N/A');
 
-    const waMsg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Cost Sheet Breakdown & PDF Document:\n\n📄 Cost Sheet ID: ${costSheet.costSheetId} (${costSheet.version || 'V01'})\n🏢 Property: ${propTitleStr}\n📍 Locality: ${localityStr}\n📐 Configuration: ${bhkStr}\n📐 Super Built-Up Area: ${superBuiltStr}\n🏷️ Asking Rate per Sq.Ft.: ${rateSqftStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\n📎 Cost Sheet PDF Document: Itemized official PDF document is generated & attached.\n\nPlease review the details. Click or reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
+    const waMsg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Property Cost Sheet Breakdown & Investment Summary:\n\n📄 Cost Sheet ID: ${costSheet.costSheetId} (${costSheet.version || 'V01'})\n🏢 Property: ${propTitleStr}\n📍 Locality: ${localityStr}\n📐 Configuration: ${bhkStr}\n📐 Super Built-Up Area: ${superBuiltStr}\n🏷️ Asking Rate per Sq.Ft.: ${rateSqftStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\n📋 Itemized official cost sheet summary is included above.\n\nPlease review the details. Reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
 
     const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(waMsg)}`;
     window.open(waUrl, '_blank');
@@ -16694,6 +16839,29 @@ export default function App() {
       {/* MODAL 5: PRINTABLE INDIVIDUAL COST SHEET DOCUMENT VIEW MODAL */}
       {showViewIndividualCostSheetModal && showViewIndividualCostSheetModal.open && showViewIndividualCostSheetModal.costSheet && (
         <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
+          <style>{`
+            @media print {
+              @page {
+                size: A4 portrait;
+                margin: 10mm;
+              }
+              body * {
+                visibility: hidden !important;
+              }
+              #printable-cost-sheet-area, #printable-cost-sheet-area * {
+                visibility: visible !important;
+              }
+              #printable-cost-sheet-area {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+              }
+            }
+          `}</style>
           <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', width: '94vw', maxWidth: '920px', maxHeight: '94vh', borderRadius: '16px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
             
             {/* ACTION TOOLBAR AT TOP */}
@@ -16718,7 +16886,7 @@ export default function App() {
                   <Download size={14} /> Download PDF
                 </button>
                 <button 
-                  onClick={() => downloadCostSheetPDF(showViewIndividualCostSheetModal.costSheet)} 
+                  onClick={() => window.print()} 
                   style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                 >
                   <Printer size={14} /> Print Cost Sheet

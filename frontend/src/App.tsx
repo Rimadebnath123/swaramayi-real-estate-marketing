@@ -3317,7 +3317,7 @@ export default function App() {
       keysToClean.forEach(k => localStorage.removeItem(k));
     } catch (e) {}
 
-    // Scrub stale demo records from local storage and update SRM-CUS-2026-000188 / SRM-LEAD-2026-000188
+    // Scrub stale demo records from local storage
     try {
       ['swaramayi_customers_master_v3_clean', 'swaramayi_customers_v7_clean'].forEach(key => {
         const saved = localStorage.getItem(key);
@@ -3327,21 +3327,7 @@ export default function App() {
             const cleaned = parsed.filter((c: any) => {
               const name = (c.name || c.full_name || '').toString().toLowerCase();
               const num = (c.customer_number || c.id || '').toString().toUpperCase();
-              return !(name.includes('rohan deshmukh') || num === 'SRM-CUS-2026-000184' || name.includes('sumanth varma') || num === 'SRM-CUS-2026-000186' || (name.includes('avishek das') && num !== 'SRM-CUS-2026-000188'));
-            }).map((c: any) => {
-              const num = (c.customer_number || c.id || '').toString().toUpperCase();
-              const name = (c.name || c.full_name || '').toString().toLowerCase();
-              if (num === 'SRM-CUS-2026-000188' && (name.includes('avishek') || name.includes('ingested'))) {
-                return {
-                  ...c,
-                  name: 'Honey sing',
-                  full_name: 'Honey sing',
-                  mobile: '6567788888',
-                  phone: '6567788888',
-                  email: ''
-                };
-              }
-              return c;
+              return !(name.includes('rohan deshmukh') || num === 'SRM-CUS-2026-000184' || name.includes('sumanth varma') || num === 'SRM-CUS-2026-000186' || name.includes('honey sing') || num === 'SRM-CUS-2026-000188');
             });
             localStorage.setItem(key, JSON.stringify(cleaned));
           }
@@ -3386,7 +3372,8 @@ export default function App() {
             const reqId = (r.requestId || r.id || '').toString().toUpperCase();
             if (
               name.includes('rohan deshmukh') || custNum === 'SRM-CUS-2026-000184' || reqId === 'SRM-MAT-2026-000184' ||
-              name.includes('sumanth varma') || custNum === 'SRM-CUS-2026-000186' || reqId === 'SRM-MAT-2026-000186'
+              name.includes('sumanth varma') || custNum === 'SRM-CUS-2026-000186' || reqId === 'SRM-MAT-2026-000186' ||
+              name.includes('honey sing') || custNum.includes('000188') || custNum.includes('000189') || reqId.includes('781224')
             ) {
               return false;
             }
@@ -4536,35 +4523,19 @@ export default function App() {
     return deduped;
   };
 
-  // Helper to sanitize customer list and fix SRM-CUS-2026-000188 to user's real customer Honey sing
+  // Helper to sanitize customer list and filter out demo records
   const sanitizeCustomerRecords = (list: any[]) => {
     if (!Array.isArray(list)) return [];
     return list.filter((c: any) => {
       if (!c) return false;
       const name = (c.name || c.full_name || '').toString().toLowerCase();
-      const email = (c.email || '').toString().toLowerCase();
       const mob = (c.mobile || c.phone || '').toString().replace(/\D/g, '');
       const num = (c.customer_number || c.id || '').toString().toUpperCase();
 
       if (name.includes('rohan deshmukh') || num === 'SRM-CUS-2026-000184') return false;
       if (name.includes('sumanth varma') || num === 'SRM-CUS-2026-000186') return false;
-      if ((name.includes('avishek das') || email.includes('avishek@swaramayi.com') || mob.includes('9432328947')) && num !== 'SRM-CUS-2026-000188') return false;
+      if (name.includes('honey sing') || mob.includes('6567788888') || num === 'SRM-CUS-2026-000188') return false;
       return true;
-    }).map((c: any) => {
-      const name = (c.name || c.full_name || '').toString().toLowerCase();
-      const email = (c.email || '').toString().toLowerCase();
-      const num = (c.customer_number || c.id || '').toString().toUpperCase();
-      if (num === 'SRM-CUS-2026-000188' && (name.includes('avishek') || email.includes('avishek@swaramayi.com'))) {
-        return {
-          ...c,
-          name: 'Honey sing',
-          full_name: 'Honey sing',
-          mobile: '6567788888',
-          phone: '6567788888',
-          email: ''
-        };
-      }
-      return c;
     });
   };
 
@@ -7084,7 +7055,7 @@ export default function App() {
                 const name = (r.customerName || r.name || '').toString().toLowerCase();
                 const custNum = (r.customerNumber || '').toString().toUpperCase();
                 const reqId = (r.requestId || r.id || '').toString().toUpperCase();
-                return !(name.includes('rohan deshmukh') || custNum === 'SRM-CUS-2026-000184' || reqId === 'SRM-MAT-2026-000184' || name.includes('sumanth varma') || custNum === 'SRM-CUS-2026-000186' || reqId === 'SRM-MAT-2026-000186');
+                return !(name.includes('rohan deshmukh') || custNum === 'SRM-CUS-2026-000184' || reqId === 'SRM-MAT-2026-000184' || name.includes('sumanth varma') || custNum === 'SRM-CUS-2026-000186' || reqId === 'SRM-MAT-2026-000186' || name.includes('honey sing') || custNum.includes('000188') || custNum.includes('000189') || reqId.includes('781224'));
               });
               setMatchingRequestsQueue(cleanMatching);
               try {

@@ -965,9 +965,32 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {allMatchingRequests
-                      .filter(req => (matchingVaultFilter === 'ALL' || (!req.costSheetId && req.status !== 'COST_SHEET_CREATED')) && matchesSearchQuery(req, searchQuery || matchingSearchQuery))
-                      .map((req) => {
+                    {(() => {
+                      const filteredVault = allMatchingRequests.filter(req => 
+                        (matchingVaultFilter === 'ALL' || (!req.costSheetId && req.status !== 'COST_SHEET_CREATED')) && 
+                        matchesSearchQuery(req, searchQuery || matchingSearchQuery) &&
+                        !String(req.customerName || '').toLowerCase().includes('honey sing') &&
+                        !String(req.customerNumber || '').includes('000188') &&
+                        !String(req.customerNumber || '').includes('000189') &&
+                        !String(req.requestId || '').includes('781224')
+                      );
+
+                      if (filteredVault.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={7} style={{ padding: '36px 16px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
+                              <div style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginBottom: '4px' }}>
+                                📭 No Matching Requests Found
+                              </div>
+                              <div style={{ fontSize: '0.8rem' }}>
+                                There are currently no active property matching requests in the vault.
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return filteredVault.map((req) => {
                         const isCostSheetCreated = !!req.costSheetId;
                         return (
                           <tr key={req.requestId} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: selectedMatchingId === req.requestId ? 'rgba(2, 132, 199, 0.15)' : 'transparent' }}>
@@ -1076,7 +1099,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                             </td>
                           </tr>
                         );
-                      })}
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>

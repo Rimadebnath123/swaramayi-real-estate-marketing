@@ -3736,7 +3736,7 @@ export default function App() {
     budget_min: '₹1.20 Crore',
     budget_max: '₹1.80 Crore',
     budget: '₹1.20 Crore - ₹1.80 Crore',
-    budget_flexibility: '+10% Negotiable',
+    budget_flexibility: 'Strict Fixed (0% Stretch)',
     preferredArea: 'Kondapur / Gachibowli',
     secondary_areas: 'Hitec City, Financial District',
     radius_km: 2,
@@ -3924,7 +3924,7 @@ export default function App() {
       non_preferred_floor: '',
       budget_min: '',
       budget_max: '',
-      budget_flexibility: '± 10% Flexible',
+      budget_flexibility: 'Strict Fixed (0% Stretch)',
       carpet_area_min: '',
       carpet_area_max: '',
       area_unit: 'Sq.Ft.',
@@ -3992,7 +3992,7 @@ export default function App() {
       non_preferred_floor: '',
       budget_min: '',
       budget_max: '',
-      budget_flexibility: '± 10% Flexible',
+      budget_flexibility: 'Strict Fixed (0% Stretch)',
       carpet_area_min: '',
       carpet_area_max: '',
       area_unit: 'Sq.Ft.',
@@ -9080,8 +9080,15 @@ export default function App() {
     let isBudMatch = true;
     if (propPriceLakhs > 0) {
       if (minBud > 0 || maxBud < 99999) {
-        const effectiveMin = minBud > 0 ? minBud * 0.80 : 0;
-        const effectiveMax = maxBud < 99999 ? maxBud * 1.20 : 99999;
+        let flexPct = 0.10; // Default 10% flexible
+        const flexStr = (customer?.budget_flexibility || '').toLowerCase();
+        if (flexStr.includes('strict') || flexStr.includes('0%')) flexPct = 0.00;
+        else if (flexStr.includes('5%')) flexPct = 0.05;
+        else if (flexStr.includes('15%')) flexPct = 0.15;
+        else if (flexStr.includes('open') || flexStr.includes('no limit')) flexPct = 0.50;
+
+        const effectiveMin = minBud > 0 ? minBud * (1 - flexPct) : 0;
+        const effectiveMax = maxBud < 99999 ? maxBud * (1 + flexPct) : 99999;
 
         if (propPriceLakhs >= minBud && propPriceLakhs <= maxBud) {
           breakdown.bud = 25;
@@ -14551,7 +14558,7 @@ export default function App() {
                       💰 INVESTMENT BUDGET RANGE & FLEXIBILITY LIMIT
                     </label>
                     <span style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: '800' }}>
-                      Current: {newCustomerForm.budget_min || '₹0'} to {newCustomerForm.budget_max || '₹0'} ({newCustomerForm.budget_flexibility || '+10% Negotiable'})
+                      Current: {newCustomerForm.budget_min || '₹0'} to {newCustomerForm.budget_max || '₹0'} ({newCustomerForm.budget_flexibility || 'Strict Fixed (0% Stretch)'})
                     </span>
                   </div>
 
@@ -14679,15 +14686,15 @@ export default function App() {
                     <div>
                       <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Budget Flexibility Stretch</label>
                       <select
-                        value={newCustomerForm.budget_flexibility}
+                        value={newCustomerForm.budget_flexibility || 'Strict Fixed (0% Stretch)'}
                         onChange={(e) => setNewCustomerForm({ ...newCustomerForm, budget_flexibility: e.target.value })}
                         style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#fbbf24', fontWeight: '900', padding: '9px 12px', borderRadius: '8px', fontSize: '0.86rem' }}
                       >
-                        <option value="Fixed Strict">🔒 Strict Fixed (0% Stretch)</option>
-                        <option value="+5% Flexible">⚖️ +5% Stretchable</option>
-                        <option value="+10% Negotiable">⚡ +10% Negotiable (Standard)</option>
-                        <option value="+15% Flexible">🚀 +15% Highly Flexible</option>
-                        <option value="Open Budget">⭐ Open Budget / No Stretch Limit</option>
+                        <option value="Strict Fixed (0% Stretch)">🔒 Strict Fixed (0% Stretch)</option>
+                        <option value="± 5% Flexible">⚖️ ± 5% Stretchable</option>
+                        <option value="± 10% Flexible">⚡ ± 10% Flexible (Standard)</option>
+                        <option value="± 15% Flexible">🚀 ± 15% Highly Flexible</option>
+                        <option value="Open Budget / No Limit">⭐ Open Budget / No Limit</option>
                       </select>
                     </div>
                   </div>
@@ -14813,7 +14820,7 @@ export default function App() {
                 {/* LIVE FINANCIAL & SPATIAL SUMMARY CARD */}
                 <div style={{ background: 'rgba(34, 197, 94, 0.12)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '10px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                   <span style={{ fontSize: '0.82rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800' }}>
-                    📊 TARGET PROFILING: <strong style={{ color: '#4ade80' }}>Budget {newCustomerForm.budget_min} – {newCustomerForm.budget_max}</strong> ({newCustomerForm.budget_flexibility}) • <strong style={{ color: '#38bdf8' }}>Area: {newCustomerForm.carpet_area_min} – {newCustomerForm.carpet_area_max} {newCustomerForm.area_unit}</strong>
+                    📊 TARGET PROFILING: <strong style={{ color: '#4ade80' }}>Budget {newCustomerForm.budget_min || '₹0'} – {newCustomerForm.budget_max || '₹0'} ({newCustomerForm.budget_flexibility || 'Strict Fixed (0% Stretch)'})</strong> • <strong style={{ color: '#38bdf8' }}>Area: {newCustomerForm.carpet_area_min ? `${newCustomerForm.carpet_area_min}` : '–'} – {newCustomerForm.carpet_area_max ? `${newCustomerForm.carpet_area_max}` : '–'} {newCustomerForm.area_unit || 'Sq.Ft.'}</strong>
                   </span>
                 </div>
               </div>

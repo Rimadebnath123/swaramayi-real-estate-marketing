@@ -3437,8 +3437,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             <strong style={{ color: '#38bdf8' }}>{p.configuration || '2BHK'}</strong> • <span style={{ color: '#fbbf24' }}>{superDisp}</span>
                           </div>
                           <div>
-                            <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Price Tag</span>
-                            <strong style={{ color: '#4ade80', fontSize: '0.92rem' }}>{p.final_price}</strong>
+                            <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Total Base (+ Charges)</span>
+                            <strong style={{ color: '#22c55e', fontSize: '0.92rem' }}>{computeTotalBaseWithOtherCharges(p)}</strong>
+                            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Base: {p.final_price || 'N/A'}</span>
                           </div>
                         </div>
 
@@ -3475,7 +3476,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     <th style={{ padding: '12px' }}>Config</th>
                     <th style={{ padding: '12px' }}>Super Built-up</th>
                     <th style={{ padding: '12px' }}>Carpet Area</th>
-                    <th style={{ padding: '12px' }}>Price</th>
+                    <th style={{ padding: '12px' }}>Total Base Price (+ Charges)</th>
                     <th style={{ padding: '12px' }}>Parking Stock & Slot</th>
                     <th style={{ padding: '12px' }}>Status</th>
                     <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
@@ -3558,7 +3559,17 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           <td style={{ padding: '12px', color: '#38bdf8', fontWeight: '800' }}>{p.configuration}</td>
                           <td style={{ padding: '12px', fontWeight: '900', color: '#fbbf24' }}>{superDisp}</td>
                           <td style={{ padding: '12px', fontWeight: '700' }}>{p.carpet_area}</td>
-                          <td style={{ padding: '12px', color: '#4ade80', fontWeight: '800' }}>{p.final_price}</td>
+                          <td style={{ padding: '12px' }}>
+                            <div style={{ color: '#22c55e', fontWeight: '900', fontSize: '0.92rem' }}>
+                              {computeTotalBaseWithOtherCharges(p)}
+                            </div>
+                            <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block', fontWeight: '700' }}>
+                              Base: {p.final_price || 'N/A'}
+                            </span>
+                            <span style={{ fontSize: '0.64rem', color: '#0284c7', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid #0284c7', padding: '1px 5px', borderRadius: '4px', fontWeight: '800', marginTop: '2px', display: 'inline-block' }}>
+                              Total Base + Charges
+                            </span>
+                          </td>
                           <td style={{ padding: '12px' }}>
                             <div style={{ fontWeight: '800', color: isEv ? '#eab308' : isOpen ? '#22c55e' : '#0284c7', fontSize: '0.78rem' }}>
                               {isEv ? '⚡ EV Fast Charger' : isOpen ? '🅿️ Open Surface' : '🚘 Covered Basement'}

@@ -969,11 +969,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     {(() => {
                       const filteredVault = allMatchingRequests.filter(req => 
                         (matchingVaultFilter === 'ALL' || (!req.costSheetId && req.status !== 'COST_SHEET_CREATED')) && 
-                        matchesSearchQuery(req, searchQuery || matchingSearchQuery) &&
-                        !String(req.customerName || '').toLowerCase().includes('honey sing') &&
-                        !String(req.customerNumber || '').includes('000188') &&
-                        !String(req.customerNumber || '').includes('000189') &&
-                        !String(req.requestId || '').includes('781224')
+                        matchesSearchQuery(req, searchQuery || matchingSearchQuery)
                       );
 
                       if (filteredVault.length === 0) {
@@ -1562,11 +1558,16 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                 .map(p => {
                   const currentMatchingCust = {
                     ...selectedCust,
-                    name: activeMatchingReq.customerName,
-                    customer_number: activeMatchingReq.customerNumber,
-                    budget: activeMatchingReq.budget,
-                    preferredArea: activeMatchingReq.preferredArea,
-                    configuration: activeMatchingReq.configuration
+                    ...activeMatchingReq,
+                    name: activeMatchingReq.customerName || activeMatchingReq.name || selectedCust?.name,
+                    customer_number: activeMatchingReq.customerNumber || activeMatchingReq.customerId || selectedCust?.customer_number,
+                    budget: activeMatchingReq.budget || selectedCust?.budget,
+                    budget_min: activeMatchingReq.budget_min || selectedCust?.budget_min,
+                    budget_max: activeMatchingReq.budget_max || selectedCust?.budget_max,
+                    budget_flexibility: activeMatchingReq.budget_flexibility || selectedCust?.budget_flexibility,
+                    preferredArea: activeMatchingReq.preferredArea || selectedCust?.preferredArea,
+                    secondary_areas: activeMatchingReq.secondary_areas || activeMatchingReq.secondaryAreas || selectedCust?.secondary_areas,
+                    configuration: activeMatchingReq.configuration || selectedCust?.configuration
                   };
                   const res = calculatePropertyMatchScore(currentMatchingCust, p);
                   let matchVal = res.total;

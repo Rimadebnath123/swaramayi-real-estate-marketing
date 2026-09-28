@@ -57,6 +57,33 @@ interface ProjectManagementViewProps {
   onRecycleItem?: (itemData: any) => void;
 }
 
+export const computeTotalBaseWithOtherCharges = (form: any): string => {
+  if (!form) return '₹0';
+  const parseNum = (val: any) => {
+    if (!val) return 0;
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    const num = parseFloat(String(val).replace(/,/g, '').replace(/[^0-9.]/g, ''));
+    return isNaN(num) ? 0 : num;
+  };
+
+  const superSqft = parseNum(form.super_builtup_area || form.superBuiltupArea);
+  const rateSqft = parseNum(form.price_sqft || form.priceSqft);
+  let basePrice = parseNum(form.final_price || form.basePrice);
+
+  if (basePrice <= 0 && superSqft > 0 && rateSqft > 0) {
+    basePrice = superSqft * rateSqft;
+  }
+
+  const floorRise = parseNum(form.floor_rise_charge || form.floorRiseCharge || form.floorRise);
+  const plc = parseNum(form.plc_charge || form.plcCharge || form.plc);
+  const club = parseNum(form.amenity_charges || form.amenityCharges || form.clubhouse_charge || form.clubhouseCharge);
+  const maintenance = parseNum(form.advance_maintenance_charge || form.advanceMaintenanceCharge);
+  const infraLegal = parseNum(form.legal_doc_charge || form.legalDocCharge || form.infrastructure_charge);
+
+  const total = basePrice + floorRise + plc + club + maintenance + infraLegal;
+  return total > 0 ? `₹${Math.round(total).toLocaleString('en-IN')}` : (form.final_price ? String(form.final_price) : '₹0');
+};
+
 export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   currentRole,
   isLight,
@@ -2885,7 +2912,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
                 <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '14px' }}>
                   <div>
-                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Price per Sq.Ft. (INR) *</label>
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Asking Rate per Sq.Ft. *</label>
                     <input 
                       type="text" 
                       value={newPropertyForm.price_sqft} 
@@ -2910,7 +2937,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Base Flat Price (INR) [Super Built-up × Rate] *</label>
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Base Property Asking Price [Super Built-up × Rate] *</label>
                     <input 
                       type="text" 
                       value={newPropertyForm.final_price || (parseFloat((newPropertyForm.price_sqft || '').replace(/[^0-9.]/g, '')) && parseFloat((newPropertyForm.super_builtup_area || '').replace(/[^0-9.]/g, '')) ? `₹${Math.round(parseFloat((newPropertyForm.price_sqft || '').replace(/[^0-9.]/g, '')) * parseFloat((newPropertyForm.super_builtup_area || '').replace(/[^0-9.]/g, ''))).toLocaleString('en-IN')}` : '')} 
@@ -2952,20 +2979,117 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   </div>
                 </div>
 
+                {/* ITEMIZATION SECTION HEADER */}
+                <div style={{ background: isLight ? '#e0f2fe' : 'rgba(2, 132, 199, 0.15)', borderLeft: '4px solid #0284c7', padding: '8px 12px', borderRadius: '6px', marginTop: '4px' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: '800', color: isLight ? '#0369a1' : '#38bdf8' }}>
+                    📋 Cost Sheet Breakdown Charge Particulars (Auto-populates Official Client Cost Sheet)
+                  </span>
+                </div>
+
+                {/* ROW 2: CHARGES 1, 2, 3 */}
                 <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '14px' }}>
-
-
-                  {/* AMENITY CHARGES */}
+                  {/* 1. FLOOR RISE CHARGE */}
                   <div>
-                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Amenity & Clubhouse Charges (INR) *</label>
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
+                      Floor Rise Charge (INR)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={newPropertyForm.floor_rise_charge !== undefined ? newPropertyForm.floor_rise_charge : ''} 
+                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, floor_rise_charge: e.target.value, floorRise: e.target.value })} 
+                      placeholder="e.g. 50000 (0 if N/A)"
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    />
+                  </div>
+
+                  {/* 2. PREFERENTIAL LOCATION CHARGE (PLC - FACING) */}
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
+                      Preferential Location Charge (PLC - Facing) (INR)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={newPropertyForm.plc_charge !== undefined ? newPropertyForm.plc_charge : ''} 
+                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, plc_charge: e.target.value, plc: e.target.value })} 
+                      placeholder="e.g. 75000 (0 if N/A)"
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    />
+                  </div>
+
+                  {/* 3. COVERED CAR PARKING SLOT CHARGE */}
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
+                      Covered Car Parking Slot Charge (INR)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={newPropertyForm.parking_price !== undefined ? newPropertyForm.parking_price : ''} 
+                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, parking_price: e.target.value, car_parking_charge: e.target.value })} 
+                      placeholder="e.g. 350000 (0 if N/A)"
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    />
+                  </div>
+                </div>
+
+                {/* ROW 3: CHARGES 4, 5, 6 */}
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '14px' }}>
+                  {/* 4. CLUBHOUSE & GATED AMENITIES MEMBERSHIP */}
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
+                      Clubhouse & Gated Amenities Membership (INR) *
+                    </label>
                     <input 
                       type="text" 
                       value={newPropertyForm.amenity_charges !== undefined ? newPropertyForm.amenity_charges : ''} 
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, amenity_charges: e.target.value })} 
+                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, amenity_charges: e.target.value, clubhouse_charge: e.target.value })} 
                       placeholder="e.g. 150000"
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#fbbf24', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
                     />
                   </div>
+
+                  {/* 5. ADVANCE MAINTENANCE CHARGE (1 YEAR) */}
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
+                      Advance Maintenance Charge (1 Year) (INR)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={newPropertyForm.advance_maintenance_charge !== undefined ? newPropertyForm.advance_maintenance_charge : ''} 
+                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, advance_maintenance_charge: e.target.value })} 
+                      placeholder="e.g. 25000"
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    />
+                  </div>
+
+                  {/* 6. INFRASTRUCTURE & LEGAL DOCUMENTATION CHARGES */}
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
+                      Infrastructure & Legal Documentation Charges (INR)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={newPropertyForm.legal_doc_charge !== undefined ? newPropertyForm.legal_doc_charge : ''} 
+                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, legal_doc_charge: e.target.value, infrastructure_charge: e.target.value })} 
+                      placeholder="e.g. 45000"
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    />
+                  </div>
+                </div>
+
+                {/* TOTAL BASE PRICE WITH OTHER CHARGES */}
+                <div style={{ background: isLight ? '#f0fdf4' : 'rgba(34, 197, 94, 0.12)', border: '2px solid #22c55e', borderRadius: '10px', padding: '14px' }}>
+                  <label style={{ fontSize: '0.84rem', color: '#16a34a', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                    💰 Total Base price with Others Charges (INR) [Base Property Asking Price + Floor Rise + PLC + Clubhouse + Maint + Legal] *
+                  </label>
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={computeTotalBaseWithOtherCharges(newPropertyForm)} 
+                    style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: '1.5px solid #22c55e', color: '#22c55e', fontWeight: '900', padding: '12px 14px', borderRadius: '8px', fontSize: '1.08rem' }} 
+                  />
+                  <span style={{ fontSize: '0.72rem', color: isLight ? '#475569' : '#94a3b8', marginTop: '4px', display: 'block', fontWeight: '700' }}>
+                    💡 Auto-calculated sum = Base Property Asking Price [Super Built-up × Rate] + Floor Rise Charge + Preferential Location Charge (PLC) + Clubhouse & Gated Amenities Membership + Advance Maintenance Charge (1 Year) + Infrastructure & Legal Documentation Charges (Before GST Tax).
+                  </span>
                 </div>
 
 
@@ -4096,8 +4220,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.95rem' }}>{viewPropertyModal.developer || 'N/A'}</strong>
                     </div>
                     <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Master Project ID Code</span>
+                      <strong style={{ color: '#0284c7', fontFamily: 'monospace' }}>{projCode || viewPropertyModal.project_id || 'N/A'}</strong>
+                    </div>
+                    <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Developer ID Code</span>
                       <strong style={{ color: '#fbbf24', fontFamily: 'monospace' }}>{devIdCode || 'N/A'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Project Posting ID</span>
+                      <strong style={{ color: '#a855f7', fontFamily: 'monospace' }}>{viewPropertyModal.project_posting_id || viewPropertyModal.campaign_id || 'PRJ-POST-2026-8802'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Developer Primary Mobile</span>
@@ -4106,6 +4238,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Alternative Phone Number</span>
                       <strong style={{ color: '#38bdf8' }}>📞 {altDevMobile || 'N/A'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Site Incharge Person</span>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.site_person_name || 'N/A'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Site Person Contact</span>
+                      <strong style={{ color: '#22c55e' }}>{viewPropertyModal.site_person_contact ? `📞 ${viewPropertyModal.site_person_contact}` : 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Developer Email Address</span>
@@ -4210,12 +4350,20 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       <strong style={{ color: '#fbbf24', fontWeight: '900' }}>{superBuiltupDisp}</strong>
                     </div>
                     <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Deduction / Loading (%)</span>
+                      <strong style={{ color: '#eab308', fontWeight: '900' }}>{viewPropertyModal.deduction_pct || '35%'}</strong>
+                    </div>
+                    <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Tower / Block Name</span>
                       <strong style={{ color: '#a855f7', fontWeight: '900' }}>{viewPropertyModal.tower_block || viewPropertyModal.tower || 'N/A'}</strong>
                     </div>
                     <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Number Of Towers in Project</span>
+                      <strong style={{ color: '#fbbf24', fontWeight: '900' }}>{viewPropertyModal.number_of_towers || 'N/A'}</strong>
+                    </div>
+                    <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Floor Number (Unit Floor)</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.floor_num || viewPropertyModal.floor_number || 'N/A'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.floor_num || viewPropertyModal.floor_number || viewPropertyModal.unit_floor || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Total Floors in Building</span>
@@ -4235,22 +4383,40 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                         {viewPropertyModal.possession_status || viewPropertyModal.possession || viewPropertyModal.possession_timeline || 'N/A'}
                       </strong>
                     </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Handover Month & Year</span>
+                      <strong style={{ color: '#eab308', fontWeight: '900' }}>
+                        {viewPropertyModal.handover_month_year || (viewPropertyModal.handover_month && viewPropertyModal.handover_year ? `${viewPropertyModal.handover_month} ${viewPropertyModal.handover_year}` : 'N/A')}
+                      </strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Physical Keys / Custody</span>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.key_custody || 'N/A'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Architectural Description / Notes</span>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.8rem' }}>{viewPropertyModal.description || 'N/A'}</strong>
+                    </div>
                   </div>
                 </div>
 
                 {/* SECTION 4: 💰 FINANCIALS, PRICING & PARKING STOCK */}
-                <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #a855f7', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #a855f7', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <h4 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#a855f7', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                    💰 FINANCIAL VALUATION, CAR PARKING & COST SHEET
+                    💰 FINANCIAL VALUATION, CAR PARKING & COST SHEET BREAKDOWN
                   </h4>
                   <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : windowWidth <= 900 ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Total Inventory Final Price</span>
-                      <strong style={{ color: '#4ade80', fontSize: '1.1rem', fontWeight: '900' }}>{viewPropertyModal.final_price || (viewPropertyModal.price ? `₹${parseInt(viewPropertyModal.price.toString().replace(/[^0-9]/g, ''), 10).toLocaleString('en-IN')}` : 'N/A')}</strong>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Asking Rate Per Sq.Ft.</span>
+                      <strong style={{ color: '#38bdf8', fontWeight: '900' }}>{viewPropertyModal.price_sqft ? (viewPropertyModal.price_sqft.toString().startsWith('₹') ? viewPropertyModal.price_sqft : `₹${viewPropertyModal.price_sqft}/Sq.Ft.`) : 'N/A'}</strong>
                     </div>
                     <div>
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Rate Per Sq.Ft.</span>
-                      <strong style={{ color: '#38bdf8', fontWeight: '900' }}>{viewPropertyModal.price_sqft ? (viewPropertyModal.price_sqft.toString().startsWith('₹') ? viewPropertyModal.price_sqft : `₹${viewPropertyModal.price_sqft}/Sq.Ft.`) : 'N/A'}</strong>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Base Property Asking Price</span>
+                      <strong style={{ color: '#4ade80', fontSize: '1rem', fontWeight: '900' }}>{viewPropertyModal.final_price || (viewPropertyModal.price ? `₹${parseInt(viewPropertyModal.price.toString().replace(/[^0-9]/g, ''), 10).toLocaleString('en-IN')}` : 'N/A')}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Statutory GST Charge (%)</span>
+                      <strong style={{ color: '#a855f7', fontWeight: '900' }}>{viewPropertyModal.gst_pct || '5%'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Parking Slot Allocation</span>
@@ -4261,13 +4427,61 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       <strong style={{ color: '#38bdf8', fontWeight: '800' }}>{parkingPriceDisp}</strong>
                     </div>
                     <div>
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Physical Keys / Custody</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.key_custody || 'N/A'}</strong>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Monthly Maintenance</span>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.maintenance_monthly ? (viewPropertyModal.maintenance_monthly.toString().startsWith('₹') ? viewPropertyModal.maintenance_monthly : `₹${viewPropertyModal.maintenance_monthly}`) : 'N/A'}</strong>
                     </div>
                   </div>
 
+                  {/* ITEMIZATION SECTION HEADER */}
+                  <div style={{ background: isLight ? '#e0f2fe' : 'rgba(2, 132, 199, 0.15)', borderLeft: '4px solid #0284c7', padding: '8px 12px', borderRadius: '6px', marginTop: '4px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: '800', color: isLight ? '#0369a1' : '#38bdf8' }}>
+                      📋 Cost Sheet Breakdown Charge Particulars
+                    </span>
+                  </div>
+
+                  {/* 6 CHARGE BREAKDOWN PARTICULAR GRID */}
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : windowWidth <= 900 ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', gap: '10px', fontSize: '0.8rem' }}>
+                    <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #cbd5e1', padding: '8px 10px', borderRadius: '8px' }}>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem', display: 'block', fontWeight: '700' }}>1. Floor Rise Charge</span>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.floor_rise_charge !== undefined && viewPropertyModal.floor_rise_charge !== '' ? `₹${viewPropertyModal.floor_rise_charge}` : (viewPropertyModal.floorRise ? `₹${viewPropertyModal.floorRise}` : '₹0')}</strong>
+                    </div>
+                    <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #cbd5e1', padding: '8px 10px', borderRadius: '8px' }}>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem', display: 'block', fontWeight: '700' }}>2. PLC (Facing)</span>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.plc_charge !== undefined && viewPropertyModal.plc_charge !== '' ? `₹${viewPropertyModal.plc_charge}` : (viewPropertyModal.plc ? `₹${viewPropertyModal.plc}` : '₹0')}</strong>
+                    </div>
+                    <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #cbd5e1', padding: '8px 10px', borderRadius: '8px' }}>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem', display: 'block', fontWeight: '700' }}>3. Covered Car Parking</span>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.parking_price !== undefined && viewPropertyModal.parking_price !== '' ? `₹${viewPropertyModal.parking_price}` : (viewPropertyModal.car_parking_charge ? `₹${viewPropertyModal.car_parking_charge}` : '₹0')}</strong>
+                    </div>
+                    <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #cbd5e1', padding: '8px 10px', borderRadius: '8px' }}>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem', display: 'block', fontWeight: '700' }}>4. Clubhouse Membership</span>
+                      <strong style={{ color: '#fbbf24' }}>{viewPropertyModal.amenity_charges !== undefined && viewPropertyModal.amenity_charges !== '' ? `₹${viewPropertyModal.amenity_charges}` : (viewPropertyModal.clubhouse_charge ? `₹${viewPropertyModal.clubhouse_charge}` : '₹0')}</strong>
+                    </div>
+                    <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #cbd5e1', padding: '8px 10px', borderRadius: '8px' }}>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem', display: 'block', fontWeight: '700' }}>5. Advance Maint. (1 Yr)</span>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.advance_maintenance_charge ? `₹${viewPropertyModal.advance_maintenance_charge}` : '₹0'}</strong>
+                    </div>
+                    <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #cbd5e1', padding: '8px 10px', borderRadius: '8px' }}>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.7rem', display: 'block', fontWeight: '700' }}>6. Infra & Legal Charges</span>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.legal_doc_charge !== undefined && viewPropertyModal.legal_doc_charge !== '' ? `₹${viewPropertyModal.legal_doc_charge}` : (viewPropertyModal.infrastructure_charge ? `₹${viewPropertyModal.infrastructure_charge}` : '₹0')}</strong>
+                    </div>
+                  </div>
+
+                  {/* TOTAL BASE PRICE WITH OTHER CHARGES BANNER */}
+                  <div style={{ background: isLight ? '#f0fdf4' : 'rgba(34, 197, 94, 0.12)', border: '1.5px solid #22c55e', borderRadius: '10px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      💰 Total Base price with Others Charges (INR) [Base Flat + Floor Rise + PLC + Clubhouse + Maint + Legal]
+                    </span>
+                    <strong style={{ fontSize: '1.2rem', color: '#22c55e', fontWeight: '900' }}>
+                      {computeTotalBaseWithOtherCharges(viewPropertyModal)}
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: isLight ? '#475569' : '#94a3b8', fontWeight: '700' }}>
+                      Calculated sum of Base Property Asking Price + Floor Rise + PLC + Clubhouse + Advance Maintenance (1 Year) + Legal Charges (Excludes Car Parking Slot Charge).
+                    </span>
+                  </div>
+
                   {/* PROJECT PARKING STOCK AVAILABILITY BREAKDOWN */}
-                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '12px', borderRadius: '10px', border: '1px solid #0284c7', marginTop: '6px' }}>
+                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', padding: '12px', borderRadius: '10px', border: '1px solid #0284c7', marginTop: '2px' }}>
                     <span style={{ fontSize: '0.78rem', color: '#fbbf24', fontWeight: '900', display: 'block', marginBottom: '8px' }}>
                       🚗 PROJECT PARKING STOCK STATUS ({viewPropertyModal.title})
                     </span>
@@ -4958,7 +5172,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
                   <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(3, 1fr)', gap: '12px' }}>
                     <div>
-                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Price per Sq.Ft. (INR) *</label>
+                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Asking Rate per Sq.Ft. *</label>
                       <input 
                         type="text" 
                         value={sliderUnitForm.priceSqft} 
@@ -4989,19 +5203,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
 
                     <div>
-                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Base Unit Flat Price (INR) *</label>
+                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Base Property Asking Price [Super Built-up × Rate] *</label>
                       <input type="text" value={sliderUnitForm.basePrice} onChange={(e) => setSliderUnitForm({ ...sliderUnitForm, basePrice: e.target.value })} placeholder="e.g. ₹65,83,073" style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: '2px solid #22c55e', color: '#22c55e', fontWeight: '900', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem' }} />
                     </div>
 
 
 
                     <div>
-                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Amenity & Maintenance Charges (INR)</label>
-                      <input type="text" value={sliderUnitForm.amenityCharges || '150000'} onChange={(e) => setSliderUnitForm({ ...sliderUnitForm, amenityCharges: e.target.value })} placeholder="e.g. 150000" style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem' }} />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>GST Charge Option</label>
+                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Statutory GST Charge Option *</label>
                       <select value={sliderUnitForm.gstPct || '5%'} onChange={(e) => setSliderUnitForm({ ...sliderUnitForm, gstPct: e.target.value })} style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem' }}>
                         <option value="5%">5% GST (Standard Residential Construction)</option>
                         <option value="1%">1% GST (Affordable Housing Scheme)</option>
@@ -5010,7 +5219,56 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       </select>
                     </div>
 
-                    <div style={{ gridColumn: windowWidth <= 640 ? 'span 1' : 'span 2' }}>
+                    {/* 1. FLOOR RISE CHARGE */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Floor Rise Charge (INR)</label>
+                      <input type="text" value={sliderUnitForm.floorRiseCharge !== undefined ? sliderUnitForm.floorRiseCharge : ''} onChange={(e) => setSliderUnitForm({ ...sliderUnitForm, floorRiseCharge: e.target.value })} placeholder="e.g. 50000 (0 if N/A)" style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem' }} />
+                    </div>
+
+                    {/* 2. PREFERENTIAL LOCATION CHARGE (PLC - FACING) */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Preferential Location Charge (PLC - Facing) (INR)</label>
+                      <input type="text" value={sliderUnitForm.plcCharge !== undefined ? sliderUnitForm.plcCharge : ''} onChange={(e) => setSliderUnitForm({ ...sliderUnitForm, plcCharge: e.target.value })} placeholder="e.g. 75000 (0 if N/A)" style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem' }} />
+                    </div>
+
+                    {/* 3. COVERED CAR PARKING SLOT CHARGE */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Covered Car Parking Slot Charge (INR)</label>
+                      <input type="text" value={sliderUnitForm.parkingPrice !== undefined ? sliderUnitForm.parkingPrice : ''} onChange={(e) => setSliderUnitForm({ ...sliderUnitForm, parkingPrice: e.target.value })} placeholder="e.g. 350000 (0 if N/A)" style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem' }} />
+                    </div>
+
+                    {/* 4. CLUBHOUSE & GATED AMENITIES MEMBERSHIP */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Clubhouse & Gated Amenities Membership (INR)</label>
+                      <input type="text" value={sliderUnitForm.amenityCharges !== undefined ? sliderUnitForm.amenityCharges : ''} onChange={(e) => setSliderUnitForm({ ...sliderUnitForm, amenityCharges: e.target.value })} placeholder="e.g. 150000" style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#fbbf24', fontWeight: '900', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem' }} />
+                    </div>
+
+                    {/* 5. ADVANCE MAINTENANCE CHARGE (1 YEAR) */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Advance Maintenance Charge (1 Year) (INR)</label>
+                      <input type="text" value={sliderUnitForm.advanceMaintenanceCharge !== undefined ? sliderUnitForm.advanceMaintenanceCharge : ''} onChange={(e) => setSliderUnitForm({ ...sliderUnitForm, advanceMaintenanceCharge: e.target.value })} placeholder="e.g. 25000" style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem' }} />
+                    </div>
+
+                    {/* 6. INFRASTRUCTURE & LEGAL DOCUMENTATION CHARGES */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Infrastructure & Legal Documentation Charges (INR)</label>
+                      <input type="text" value={sliderUnitForm.legalDocCharge !== undefined ? sliderUnitForm.legalDocCharge : ''} onChange={(e) => setSliderUnitForm({ ...sliderUnitForm, legalDocCharge: e.target.value })} placeholder="e.g. 45000" style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem' }} />
+                    </div>
+
+                    {/* TOTAL BASE PRICE WITH OTHER CHARGES */}
+                    <div style={{ gridColumn: windowWidth <= 640 ? 'span 1' : 'span 3', background: isLight ? '#f0fdf4' : 'rgba(34, 197, 94, 0.12)', border: '1.5px solid #22c55e', borderRadius: '8px', padding: '10px 12px' }}>
+                      <label style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: '900', display: 'block', marginBottom: '4px' }}>
+                        💰 Total Base price with Others Charges (INR) [Base Property Asking Price + Floor Rise + PLC + Clubhouse + Maint + Legal] *
+                      </label>
+                      <input 
+                        type="text" 
+                        readOnly 
+                        value={computeTotalBaseWithOtherCharges(sliderUnitForm)} 
+                        style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: '1.5px solid #22c55e', color: '#22c55e', fontWeight: '900', padding: '8px 12px', borderRadius: '6px', fontSize: '1rem' }} 
+                      />
+                    </div>
+
+                    <div style={{ gridColumn: windowWidth <= 640 ? 'span 1' : 'span 3' }}>
                       <label style={{ fontSize: '0.75rem', color: '#22c55e', fontWeight: '900', display: 'block', marginBottom: '4px' }}>Total All-Inclusive Final Price (INR) [Base + Charges + Taxes] *</label>
                       <input type="text" value={sliderUnitForm.totalAllInclusivePrice || '₹73,84,727'} onChange={(e) => setSliderUnitForm({ ...sliderUnitForm, totalAllInclusivePrice: e.target.value })} placeholder="e.g. ₹73,84,727" style={{ width: '100%', background: 'rgba(34, 197, 94, 0.15)', border: '2px solid #22c55e', color: '#22c55e', fontWeight: '900', padding: '8px 12px', borderRadius: '8px', fontSize: '1rem' }} />
                     </div>

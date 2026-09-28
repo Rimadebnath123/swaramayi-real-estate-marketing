@@ -1209,7 +1209,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                       🏢 {b.branch_name}
                     </h3>
                     <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', margin: '4px 0 0 0' }}>
-                      {b.address || 'Kolkata Central Hub'} • City: <strong style={{ color: '#38bdf8' }}>{b.city || 'Kolkata'}</strong>
+                      {b.address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129'} • City: <strong style={{ color: '#38bdf8' }}>{b.city || 'Kolkata'}</strong>
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -1282,6 +1282,8 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
           {safeTeams.map((t: any, idx: number) => {
             const teamId = t.id || `TEAM-0${idx + 1}`;
             const teamName = t.team_name || t.name || 'Sales Team';
+            const matchedBranch = safeBranches.find((b: any) => b.branch_name === t.branch_name || b.id === t.branch_id);
+            const dynamicBranchAddr = matchedBranch?.address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129';
             return (
               <div key={teamId} style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1291,6 +1293,9 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                     </h3>
                     <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', margin: '4px 0 0 0' }}>
                       Branch: <strong style={{ color: '#38bdf8' }}>{t.branch_name}</strong> • Dept: <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{t.department}</strong>
+                    </p>
+                    <p style={{ fontSize: '0.75rem', color: isLight ? '#475569' : '#cbd5e1', margin: '3px 0 0 0', fontWeight: '600' }}>
+                      📍 <strong>Address:</strong> {dynamicBranchAddr}
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>

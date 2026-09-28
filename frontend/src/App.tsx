@@ -4413,7 +4413,10 @@ export default function App() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.map((b: any) => ({
             ...b,
-            manager_name: (b.manager_name || 'Avishek Das (Super Admin)').replace(/Rajesh V[ae]rma/gi, 'Avishek Das')
+            manager_name: (b.manager_name || 'Avishek Das (Super Admin)').replace(/Rajesh V[ae]rma/gi, 'Avishek Das'),
+            address: (b.id === 'BR-01' || (b.branch_name && b.branch_name.includes('Head Office')))
+              ? '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129'
+              : b.address
           }));
         }
       }
@@ -4421,7 +4424,7 @@ export default function App() {
       console.error('Error reading branches from localStorage:', e);
     }
     return [
-      { id: 'BR-01', branch_name: 'Head Office (Kolkata)', city: 'Kolkata', manager_name: 'Avishek Das (Super Admin)', address: '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, North 24 Parganas, Madhyamgram, Kolkata - 700129', target_revenue: '₹15,00,00,000', teams: ['Corporate Leadership Squad'], created_at: '2026-01-15' },
+      { id: 'BR-01', branch_name: 'Head Office (Kolkata)', city: 'Kolkata', manager_name: 'Avishek Das (Super Admin)', address: '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129', target_revenue: '₹15,00,00,000', teams: ['Corporate Leadership Squad'], created_at: '2026-01-15' },
       { id: 'BR-02', branch_name: 'Kolkata Branch', city: 'Kolkata', manager_name: 'Abinash Roy (Admin)', address: 'Park Street, Kolkata - 700016', target_revenue: '₹5,00,00,000', teams: ['Kolkata Expansion Team'], created_at: '2026-03-10' }
     ];
   });
@@ -6948,7 +6951,14 @@ export default function App() {
 
             if (Array.isArray(mData.users) && mData.users.length > 0) setUsers(mData.users);
             if (Array.isArray(mData.teams) && mData.teams.length > 0) setTeams(mData.teams);
-            if (Array.isArray(mData.branches) && mData.branches.length > 0) setBranches(mData.branches);
+            if (Array.isArray(mData.branches) && mData.branches.length > 0) {
+              setBranches(mData.branches.map((b: any) => ({
+                ...b,
+                address: (b.id === 'BR-01' || (b.branch_name && b.branch_name.includes('Head Office')))
+                  ? '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129'
+                  : b.address
+              })));
+            }
             if (Array.isArray(mData.properties)) {
               const sanitizedProps = mData.properties
                 .filter((p: any) => !isItemInRecycledSet(p, recycledSet))
@@ -8294,6 +8304,9 @@ export default function App() {
       perm_brokerage: !!foundMatrix.brokerage
     } : { perm_view: true, perm_create: true, perm_edit: true, perm_delete: false, perm_export: true, perm_approve: false, perm_price_change: false, perm_brokerage: false };
 
+    const defaultBranch = (branches && branches.length > 0) ? branches[0].branch_name : 'Head Office (Kolkata)';
+    const defaultTeam = (teams && teams.length > 0) ? (teams[0].team_name || teams[0].name) : 'Corporate Leadership Squad';
+
     setNewUserForm({
       username: '',
       full_name: '',
@@ -8302,9 +8315,9 @@ export default function App() {
       mobile: '',
       role: initialRole,
       designation: '',
-      branch_name: 'Kolkata Branch',
-      department: 'Sales Operations',
-      team_name: 'Kolkata Expansion Team',
+      branch_name: defaultBranch,
+      department: 'Executive Board',
+      team_name: defaultTeam,
       manager_name: 'Avishek Das (Super Admin)',
       permissions: initialPerms
     });
@@ -8326,6 +8339,14 @@ export default function App() {
       perm_brokerage: !!foundMatrix.brokerage
     } : { perm_view: true, perm_create: true, perm_edit: true, perm_delete: false, perm_export: true, perm_approve: false, perm_price_change: false, perm_brokerage: false });
 
+    const currentBranch = u.branch_name && branches.some((b: any) => b.branch_name === u.branch_name)
+      ? u.branch_name
+      : (branches && branches.length > 0 ? branches[0].branch_name : 'Head Office (Kolkata)');
+
+    const currentTeam = u.team_name && teams.some((t: any) => (t.team_name || t.name) === u.team_name)
+      ? u.team_name
+      : (teams && teams.length > 0 ? (teams[0].team_name || teams[0].name) : 'Corporate Leadership Squad');
+
     setNewUserForm({
       username: u.username || u.full_name,
       full_name: u.full_name,
@@ -8334,10 +8355,10 @@ export default function App() {
       mobile: u.mobile,
       role: u.role,
       designation: u.designation || '',
-      branch_name: u.branch_name,
-      department: u.department,
-      team_name: u.team_name,
-      manager_name: u.manager_name,
+      branch_name: currentBranch,
+      department: u.department || 'Executive Board',
+      team_name: currentTeam,
+      manager_name: u.manager_name || 'Avishek Das (Super Admin)',
       permissions: userPerms
     });
     setShowUserModalPassword(false);
@@ -12935,25 +12956,18 @@ export default function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Assigned Branch *</label>
-                    <input 
-                      type="text" 
-                      list="user-branch-suggestions" 
+                    <select 
                       value={newUserForm.branch_name} 
                       onChange={(e) => setNewUserForm({ ...newUserForm, branch_name: e.target.value })} 
-                      placeholder="Select branch or type office..." 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }} 
                       required 
-                    />
-                    <datalist id="user-branch-suggestions">
-                      {Array.from(new Set([
-                        ...branches.map(b => b.branch_name),
-                        'Head Office (Kolkata)',
-                        'Kolkata Branch',
-                        'Rajarhat office'
-                      ])).filter(Boolean).map((bName, i) => (
-                        <option key={i} value={bName} />
+                    >
+                      {Array.from(new Map((branches || []).map((b: any) => [b.branch_name, b])).values()).map((b: any, i: number) => (
+                        <option key={i} value={b.branch_name}>
+                          {b.branch_name} ({b.address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129'})
+                        </option>
                       ))}
-                    </datalist>
+                    </select>
                   </div>
 
                   <div>
@@ -12972,24 +12986,34 @@ export default function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Assigned Team *</label>
-                    <input 
-                      type="text" 
-                      list="user-team-suggestions" 
+                    <select 
                       value={newUserForm.team_name} 
                       onChange={(e) => setNewUserForm({ ...newUserForm, team_name: e.target.value })} 
-                      placeholder="Select team or type custom..." 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }} 
                       required 
-                    />
-                    <datalist id="user-team-suggestions">
-                      {Array.from(new Set([
-                        ...teams.map(t => t.team_name),
-                        'Kolkata Expansion Team',
-                        'Corporate Leadership'
-                      ])).filter(Boolean).map((tName, i) => (
-                        <option key={i} value={tName} />
-                      ))}
-                    </datalist>
+                    >
+                      {(() => {
+                        const filteredTeams = (teams || []).filter((t: any) => {
+                          if (!newUserForm.branch_name) return true;
+                          return !t.branch_name || t.branch_name === newUserForm.branch_name || t.branch_name.includes(newUserForm.branch_name) || newUserForm.branch_name.includes(t.branch_name);
+                        });
+                        const displayTeams = filteredTeams.length > 0 ? filteredTeams : (teams || []);
+                        const uniqueTeams = Array.from(new Map(displayTeams.map((t: any) => [t.team_name || t.name, t])).values());
+
+                        if (uniqueTeams.length === 0) {
+                          return <option value="Corporate Leadership Squad">Corporate Leadership Squad</option>;
+                        }
+
+                        return uniqueTeams.map((t: any, i: number) => {
+                          const tName = t.team_name || t.name || 'Corporate Leadership Squad';
+                          return (
+                            <option key={i} value={tName}>
+                              {tName} ({t.branch_name || newUserForm.branch_name || 'Head Office (Kolkata)'})
+                            </option>
+                          );
+                        });
+                      })()}
+                    </select>
                   </div>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Reporting Manager *</label>
@@ -13203,9 +13227,10 @@ export default function App() {
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Parent Branch *</label>
                   <select value={newTeamForm.branch_name} onChange={(e) => setNewTeamForm({ ...newTeamForm, branch_name: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}>
-                    <option value="Head Office (Kolkata)">Head Office (Kolkata)</option>
-                    {branches.map((b, i) => (
-                      <option key={i} value={b.branch_name}>{b.branch_name}</option>
+                    {Array.from(new Map((branches || []).map((b: any) => [b.branch_name, b])).values()).map((b: any, i: number) => (
+                      <option key={i} value={b.branch_name}>
+                        {b.branch_name} ({b.address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129'})
+                      </option>
                     ))}
                   </select>
                 </div>

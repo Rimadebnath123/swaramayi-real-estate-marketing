@@ -814,9 +814,10 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Primary Preferred Locality *</label>
                   <LocationAutocompleteInput
                     isLight={isLight}
+                    isMulti={true}
                     value={newRequestForm.preferred_locality || ''}
                     onChange={(val) => setNewRequestForm({ ...newRequestForm, preferred_locality: val })}
-                    placeholder="e.g. Madhyamgram, Barasat, Kondapur"
+                    placeholder="e.g. Agarpara, Nilgunj Road, Sodepur, Kamarhati"
                     required={true}
                   />
                 </div>

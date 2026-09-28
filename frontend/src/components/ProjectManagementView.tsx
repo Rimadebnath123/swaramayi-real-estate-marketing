@@ -67,12 +67,8 @@ export const computeTotalBaseWithOtherCharges = (form: any): string => {
   };
 
   const superSqft = parseNum(form.super_builtup_area || form.superBuiltupArea);
-  const rateSqft = parseNum(form.price_sqft || form.priceSqft);
-  let basePrice = parseNum(form.final_price || form.basePrice);
-
-  if (basePrice <= 0 && superSqft > 0 && rateSqft > 0) {
-    basePrice = superSqft * rateSqft;
-  }
+  const rateSqft = parseNum(form.price_sqft || form.priceSqft || form.asking_rate_sqft || form.askingRateSqft);
+  let basePrice = (superSqft > 0 && rateSqft > 0) ? (superSqft * rateSqft) : parseNum(form.final_price || form.basePrice);
 
   const floorRise = parseNum(form.floor_rise_charge || form.floorRiseCharge || form.floorRise);
   const plc = parseNum(form.plc_charge || form.plcCharge || form.plc);

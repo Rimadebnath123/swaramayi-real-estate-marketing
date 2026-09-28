@@ -269,14 +269,33 @@ export const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps>
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Multi-location tags parsing
+  const tags = useMemo(() => {
+    if (!value) return [];
+    return value
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+  }, [value]);
+
+  const removeTag = (indexToRemove: number) => {
+    const updatedTags = tags.filter((_, idx) => idx !== indexToRemove);
+    const newValue = updatedTags.length > 0 ? updatedTags.join(', ') + ', ' : '';
+    onChange(newValue);
+  };
+
   const selectSuggestion = (fullText: string) => {
     let finalValue = fullText;
     if (isMulti) {
       const parts = (value || '').split(',').map(s => s.trim()).filter(Boolean);
       if (parts.length > 0) {
-        // Replace last un-finished token with selected text
-        parts[parts.length - 1] = fullText;
-        finalValue = parts.join(', ') + ', ';
+        const lastPart = parts[parts.length - 1];
+        if (fullText.toLowerCase().includes(lastPart.toLowerCase()) || lastPart.toLowerCase().includes(fullText.toLowerCase())) {
+          parts[parts.length - 1] = fullText;
+        } else if (!parts.includes(fullText)) {
+          parts.push(fullText);
+        }
+        finalValue = Array.from(new Set(parts)).join(', ') + ', ';
       } else {
         finalValue = fullText + ', ';
       }
@@ -357,6 +376,48 @@ export const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps>
           )}
         </div>
       </div>
+
+      {/* MULTI-LOCATION SELECTED CHIPS BADGES */}
+      {isMulti && tags.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '6px' }}>
+          {tags.map((tag, idx) => (
+            <span
+              key={idx}
+              style={{
+                background: isLight ? '#e0f2fe' : '#1e293b',
+                border: '1px solid #38bdf8',
+                color: isLight ? '#0284c7' : '#38bdf8',
+                fontSize: '0.72rem',
+                fontWeight: '800',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.15)'
+              }}
+            >
+              <span>📍 {tag}</span>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeTag(idx);
+                }}
+                style={{
+                  cursor: 'pointer',
+                  fontWeight: '900',
+                  color: '#ef4444',
+                  marginLeft: '2px',
+                  fontSize: '0.85rem'
+                }}
+                title="Remove location"
+              >
+                ×
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* FLOATING AUTOCOMPLETE SUGGESTIONS DROPDOWN */}
       {isOpen && suggestions.length > 0 && (

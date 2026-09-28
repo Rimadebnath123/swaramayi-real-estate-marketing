@@ -90,7 +90,7 @@ import { BillingManagementView } from './components/BillingManagementView';
 import { BookingManagementView } from './components/BookingManagementView';
 import { LocationMapView } from './components/LocationMapView';
 import { AgreementManagementView } from './components/AgreementManagementView';
-import { ProjectManagementView } from './components/ProjectManagementView';
+import { ProjectManagementView, computeTotalBaseWithOtherCharges } from './components/ProjectManagementView';
 import { VisitManagementView } from './components/VisitManagementView';
 import { CostSheetSharingView } from './components/CostSheetSharingView';
 import { CustomerManagementView } from './components/CustomerManagementView';
@@ -3741,8 +3741,8 @@ export default function App() {
     secondary_areas: 'Hitec City, Financial District',
     radius_km: 2,
     facing: 'East Facing',
-    floor_pref: '10th Floor or Higher',
-    non_preferred_floor: 'No Ground Floor',
+    floor_pref: '',
+    non_preferred_floor: '',
     carpet_area_min: '1,400',
     carpet_area_max: '2,200',
     area_unit: 'Sq.Ft.',
@@ -3920,8 +3920,8 @@ export default function App() {
       preferredArea: '',
       secondary_areas: '',
       radius_km: 2,
-      floor_pref: 'Mid Floor (4th - 8th)',
-      non_preferred_floor: 'Ground Floor / Top Floor',
+      floor_pref: '',
+      non_preferred_floor: '',
       budget_min: '',
       budget_max: '',
       budget_flexibility: '± 10% Flexible',
@@ -3988,8 +3988,8 @@ export default function App() {
       preferredArea: '',
       secondary_areas: '',
       radius_km: 2,
-      floor_pref: 'Mid Floor (4th - 8th)',
-      non_preferred_floor: 'Ground Floor / Top Floor',
+      floor_pref: '',
+      non_preferred_floor: '',
       budget_min: '',
       budget_max: '',
       budget_flexibility: '± 10% Flexible',
@@ -9047,7 +9047,13 @@ export default function App() {
     };
 
     // --- 1. STRICT BUDGET CHECK (25%) ---
-    const propPriceLakhs = parseSingleValToLakhs(property?.final_price || property?.base_price || property?.AskingPrice || property?.price || '');
+    // Evaluates "Total Base price with Others Charges" (Base Asking + Floor Rise + PLC + Clubhouse + Advance Maint + Infrastructure & Legal)
+    const totalBaseWithOthersStr = computeTotalBaseWithOtherCharges(property);
+    const propPriceLakhs = parseSingleValToLakhs(
+      totalBaseWithOthersStr && totalBaseWithOthersStr !== '₹0'
+        ? totalBaseWithOthersStr
+        : (property?.total_base_with_others || property?.final_price || property?.base_price || property?.AskingPrice || property?.price || '')
+    );
     const { min: minBud, max: maxBud } = parseBudgetRangeInLakhs(customer);
 
     let isBudMatch = true;
@@ -9083,7 +9089,7 @@ export default function App() {
     let isLocMatch = true;
     if (custLocStr.trim().length > 0) {
       const prefLocs = custLocStr
-        .split(/[\/,–—|]|\s+to\s+/)
+        .split(/[\/,–—|,]\s*|\s+to\s+/)
         .map((s: string) => s.replace(/\(.*?\)/g, '').trim().toLowerCase())
         .filter(s => s.length >= 2 && s !== 'radius:');
 
@@ -13676,7 +13682,14 @@ export default function App() {
 
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Preferred Area / Locality Hub *</label>
-                    <input type="text" value={newCustomerForm.preferredArea} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, preferredArea: e.target.value })} placeholder="Kondapur / Gachibowli / Hitec City" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} required />
+                    <LocationAutocompleteInput
+                      isLight={isLight}
+                      isMulti={true}
+                      value={newCustomerForm.preferredArea || ''}
+                      onChange={(val) => setNewCustomerForm({ ...newCustomerForm, preferredArea: val })}
+                      placeholder="e.g. Agarpara, Nilgunj Road, Sodepur, Kamarhati"
+                      required={true}
+                    />
                   </div>
                 </div>
               )}
@@ -14443,9 +14456,10 @@ export default function App() {
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Primary Preferred Locality *</label>
                     <LocationAutocompleteInput
                       isLight={isLight}
+                      isMulti={true}
                       value={newCustomerForm.preferredArea || ''}
                       onChange={(val) => setNewCustomerForm({ ...newCustomerForm, preferredArea: val })}
-                      placeholder="e.g. Kondapur / Gachibowli or Madhyamgram"
+                      placeholder="e.g. Agarpara, Nilgunj Road, Sodepur, Kamarhati"
                       required={true}
                     />
                   </div>
@@ -18557,7 +18571,14 @@ export default function App() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Preferred Area / Locality Hub *</label>
-                  <input type="text" value={updateReqForm.preferredArea} onChange={(e) => setUpdateReqForm({ ...updateReqForm, preferredArea: e.target.value })} placeholder="e.g. Kondapur, Gachibowli" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
+                  <LocationAutocompleteInput
+                    isLight={isLight}
+                    isMulti={true}
+                    value={updateReqForm.preferredArea || ''}
+                    onChange={(val) => setUpdateReqForm({ ...updateReqForm, preferredArea: val })}
+                    placeholder="e.g. Kondapur, Gachibowli, Madhapur"
+                    required={true}
+                  />
                 </div>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Configuration (BHK) *</label>
@@ -20713,12 +20734,13 @@ export default function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Revised Preferred Area / Localities *</label>
-                    <input 
-                      type="text"
-                      value={updateReqForm.preferredArea} 
-                      onChange={(e) => setUpdateReqForm({ ...updateReqForm, preferredArea: e.target.value })} 
-                      placeholder="e.g. Kondapur, Gachibowli, Madhapur, HTEC City"
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontWeight: '900', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}
+                    <LocationAutocompleteInput
+                      isLight={isLight}
+                      isMulti={true}
+                      value={updateReqForm.preferredArea || ''}
+                      onChange={(val) => setUpdateReqForm({ ...updateReqForm, preferredArea: val })}
+                      placeholder="e.g. Kondapur, Gachibowli, Madhapur, Hitec City"
+                      required={true}
                     />
                   </div>
                   <div>

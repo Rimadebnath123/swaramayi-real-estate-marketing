@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Zap, Search, X, SearchCode, Eye, FileText, Trash2 } from 'lucide-react';
+import { computeTotalBaseWithOtherCharges } from './ProjectManagementView';
 
 interface MatchingManagementViewProps {
   isLight: boolean;
@@ -322,7 +323,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
         budget_range: `${sourcingModalRequest.budget_min || '₹50 Lakhs'} - ${sourcingModalRequest.budget_max || '₹1.00 Crore'}`,
         possession_status: sourcingModalRequest.possessionCondition || cust.possession_status || 'Ready to Move',
         facing: sourcingModalRequest.facing || cust.facing || 'North Facing',
-        floor_pref: cust.floor_pref || '10th Floor or Higher',
+        floor_pref: cust.floor_pref || '',
         carpet_area_min: cust.carpet_area_min || '800 Sq.Ft.',
         carpet_area_max: cust.carpet_area_max || '1400 Sq.Ft.',
         parking: cust.parking || 'Covered Slot + EV Charger',
@@ -1705,8 +1706,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                               <div style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>{p.carpet_area || p.area_sqft}</div>
                             </div>
                             <div style={{ gridColumn: windowWidth <= 480 ? '1' : 'span 2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '6px', marginTop: '2px' }}>
-                              <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.72rem' }}>Final Pricing:</span>
-                              <strong style={{ color: '#4ade80', fontSize: '1rem', fontWeight: '900' }}>{p.final_price}</strong>
+                              <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.72rem' }}>Total Base price with Others:</span>
+                              <strong style={{ color: '#4ade80', fontSize: '0.98rem', fontWeight: '900' }}>{computeTotalBaseWithOtherCharges(p)}</strong>
                             </div>
                           </div>
 
@@ -1850,7 +1851,12 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                               <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>{p.carpet_area}</span>
                             </td>
                             <td style={{ padding: '12px', color: '#4ade80', fontWeight: '900', fontSize: '0.95rem' }}>
-                              {p.final_price}
+                              <div>{computeTotalBaseWithOtherCharges(p)}</div>
+                              {p.final_price && p.final_price !== computeTotalBaseWithOtherCharges(p) && (
+                                <div style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: 'normal' }}>
+                                  Base: {p.final_price}
+                                </div>
+                              )}
                             </td>
                             <td style={{ padding: '12px', textAlign: 'center' }}>
                               <span style={{ background: pct >= 85 ? 'rgba(34, 197, 94, 0.2)' : pct >= 70 ? 'rgba(234, 179, 8, 0.2)' : 'rgba(239, 68, 68, 0.2)', color: pct >= 85 ? '#4ade80' : pct >= 70 ? '#fbbf24' : '#ef4444', padding: '4px 10px', borderRadius: '20px', fontWeight: '900', fontSize: '0.8rem' }}>

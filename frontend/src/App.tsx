@@ -3625,6 +3625,19 @@ export default function App() {
 
   useEffect(() => {
     try {
+      const dataKeysToClear = [
+        'swaramayi_customers_v7_clean',
+        'swaramayi_customers_master_v3_clean',
+        'swaramayi_project_visit_agreements_v7_clean',
+        'swaramayi_project_visit_agreements_v2_clean',
+        'swaramayi_agreements_vault_v5_clean',
+        'swaramayi_bookings_v3_clean',
+        'swaramayi_invoices_v6'
+      ];
+      dataKeysToClear.forEach(k => {
+        try { localStorage.removeItem(k); } catch(e) {}
+      });
+
       const keys = Object.keys(localStorage);
       for (const key of keys) {
         if (key && key.startsWith('swaramayi_')) {

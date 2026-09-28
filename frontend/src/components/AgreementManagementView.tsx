@@ -272,9 +272,26 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
                   combinedAgreements = agreements.filter(a => a.category === 'DEVELOPER' || a.agreement_type === 'DEVELOPER_PROJECT_TIEUP');
                 }
 
-                return combinedAgreements
-                  .filter(a => matchesSearchQuery(a, searchQuery))
-                  .map((a: any) => (
+                const filtered = combinedAgreements.filter(a => matchesSearchQuery(a, searchQuery));
+
+                if (filtered.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={5} style={{ padding: '36px 16px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
+                        <div style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginBottom: '4px' }}>
+                          📭 No Agreements Found
+                        </div>
+                        <div style={{ fontSize: '0.8rem' }}>
+                          {agreementCategory === 'customer' 
+                            ? 'No customer site visit non-circumvention agreements recorded yet.' 
+                            : 'No developer channel partner MOUs recorded yet.'}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return filtered.map((a: any) => (
                     <tr key={a.id} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
                       <td style={{ padding: '12px', fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800' }}>{a.agreement_code}</td>
                       <td style={{ padding: '12px' }}>

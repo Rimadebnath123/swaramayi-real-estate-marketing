@@ -188,8 +188,8 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: {
     };
 
     // Node 1: Office (Driver/HQ Start Point)
-    let offLat = 22.720000;
-    let offLng = 88.480000;
+    let offLat = 22.694318;
+    let offLng = 88.400659;
     if (plan.officeLat && plan.officeLng && !isHyd(plan.officeLat, plan.officeLng)) {
       const lat = parseFloat(String(plan.officeLat).replace(/[^0-9.-]/g, ''));
       const lng = parseFloat(String(plan.officeLng).replace(/[^0-9.-]/g, ''));
@@ -200,7 +200,7 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: {
       nodeType: 'OFFICE',
       title: plan.officeName || 'HQ Office',
       subtitle: 'Office / Driver Starting Location',
-      address: plan.officeAddress || 'Swaramayi Real Estate HQ, Station Road, Barasat, Kolkata - 700124',
+      address: plan.officeAddress || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129 • Phone: +91 88021 30791 • RERA Reg No: WBRERA/A/NOR/2025/000737',
       lat: offLat,
       lng: offLng,
       icon: '🏢',
@@ -1081,7 +1081,7 @@ function ScheduleVisitModalContent({
     ? dynamicSalesExecutives
     : [
         { id: 'EXE-01', name: 'Avishek Das (Super Admin)', value: 'Avishek Das (Super Admin)', label: 'Avishek Das (Super Admin)' },
-        { id: 'EXE-02', name: 'Ramesh Pawar (Field Exec)', value: 'Ramesh Pawar (Field Exec)', label: 'Ramesh Pawar (Field Exec)' },
+        { id: 'EXE-02', name: 'Priya Nair (Sales Exec)', value: 'Priya Nair (Sales Exec)', label: 'Priya Nair (Sales Exec)' },
         { id: 'EXE-03', name: 'Sanjay Dutt (Senior Consultant)', value: 'Sanjay Dutt (Senior Consultant)', label: 'Sanjay Dutt (Senior Consultant)' }
       ];
   const [selectedCsIds, setSelectedCsIds] = useState<string[]>(
@@ -1108,7 +1108,7 @@ function ScheduleVisitModalContent({
   const [dropAddress, setDropAddress] = useState<string>(custHomeAddress);
   const [visitDate, setVisitDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState<string>('10:00 AM');
-  const [assignedExec, setAssignedExec] = useState<string>('Ramesh Pawar (Field Exec - Kondapur)');
+  const [assignedExec, setAssignedExec] = useState<string>('Avishek Das (Super Admin)');
   const [transportMode, setTransportMode] = useState<string>('🚗 Cab Pick & Drop Needed');
 
   const [orderedStops, setOrderedStops] = useState<any[]>(() => {
@@ -3629,8 +3629,10 @@ export default function App() {
       for (const key of keys) {
         if (key && key.startsWith('swaramayi_')) {
           const val = localStorage.getItem(key);
-          if (val && /Rajesh V[ae]rma/i.test(val)) {
-            const cleaned = val.replace(/Rajesh V[ae]rma/gi, 'Avishek Das');
+          if (val && (/Rajesh V[ae]rma/i.test(val) || /Ramesh Pawar/i.test(val))) {
+            const cleaned = val
+              .replace(/Rajesh V[ae]rma/gi, 'Avishek Das')
+              .replace(/Ramesh Pawar(?:\s*\(Field Exec(?:\s*-\s*Kondapur)?\))?/gi, 'Avishek Das');
             localStorage.setItem(key, cleaned);
           }
         }
@@ -3664,7 +3666,7 @@ export default function App() {
     customerName: '',
     mobile: '',
     matchingId: '',
-    assignedExecutive: 'Ramesh Pawar (Field Exec - Kondapur)',
+    assignedExecutive: 'Avishek Das',
     visitDate: '2026-08-22',
     startTime: '10:00 AM',
     pickupAddress: 'Barasat Banamalipur, Kolkata, West Bengal - 700124',
@@ -4326,7 +4328,7 @@ export default function App() {
   const [visitScheduleForm, setVisitScheduleForm] = useState({
     visitDate: '2026-08-22',
     visitTime: '11:00',
-    assignedExecutive: 'Ramesh Pawar (Field Exec - Kondapur)',
+    assignedExecutive: 'Avishek Das',
     transport: 'Cab Pick & Drop Needed',
     notes: 'Customer requested 14th floor flat inspection and parking slot check.'
   });
@@ -17895,12 +17897,12 @@ export default function App() {
             {/* ROUTE FLOW NODES */}
             <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
               
-              <div style={{ textAlign: 'center', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <div style={{ textAlign: 'center', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', maxWidth: '220px' }}>
                 <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: '900' }}>🏢 START OFFICE</span>
                 <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '900', margin: 0 }}>HQ Office</h4>
-                <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>{showRouteMapModal.plan.officeAddress || 'Swaramayi HQ Barasat, Kolkata'}</span>
+                <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', lineHeight: '1.2' }}>{showRouteMapModal.plan.officeAddress || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129'}</span>
                 <a 
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(showRouteMapModal.plan.officeAddress || 'Swaramayi Real Estate HQ Barasat Kolkata West Bengal')}`}
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(showRouteMapModal.plan.officeAddress || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129')}`}
                   target="_blank" 
                   rel="noopener noreferrer"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', border: '1px solid #0284c7', padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800', textDecoration: 'none' }}

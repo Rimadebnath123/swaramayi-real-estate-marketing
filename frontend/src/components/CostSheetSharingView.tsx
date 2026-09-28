@@ -104,26 +104,11 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
       const saved = localStorage.getItem('swaramayi_cs_followups_v1');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {}
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    return [
-      {
-        id: 'FOL-CS-2026-001',
-        costSheetId: 'COST-SHEET-2026-000001',
-        customerName: 'Honey sing',
-        customerNumber: 'SRM-CUS-2026-000188',
-        customerMobile: '+91 95677 88888',
-        propertyTitle: 'SK Construction (Madhyamgram)',
-        followupDate: todayStr,
-        followupTime: '05:00 PM',
-        priority: 'HIGH',
-        status: 'PENDING',
-        remarks: 'Follow up on payment schedule revision, GST breakdown clarification, and booking token deposit decision.'
-      }
-    ];
+    return [];
   });
 
   const saveCostSheetFollowups = (newList: any[]) => {
@@ -734,13 +719,13 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                                         const newCS = {
                                           id: fol.id || `CS-${Date.now()}`,
                                           costSheetId: fol.costSheetId || `COST-SHEET-2026-${Date.now().toString().slice(-6)}`,
-                                          customerId: fol.customerNumber || 'SRM-CUS-2026-000188',
-                                          customerName: fol.customerName || 'Honey sing',
-                                          mobile: fol.customerMobile || '+91 95677 88888',
+                                          customerId: fol.customerNumber || '',
+                                          customerName: fol.customerName || 'Customer',
+                                          mobile: fol.customerMobile || '',
                                           customerSnapshot: {
-                                            customerName: fol.customerName || 'Honey sing',
-                                            customerNumber: fol.customerNumber || 'SRM-CUS-2026-000188',
-                                            mobile: fol.customerMobile || '+91 95677 88888',
+                                            customerName: fol.customerName || 'Customer',
+                                            customerNumber: fol.customerNumber || '',
+                                            mobile: fol.customerMobile || '',
                                           },
                                           propertySnapshot: {
                                             propertyTitle: fol.propertyTitle || 'SK Construction (Madhyamgram)',

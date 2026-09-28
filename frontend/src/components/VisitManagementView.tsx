@@ -148,7 +148,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
   const [ratingAdvisorName, setRatingAdvisorName] = useState('');
   const [ratingCustomerName, setRatingCustomerName] = useState('');
   const [ratingCustomerMobile, setRatingCustomerMobile] = useState('');
-  const [ratingPropertyTitle, setRatingPropertyTitle] = useState('DHRITI APARTMENT');
+  const [ratingPropertyTitle, setRatingPropertyTitle] = useState('');
   const [ratingDeliveryChannel, setRatingDeliveryChannel] = useState<'WHATSAPP' | 'SMS' | 'EMAIL' | 'COPY'>('WHATSAPP');
   const [ratingCustomNote, setRatingCustomNote] = useState('');
   const [copiedRatingLinkSuccess, setCopiedRatingLinkSuccess] = useState(false);
@@ -166,11 +166,11 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     customerMobile: '',
     propertyTitle: '',
     visitScheduleId: '',
-    assignedExecutive: 'Ramesh Pawar (Field Exec - Kondapur)',
+    assignedExecutive: 'Avishek Das',
     followupDate: new Date().toISOString().split('T')[0],
     followupTime: '05:00 PM',
     priority: 'HIGH',
-    notes: 'Call customer regarding site visit feedback and cost sheet quotation negotiation.'
+    notes: ''
   });
 
   const [showSendToFollowupModal, setShowSendToFollowupModal] = useState<any>(null);
@@ -178,7 +178,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     followupDate: new Date().toISOString().split('T')[0],
     followupTime: '17:00',
     priority: 'HIGH',
-    remarks: 'Customer requested callback regarding site visit feedback and cost sheet negotiation.'
+    remarks: ''
   });
 
   const [localFollowupList, setLocalFollowupList] = useState<any[]>(() => {
@@ -186,58 +186,11 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       const saved = localStorage.getItem('swaramayi_visit_followups_v1');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {}
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    return [
-      {
-        id: 'FOL-2026-001',
-        customerName: 'Honey sing',
-        customerNumber: 'SRM-CUS-2026-000188',
-        customerMobile: '+91 98833 95102',
-        propertyTitle: 'SK Construction',
-        visitScheduleId: 'SRM-VS-2026-000088',
-        costSheetId: 'COST-SHEET-2026-000021',
-        assignedExecutive: 'Ramesh Pawar (Field Exec - Kondapur)',
-        followupDate: todayStr,
-        followupTime: '05:30 PM',
-        priority: 'HIGH',
-        status: 'DUE_TODAY',
-        notes: 'Follow up on 3BHK flat quotation, loan eligibility calculation, & booking token deposit decision.'
-      },
-      {
-        id: 'FOL-2026-002',
-        customerName: 'Priya Sharma',
-        customerNumber: 'SRM-CUS-2026-000142',
-        customerMobile: '+91 98490 88776',
-        propertyTitle: 'DHRITI APARTMENT',
-        visitScheduleId: 'SRM-VS-2026-000074',
-        costSheetId: 'COST-SHEET-2026-000018',
-        assignedExecutive: 'Avishek Das (Sr. Sales Manager)',
-        followupDate: todayStr,
-        followupTime: '06:00 PM',
-        priority: 'HIGH',
-        status: 'DUE_TODAY',
-        notes: 'Customer requested cab pickup time confirmation and revised cost sheet floor rise discount.'
-      },
-      {
-        id: 'FOL-2026-003',
-        customerName: 'Rahul Verma',
-        customerNumber: 'SRM-CUS-2026-000099',
-        customerMobile: '+91 70442 93951',
-        propertyTitle: 'Green Valley Villas',
-        visitScheduleId: 'SRM-VS-2026-000052',
-        costSheetId: 'COST-SHEET-2026-000012',
-        assignedExecutive: 'Priya Nair (Sales Exec)',
-        followupDate: '2026-09-25',
-        followupTime: '04:00 PM',
-        priority: 'MEDIUM',
-        status: 'OVERDUE',
-        notes: 'Post-visit 5-star rating collection and bank home loan sanction letter upload follow-up.'
-      }
-    ];
+    return [];
   });
 
   const saveFollowupsToStorage = (newList: any[]) => {
@@ -329,10 +282,10 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
             map.set(key, {
               id: v.site_visit_code || v.id || `SRM-RAT-INV-${Math.floor(1000 + Math.random() * 9000)}`,
               date: v.created_at ? new Date(v.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              customerName: v.customer_name || v.customerName || 'Website Home-Buyer',
-              customerMobile: v.customer_number || v.customerNumber || v.mobile || '+91 98300 12345',
-              advisorName: v.sales_executive || v.assignedExecutive || 'Punita Roy',
-              propertyTitle: v.propertyTitle || 'GAJAPATI APARTMENT',
+              customerName: v.customer_name || v.customerName || 'Customer',
+              customerMobile: v.customer_number || v.customerNumber || v.mobile || '',
+              advisorName: v.sales_executive || v.assignedExecutive || 'Avishek Das',
+              propertyTitle: v.propertyTitle || 'Property Visit',
               rating: rNum,
               feedbackText: noteText,
               comment: noteText,
@@ -433,7 +386,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
   const [rescheduleForm, setRescheduleForm] = useState({
     visitDate: '',
     visitTime: '10:00 AM',
-    assignedExecutive: 'Punita Roy',
+    assignedExecutive: 'Avishek Das',
     transport: '🚗 Cab Pick & Drop Needed',
     rescheduleReason: 'Customer requested date change',
     stayType: 'NO_STAY',
@@ -445,7 +398,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     setRescheduleForm({
       visitDate: v.visitDate || new Date().toISOString().split('T')[0],
       visitTime: v.visitTime || '10:00 AM',
-      assignedExecutive: v.assignedExecutive || 'Punita Roy',
+      assignedExecutive: v.assignedExecutive || 'Avishek Das',
       transport: v.transport || '🚗 Cab Pick & Drop Needed',
       rescheduleReason: v.rescheduleReason || 'Customer requested schedule adjustment',
       stayType: v.stayType || 'NO_STAY',
@@ -1365,17 +1318,17 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                     const stopPvaId = stopItem.pvaId || displayPvaId;
                     return {
                       projectVisitAgreementId: stopPvaId,
-                      visitScheduleId: v.visitId || 'SRM-VS-2026-000087',
-                      customerId: v.customerNumber || 'SRM-CUS-2026-000188',
-                      customerName: v.customerName || 'Rishita sharma',
-                      customerMobile: v.mobile || '8876597975',
+                      visitScheduleId: v.visitId || '',
+                      customerId: v.customerNumber || '',
+                      customerName: v.customerName || 'Customer',
+                      customerMobile: v.mobile || '',
                       propertyId: stopPropCode,
                       projectTitle: stopItem.propertyTitle || cleanPropTitle,
                       locality: stopItem.locality || cleanLocality,
-                      developerName: stopItem.developer || matchedProp?.developerName || matchedProp?.developer || 'Dhriti Builders & Developers',
-                      salesPersonName: v.assignedExecutive || 'Punita Roy',
-                      visitDate: v.visitDate || '2026-08-22',
-                      protectionStartDate: v.visitDate || '2026-08-22',
+                      developerName: stopItem.developer || matchedProp?.developerName || matchedProp?.developer || 'Developer Partner',
+                      salesPersonName: v.assignedExecutive || 'Avishek Das',
+                      visitDate: v.visitDate || new Date().toISOString().split('T')[0],
+                      protectionStartDate: v.visitDate || new Date().toISOString().split('T')[0],
                       protectionEndDate: '2027-02-22',
                       customerOtpStatus: 'OTP_VERIFIED',
                       geofenceStatus: 'GEOFENCE_VERIFIED',
@@ -1624,24 +1577,24 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                       onClick={() => {
                                         const matchedCust = (customers || []).find(c => (v.customerNumber && c.custCode === v.customerNumber) || (v.mobile && c.mobile === v.mobile) || (v.customerName && c.custName === v.customerName));
                                         const matchedPlanObj = matchedPlan || {
-                                          visitPlanId: v.visitId || 'SRM-VP-2026-000001',
-                                          visitScheduleId: v.visitId || 'SRM-VS-2026-000087',
+                                          visitPlanId: v.visitId || '',
+                                          visitScheduleId: v.visitId || '',
                                           customerName: v.customerName || matchedCust?.custName || 'Customer',
-                                          customerNumber: v.customerNumber || matchedCust?.custCode || 'SRM-CUS-2026-000185',
-                                          mobile: v.mobile || matchedCust?.mobile || '+91 98490 12345',
-                                          email: v.email || matchedCust?.email || 'customer@gmail.com',
-                                          assignedExecutive: v.assignedExecutive || 'Punita Roy',
-                                          visitDate: v.visitDate || '2026-08-22',
+                                          customerNumber: v.customerNumber || matchedCust?.custCode || '',
+                                          mobile: v.mobile || matchedCust?.mobile || '',
+                                          email: v.email || matchedCust?.email || '',
+                                          assignedExecutive: v.assignedExecutive || 'Avishek Das',
+                                          visitDate: v.visitDate || new Date().toISOString().split('T')[0],
                                           visitTime: v.visitTime || '10:00 AM',
                                           stops: stopsList
                                         };
                                         const targetStop = {
                                           stopId: stopItem.stopId || `SRM-VSTOP-2026-00000${stopNum}`,
-                                          costSheetId: stopItem.costSheetId || v.costSheetId || 'SRM-CS-2026-000145',
+                                          costSheetId: stopItem.costSheetId || v.costSheetId || '',
                                           propertyCode: stopItem.propertyCode || cleanPropCode,
                                           propertyTitle: stopItem.propertyTitle || cleanPropTitle,
                                           locality: stopItem.locality || cleanLocality,
-                                          developer: stopItem.developer || matchedProp?.developerName || matchedProp?.developer || 'Dhriti Builders & Developers',
+                                          developer: stopItem.developer || matchedProp?.developerName || matchedProp?.developer || 'Developer Partner',
                                           latitude: stopItem.latitude || lat,
                                           longitude: stopItem.longitude || lng,
                                           status: stopItem.status || 'SCHEDULED'
@@ -1662,17 +1615,17 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                               onClick={() => {
                                 const activePva = matchingPva || {
                                   projectVisitAgreementId: displayPvaId,
-                                  visitScheduleId: v.visitId || 'SRM-VS-2026-000087',
-                                  customerId: v.customerNumber || 'SRM-CUS-2026-000188',
-                                  customerName: v.customerName || 'Rishita sharma',
-                                  customerMobile: v.mobile || '8876597975',
+                                  visitScheduleId: v.visitId || '',
+                                  customerId: v.customerNumber || '',
+                                  customerName: v.customerName || 'Customer',
+                                  customerMobile: v.mobile || '',
                                   propertyId: cleanPropCode,
                                   projectTitle: cleanPropTitle,
                                   locality: cleanLocality,
-                                  developerName: matchedProp?.developerName || matchedProp?.developer || 'Dhriti Builders & Developers',
-                                  salesPersonName: v.assignedExecutive || 'Punita Roy',
-                                  visitDate: v.visitDate || '2026-08-22',
-                                  protectionStartDate: v.visitDate || '2026-08-22',
+                                  developerName: matchedProp?.developerName || matchedProp?.developer || 'Developer Partner',
+                                  salesPersonName: v.assignedExecutive || 'Avishek Das',
+                                  visitDate: v.visitDate || new Date().toISOString().split('T')[0],
+                                  protectionStartDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   protectionEndDate: '2027-02-22',
                                   customerOtpStatus: 'OTP_VERIFIED',
                                   geofenceStatus: 'GEOFENCE_VERIFIED',
@@ -1689,23 +1642,23 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                               onClick={() => {
                                 const matchedCust = (customers || []).find(c => (v.customerNumber && c.custCode === v.customerNumber) || (v.mobile && c.mobile === v.mobile) || (v.customerName && c.custName === v.customerName));
                                 const matchedPlanObj = matchedPlan || {
-                                  visitPlanId: v.visitId || 'SRM-VP-2026-000001',
-                                  visitScheduleId: v.visitId || 'SRM-VS-2026-000087',
+                                  visitPlanId: v.visitId || '',
+                                  visitScheduleId: v.visitId || '',
                                   customerName: v.customerName || matchedCust?.custName || 'Customer',
-                                  customerNumber: v.customerNumber || matchedCust?.custCode || 'SRM-CUS-2026-000185',
-                                  mobile: v.mobile || matchedCust?.mobile || '+91 98490 12345',
-                                  email: v.email || matchedCust?.email || 'customer@gmail.com',
-                                  assignedExecutive: v.assignedExecutive || 'Punita Roy',
-                                  visitDate: v.visitDate || '2026-08-22',
+                                  customerNumber: v.customerNumber || matchedCust?.custCode || '',
+                                  mobile: v.mobile || matchedCust?.mobile || '',
+                                  email: v.email || matchedCust?.email || '',
+                                  assignedExecutive: v.assignedExecutive || 'Avishek Das',
+                                  visitDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   visitTime: v.visitTime || '10:00 AM',
                                   stops: [
                                     {
                                       stopId: 'SRM-VSTOP-2026-000001',
-                                      costSheetId: v.costSheetId || 'SRM-CS-2026-000145',
+                                      costSheetId: v.costSheetId || '',
                                       propertyCode: cleanPropCode,
                                       propertyTitle: cleanPropTitle,
                                       locality: cleanLocality,
-                                      developer: matchedProp?.developerName || matchedProp?.developer || 'Dhriti Builders & Developers',
+                                      developer: matchedProp?.developerName || matchedProp?.developer || 'Developer Partner',
                                       latitude: lat,
                                       longitude: lng,
                                       status: 'SCHEDULED'
@@ -1714,11 +1667,11 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                 };
                                 const targetStop = (matchedPlanObj.stops && matchedPlanObj.stops[0]) ? matchedPlanObj.stops[0] : {
                                   stopId: 'SRM-VSTOP-2026-000001',
-                                  costSheetId: v.costSheetId || 'SRM-CS-2026-000145',
+                                  costSheetId: v.costSheetId || '',
                                   propertyCode: cleanPropCode,
                                   propertyTitle: cleanPropTitle,
                                   locality: cleanLocality,
-                                  developer: matchedProp?.developerName || matchedProp?.developer || 'Dhriti Builders & Developers',
+                                  developer: matchedProp?.developerName || matchedProp?.developer || 'Developer Partner',
                                   latitude: lat,
                                   longitude: lng,
                                   status: 'SCHEDULED'
@@ -1821,12 +1774,12 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                 id: `bkg-${Date.now()}`,
                                 booking_code: generatedBookingCode,
                                 booking_date: new Date().toISOString().split('T')[0],
-                                customer_name: v.customerName || 'Bishwajit Pandey',
-                                customer_mobile: v.mobile || '9432328947',
-                                customer_number: v.customerNumber || 'SRM-CUS-2026-000188',
-                                project_name: v.propertyTitle || 'TILOTTAMA APPARTMENT',
+                                customer_name: v.customerName || 'Customer',
+                                customer_mobile: v.mobile || '',
+                                customer_number: v.customerNumber || '',
+                                project_name: v.propertyTitle || 'Property Visit',
                                 developer_name: 'Swaramayi Partner Developer',
-                                tower_unit: 'Block A - Unit 302',
+                                tower_unit: 'Unit TBD',
                                 agreement_value: '₹51,14,880',
                                 token_amount: 100000,
                                 payment_mode: 'UPI / Online Bank Transfer',
@@ -1834,7 +1787,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                 brokerage_rate: '2.0%',
                                 brokerage_amount: 102297,
                                 approval_status: 'APPROVED_LOCKED',
-                                sales_executive: v.assignedExecutive || 'Punita Roy (Sales Exec)'
+                                sales_executive: v.assignedExecutive || 'Avishek Das'
                               };
 
                               const updatedBookings = [newBookingObj, ...(bookings || [])];
@@ -2172,17 +2125,17 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                               onClick={() => {
                                 const activePva = pvaMatch || {
                                   projectVisitAgreementId: displayPvaId,
-                                  visitScheduleId: v.visitId || 'SRM-VS-2026-000087',
-                                  customerId: v.customerNumber || 'SRM-CUS-2026-000188',
-                                  customerName: v.customerName || 'Rishita sharma',
-                                  customerMobile: v.mobile || '8876597975',
-                                  propertyId: v.propertyCode || 'SRM-PROP-2026-000426',
-                                  projectTitle: v.propertyTitle || 'GAJAPATI APARTMENT',
-                                  locality: v.locality || 'Barasat, Kolkata',
-                                  developerName: 'Dhriti Builders & Developers',
-                                  salesPersonName: v.assignedExecutive || 'Punita Roy',
-                                  visitDate: v.visitDate || '2026-08-22',
-                                  protectionStartDate: v.visitDate || '2026-08-22',
+                                  visitScheduleId: v.visitId || '',
+                                  customerId: v.customerNumber || '',
+                                  customerName: v.customerName || 'Customer',
+                                  customerMobile: v.mobile || '',
+                                  propertyId: v.propertyCode || '',
+                                  projectTitle: v.propertyTitle || 'Property Visit',
+                                  locality: v.locality || '',
+                                  developerName: matchedProp?.developerName || matchedProp?.developer || 'Developer Partner',
+                                  salesPersonName: v.assignedExecutive || 'Avishek Das',
+                                  visitDate: v.visitDate || new Date().toISOString().split('T')[0],
+                                  protectionStartDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   protectionEndDate: '2027-02-22',
                                   customerOtpStatus: 'OTP_VERIFIED',
                                   geofenceStatus: 'GEOFENCE_VERIFIED',
@@ -2201,38 +2154,38 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                 const matchedProp = (properties || []).find(p => (v.propertyCode && (p.property_code === v.propertyCode || p.propertyCode === v.propertyCode || p.propCode === v.propertyCode)) || (v.propertyTitle && (p.title === v.propertyTitle || p.propTitle === v.propertyTitle)));
                                 const foundPlan = (visitPlans || []).find(p => (v.customerNumber && p.customerNumber === v.customerNumber) || (v.mobile && p.mobile === v.mobile) || (v.visitId && (p.visitPlanId === v.visitId || p.visitScheduleId === v.visitId)));
                                 const matchedPlan = foundPlan || {
-                                  visitPlanId: v.visitId || 'SRM-VP-2026-000001',
-                                  visitScheduleId: v.visitId || 'SRM-VS-2026-000087',
+                                  visitPlanId: v.visitId || '',
+                                  visitScheduleId: v.visitId || '',
                                   customerName: v.customerName || matchedCust?.name || 'Customer',
-                                  customerNumber: v.customerNumber || matchedCust?.customer_number || 'SRM-CUS-2026-000188',
-                                  mobile: v.mobile || matchedCust?.mobile || '8876597975',
-                                  email: v.email || matchedCust?.email || 'customer@gmail.com',
-                                  assignedExecutive: v.assignedExecutive || 'Punita Roy',
-                                  visitDate: v.visitDate || '2026-08-22',
+                                  customerNumber: v.customerNumber || matchedCust?.customer_number || '',
+                                  mobile: v.mobile || matchedCust?.mobile || '',
+                                  email: v.email || matchedCust?.email || '',
+                                  assignedExecutive: v.assignedExecutive || 'Avishek Das',
+                                  visitDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   visitTime: v.visitTime || '10:00 AM',
                                   stops: [
                                     {
                                       stopId: 'SRM-VSTOP-2026-000001',
-                                      costSheetId: v.costSheetId || 'COST-SHEET-2026-000001',
-                                      propertyCode: v.propertyCode || matchedProp?.property_code || 'SRM-PROP-2026-000426',
-                                      propertyTitle: v.propertyTitle || matchedProp?.title || 'GAJAPATI APARTMENT',
-                                      locality: matchedProp?.locality || v.locality || 'Barasat, Kolkata',
-                                      developer: matchedProp?.developer || 'Dhriti Builders & Developers',
-                                      latitude: matchedProp?.latitude || '22.722351° N',
-                                      longitude: matchedProp?.longitude || '88.485484° E',
+                                      costSheetId: v.costSheetId || '',
+                                      propertyCode: v.propertyCode || matchedProp?.property_code || '',
+                                      propertyTitle: v.propertyTitle || matchedProp?.title || 'Property Visit',
+                                      locality: matchedProp?.locality || v.locality || '',
+                                      developer: matchedProp?.developer || matchedProp?.developerName || 'Developer Partner',
+                                      latitude: matchedProp?.latitude || '',
+                                      longitude: matchedProp?.longitude || '',
                                       status: 'SCHEDULED'
                                     }
                                   ]
                                 };
                                 const targetStop = (matchedPlan.stops && matchedPlan.stops[0]) ? matchedPlan.stops[0] : {
                                   stopId: 'SRM-VSTOP-2026-000001',
-                                  costSheetId: v.costSheetId || 'COST-SHEET-2026-000001',
-                                  propertyCode: v.propertyCode || matchedProp?.property_code || 'SRM-PROP-2026-000426',
-                                  propertyTitle: v.propertyTitle || matchedProp?.title || 'GAJAPATI APARTMENT',
-                                  locality: matchedProp?.locality || v.locality || 'Barasat, Kolkata',
-                                  developer: matchedProp?.developer || 'Dhriti Builders & Developers',
-                                  latitude: matchedProp?.latitude || '22.722351° N',
-                                  longitude: matchedProp?.longitude || '88.485484° E',
+                                  costSheetId: v.costSheetId || '',
+                                  propertyCode: v.propertyCode || matchedProp?.property_code || '',
+                                  propertyTitle: v.propertyTitle || matchedProp?.title || 'Property Visit',
+                                  locality: matchedProp?.locality || v.locality || '',
+                                  developer: matchedProp?.developer || matchedProp?.developerName || 'Developer Partner',
+                                  latitude: matchedProp?.latitude || '',
+                                  longitude: matchedProp?.longitude || '',
                                   status: 'SCHEDULED'
                                 };
                                 setShowPvaVerificationModal({ open: true, plan: matchedPlan, stop: targetStop });
@@ -3239,14 +3192,14 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                         <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>{item.date}</span>
                       </td>
                       <td style={{ padding: '12px', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900' }}>
-                        {item.customerName || 'Home Buyer'}
-                        <br /><span style={{ fontSize: '0.75rem', color: '#4ade80', fontFamily: 'monospace' }}>{item.customerMobile || item.customerPhone || '+91 98300 12345'}</span>
+                        {item.customerName || 'Customer'}
+                        <br /><span style={{ fontSize: '0.75rem', color: '#4ade80', fontFamily: 'monospace' }}>{item.customerMobile || item.customerPhone || ''}</span>
                       </td>
                       <td style={{ padding: '12px', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800' }}>
-                        {item.advisorName || 'Punita Roy'}
+                        {item.advisorName || 'Avishek Das'}
                       </td>
                       <td style={{ padding: '12px', color: isLight ? '#64748b' : '#94a3b8' }}>
-                        {item.propertyTitle || 'GAJAPATI APARTMENT'}
+                        {item.propertyTitle || 'Property Visit'}
                       </td>
                       <td style={{ padding: '12px', textAlign: 'center' }}>
                         {item.rating !== null && item.rating !== undefined ? (
@@ -3537,7 +3490,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                     followupDate: item.followupDate || new Date().toISOString().split('T')[0],
                                     followupTime: item.followupTime || '17:00',
                                     priority: item.priority || 'HIGH',
-                                    assignedExecutive: item.assignedExecutive || 'Ramesh Pawar (Field Exec - Kondapur)',
+                                    assignedExecutive: item.assignedExecutive || 'Avishek Das',
                                     notes: item.notes || ''
                                   });
                                 }}
@@ -3732,8 +3685,8 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                         customerNumber: `SRM-CUS-2026-${Math.floor(100 + Math.random() * 900)}`,
                         customerMobile: newFollowupForm.customerMobile,
                         propertyTitle: newFollowupForm.propertyTitle || 'General Site Visit',
-                        visitScheduleId: newFollowupForm.visitScheduleId || 'SRM-VS-2026-000088',
-                        assignedExecutive: newFollowupForm.assignedExecutive || 'Ramesh Pawar (Field Exec)',
+                        visitScheduleId: newFollowupForm.visitScheduleId || '',
+                        assignedExecutive: newFollowupForm.assignedExecutive || 'Avishek Das',
                         followupDate: newFollowupForm.followupDate || todayStr,
                         followupTime: newFollowupForm.followupTime || '05:00 PM',
                         priority: newFollowupForm.priority || 'HIGH',
@@ -3748,11 +3701,11 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                         customerMobile: '',
                         propertyTitle: '',
                         visitScheduleId: '',
-                        assignedExecutive: 'Ramesh Pawar (Field Exec - Kondapur)',
+                        assignedExecutive: 'Avishek Das',
                         followupDate: todayStr,
                         followupTime: '05:00 PM',
                         priority: 'HIGH',
-                        notes: 'Call customer regarding site visit feedback and cost sheet quotation negotiation.'
+                        notes: ''
                       });
                     }}
                     style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px 20px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer' }}
@@ -3878,12 +3831,12 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
               </label>
               <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '10px 14px', fontFamily: 'monospace', fontSize: '0.75rem', color: '#38bdf8', wordBreak: 'break-all', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                 <span>
-                  https://swaramayi-website.vercel.app/properties/dhriti-apartment-srm-prop-2026-000427?rate=true&advisor={encodeURIComponent(ratingAdvisorName)}&customer={encodeURIComponent(ratingCustomerName || 'Customer')}#rate-advisor
+                  https://swaramayi-website.vercel.app/properties/property-srm-prop-2026?rate=true&advisor={encodeURIComponent(ratingAdvisorName)}&customer={encodeURIComponent(ratingCustomerName || 'Customer')}#rate-advisor
                 </span>
                 <button
                   type="button"
                   onClick={() => {
-                    const link = `https://swaramayi-website.vercel.app/properties/dhriti-apartment-srm-prop-2026-000427?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(ratingCustomerName || 'Customer')}#rate-advisor`;
+                    const link = `https://swaramayi-website.vercel.app/properties/property-srm-prop-2026?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(ratingCustomerName || 'Customer')}#rate-advisor`;
                     if (navigator.clipboard) {
                       navigator.clipboard.writeText(link);
                       setCopiedRatingLinkSuccess(true);
@@ -3907,9 +3860,9 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
             </button>
             <button
               onClick={() => {
-                const targetCustomer = ratingCustomerName || 'Home Buyer Customer';
-                const targetMobile = ratingCustomerMobile || '+91 98300 12345';
-                const link = `https://swaramayi-website.vercel.app/properties/dhriti-apartment-srm-prop-2026-000427?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(targetCustomer)}#rate-advisor`;
+                const targetCustomer = ratingCustomerName || 'Customer';
+                const targetMobile = ratingCustomerMobile || '';
+                const link = `https://swaramayi-website.vercel.app/properties/property-srm-prop-2026?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(targetCustomer)}#rate-advisor`;
 
                 if (ratingDeliveryChannel === 'WHATSAPP') {
                   window.open(`https://wa.me/${targetMobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Dear ${targetCustomer}, thank you for your recent property consultation with Swaramayi Real Estate. Please rate your assigned Property Advisor (${ratingAdvisorName}) here: ${link}`)}`, '_blank');
@@ -3922,7 +3875,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   customerName: targetCustomer,
                   customerMobile: targetMobile,
                   advisorName: ratingAdvisorName,
-                  propertyTitle: ratingPropertyTitle || 'DHRITI APARTMENT',
+                  propertyTitle: ratingPropertyTitle || 'General Site Visit',
                   deliveryChannel: ratingDeliveryChannel,
                   customNote: ratingCustomNote || null
                 };
@@ -4114,7 +4067,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       const custMobile = v.mobile || v.customerMobile || v.customerNumber || '';
       const propTitle = v.propertyTitle || v.title || 'Property Site Visit';
       const visitId = v.visitId || v.visitScheduleId || v.costSheetId || 'SRM-VS-2026';
-      const execName = v.assignedExecutive || 'Ramesh Pawar (Field Exec)';
+      const execName = v.assignedExecutive || 'Avishek Das';
 
       return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '16px' }}>

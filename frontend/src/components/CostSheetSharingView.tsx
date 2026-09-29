@@ -194,13 +194,15 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
     const localityStr = item.propertySnapshot?.localityHub || item.propertySnapshot?.locality || item.propertySnapshot?.city || matchedProp?.locality || 'Locality Hub';
     const bhkStr = item.propertySnapshot?.configuration || item.propertySnapshot?.bhk || matchedProp?.configuration || matchedProp?.bhk || 'Standard Unit';
     const superBuiltStr = item.propertySnapshot?.superBuiltupArea || item.propertySnapshot?.super_builtup_area || matchedProp?.super_builtup_area || '1,283 Sq.Ft.';
-    const rateSqftStr = item.formattedPriceBreakup?.ratePerSqftStr || (item.pricingSnapshot?.ratePerSqft ? `₹${Number(item.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A');
-    const basePriceNum = item.pricingSnapshot?.basePrice || item.base_price || matchedProp?.base_price;
+    const basePriceNum = item.pricingSnapshot?.basePrice || (item.formattedPriceBreakup?.basePriceStr ? parseFloat(String(item.formattedPriceBreakup.basePriceStr).replace(/,/g, '').replace(/[^\d.]/g, '')) : 0) || item.base_price || matchedProp?.final_price || matchedProp?.base_price || 0;
+    const superAreaNum = parseFloat(String(superBuiltStr).replace(/,/g, '').replace(/[^\d.]/g, '')) || 0;
+    const computedRateSqft = (basePriceNum > 0 && superAreaNum > 0) ? Math.round(basePriceNum / superAreaNum) : (item.pricingSnapshot?.ratePerSqft || 0);
+    const rateSqftStr = computedRateSqft > 0 ? `₹${computedRateSqft.toLocaleString('en-IN')}/Sq.Ft.` : (item.formattedPriceBreakup?.ratePerSqftStr || 'N/A');
     const basePriceStr = item.formattedPriceBreakup?.basePriceStr || (basePriceNum ? `₹${Number(basePriceNum).toLocaleString('en-IN')}` : 'N/A');
     const totalEstNum = item.pricingSnapshot?.totalEstimatedCost || item.pricingSnapshot?.grandTotal || item.final_estimated_price || item.totalEstimatedCost || matchedProp?.final_estimated_price;
     const totalEstStr = item.formattedPriceBreakup?.totalEstimatedCostStr || item.formattedPriceBreakup?.grandTotalStr || item.formattedPriceBreakup?.allInclusiveTotalStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : 'N/A');
 
-    const waMsg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Property Cost Sheet Breakdown & Investment Summary:\n\n📄 Cost Sheet ID: ${item.costSheetId} (${item.version || 'V01'})\n🏢 Property: ${propTitleStr}\n📍 Locality: ${localityStr}\n📐 Configuration: ${bhkStr}\n📐 Super Built-Up Area: ${superBuiltStr}\n🏷️ Asking Rate per Sq.Ft.: ${rateSqftStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\n📋 Itemized official cost sheet summary is included above.\n\nPlease review the details. Reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
+    const waMsg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Property Cost Sheet Breakdown & Investment Summary:\n\n📄 Cost Sheet ID: ${item.costSheetId} (${item.version || 'V01'})\n📍 Locality: ${localityStr}\n📐 Configuration: ${bhkStr}\n📐 Super Built-Up Area: ${superBuiltStr}\n🏷️ Asking Rate per Sq.Ft.: ${rateSqftStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\n📋 Itemized official cost sheet summary is included above.\n\nPlease review the details. Reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
 
     const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(waMsg)}`;
     window.open(waUrl, '_blank');

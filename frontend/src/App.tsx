@@ -9786,23 +9786,7 @@ export default function App() {
                 Enterprise BI Control Center & Automated Real Estate Operating System
               </h2>
 
-              <p style={{ fontSize: '0.88rem', color: '#e0f2fe', lineHeight: '1.6', margin: '0 0 28px 0' }}>
-                Integrated Lead Ingestion, Real-Time AI Property Matcher, Live Tower Unit Board, Automated Cost Sheets, & Field Site Visit GPS Route Planner.
-              </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {[
-                  { icon: Sliders, text: '13-Stage Enterprise Sales Funnel & Lead Lifecycle Engine' },
-                  { icon: Zap, text: 'Real-Time AI Property Requirement Matching Score Ranker' },
-                  { icon: Navigation, text: 'Turn-by-Turn Executive Site Visit GPS Route Planner & OTP Check-In' },
-                  { icon: ShieldCheck, text: 'Role-Based Access Security Matrix (15 Granular Roles)' }
-                ].map((item, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255, 255, 255, 0.1)', padding: '10px 14px', borderRadius: '10px' }}>
-                    <item.icon size={18} color="#38bdf8" style={{ flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#f0f9ff' }}>{item.text}</span>
-                  </div>
-                ))}
-              </div>
             </div>
 
             <div style={{ marginTop: '36px', paddingTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

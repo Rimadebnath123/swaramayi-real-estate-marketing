@@ -442,7 +442,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
             <div>
               <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', textTransform: 'uppercase' }}>Email Address</span>
-              <span style={{ display: 'block', color: '#38bdf8', fontWeight: '700', marginTop: '2px' }}>{currentUser.email || 'admin@swaramayi.com'}</span>
+              <span style={{ display: 'block', color: '#38bdf8', fontWeight: '700', marginTop: '2px' }}>{currentUser.email || 'avishek@swaramayi.info'}</span>
             </div>
             <div>
               <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', textTransform: 'uppercase' }}>Mobile Contact</span>

@@ -26,7 +26,7 @@ export function verifyToken(req: AuthRequest, res: Response, next: NextFunction)
     req.user = {
       id: 'USR-01',
       username: 'Avishek Das (Super Admin)',
-      email: 'admin@swaramayi.com',
+      email: 'avishek@swaramayi.info',
       role: 'SUPER_ADMIN'
     };
     return next();
@@ -51,7 +51,7 @@ export function verifyToken(req: AuthRequest, res: Response, next: NextFunction)
     req.user = {
       id: 'USR-01',
       username: 'Avishek Das (Super Admin)',
-      email: 'admin@swaramayi.com',
+      email: 'avishek@swaramayi.info',
       role: 'SUPER_ADMIN'
     };
     return next();

@@ -423,7 +423,7 @@ const initialData: Schema = {
     { id: 'TEAM-01', team_name: 'Corporate Leadership Squad', branch_id: 'BR-01', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', leader_name: 'Avishek Das (SUPER_ADMIN)', monthly_target: '50 Property Units', created_at: '2026-01-15', members_count: 1 }
   ],
   users: [
-    { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-01' }
+    { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'avishek@swaramayi.info', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE', created_at: '2026-01-01' }
   ],
   customers: [],
   properties: [],

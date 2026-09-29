@@ -58,7 +58,7 @@ async function main() {
     id: 'USR-01',
     username: 'Avishek Das (Super Admin)',
     full_name: 'Avishek Das',
-    email: 'admin@swaramayi.com',
+    email: 'avishek@swaramayi.info',
     password: 'Swaramayi@2026',
     mobile: '+91 98490 00001',
     role: 'SUPER_ADMIN',

@@ -4349,7 +4349,7 @@ export default function App() {
       console.error('Error loading users from localStorage:', e);
     }
     return [
-      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', password: 'Swaramayi@2026', mobile: '+91 94323 28947', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' },
+      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'avishek@swaramayi.info', password: 'Swaramayi@2026', mobile: '+91 94323 28947', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' },
       { id: 'USR-02', username: 'Punita Roy Chowdhury', full_name: 'Punita Roy Chowdhury', email: 'punita13.pr@gmail.com', password: 'Swaramayi@2026', mobile: '+91 90383 25675', role: 'ADMIN', designation: 'System Administrator', branch_name: 'Head Office (Kolkata)', department: 'Sales Operations', team_name: 'Corporate Leadership Squad', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE' }
     ];
   });
@@ -4371,7 +4371,7 @@ export default function App() {
       id: 'USR-01',
       username: 'Avishek Das (Super Admin)',
       full_name: 'Avishek Das',
-      email: 'admin@swaramayi.com',
+      email: 'avishek@swaramayi.info',
       mobile: '+91 94323 28947',
       role: 'SUPER_ADMIN',
       designation: 'Managing Director & Founder',
@@ -9678,7 +9678,7 @@ export default function App() {
         (u.username && u.username.trim().toLowerCase() === emailToTest)
       );
 
-      const isSuperAdmin = emailToTest === 'admin@swaramayi.com';
+      const isSuperAdmin = emailToTest === 'avishek@swaramayi.info' || emailToTest === 'admin@swaramayi.com';
 
       if (!matchedUser && !isSuperAdmin) {
         setLoginErrorMsg(`❌ Access Denied: User '${emailToTest}' is NOT registered in the system database. Access strictly prohibited.`);
@@ -9702,7 +9702,7 @@ export default function App() {
         id: 'USR-01',
         username: 'Avishek Das (Super Admin)',
         full_name: 'Avishek Das',
-        email: 'admin@swaramayi.com',
+        email: 'avishek@swaramayi.info',
         role: 'SUPER_ADMIN',
         designation: 'Managing Director & Founder',
         branch_name: 'Head Office (Kolkata)',
@@ -9856,7 +9856,7 @@ export default function App() {
                       type="email" 
                       value={loginEmail} 
                       onChange={(e) => { setLoginEmail(e.target.value); setLoginErrorMsg(''); }}
-                      placeholder="e.g. admin@swaramayi.com" 
+                      placeholder="e.g. avishek@swaramayi.info" 
                       required 
                       style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '12px 14px', paddingLeft: '38px', borderRadius: '10px', fontSize: '0.88rem', fontWeight: '700', outline: 'none' }} 
                     />

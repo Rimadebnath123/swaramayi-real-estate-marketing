@@ -16,7 +16,7 @@ export function seedDatabase() {
       { id: 'TEAM-A', name: 'Corporate Leadership Squad', leader_id: 'USR-01', branch_id: 'BR-KOL-HO' }
     ],
     users: [
-      { id: 'USR-01', username: 'admin', full_name: 'Avishek Das (Super Admin)', role: 'SUPER_ADMIN', email: 'admin@swaramayi.com', mobile: '+91 98490 00001', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', is_active: true }
+      { id: 'USR-01', username: 'admin', full_name: 'Avishek Das (Super Admin)', role: 'SUPER_ADMIN', email: 'avishek@swaramayi.info', mobile: '+91 98490 00001', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', is_active: true }
     ],
     customers: [],
     leads: [],

@@ -9985,47 +9985,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* ROLE CONTEXT SWITCHER */}
-        <div style={{ padding: '14px 20px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: isLight ? '#f1f5f9' : '#1e293b' }}>
-          <label style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Active Role Scope</label>
-          <select 
-            value={currentRole} 
-            onChange={(e) => setCurrentRole(e.target.value)} 
-            disabled={!(loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER')}
-            style={{ 
-              width: '100%', 
-              background: isLight ? '#f8fafc' : '#0f172a', 
-              color: '#38bdf8', 
-              border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', 
-              borderRadius: '6px', 
-              padding: '6px 10px', 
-              fontSize: '0.8rem', 
-              fontWeight: '700', 
-              cursor: (loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER') ? 'pointer' : 'default',
-              opacity: (loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER') ? 1 : 0.85
-            }}
-          >
-            {customRoles
-              .filter(role => {
-                const isUserSuperAdmin = (loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER');
-                if (!isUserSuperAdmin) {
-                  const targetRole = loggedInUser?.role || currentRole;
-                  return (
-                    role.key === targetRole ||
-                    role.role_code === targetRole ||
-                    (role.name && role.name.toUpperCase().replace(/\s+/g, '_') === targetRole) ||
-                    (role.name && role.name.toUpperCase() === targetRole.toUpperCase())
-                  );
-                }
-                return true;
-              })
-              .map((role, idx) => (
-                <option key={role.key || idx} value={role.key}>
-                  {`${idx + 1}. ${(role.name || role.key).replace(/^\d+\.\s*/, '')}`}
-                </option>
-              ))}
-          </select>
-        </div>
+
 
         {/* 11 MAIN CATEGORIES NAV */}
         <nav style={{ padding: '16px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto' }}>

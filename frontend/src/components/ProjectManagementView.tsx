@@ -2961,7 +2961,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
                   {/* GST CHARGE OPTION */}
                   <div>
-                    <label style={{ fontSize: '0.78rem', color: '#a855f7', fontWeight: '900', display: 'block', marginBottom: '6px' }}>Statutory GST Charge (%) *</label>
+                    <label style={{ fontSize: '0.78rem', color: '#a855f7', fontWeight: '900', display: 'block', marginBottom: '6px' }}>Goods & Services Tax (GST) Rate (%) *</label>
                     <select 
                       value={newPropertyForm.gst_pct || '5%'} 
                       onChange={(e) => setNewPropertyForm({ ...newPropertyForm, gst_pct: e.target.value })} 
@@ -2972,6 +2972,30 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       <option value="12%">12% GST (Commercial Real Estate)</option>
                       <option value="0%">0% GST (Ready-to-Move / Exempt)</option>
                     </select>
+                  </div>
+
+                  {/* STAMP DUTY CHARGES RATE (%) */}
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: '#0284c7', fontWeight: '900', display: 'block', marginBottom: '6px' }}>Stamp Duty Charges Rate (%) *</label>
+                    <input 
+                      type="text" 
+                      value={newPropertyForm.stamp_duty_pct !== undefined ? newPropertyForm.stamp_duty_pct : '5.0%'} 
+                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, stamp_duty_pct: e.target.value })} 
+                      placeholder="e.g. 5.0%"
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', color: '#0284c7', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    />
+                  </div>
+
+                  {/* REGISTRATION & PROPERTY TRANSFER FEE RATE (%) */}
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: '#0284c7', fontWeight: '900', display: 'block', marginBottom: '6px' }}>Registration & Property Transfer Fee Rate (%) *</label>
+                    <input 
+                      type="text" 
+                      value={newPropertyForm.registration_fee_pct !== undefined ? newPropertyForm.registration_fee_pct : '1.0%'} 
+                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, registration_fee_pct: e.target.value })} 
+                      placeholder="e.g. 1.0%"
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', color: '#0284c7', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    />
                   </div>
                 </div>
 
@@ -3057,15 +3081,15 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     />
                   </div>
 
-                  {/* 6. INFRASTRUCTURE & LEGAL DOCUMENTATION CHARGES */}
+                  {/* 6. LAWYER / LEGAL VERIFICATION & INFRASTRUCTURE CHARGES */}
                   <div>
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
-                      Infrastructure & Legal Documentation Charges (INR)
+                      Lawyer / Legal Verification & Infrastructure Charges (INR)
                     </label>
                     <input 
                       type="text" 
                       value={newPropertyForm.legal_doc_charge !== undefined ? newPropertyForm.legal_doc_charge : ''} 
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, legal_doc_charge: e.target.value, infrastructure_charge: e.target.value })} 
+                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, legal_doc_charge: e.target.value, infrastructure_charge: e.target.value, lawyer_charge: e.target.value })} 
                       placeholder="e.g. 45000"
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
                     />

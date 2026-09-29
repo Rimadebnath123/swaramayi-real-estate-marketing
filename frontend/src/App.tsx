@@ -5151,7 +5151,18 @@ export default function App() {
 
     const floorRiseNum = parsePriceToNumeric(prop.floor_rise_charge || prop.floorRise || prop.floor_rise || 0);
     const plcNum = parsePriceToNumeric(prop.plc_charge || prop.plc || prop.plc_facing_charge || 0);
-    const parkingNum = parsePriceToNumeric(prop.parking_price || prop.parking_charge || prop.parkingCharge || prop.parking || 0);
+    
+    // Numeric parking fields ONLY first:
+    const explicitParkingPrice = prop.parking_price || prop.parking_charge || prop.parkingCharge || prop.covered_parking_rate || prop.parking_slot_charge;
+    let parkingNum = parsePriceToNumeric(explicitParkingPrice || 0);
+
+    if (parkingNum === 0 && prop.parking && typeof prop.parking === 'string') {
+      const parsed = parsePriceToNumeric(prop.parking);
+      if (parsed > 1000) {
+        parkingNum = parsed;
+      }
+    }
+
     const clubNum = parsePriceToNumeric(prop.clubhouse_charge || prop.club_charge || prop.clubhouse_fee || prop.club_membership_fee || 0);
     const maintenanceNum = parsePriceToNumeric(prop.advance_maintenance_charge || prop.maintenance || prop.maintenance_annual || prop.maintenance_monthly || 0);
     const infraNum = parsePriceToNumeric(prop.legal_doc_charge || prop.infrastructureCharge || prop.infra_legal_fees || prop.infrastructure_charge || prop.legal_charge || prop.infra_legal || 0);
@@ -5165,7 +5176,8 @@ export default function App() {
     const baseSumForBrok = basePriceNum + floorRiseNum + plcNum + parkingNum;
     const computedBrokerage = (brokeragePct > 0 && baseSumForBrok > 0) ? Math.round(baseSumForBrok * (brokeragePct / 100)) : brokerageNum;
 
-    const subtotalBeforeTax = basePriceNum + floorRiseNum + plcNum + parkingNum + clubNum + maintenanceNum + infraNum + computedBrokerage;
+    // Subtotal Before Taxes & Government Charges (Rows 1 to 7 sum)
+    const subtotalBeforeTax = basePriceNum + floorRiseNum + plcNum + parkingNum + clubNum + maintenanceNum + infraNum;
 
     const gstPct = parsePct(prop.gst_pct, basePriceNum > 0 && basePriceNum < 4500000 ? 1 : 5);
     const gstAmount = basePriceNum > 0 ? Math.round(basePriceNum * (gstPct / 100)) : 0;
@@ -5176,9 +5188,10 @@ export default function App() {
     const registrationPct = parsePct(prop.registration_fee_pct, 1);
     const registrationAmount = basePriceNum > 0 ? Math.round(basePriceNum * (registrationPct / 100)) : 0;
 
-    const totalEstimatedCost = subtotalBeforeTax + gstAmount + stampDutyAmount + registrationAmount;
+    const totalEstimatedCost = subtotalBeforeTax + gstAmount + stampDutyAmount + registrationAmount + computedBrokerage;
 
     const formatChargeStr = (num: number, origStr: any) => {
+      if (num > 0) return formatIndianRupees(num);
       if (origStr !== undefined && origStr !== null && origStr !== '') {
         const s = String(origStr).trim();
         if (s.toLowerCase().includes('included')) return 'Included in Flat Price';
@@ -5186,7 +5199,6 @@ export default function App() {
         const parsed = parsePriceToNumeric(s);
         if (parsed > 0) return formatIndianRupees(parsed);
       }
-      if (num > 0) return formatIndianRupees(num);
       return 'Included in Flat Price';
     };
 
@@ -5512,15 +5524,14 @@ export default function App() {
         latitude: prop.latitude || '22.722361° N',
         longitude: prop.longitude || '88.493403° E',
         bhk: prop.configuration || '3BHK',
-        unitType: prop.type || 'Apartment',
-        floor: prop.floor ? `${prop.floor}th Floor` : '5th Floor',
-        tower: prop.tower || 'Tower A',
-        block: prop.block || 'Block 1',
-        unitNumber: prop.unit || 'A-504',
-        carpetArea: prop.carpet_area || '1,450 sq.ft.',
-        builtupArea: prop.builtup_area || '1,800 sq.ft.',
-        superBuiltupArea: prop.super_builtup_area || '1,950 sq.ft.',
-        balconyArea: '140 sq.ft.',
+        floor: prop.floor ? (String(prop.floor).toLowerCase().includes('floor') ? String(prop.floor) : `${prop.floor}th Floor`) : (prop.floor_no ? (String(prop.floor_no).toLowerCase().includes('floor') ? String(prop.floor_no) : `${prop.floor_no}th Floor`) : (prop.unit_floor ? String(prop.unit_floor) : '')),
+        tower: prop.tower || prop.tower_block || '',
+        block: prop.block || '',
+        unitNumber: prop.unit || prop.unit_number || prop.unit_no || '',
+        carpetArea: prop.carpet_area ? (typeof prop.carpet_area === 'number' ? `${prop.carpet_area.toLocaleString('en-IN')} Sq.Ft.` : String(prop.carpet_area)) : `${Math.round(parseSqftToNumeric(prop.super_builtup_area || prop.builtup_area || 1200) * 0.78).toLocaleString('en-IN')} Sq.Ft.`,
+        builtupArea: prop.builtup_area ? (typeof prop.builtup_area === 'number' ? `${prop.builtup_area.toLocaleString('en-IN')} Sq.Ft.` : String(prop.builtup_area)) : `${parseSqftToNumeric(prop.super_builtup_area || 1200).toLocaleString('en-IN')} Sq.Ft.`,
+        superBuiltupArea: prop.super_builtup_area ? (typeof prop.super_builtup_area === 'number' ? `${prop.super_builtup_area.toLocaleString('en-IN')} Sq.Ft.` : String(prop.super_builtup_area)) : `${parseSqftToNumeric(prop.carpet_area || 1200).toLocaleString('en-IN')} Sq.Ft.`,
+        balconyArea: '140 Sq.Ft.',
         parking: prop.parkingSlot || 'Covered Slot + EV Charger',
         facing: prop.facing || 'East Facing',
         propertyOrientation: prop.facing || 'East Facing',
@@ -5866,15 +5877,15 @@ export default function App() {
     const brokPct = form.revBrokeragePct !== undefined ? form.revBrokeragePct : 0;
     const brok = (brokPct && brokPct > 0) ? Math.round((brokBaseSum * brokPct) / 100) : (form.revBrokerage || 0);
 
-    const subtotal = Math.max(0, (base + floor + plc + park + club + maint + infra + brok) - disc);
+    const subtotal = Math.max(0, (base + floor + plc + park + club + maint + infra) - disc);
     const gstPct = form.revGstPct !== undefined ? form.revGstPct : 5;
     const stampPct = form.revStampDutyPct !== undefined ? form.revStampDutyPct : 5;
     const regPct = form.revRegPct !== undefined ? form.revRegPct : 1;
 
-    const gst = Math.round((subtotal * gstPct) / 100);
-    const stamp = Math.round((subtotal * stampPct) / 100);
-    const reg = Math.round((subtotal * regPct) / 100);
-    const grandTotal = subtotal + gst + stamp + reg;
+    const gst = base > 0 ? Math.round((base * gstPct) / 100) : 0;
+    const stamp = base > 0 ? Math.round((base * stampPct) / 100) : 0;
+    const reg = base > 0 ? Math.round((base * regPct) / 100) : 0;
+    const grandTotal = subtotal + gst + stamp + reg + brok;
 
     return { subtotal, gst, stamp, reg, grandTotal, brok };
   };
@@ -8309,9 +8320,266 @@ export default function App() {
 
   const handleSaveEditedCustomer = (e: React.FormEvent) => {
     e.preventDefault();
-    setCustomers(customers.map(c => c.id === editingCustomer.id ? editingCustomer : c));
+    if (!editingCustomer) return;
+
+    let computedBudget = editingCustomer.budget;
+    if (editingCustomer.budget_min || editingCustomer.budget_max) {
+      computedBudget = `${editingCustomer.budget_min || ''} - ${editingCustomer.budget_max || ''}`.trim();
+    }
+    const updatedCust = {
+      ...editingCustomer,
+      budget: computedBudget || editingCustomer.budget || '₹70 Lakhs - ₹1.5 Crores'
+    };
+
+    const cleanCustCode = (updatedCust.customer_number || updatedCust.customer_id || updatedCust.id || '').toString().toLowerCase();
+    const cleanId = (updatedCust.id || '').toString().toLowerCase();
+    const cleanMobile = (updatedCust.mobile || updatedCust.phone || '').toString().replace(/\D/g, '');
+    const cleanName = (updatedCust.name || updatedCust.customer_name || '').toString().toLowerCase().trim();
+
+    // 1. Update customers master state
+    const updatedCustomers = customers.map(c => {
+      const cCode = (c.customer_number || c.customer_id || c.id || '').toString().toLowerCase();
+      const cId = (c.id || '').toString().toLowerCase();
+      const cMob = (c.mobile || c.phone || '').toString().replace(/\D/g, '');
+      const cName = (c.name || c.customer_name || '').toString().toLowerCase().trim();
+
+      if (
+        (cleanId && cId === cleanId) ||
+        (cleanCustCode && cCode === cleanCustCode) ||
+        (cleanMobile && cMob && cMob === cleanMobile) ||
+        (cleanName && cName && cName === cleanName)
+      ) {
+        return { ...c, ...updatedCust };
+      }
+      return c;
+    });
+    setCustomers(updatedCustomers);
+
+    // 2. Cascade edits to central leadsList
+    const updatedLeads = leadsList.map(l => {
+      const lCode = (l.customer_number || l.customer_id || l.id || '').toString().toLowerCase();
+      const lId = (l.id || '').toString().toLowerCase();
+      const lMob = (l.mobile || l.phone || '').toString().replace(/\D/g, '');
+      const lName = (l.customer_name || l.name || '').toString().toLowerCase().trim();
+
+      if (
+        (cleanId && lId === cleanId) ||
+        (cleanCustCode && lCode === cleanCustCode) ||
+        (cleanMobile && lMob && lMob === cleanMobile) ||
+        (cleanName && lName && lName === cleanName)
+      ) {
+        return {
+          ...l,
+          customer_name: updatedCust.name || updatedCust.customer_name || l.customer_name,
+          mobile: updatedCust.mobile || l.mobile,
+          phone: updatedCust.mobile || l.phone,
+          secondary_phone: updatedCust.secondary_phone || updatedCust.alternate_mobile || l.secondary_phone,
+          email: updatedCust.email || l.email,
+          city: updatedCust.city || l.city,
+          address: updatedCust.address || l.address,
+          preferred_location: updatedCust.preferredArea || updatedCust.preferred_location || l.preferred_location,
+          budget_min: updatedCust.budget_min || l.budget_min,
+          budget_max: updatedCust.budget_max || l.budget_max,
+          budget: updatedCust.budget || l.budget,
+          bhk: updatedCust.configuration || updatedCust.bhk || l.bhk,
+          property_type: updatedCust.property_type || l.property_type,
+          facing: updatedCust.facing || l.facing,
+          floor_pref: updatedCust.floor_pref || updatedCust.floor_preference || l.floor_pref,
+          avoided_floors: updatedCust.avoided_floors || l.avoided_floors,
+          flexibility_stretch: updatedCust.flexibility_stretch || updatedCust.stretch || l.flexibility_stretch,
+          assigned_employee_name: updatedCust.assigned_employee_name || updatedCust.assigned_salesperson || l.assigned_employee_name,
+          source: updatedCust.source || l.source,
+          notes: updatedCust.notes || l.notes,
+          updated_at: new Date().toISOString()
+        };
+      }
+      return l;
+    });
+    setLeadsList(updatedLeads);
+
+    // 3. Cascade edits to matchingRequestsQueue
+    const updatedMatchingQueue = matchingRequestsQueue.map(r => {
+      const rCode = (r.customerNumber || r.requestId || r.id || '').toString().toLowerCase();
+      const rMob = (r.mobile || '').toString().replace(/\D/g, '');
+      const rName = (r.customerName || '').toString().toLowerCase().trim();
+
+      if (
+        (cleanCustCode && rCode === cleanCustCode) ||
+        (cleanMobile && rMob && rMob === cleanMobile) ||
+        (cleanName && rName && rName === cleanName)
+      ) {
+        return {
+          ...r,
+          customerName: updatedCust.name || updatedCust.customer_name || r.customerName,
+          mobile: updatedCust.mobile || r.mobile,
+          purpose: updatedCust.purpose || r.purpose,
+          propertyType: updatedCust.property_type || r.propertyType,
+          configuration: updatedCust.configuration || updatedCust.bhk || r.configuration,
+          budget: updatedCust.budget || r.budget,
+          budget_min: updatedCust.budget_min || r.budget_min,
+          budget_max: updatedCust.budget_max || r.budget_max,
+          preferredArea: updatedCust.preferredArea || updatedCust.preferred_location || r.preferredArea,
+          facing: updatedCust.facing || r.facing,
+          floor_pref: updatedCust.floor_pref || updatedCust.floor_preference || r.floor_pref,
+          avoided_floors: updatedCust.avoided_floors || r.avoided_floors,
+          flexibility_stretch: updatedCust.flexibility_stretch || updatedCust.stretch || r.flexibility_stretch,
+          assignedExecutive: updatedCust.assigned_employee_name || updatedCust.assigned_salesperson || r.assignedExecutive,
+          priority: updatedCust.priority || r.priority
+        };
+      }
+      return r;
+    });
+    setMatchingRequestsQueue(updatedMatchingQueue);
+
+    // 4. Cascade edits to scheduledVisits & visitPlans
+    const updatedVisitPlans = (visitPlans || []).map(p => {
+      const pCode = (p.customerNumber || '').toString().toLowerCase();
+      const pMob = (p.mobile || '').toString().replace(/\D/g, '');
+      const pName = (p.customerName || '').toString().toLowerCase().trim();
+
+      if (
+        (cleanCustCode && pCode === cleanCustCode) ||
+        (cleanMobile && pMob && pMob === cleanMobile) ||
+        (cleanName && pName && pName === cleanName)
+      ) {
+        return {
+          ...p,
+          customerName: updatedCust.name || updatedCust.customer_name || p.customerName,
+          mobile: updatedCust.mobile || p.mobile,
+          assignedExecutive: updatedCust.assigned_employee_name || updatedCust.assigned_salesperson || p.assignedExecutive
+        };
+      }
+      return p;
+    });
+    setVisitPlans(updatedVisitPlans);
+
+    const updatedScheduledVisits = (scheduledVisits || []).map(v => {
+      const vCode = (v.customerNumber || v.customerId || '').toString().toLowerCase();
+      const vMob = (v.mobile || v.custMobile || '').toString().replace(/\D/g, '');
+      const vName = (v.customerName || '').toString().toLowerCase().trim();
+
+      if (
+        (cleanCustCode && vCode === cleanCustCode) ||
+        (cleanMobile && vMob && vMob === cleanMobile) ||
+        (cleanName && vName && vName === cleanName)
+      ) {
+        return {
+          ...v,
+          customerName: updatedCust.name || updatedCust.customer_name || v.customerName,
+          mobile: updatedCust.mobile || v.mobile,
+          custMobile: updatedCust.mobile || v.custMobile,
+          assignedExecutive: updatedCust.assigned_employee_name || updatedCust.assigned_salesperson || v.assignedExecutive
+        };
+      }
+      return v;
+    });
+    setScheduledVisits(updatedScheduledVisits);
+
+    // 5. Cascade edits to individualCostSheets
+    const updatedCostSheets = (individualCostSheets || []).map(cs => {
+      const csCode = (cs.customerId || cs.customerSnapshot?.customerNumber || '').toString().toLowerCase();
+      const csMob = (cs.customerSnapshot?.mobile || '').toString().replace(/\D/g, '');
+      const csName = (cs.customerSnapshot?.customerName || '').toString().toLowerCase().trim();
+
+      if (
+        (cleanCustCode && csCode === cleanCustCode) ||
+        (cleanMobile && csMob && csMob === cleanMobile) ||
+        (cleanName && csName && csName === cleanName)
+      ) {
+        return {
+          ...cs,
+          customerSnapshot: {
+            ...cs.customerSnapshot,
+            customerName: updatedCust.name || updatedCust.customer_name || cs.customerSnapshot?.customerName,
+            mobile: updatedCust.mobile || cs.customerSnapshot?.mobile,
+            email: updatedCust.email || cs.customerSnapshot?.email,
+            address: updatedCust.address || cs.customerSnapshot?.address
+          }
+        };
+      }
+      return cs;
+    });
+    setIndividualCostSheets(updatedCostSheets);
+
+    // 6. Cascade edits to invoices
+    const updatedInvoices = (invoices || []).map(inv => {
+      const invCode = (inv.customer_number || '').toString().toLowerCase();
+      const invMob = (inv.customer_mobile || '').toString().replace(/\D/g, '');
+      const invName = (inv.customer_name || '').toString().toLowerCase().trim();
+
+      if (
+        (cleanCustCode && invCode === cleanCustCode) ||
+        (cleanMobile && invMob && invMob === cleanMobile) ||
+        (cleanName && invName && invName === cleanName)
+      ) {
+        return {
+          ...inv,
+          customer_name: updatedCust.name || updatedCust.customer_name || inv.customer_name,
+          customer_mobile: updatedCust.mobile || inv.customer_mobile,
+          customer_email: updatedCust.email || inv.customer_email,
+          customer_address: updatedCust.address || inv.customer_address
+        };
+      }
+      return inv;
+    });
+    setInvoices(updatedInvoices);
+
+    // 7. Cascade edits to bookings
+    const updatedBookings = (bookings || []).map(b => {
+      const bCode = (b.customer_number || '').toString().toLowerCase();
+      const bMob = (b.customer_mobile || '').toString().replace(/\D/g, '');
+      const bName = (b.customer_name || '').toString().toLowerCase().trim();
+
+      if (
+        (cleanCustCode && bCode === cleanCustCode) ||
+        (cleanMobile && bMob && bMob === cleanMobile) ||
+        (cleanName && bName && bName === cleanName)
+      ) {
+        return {
+          ...b,
+          customer_name: updatedCust.name || updatedCust.customer_name || b.customer_name,
+          customer_mobile: updatedCust.mobile || b.customer_mobile,
+          sales_executive: updatedCust.assigned_employee_name || updatedCust.assigned_salesperson || b.sales_executive
+        };
+      }
+      return b;
+    });
+    setBookings(updatedBookings);
+
+    if (selectedCustomer360 && (selectedCustomer360.id === updatedCust.id || selectedCustomer360.customer_number === updatedCust.customer_number)) {
+      setSelectedCustomer360(updatedCust);
+    }
+    if (rawSelectedCust && (rawSelectedCust.id === updatedCust.id || rawSelectedCust.customer_number === updatedCust.customer_number)) {
+      setSelectedCust(updatedCust);
+    }
+
+    try {
+      localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updatedCustomers));
+      localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updatedCustomers));
+      localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(updatedLeads));
+      localStorage.setItem('swaramayi_leads_v5_clean', JSON.stringify(updatedLeads));
+      localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(updatedMatchingQueue));
+      localStorage.setItem('swaramayi_cost_sheets_v7_clean', JSON.stringify(updatedCostSheets));
+      localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(updatedInvoices));
+      localStorage.setItem('swaramayi_bookings_v7', JSON.stringify(updatedBookings));
+      localStorage.setItem('swaramayi_visit_plans_v7', JSON.stringify(updatedVisitPlans));
+    } catch (err) {
+      console.error('Error saving edited customer cross-module updates to localStorage:', err);
+    }
+
+    if (typeof syncAllToMongoDB === 'function') {
+      syncAllToMongoDB({
+        customers: updatedCustomers,
+        leads: updatedLeads,
+        matchingQueue: updatedMatchingQueue,
+        cost_sheets: updatedCostSheets,
+        invoices: updatedInvoices,
+        bookings: updatedBookings
+      });
+    }
+
     setShowEditCustomerModal(false);
-    alert(`✏️ Customer Record ${editingCustomer.customer_number} updated successfully!`);
+    alert(`✏️ Customer Record ${updatedCust.customer_number || updatedCust.name} updated successfully across ALL categories!`);
   };
 
   const handleStartEditProfile = (userToEdit?: any) => {
@@ -8777,8 +9045,11 @@ export default function App() {
         advance_maintenance_charge: newPropertyForm.advance_maintenance_charge !== undefined ? newPropertyForm.advance_maintenance_charge : (p.advance_maintenance_charge || ''),
         legal_doc_charge: newPropertyForm.legal_doc_charge !== undefined ? newPropertyForm.legal_doc_charge : (p.legal_doc_charge || ''),
         infrastructure_charge: newPropertyForm.legal_doc_charge !== undefined ? newPropertyForm.legal_doc_charge : (p.infrastructure_charge || ''),
+        lawyer_charge: newPropertyForm.legal_doc_charge !== undefined ? newPropertyForm.legal_doc_charge : (p.lawyer_charge || p.legal_doc_charge || ''),
         total_base_price_with_other_charges: newPropertyForm.total_base_price_with_other_charges || p.total_base_price_with_other_charges || '',
         gst_pct: newPropertyForm.gst_pct || p.gst_pct || '5%',
+        stamp_duty_pct: newPropertyForm.stamp_duty_pct || p.stamp_duty_pct || '5%',
+        registration_fee_pct: newPropertyForm.registration_fee_pct || p.registration_fee_pct || '1%',
         total_all_inclusive_price: newPropertyForm.total_all_inclusive_price || p.total_all_inclusive_price || '',
         commission_pct: newPropertyForm.commission_pct || p.commission_pct,
         possession_status: newPropertyForm.possession_status || p.possession_status,
@@ -8852,8 +9123,11 @@ export default function App() {
       advance_maintenance_charge: newPropertyForm.advance_maintenance_charge !== undefined ? newPropertyForm.advance_maintenance_charge : '',
       legal_doc_charge: newPropertyForm.legal_doc_charge !== undefined ? newPropertyForm.legal_doc_charge : '',
       infrastructure_charge: newPropertyForm.legal_doc_charge !== undefined ? newPropertyForm.legal_doc_charge : '',
+      lawyer_charge: newPropertyForm.legal_doc_charge !== undefined ? newPropertyForm.legal_doc_charge : '',
       total_base_price_with_other_charges: newPropertyForm.total_base_price_with_other_charges || '',
       gst_pct: newPropertyForm.gst_pct || '5%',
+      stamp_duty_pct: newPropertyForm.stamp_duty_pct || '5%',
+      registration_fee_pct: newPropertyForm.registration_fee_pct || '1%',
       total_all_inclusive_price: newPropertyForm.total_all_inclusive_price || '',
       possession_status: newPropertyForm.possession_status || 'Ready to Move',
       latitude: newPropertyForm.latitude || '',
@@ -12501,16 +12775,517 @@ export default function App() {
 
       {/* EDIT CUSTOMER MODAL */}
       {showEditCustomerModal && editingCustomer && (
-        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', width: '700px', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>✏️ Edit Customer Master Record ({editingCustomer.customer_number})</h3>
-            <form onSubmit={handleSaveEditedCustomer} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <input type="text" value={editingCustomer.name} onChange={(e) => setEditingCustomer({ ...editingCustomer, name: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px' }} required />
-              <input type="text" value={editingCustomer.budget} onChange={(e) => setEditingCustomer({ ...editingCustomer, budget: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '800', padding: '8px', borderRadius: '6px' }} required />
-              <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                <button type="button" onClick={() => setShowEditCustomerModal(false)} style={{ flex: 1, background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '10px', borderRadius: '6px' }}>Cancel</button>
-                <button type="submit" style={{ flex: 1, background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '10px', borderRadius: '6px', fontWeight: '800' }}>Save Changes</button>
+        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: windowWidth <= 640 ? '8px' : '20px' }}>
+          <div className="custom-modal-scrollbar" style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '2px solid #0284c7' : '2px solid #0284c7', width: windowWidth <= 640 ? '98vw' : '92vw', maxWidth: '850px', maxHeight: '92vh', borderRadius: '16px', padding: windowWidth <= 640 ? '16px' : '24px', display: 'flex', flexDirection: 'column', gap: '18px', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+            
+            {/* MODAL HEADER */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
+              <div>
+                <h3 style={{ fontSize: windowWidth <= 640 ? '1.1rem' : '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  ✏️ Edit Complete Customer Profile — {editingCustomer.name || editingCustomer.customer_name || 'Customer'}
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
+                  Modifying details will automatically synchronize across Customer Master Vault, Lead Management, Matching Queue, Visits, Cost Sheets, Invoices & MongoDB.
+                </p>
               </div>
+              <X size={22} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowEditCustomerModal(false)} />
+            </div>
+
+            {/* SYSTEM CUSTOMER ID BADGE BANNER */}
+            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', textTransform: 'uppercase' }}>
+                  SYSTEM CUSTOMER UNIQUE TRACKING ID:
+                </span>
+                <div style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8', fontFamily: 'monospace' }}>
+                  {editingCustomer.customer_number || editingCustomer.customer_id || editingCustomer.id || 'SRM-CUS-2026'}
+                </div>
+              </div>
+              <span style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '900', border: '1px solid #0284c7' }}>
+                ✓ Cross-Module State Sync Active
+              </span>
+            </div>
+
+            <form onSubmit={handleSaveEditedCustomer} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              
+              {/* SECTION 1: IDENTITY & CONTACT INFORMATION */}
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#38bdf8', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '6px' }}>
+                  👤 SECTION 1: IDENTITY & CONTACT DETAILS
+                </span>
+
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Customer Full Name *
+                    </label>
+                    <input 
+                      type="text" 
+                      value={editingCustomer.name || editingCustomer.customer_name || ''} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, name: e.target.value, customer_name: e.target.value })} 
+                      placeholder="Full Name" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700' }} 
+                      required 
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Primary Mobile Phone *
+                    </label>
+                    <input 
+                      type="text" 
+                      value={editingCustomer.mobile || editingCustomer.phone || ''} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, mobile: e.target.value, phone: e.target.value })} 
+                      placeholder="+91 98490 12345" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                      required 
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Secondary Phone / Alt Mobile
+                    </label>
+                    <input 
+                      type="text" 
+                      value={editingCustomer.secondary_phone || editingCustomer.alternate_mobile || ''} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, secondary_phone: e.target.value, alternate_mobile: e.target.value })} 
+                      placeholder="+91 98491 54321" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      WhatsApp Number
+                    </label>
+                    <input 
+                      type="text" 
+                      value={editingCustomer.whatsapp || editingCustomer.whatsapp_number || editingCustomer.mobile || ''} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, whatsapp: e.target.value, whatsapp_number: e.target.value })} 
+                      placeholder="+91 98490 12345" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Email Address
+                    </label>
+                    <input 
+                      type="email" 
+                      value={editingCustomer.email || ''} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, email: e.target.value })} 
+                      placeholder="customer@gmail.com" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 2fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      City / Region
+                    </label>
+                    <input 
+                      type="text" 
+                      value={editingCustomer.city || 'Kolkata'} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, city: e.target.value })} 
+                      placeholder="e.g. Kolkata, Hyderabad" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Locality / Street Address
+                    </label>
+                    <input 
+                      type="text" 
+                      value={editingCustomer.address || editingCustomer.locality || ''} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, address: e.target.value, locality: e.target.value })} 
+                      placeholder="Flat No, Building Name, Street" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Pincode
+                    </label>
+                    <input 
+                      type="text" 
+                      value={editingCustomer.pincode || ''} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, pincode: e.target.value })} 
+                      placeholder="700129" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'monospace' }} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 2: PROPERTY REQUIREMENTS & SPECIFICATIONS */}
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#4ade80', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '6px' }}>
+                  🏠 SECTION 2: PROPERTY REQUIREMENTS & LOCALITY SPECIFICATIONS
+                </span>
+
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Transaction Purpose *
+                    </label>
+                    <select 
+                      value={editingCustomer.purpose || editingCustomer.investment_purpose || 'BUY / OUTRIGHT PURCHASE'} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, purpose: e.target.value, investment_purpose: e.target.value })} 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#22c55e', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                    >
+                      <option value="BUY / OUTRIGHT PURCHASE">🟢 BUY / OUTRIGHT PURCHASE</option>
+                      <option value="RESIDENTIAL RENT / LEASE">🔑 RESIDENTIAL RENT / LEASE</option>
+                      <option value="COMMERCIAL LEASE / RENT">🏢 COMMERCIAL LEASE / RENT</option>
+                      <option value="INVESTMENT (Capital Appreciation)">📈 INVESTMENT (Capital Appreciation)</option>
+                      <option value="RENTAL YIELD INVESTOR">💰 RENTAL YIELD INVESTOR</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      BHK Configuration *
+                    </label>
+                    <select 
+                      value={editingCustomer.configuration || editingCustomer.bhk || '3BHK'} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, configuration: e.target.value, bhk: e.target.value })} 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#fbbf24', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                    >
+                      <option value="1BHK">1BHK Studio</option>
+                      <option value="2BHK">2BHK Flat</option>
+                      <option value="3BHK">3BHK Flat</option>
+                      <option value="4BHK">4BHK Luxury Apartment</option>
+                      <option value="5BHK Villa">5BHK Villa</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Carpet Area Range (Sq.Ft.)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={editingCustomer.carpet_area || editingCustomer.area_range || ''} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, carpet_area: e.target.value, area_range: e.target.value })} 
+                      placeholder="e.g. 1200 - 1800 Sq.Ft." 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Primary Preferred Locality / Address *
+                    </label>
+                    <LocationAutocompleteInput
+                      isLight={isLight}
+                      isMulti={true}
+                      value={editingCustomer.preferredArea || editingCustomer.preferred_location || ''}
+                      onChange={(val) => setEditingCustomer({ ...editingCustomer, preferredArea: val, preferred_location: val })}
+                      placeholder="e.g. Kondapur, Gachibowli, Barasat"
+                      required={true}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Secondary Preferred Localities
+                    </label>
+                    <LocationAutocompleteInput
+                      isLight={isLight}
+                      isMulti={true}
+                      value={editingCustomer.secondary_localities || editingCustomer.secondary_location || ''}
+                      onChange={(val) => setEditingCustomer({ ...editingCustomer, secondary_localities: val, secondary_location: val })}
+                      placeholder="e.g. Madhapur, Hitech City"
+                      required={false}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <MultiSelectFloorSelector
+                      isLight={isLight}
+                      value={editingCustomer.floor_preference || editingCustomer.floor_pref || ''}
+                      onChange={(val) => setEditingCustomer({ ...editingCustomer, floor_preference: val, floor_pref: val })}
+                      label="🏢 Floor Number (Unit Floor)"
+                    />
+                  </div>
+
+                  <div>
+                    <MultiSelectFloorSelector
+                      isLight={isLight}
+                      value={editingCustomer.avoided_floors || editingCustomer.floor_avoid || ''}
+                      onChange={(val) => setEditingCustomer({ ...editingCustomer, avoided_floors: val, floor_avoid: val })}
+                      label="🚫 Non-Preferred / Avoided Floors"
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Vastu / Facing Preference
+                    </label>
+                    <select 
+                      value={editingCustomer.facing || 'East Facing'} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, facing: e.target.value })} 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                    >
+                      <option value="East Facing">East Facing (Poorva)</option>
+                      <option value="North-East Facing">North-East Facing (NE / Ishanya)</option>
+                      <option value="North Facing">North Facing (Uttara)</option>
+                      <option value="North-West Facing">North-West Facing (NW / Vayavya)</option>
+                      <option value="West Facing">West Facing (Paschima)</option>
+                      <option value="South-West Facing">South-West Facing (SW / Nairutya)</option>
+                      <option value="South Facing">South Facing (Dakshina)</option>
+                      <option value="South-East Facing">South-East Facing (SE / Agneya)</option>
+                      <option value="Any Facing Acceptable">Any Facing Acceptable / Open</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Possession Timeline
+                    </label>
+                    <select 
+                      value={editingCustomer.possession_timeline || editingCustomer.possessionStatus || 'Ready to Move'} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, possession_timeline: e.target.value, possessionStatus: e.target.value })} 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                    >
+                      <option value="Ready to Move">Immediate / Ready to Move</option>
+                      <option value="Within 3 Months">Within 3 Months</option>
+                      <option value="Within 6 Months">Within 6 Months</option>
+                      <option value="Under Construction (1-2 Years)">Under Construction (1-2 Years)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Parking & Special Amenities
+                    </label>
+                    <input 
+                      type="text" 
+                      value={editingCustomer.parking || editingCustomer.amenities || ''} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, parking: e.target.value, amenities: e.target.value })} 
+                      placeholder="2 Car Parkings, Clubhouse, Gym" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                    Property Categories (Comma Separated)
+                  </label>
+                  <input 
+                    type="text" 
+                    value={editingCustomer.property_type || editingCustomer.propertyCategory || ''} 
+                    onChange={(e) => setEditingCustomer({ ...editingCustomer, property_type: e.target.value, propertyCategory: e.target.value })} 
+                    placeholder="🏢 Flat / Apartment (New / Builder), 🏰 Gated Villa (New / Builder)" 
+                    style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                  />
+                </div>
+              </div>
+
+              {/* SECTION 3: BUDGET & FINANCIAL PROFILING */}
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#fbbf24', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '6px' }}>
+                  💰 SECTION 3: BUDGET & FINANCIAL PROFILING
+                </span>
+
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Minimum Budget (₹ / Lakhs) *
+                    </label>
+                    <input 
+                      type="text" 
+                      value={editingCustomer.budget_min || ''} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, budget_min: e.target.value })} 
+                      placeholder="e.g. ₹70 Lakhs" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Maximum Budget (₹ / Lakhs) *
+                    </label>
+                    <input 
+                      type="text" 
+                      value={editingCustomer.budget_max || ''} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, budget_max: e.target.value })} 
+                      placeholder="e.g. ₹95 Lakhs" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Budget Flexibility Stretch *
+                    </label>
+                    <select 
+                      value={editingCustomer.flexibility_stretch || editingCustomer.stretch || '0% stretch'} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, flexibility_stretch: e.target.value, stretch: e.target.value })} 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                    >
+                      <option value="0% stretch">0% stretch (Strict Maximum Budget Limit)</option>
+                      <option value="5%">5% stretch (Flexible up to +5%)</option>
+                      <option value="10%">10% stretch (Flexible up to +10%)</option>
+                      <option value="15%">15% stretch (Flexible up to +15%)</option>
+                      <option value="20%">20% stretch (Flexible up to +20%)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Home Loan Required / Status
+                    </label>
+                    <select 
+                      value={editingCustomer.loan_required || editingCustomer.loan_status || 'Self-Funding / Cash'} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, loan_required: e.target.value, loan_status: e.target.value })} 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                    >
+                      <option value="Self-Funding / Cash">Self-Funding / Direct Payment</option>
+                      <option value="Bank Pre-Sanctioned">Bank Home Loan Pre-Sanctioned</option>
+                      <option value="Loan Assistance Needed">Home Loan Assistance Required</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Combined Budget Display String
+                    </label>
+                    <input 
+                      type="text" 
+                      value={editingCustomer.budget || ''} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, budget: e.target.value })} 
+                      placeholder="e.g. ₹70 Lakhs - ₹95 Lakhs" 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 4: ASSIGNMENT, LIFECYCLE & NOTES */}
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#a855f7', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '6px' }}>
+                  👤 SECTION 4: EXECUTIVE ASSIGNMENT, LIFECYCLE & NOTES
+                </span>
+
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Assigned Sales Executive *
+                    </label>
+                    <select 
+                      value={(() => {
+                        const cur = editingCustomer.assigned_employee_name || editingCustomer.assigned_salesperson || editingCustomer.assignedExecutive;
+                        const match = (dynamicSalesExecutives || []).find((x: any) => 
+                          x.value === cur || x.name === cur || x.label?.includes(cur) || cur?.includes(x.name)
+                        );
+                        return match ? match.value : (dynamicSalesExecutives[0]?.value || 'Avishek Das');
+                      })()} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const match = (dynamicSalesExecutives || []).find((x: any) => x.value === val || x.name === val);
+                        const displayName = match ? (match.label || match.name) : val;
+                        setEditingCustomer({ 
+                          ...editingCustomer, 
+                          assigned_employee_id: val, 
+                          assigned_employee_name: displayName,
+                          assigned_salesperson: displayName,
+                          assignedExecutive: displayName
+                        });
+                      }} 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '800' }}
+                    >
+                      {(dynamicSalesExecutives || []).map((exec: any) => (
+                        <option key={exec.id || exec.name} value={exec.value}>
+                          👤 {exec.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Priority Level *
+                    </label>
+                    <select 
+                      value={editingCustomer.priority || 'HOT'} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, priority: e.target.value })} 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: editingCustomer.priority === 'HOT' ? '#ef4444' : '#fbbf24', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                    >
+                      <option value="HOT">🔥 HOT Priority</option>
+                      <option value="WARM">⚡ WARM Priority</option>
+                      <option value="COLD">❄️ COLD Priority</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      Lifecycle Stage / Status
+                    </label>
+                    <select 
+                      value={editingCustomer.status || editingCustomer.stage || 'ACTIVE'} 
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, status: e.target.value, stage: e.target.value })} 
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                    >
+                      <option value="ACTIVE">ACTIVE Customer</option>
+                      <option value="MATCHING_PENDING">Requirement Matching Pending</option>
+                      <option value="SITE_VISIT_SCHEDULED">Site Visit Scheduled</option>
+                      <option value="COST_SHEET_SHARED">Cost Sheet Shared</option>
+                      <option value="BOOKED">Property Booked</option>
+                      <option value="CLOSED_WON">Closed Deal</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                    Remarks & Client Notes
+                  </label>
+                  <textarea 
+                    rows={3} 
+                    value={editingCustomer.notes || editingCustomer.remarks || ''} 
+                    onChange={(e) => setEditingCustomer({ ...editingCustomer, notes: e.target.value, remarks: e.target.value })} 
+                    placeholder="Enter customer specific remarks, negotiation notes, family preferences..." 
+                    style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
+                  />
+                </div>
+              </div>
+
+              {/* ACTION BUTTONS */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '14px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setShowEditCustomerModal(false)} 
+                  style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '800', fontSize: '0.88rem', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#0f172a', border: 'none', padding: '10px 24px', borderRadius: '8px', fontWeight: '900', fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.4)' }}
+                >
+                  💾 Save & Cascade Changes Everywhere
+                </button>
+              </div>
+
             </form>
           </div>
         </div>
@@ -17129,10 +17904,75 @@ export default function App() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem' }}>
                     <div><span style={{ color: '#64748b' }}>Property Category Type:</span> <strong style={{ color: '#a855f7', fontWeight: '800' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.property_type || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.propertyType || showViewIndividualCostSheetModal.costSheet.property_type || 'Flat / Apartment'}</strong></div>
                     <div><span style={{ color: '#64748b' }}>Property Code:</span> <strong style={{ color: '#0369a1', fontFamily: 'monospace' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.propertyCode}</strong></div>
-                    <div><span style={{ color: '#64748b' }}>Tower / Floor / Unit:</span> <strong style={{ color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.tower}, {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.floor}, Unit {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.unitNumber}</strong></div>
-                    <div><span style={{ color: '#64748b' }}>Super Built-Up Area:</span> <strong style={{ color: '#0284c7', fontWeight: '900' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.superBuiltupArea || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.super_builtup_area || '1,283 Sq.Ft.'}</strong></div>
-                    <div><span style={{ color: '#64748b' }}>Carpet Area:</span> <strong style={{ color: '#d97706', fontWeight: '800' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.carpetArea}</strong></div>
-                    <div><span style={{ color: '#64748b' }}>Asking Rate per Sq.Ft.:</span> <strong style={{ color: '#16a34a', fontWeight: '900' }}>{showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.ratePerSqftStr || (showViewIndividualCostSheetModal.costSheet.pricingSnapshot?.ratePerSqft ? `₹${Number(showViewIndividualCostSheetModal.costSheet.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A')}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Tower / Floor / Unit:</span> <strong style={{ color: '#0f172a' }}>{(() => {
+                      const cs = showViewIndividualCostSheetModal.costSheet;
+                      const ps = cs?.propertySnapshot || {};
+                      const propCode = cs?.propertyCode || ps?.propertyCode || cs?.propertyId;
+                      const matchedProp = properties.find((p: any) => 
+                        (p.property_code && p.property_code.toLowerCase() === String(propCode).toLowerCase()) ||
+                        (p.id && String(p.id).toLowerCase() === String(propCode).toLowerCase())
+                      );
+
+                      const rawTower = matchedProp?.tower || matchedProp?.tower_block || ps.tower || '';
+                      const tower = rawTower ? (rawTower.toLowerCase().startsWith('tower') ? rawTower : `Tower ${rawTower}`) : '';
+
+                      const rawFloor = matchedProp?.floor || matchedProp?.floor_no || matchedProp?.unit_floor || ps.floor || '';
+                      let floorStr = '';
+                      if (rawFloor) {
+                        floorStr = String(rawFloor).toLowerCase().includes('floor') ? String(rawFloor) : `${rawFloor}th Floor`;
+                      }
+
+                      const rawUnit = matchedProp?.unit || matchedProp?.unit_number || matchedProp?.unit_no || ps.unitNumber || ps.unit || '';
+                      let unitStr = '';
+                      if (rawUnit) {
+                        unitStr = String(rawUnit).toLowerCase().startsWith('unit') ? String(rawUnit) : `Unit ${rawUnit}`;
+                      }
+
+                      const parts = [tower, floorStr, unitStr].filter(Boolean);
+                      return parts.length > 0 ? parts.join(', ') : 'N/A';
+                    })()}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Carpet Area:</span> <strong style={{ color: '#d97706', fontWeight: '800' }}>{(() => {
+                      const cs = showViewIndividualCostSheetModal.costSheet;
+                      const ps = cs?.propertySnapshot || {};
+                      const propCode = cs?.propertyCode || ps?.propertyCode || cs?.propertyId;
+                      const matchedProp = properties.find((p: any) => 
+                        (p.property_code && p.property_code.toLowerCase() === String(propCode).toLowerCase()) ||
+                        (p.id && String(p.id).toLowerCase() === String(propCode).toLowerCase())
+                      );
+                      const rawCarpet = matchedProp?.carpet_area || matchedProp?.carpetArea || ps.carpetArea || ps.carpet_area;
+                      if (rawCarpet) {
+                        const num = parseSqftToNumeric(rawCarpet);
+                        if (num > 0) return `${num.toLocaleString('en-IN')} Sq.Ft.`;
+                        return String(rawCarpet);
+                      }
+                      const superNum = parseSqftToNumeric(matchedProp?.super_builtup_area || matchedProp?.superBuiltupArea || ps.superBuiltupArea || ps.super_builtup_area || 1140);
+                      if (superNum > 0) {
+                        return `${Math.round(superNum * 0.78).toLocaleString('en-IN')} Sq.Ft.`;
+                      }
+                      return 'N/A';
+                    })()}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Asking Rate per Sq.Ft.:</span> <strong style={{ color: '#16a34a', fontWeight: '900' }}>{(() => {
+                      const cs = showViewIndividualCostSheetModal.costSheet;
+                      const ps = cs?.propertySnapshot || {};
+                      const propCode = cs?.propertyCode || ps?.propertyCode || cs?.propertyId;
+                      const matchedProp = properties.find((p: any) => 
+                        (p.property_code && p.property_code.toLowerCase() === String(propCode).toLowerCase()) ||
+                        (p.id && String(p.id).toLowerCase() === String(propCode).toLowerCase())
+                      );
+                      if (matchedProp) {
+                        const rawRate = matchedProp.price_sqft || matchedProp.price_per_sqft || matchedProp.rate_per_sqft || matchedProp.rate_sqft || matchedProp.asking_rate;
+                        if (rawRate) {
+                          const parsed = typeof rawRate === 'number' ? rawRate : parseFloat(String(rawRate).replace(/[^0-9.]/g, ''));
+                          if (!isNaN(parsed) && parsed > 0) return `₹${Math.round(parsed).toLocaleString('en-IN')}/Sq.Ft.`;
+                        }
+                        const basePrice = parsePriceToNumeric(matchedProp.total_price || matchedProp.price || matchedProp.base_price || matchedProp.asking_price || 0);
+                        const superArea = parseSqftToNumeric(matchedProp.super_builtup_area || matchedProp.carpet_area || 0);
+                        if (basePrice > 0 && superArea > 0) {
+                          return `₹${Math.round(basePrice / superArea).toLocaleString('en-IN')}/Sq.Ft.`;
+                        }
+                      }
+                      return cs?.formattedPriceBreakup?.ratePerSqftStr || (cs?.pricingSnapshot?.ratePerSqft ? `₹${Number(cs.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A');
+                    })()}</strong></div>
                     <div><span style={{ color: '#64748b' }}>Facing & Possession:</span> <strong style={{ color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.facing} • {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.possessionStatus}</strong></div>
                     <div><span style={{ color: '#64748b' }}>Locality Hub / Sector:</span> <strong style={{ color: '#0369a1' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.localityHub || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.locality || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.city || 'Barasat, Kolkata'}</strong></div>
                   </div>
@@ -17195,7 +18035,28 @@ export default function App() {
                 <h4 style={{ fontSize: '1rem', fontWeight: '900', color: '#0284c7', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>ITEMIZED PROPERTY PRICE & TAX BREAKUP</span>
                   <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: '800', background: '#e0f2fe', padding: '4px 12px', borderRadius: '6px', border: '1px solid #7dd3fc' }}>
-                    Rate per Sq.Ft.: {showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.ratePerSqftStr || (showViewIndividualCostSheetModal.costSheet.pricingSnapshot?.ratePerSqft ? `₹${Number(showViewIndividualCostSheetModal.costSheet.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A')}
+                    Rate per Sq.Ft.: {(() => {
+                      const cs = showViewIndividualCostSheetModal.costSheet;
+                      const ps = cs?.propertySnapshot || {};
+                      const propCode = cs?.propertyCode || ps?.propertyCode || cs?.propertyId;
+                      const matchedProp = properties.find((p: any) => 
+                        (p.property_code && p.property_code.toLowerCase() === String(propCode).toLowerCase()) ||
+                        (p.id && String(p.id).toLowerCase() === String(propCode).toLowerCase())
+                      );
+                      if (matchedProp) {
+                        const rawRate = matchedProp.price_sqft || matchedProp.price_per_sqft || matchedProp.rate_per_sqft || matchedProp.rate_sqft || matchedProp.asking_rate;
+                        if (rawRate) {
+                          const parsed = typeof rawRate === 'number' ? rawRate : parseFloat(String(rawRate).replace(/[^0-9.]/g, ''));
+                          if (!isNaN(parsed) && parsed > 0) return `₹${Math.round(parsed).toLocaleString('en-IN')}/Sq.Ft.`;
+                        }
+                        const basePrice = parsePriceToNumeric(matchedProp.total_price || matchedProp.price || matchedProp.base_price || matchedProp.asking_price || 0);
+                        const superArea = parseSqftToNumeric(matchedProp.super_builtup_area || matchedProp.carpet_area || 0);
+                        if (basePrice > 0 && superArea > 0) {
+                          return `₹${Math.round(basePrice / superArea).toLocaleString('en-IN')}/Sq.Ft.`;
+                        }
+                      }
+                      return cs?.formattedPriceBreakup?.ratePerSqftStr || (cs?.pricingSnapshot?.ratePerSqft ? `₹${Number(cs.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A');
+                    })()}
                   </span>
                 </h4>
 
@@ -17212,7 +18073,28 @@ export default function App() {
                       <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0f172a' }}>
                         1. Base Property Asking Price
                         <span style={{ display: 'block', fontSize: '0.73rem', color: '#0284c7', fontWeight: '600', marginTop: '2px' }}>
-                          (@ {showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.ratePerSqftStr || 'Rate N/A'} on {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.superBuiltupArea || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.super_builtup_area || '1,283 Sq.Ft.'} Super Built-Up Area)
+                          (@ {(() => {
+                            const cs = showViewIndividualCostSheetModal.costSheet;
+                            const ps = cs?.propertySnapshot || {};
+                            const propCode = cs?.propertyCode || ps?.propertyCode || cs?.propertyId;
+                            const matchedProp = properties.find((p: any) => 
+                              (p.property_code && p.property_code.toLowerCase() === String(propCode).toLowerCase()) ||
+                              (p.id && String(p.id).toLowerCase() === String(propCode).toLowerCase())
+                            );
+                            if (matchedProp) {
+                              const rawRate = matchedProp.price_sqft || matchedProp.price_per_sqft || matchedProp.rate_per_sqft || matchedProp.rate_sqft || matchedProp.asking_rate;
+                              if (rawRate) {
+                                const parsed = typeof rawRate === 'number' ? rawRate : parseFloat(String(rawRate).replace(/[^0-9.]/g, ''));
+                                if (!isNaN(parsed) && parsed > 0) return `₹${Math.round(parsed).toLocaleString('en-IN')}/Sq.Ft.`;
+                              }
+                              const basePrice = parsePriceToNumeric(matchedProp.total_price || matchedProp.price || matchedProp.base_price || matchedProp.asking_price || 0);
+                              const superArea = parseSqftToNumeric(matchedProp.super_builtup_area || matchedProp.carpet_area || 0);
+                              if (basePrice > 0 && superArea > 0) {
+                                return `₹${Math.round(basePrice / superArea).toLocaleString('en-IN')}/Sq.Ft.`;
+                              }
+                            }
+                            return cs?.formattedPriceBreakup?.ratePerSqftStr || (cs?.pricingSnapshot?.ratePerSqft ? `₹${Number(cs.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'Rate N/A');
+                          })()} on {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.superBuiltupArea || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.super_builtup_area || '1,283 Sq.Ft.'} Super Built-Up Area)
                         </span>
                       </td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.basePriceStr}</td>
@@ -17256,8 +18138,23 @@ export default function App() {
                     <tr style={{ borderBottom: '1px solid #cbd5e1', background: '#f8fafc' }}>
                       <td style={{ padding: '10px 14px', fontWeight: '800', color: '#0f172a' }}>SUBTOTAL (BEFORE TAXES & GOVERNMENT CHARGES)</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: '#0f172a' }}>
-                        {showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.subtotalStr || 
-                         formatIndianRupees(showViewIndividualCostSheetModal.costSheet.pricingSnapshot?.subtotalBeforeTax || showViewIndividualCostSheetModal.costSheet.pricingSnapshot?.basePrice || 0)}
+                        {(() => {
+                          const cs = showViewIndividualCostSheetModal.costSheet;
+                          const ps = cs?.pricingSnapshot;
+                          const pBreakup = cs?.formattedPriceBreakup;
+                          
+                          const basePrice = ps?.basePrice || parsePriceToNumeric(pBreakup?.basePriceStr) || 0;
+                          const floorRise = ps?.floorRise || parsePriceToNumeric(pBreakup?.floorRiseStr) || 0;
+                          const plc = ps?.plc || parsePriceToNumeric(pBreakup?.plcStr) || 0;
+                          const parking = ps?.parkingCharge || parsePriceToNumeric(pBreakup?.parkingStr) || 0;
+                          const club = ps?.clubCharge || parsePriceToNumeric(pBreakup?.clubStr) || 0;
+                          const maintenance = ps?.maintenance || parsePriceToNumeric(pBreakup?.maintenanceStr) || 0;
+                          const infra = ps?.infrastructureCharge || parsePriceToNumeric(pBreakup?.infrastructureStr) || 0;
+                          const discount = ps?.discountAmount || parsePriceToNumeric(pBreakup?.discountStr) || 0;
+                          
+                          const calcSubtotal = Math.max(0, (basePrice + floorRise + plc + parking + club + maintenance + infra) - discount);
+                          return formatIndianRupees(calcSubtotal);
+                        })()}
                       </td>
                     </tr>
                     <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
@@ -17321,18 +18218,32 @@ export default function App() {
                           const ps = cs?.pricingSnapshot;
                           const custSnap = cs?.customerSnapshot;
                           
-                          const basePrice = ps?.basePrice || parsePriceToNumeric(pBreakup?.basePriceStr) || 5400000;
-                          const maintenance = ps?.maintenance || parsePriceToNumeric(pBreakup?.maintenanceStr) || 600;
+                          const basePrice = ps?.basePrice || parsePriceToNumeric(pBreakup?.basePriceStr) || 0;
+                          const floorRise = ps?.floorRise || parsePriceToNumeric(pBreakup?.floorRiseStr) || 0;
+                          const plc = ps?.plc || parsePriceToNumeric(pBreakup?.plcStr) || 0;
+                          const parking = ps?.parkingCharge || parsePriceToNumeric(pBreakup?.parkingStr) || 0;
+                          const club = ps?.clubCharge || parsePriceToNumeric(pBreakup?.clubStr) || 0;
+                          const maintenance = ps?.maintenance || parsePriceToNumeric(pBreakup?.maintenanceStr) || 0;
+                          const infra = ps?.infrastructureCharge || parsePriceToNumeric(pBreakup?.infrastructureStr) || 0;
+                          const discount = ps?.discountAmount || parsePriceToNumeric(pBreakup?.discountStr) || 0;
+                          
+                          const subtotal = Math.max(0, (basePrice + floorRise + plc + parking + club + maintenance + infra) - discount);
+                          
+                          const gstPct = ps?.gstPct !== undefined ? ps.gstPct : (basePrice > 0 && basePrice < 4500000 ? 1 : 5);
+                          const stampPct = ps?.stampDutyPct !== undefined ? ps.stampDutyPct : 5;
+                          const regPct = ps?.registrationPct !== undefined ? ps.registrationPct : 1;
+                          
+                          const gst = ps?.gstAmount || Math.round((basePrice * gstPct) / 100);
+                          const stampDuty = ps?.stampDutyAmount || Math.round((basePrice * stampPct) / 100);
+                          const reg = ps?.registrationAmount || Math.round((basePrice * regPct) / 100);
+                          
                           const rawRate = custSnap?.brokerageRate || custSnap?.brokerage_rate || '2.0%';
                           const pct = parseFloat(String(rawRate).replace(/[^0-9.]/g, '')) || 2.0;
-                          const computedBrok = ps?.brokerageCharge || ps?.brokerageNum || (pct > 0 ? Math.round(basePrice * (pct / 100)) : 0);
+                          const baseSum = basePrice + floorRise + plc + parking;
+                          const computedBrok = ps?.brokerageCharge !== undefined ? ps.brokerageCharge : (pct > 0 ? Math.round(baseSum * (pct / 100)) : 0);
                           
-                          const subtotal = basePrice + maintenance + computedBrok;
-                          const gst = Math.round(basePrice * 0.05);
-                          const stampDuty = Math.round(basePrice * 0.05);
-                          const reg = Math.round(basePrice * 0.01);
-                          const totalCost = subtotal + gst + stampDuty + reg;
-                          return `₹${totalCost.toLocaleString('en-IN')}`;
+                          const totalCost = subtotal + gst + stampDuty + reg + computedBrok;
+                          return formatIndianRupees(totalCost);
                         })()}
                       </td>
                     </tr>
@@ -17541,10 +18452,10 @@ export default function App() {
                     />
                   </div>
 
-                  {/* INFRA & LEGAL */}
+                  {/* INFRA & LEGAL / LAWYER CHARGES */}
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
-                      8. Infra & Legal Fees (INR)
+                      8. Lawyer / Legal Verification Charges & Infra (INR)
                     </label>
                     <input 
                       type="number" 
@@ -17615,61 +18526,56 @@ export default function App() {
 
                   {/* GST RATE */}
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
-                      10. GST Rate Mode
+                    <label style={{ fontSize: '0.75rem', color: '#a855f7', fontWeight: '900', display: 'block', marginBottom: '4px' }}>
+                      10. Goods & Services Tax (GST) Rate (%) *
                     </label>
-                    <select 
-                      value={showRevisionModal.revGstPct} 
+                    <input 
+                      type="number"
+                      step="0.1"
+                      value={showRevisionModal.revGstPct !== undefined ? showRevisionModal.revGstPct : 5} 
                       onChange={(e) => {
                         const val = parseFloat(e.target.value);
                         setShowRevisionModal({ ...showRevisionModal, revGstPct: isNaN(val) ? 0 : val });
                       }} 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.85rem' }}
-                    >
-                      <option value={5}>5% Standard GST (Under Construction)</option>
-                      <option value={1}>1% Affordable Housing GST</option>
-                      <option value={0}>0% Exempted (Ready Completion Cert / Nil GST)</option>
-                    </select>
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #a855f7', color: '#a855f7', fontWeight: '900', padding: '8px 10px', borderRadius: '6px', fontSize: '0.85rem' }}
+                      placeholder="e.g. 5.0"
+                    />
                   </div>
 
                   {/* STAMP DUTY */}
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
-                      11. Stamp Duty Rate
+                    <label style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: '900', display: 'block', marginBottom: '4px' }}>
+                      11. Stamp Duty Charges Rate (%) *
                     </label>
-                    <select 
-                      value={showRevisionModal.revStampDutyPct} 
+                    <input 
+                      type="number"
+                      step="0.1"
+                      value={showRevisionModal.revStampDutyPct !== undefined ? showRevisionModal.revStampDutyPct : 5} 
                       onChange={(e) => {
                         const val = parseFloat(e.target.value);
                         setShowRevisionModal({ ...showRevisionModal, revStampDutyPct: isNaN(val) ? 0 : val });
                       }} 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.85rem' }}
-                    >
-                      <option value={5}>5.0% Standard Telangana/AP Rate</option>
-                      <option value={6}>6.0% Special Urban Surcharge</option>
-                      <option value={4}>4.0% Concessional Rate</option>
-                      <option value={0}>0.0% Exempted (Nil Stamp Duty / Waived)</option>
-                    </select>
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', color: '#0284c7', fontWeight: '900', padding: '8px 10px', borderRadius: '6px', fontSize: '0.85rem' }}
+                      placeholder="e.g. 5.0"
+                    />
                   </div>
 
                   {/* REGISTRATION RATE */}
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
-                      12. Registration Fee Rate
+                    <label style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: '900', display: 'block', marginBottom: '4px' }}>
+                      12. Registration & Property Transfer Fee Rate (%) *
                     </label>
-                    <select 
-                      value={showRevisionModal.revRegPct} 
+                    <input 
+                      type="number"
+                      step="0.1"
+                      value={showRevisionModal.revRegPct !== undefined ? showRevisionModal.revRegPct : 1} 
                       onChange={(e) => {
                         const val = parseFloat(e.target.value);
                         setShowRevisionModal({ ...showRevisionModal, revRegPct: isNaN(val) ? 0 : val });
                       }} 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.85rem' }}
-                    >
-                      <option value={1}>1.0% Fixed Transfer Fee</option>
-                      <option value={0.5}>0.5% Special Slab</option>
-                      <option value={2}>2.0% High Value Property</option>
-                      <option value={0}>0.0% Exempted (Nil Registration / Waived)</option>
-                    </select>
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', color: '#0284c7', fontWeight: '900', padding: '8px 10px', borderRadius: '6px', fontSize: '0.85rem' }}
+                      placeholder="e.g. 1.0"
+                    />
                   </div>
 
                   {/* SPECIFICATIONS NOTES */}

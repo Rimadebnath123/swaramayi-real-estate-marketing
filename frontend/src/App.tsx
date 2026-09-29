@@ -4338,9 +4338,74 @@ export default function App() {
   // ----------------------------------------------------
 
   // 1. Employee Directory (Strict Single Super Admin Master Store - Direct MongoDB Source)
-  const [users, setUsers] = useState<any[]>([
-    { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', password: 'Swaramayi@2026', mobile: '+91 98490 00001', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' }
-  ]);
+  const [users, setUsers] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('swaramayi_users_v7');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Error loading users from localStorage:', e);
+    }
+    return [
+      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'admin@swaramayi.com', password: 'Swaramayi@2026', mobile: '+91 94323 28947', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' },
+      { id: 'USR-02', username: 'Punita Roy Chowdhury', full_name: 'Punita Roy Chowdhury', email: 'punita13.pr@gmail.com', password: 'Swaramayi@2026', mobile: '+91 90383 25675', role: 'ADMIN', designation: 'System Administrator', branch_name: 'Head Office (Kolkata)', department: 'Sales Operations', team_name: 'Corporate Leadership Squad', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE' }
+    ];
+  });
+
+  // Authenticated Logged-In User State (Persisted in Session Storage)
+  const [loggedInUser, setLoggedInUser] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = sessionStorage.getItem('swaramayi_logged_in_user_v2');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.email) return parsed;
+        }
+      } catch (e) {
+        console.error('Error loading loggedInUser from sessionStorage:', e);
+      }
+    }
+    return {
+      id: 'USR-01',
+      username: 'Avishek Das (Super Admin)',
+      full_name: 'Avishek Das',
+      email: 'admin@swaramayi.com',
+      mobile: '+91 94323 28947',
+      role: 'SUPER_ADMIN',
+      designation: 'Managing Director & Founder',
+      branch_name: 'Head Office (Kolkata)',
+      department: 'Executive Board',
+      team_name: 'Corporate Leadership Squad',
+      manager_name: 'Self',
+      is_active: true,
+      user_status: 'ACTIVE'
+    };
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (loggedInUser) {
+        try {
+          sessionStorage.setItem('swaramayi_logged_in_user_v2', JSON.stringify(loggedInUser));
+        } catch (e) {
+          console.error('Error saving loggedInUser to sessionStorage:', e);
+        }
+      } else {
+        sessionStorage.removeItem('swaramayi_logged_in_user_v2');
+      }
+    }
+  }, [loggedInUser]);
+
+  useEffect(() => {
+    if (loggedInUser && users && users.length > 0) {
+      const match = users.find(u => u.id === loggedInUser.id || (u.email && u.email.toLowerCase() === loggedInUser.email?.toLowerCase()));
+      if (match && (match.role !== loggedInUser.role || match.full_name !== loggedInUser.full_name || match.designation !== loggedInUser.designation)) {
+        setLoggedInUser(match);
+      }
+    }
+  }, [users]);
 
   // 2. Active 6 Roles Permission Matrix (with LocalStorage Persistence)
   const [rolePermissions, setRolePermissions] = useState<any[]>(() => {
@@ -8241,7 +8306,15 @@ export default function App() {
   };
 
   const handleStartEditProfile = (userToEdit?: any) => {
-    const target = userToEdit || users.find(u => u.id === 'USR-01' || u.role === currentRole) || users[0];
+    const target = userToEdit || loggedInUser || users.find(u => u.id === loggedInUser?.id) || users[0];
+    const isLoggedSuperAdmin = loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER';
+    const targetRole = (target?.role || '').toUpperCase();
+    const isTargetAdminOrSuper = targetRole.includes('SUPER') || targetRole.includes('OWNER') || targetRole === 'ADMIN' || targetRole.includes('ADMIN');
+
+    if (!isLoggedSuperAdmin && isTargetAdminOrSuper) {
+      alert('🔒 Security Policy: Admin accounts cannot edit Admin or Super Admin profiles. Admins can only maintain staff profiles below Admin level. Super Admin maintains all profiles.');
+      return;
+    }
     setEditingProfile({ ...target });
     setShowEditProfileModal(true);
   };
@@ -8326,6 +8399,15 @@ export default function App() {
   };
 
   const handleOpenEditUserModal = (u: any) => {
+    const isLoggedSuperAdmin = loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER';
+    const targetRole = (u?.role || '').toUpperCase();
+    const isTargetAdminOrSuper = targetRole.includes('SUPER') || targetRole.includes('OWNER') || targetRole === 'ADMIN' || targetRole.includes('ADMIN');
+
+    if (!isLoggedSuperAdmin && isTargetAdminOrSuper) {
+      alert('🔒 Access Denied: Admin accounts cannot edit Admin or Super Admin profiles. Admins can only maintain staff profiles below Admin level. Super Admin maintains all profiles.');
+      return;
+    }
+
     setEditingUser(u);
     const foundMatrix = rolePermissions.find((r: any) => r.role_key === u.role || r.role_code === u.role);
     const userPerms = u.permissions || (foundMatrix ? {
@@ -9321,17 +9403,30 @@ export default function App() {
       }
 
       // Valid credentials provided
-      if (isSuperAdmin || (matchedUser && matchedUser.role === 'SUPER_ADMIN')) {
-        setCurrentRole('SUPER_ADMIN');
-      } else if (matchedUser) {
-        setCurrentRole(matchedUser.role);
-      }
+      const activeUser = matchedUser || (isSuperAdmin ? users.find(u => u.role === 'SUPER_ADMIN') : null) || {
+        id: 'USR-01',
+        username: 'Avishek Das (Super Admin)',
+        full_name: 'Avishek Das',
+        email: 'admin@swaramayi.com',
+        role: 'SUPER_ADMIN',
+        designation: 'Managing Director & Founder',
+        branch_name: 'Head Office (Kolkata)',
+        department: 'Executive Board',
+        team_name: 'Corporate Leadership Squad',
+        manager_name: 'Self',
+        is_active: true,
+        user_status: 'ACTIVE'
+      };
+
+      setLoggedInUser(activeUser);
+      setCurrentRole(activeUser.role || 'SUPER_ADMIN');
 
       setLoginErrorMsg('');
       setIsLoggedIn(true);
       setCurrentPath('/');
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('swaramayi_is_logged_in', 'true');
+        sessionStorage.setItem('swaramayi_logged_in_user_v2', JSON.stringify(activeUser));
         localStorage.removeItem('swaramayi_is_logged_in');
         window.history.pushState({}, '', '/');
       }
@@ -9523,9 +9618,10 @@ export default function App() {
                   ⚡ One-Click Quick Demo Login Roles
                 </span>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   {[
-                    { label: '👑 Super Admin / Owner', role: 'SUPER_ADMIN', email: 'admin@swaramayi.com' }
+                    { label: '👑 Super Admin / Owner', role: 'SUPER_ADMIN', email: 'admin@swaramayi.com' },
+                    { label: '🛡️ Admin Account', role: 'ADMIN', email: 'punita13.pr@gmail.com' }
                   ].map((profile, idx) => (
                     <button 
                       key={idx}
@@ -9598,11 +9694,19 @@ export default function App() {
         <div style={{ padding: '14px 20px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: isLight ? '#f1f5f9' : '#1e293b' }}>
           <label style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Active Role Scope</label>
           <select value={currentRole} onChange={(e) => setCurrentRole(e.target.value)} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '6px 10px', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}>
-            {customRoles.map((role, idx) => (
-              <option key={role.key || idx} value={role.key}>
-                {`${idx + 1}. ${(role.name || role.key).replace(/^\d+\.\s*/, '')}`}
-              </option>
-            ))}
+            {customRoles
+              .filter(role => {
+                const isUserSuperAdmin = (loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER');
+                if (!isUserSuperAdmin) {
+                  return role.key !== 'SUPER_ADMIN' && role.key !== 'OWNER' && role.role_code !== 'SUPER_ADMIN';
+                }
+                return true;
+              })
+              .map((role, idx) => (
+                <option key={role.key || idx} value={role.key}>
+                  {`${idx + 1}. ${(role.name || role.key).replace(/^\d+\.\s*/, '')}`}
+                </option>
+              ))}
           </select>
         </div>
 
@@ -10100,14 +10204,43 @@ export default function App() {
             >
               {themeMode === 'dark' ? <><Sun size={14} color="#fbbf24" /> {isMobile ? 'Light' : '☀️ Light Mode'}</> : <><Moon size={14} color="#ffffff" /> {isMobile ? 'Dark' : '🌙 Dark Mode'}</>}
             </button>
+            {!isMobile && loggedInUser && (
+              <div 
+                onClick={() => setActiveTab('profile')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: isLight ? '#f1f5f9' : '#1e293b',
+                  border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+                title="View My Logged-In Profile"
+              >
+                <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#0284c7', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '900' }}>
+                  {(loggedInUser.full_name || loggedInUser.username || 'U').charAt(0).toUpperCase()}
+                </div>
+                <span style={{ fontSize: '0.78rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
+                  {loggedInUser.full_name || loggedInUser.username}
+                </span>
+                <span style={{ fontSize: '0.65rem', fontWeight: '800', padding: '2px 6px', borderRadius: '4px', background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8' }}>
+                  {loggedInUser.role}
+                </span>
+              </div>
+            )}
             {!isMobile && (
               <button 
                 onClick={() => {
                   setIsLoggedIn(false);
+                  setLoggedInUser(null);
                   setCurrentPath('/login');
                   if (typeof window !== 'undefined') {
                     sessionStorage.removeItem('swaramayi_is_logged_in');
                     sessionStorage.removeItem('swaramayi_current_role');
+                    sessionStorage.removeItem('swaramayi_logged_in_user_v2');
                     localStorage.removeItem('swaramayi_is_logged_in');
                     window.history.pushState({}, '', '/login');
                   }
@@ -11923,6 +12056,7 @@ export default function App() {
               profileToastMessage={profileToastMessage}
               handleStartEditProfile={handleStartEditProfile}
               handleOpenSecurityAuditModal={handleOpenSecurityAuditModal}
+              loggedInUser={loggedInUser}
             />
           )}
 

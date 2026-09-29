@@ -83,6 +83,16 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
   const isSuperAdmin = isStrictSuperAdmin || roleUpper.includes('ADMIN');
   const canDelete = isStrictSuperAdmin; // STRICT SYSTEM POLICY: All delete options in CRM are only accessible by Super Admin / Owner. Admin has Edit access only.
 
+  const canEditUser = (u: any) => {
+    if (isStrictSuperAdmin) return true; // Super Admin maintains all profiles
+    const targetRole = (u?.role || '').toUpperCase();
+    // Admin cannot edit Super Admin or Admin profiles
+    if (targetRole.includes('SUPER') || targetRole.includes('OWNER') || targetRole === 'ADMIN' || targetRole.includes('ADMIN')) {
+      return false;
+    }
+    return true; // Admin can only maintain others profiles (below Admin level)
+  };
+
   const [internalSearchQuery, setInternalSearchQuery] = React.useState('');
   const [internalFilterCategory, setInternalFilterCategory] = React.useState('ALL');
   const [localApprovals, setLocalApprovals] = React.useState<any[]>([]);
@@ -1081,7 +1091,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                       </button>
 
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        {isSuperAdmin && (
+                        {canEditUser(u) && (
                           <button
                             onClick={() => handleOpenEditUserModal(u)}
                             style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -1166,7 +1176,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
 
                         <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                           <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                            {isSuperAdmin && (
+                            {canEditUser(u) && (
                               <button
                                 onClick={() => handleOpenEditUserModal(u)}
                                 style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem' }}

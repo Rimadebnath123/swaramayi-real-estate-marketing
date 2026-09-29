@@ -13,6 +13,7 @@ interface ProfileViewProps {
   profileToastMessage: string;
   handleStartEditProfile: (user: any) => void;
   handleOpenSecurityAuditModal: (user: any) => void;
+  loggedInUser?: any;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -23,9 +24,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   windowWidth,
   profileToastMessage,
   handleStartEditProfile,
-  handleOpenSecurityAuditModal
+  handleOpenSecurityAuditModal,
+  loggedInUser
 }) => {
-  const currentUser = users.find(u => u.role === currentRole || (currentRole === 'SUPER_ADMIN' && (u.id === 'USR-01' || u.role === 'SUPER_ADMIN'))) || users.find(u => u.role === currentRole) || users[0] || {
+  const activeBaseUser = loggedInUser || 
+    (loggedInUser?.id ? users.find((u: any) => u.id === loggedInUser.id) : null) || 
+    (loggedInUser?.email ? users.find((u: any) => u.email?.toLowerCase() === loggedInUser.email?.toLowerCase()) : null) || 
+    users.find((u: any) => u.role === currentRole) || 
+    users[0];
+
+  const currentUser = users.find((u: any) => u.id === activeBaseUser?.id || (u.email && u.email.toLowerCase() === activeBaseUser?.email?.toLowerCase())) || activeBaseUser || {
     id: 'USR-01',
     username: 'Avishek Das (Owner)',
     full_name: 'Avishek Das',
@@ -39,6 +47,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     is_active: true,
     user_status: 'ACTIVE'
   };
+
+  const isLoggedSuperAdmin = loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER';
+  const cRoleUpper = (currentUser.role || '').toUpperCase();
+  const isCurrentAdminOrSuperAdmin = cRoleUpper.includes('SUPER') || cRoleUpper.includes('OWNER') || cRoleUpper === 'ADMIN' || cRoleUpper.includes('ADMIN');
+  const canEditCurrentProfile = isLoggedSuperAdmin || !isCurrentAdminOrSuperAdmin;
 
   const storageKey = `swaramayi_user_avatar_${currentUser.id || currentUser.username}`;
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(() => localStorage.getItem(storageKey));
@@ -328,26 +341,52 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* ACTION BUTTONS */}
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', width: windowWidth <= 640 ? '100%' : 'auto' }}>
-          <button 
-            onClick={() => handleStartEditProfile(currentUser)}
-            style={{
-              background: '#0284c7',
-              color: '#ffffff',
-              border: 'none',
-              padding: '10px 18px',
-              borderRadius: '10px',
-              fontWeight: '800',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              flex: windowWidth <= 640 ? '1 1 calc(50% - 6px)' : 'initial'
-            }}
-          >
-            <Edit3 size={16} /> Edit Details
-          </button>
+          {canEditCurrentProfile ? (
+            <button 
+              onClick={() => handleStartEditProfile(currentUser)}
+              style={{
+                background: '#0284c7',
+                color: '#ffffff',
+                border: 'none',
+                padding: '10px 18px',
+                borderRadius: '10px',
+                fontWeight: '800',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                flex: windowWidth <= 640 ? '1 1 calc(50% - 6px)' : 'initial'
+              }}
+            >
+              <Edit3 size={16} /> Edit Details
+            </button>
+          ) : (
+            <button 
+              disabled
+              onClick={() => alert('🔒 Access Denied: Admin profiles can only be edited by Super Admin.')}
+              title="Admin profiles can only be edited by Super Admin"
+              style={{
+                background: isLight ? '#cbd5e1' : '#334155',
+                color: isLight ? '#475569' : '#94a3b8',
+                border: 'none',
+                padding: '10px 18px',
+                borderRadius: '10px',
+                fontWeight: '800',
+                fontSize: '0.82rem',
+                cursor: 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                opacity: 0.8,
+                flex: windowWidth <= 640 ? '1 1 calc(50% - 6px)' : 'initial'
+              }}
+            >
+              <Lock size={16} /> Edit Restricted (Super Admin Only)
+            </button>
+          )}
           <button 
             onClick={() => handleOpenSecurityAuditModal(currentUser)}
             style={{

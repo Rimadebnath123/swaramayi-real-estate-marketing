@@ -106,7 +106,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
-  const isSuperAdmin = isStrictSuperAdmin || roleUpper.includes('ADMIN');
+  const isSuperAdmin = isStrictSuperAdmin;
 
   const [selectedTransactionPdf, setSelectedTransactionPdf] = useState<any | null>(null);
   const [vaultViewMode, setVaultViewMode] = useState<'cards' | 'table'>(windowWidth <= 1024 ? 'cards' : 'table');

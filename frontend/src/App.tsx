@@ -4407,6 +4407,15 @@ export default function App() {
     }
   }, [users]);
 
+  useEffect(() => {
+    if (loggedInUser && loggedInUser.role) {
+      const isUserSuperAdmin = (loggedInUser.role === 'SUPER_ADMIN' || loggedInUser.role === 'OWNER');
+      if (!isUserSuperAdmin && currentRole !== loggedInUser.role) {
+        setCurrentRole(loggedInUser.role);
+      }
+    }
+  }, [loggedInUser]);
+
   // 2. Active 6 Roles Permission Matrix (with LocalStorage Persistence)
   const [rolePermissions, setRolePermissions] = useState<any[]>(() => {
     try {
@@ -9693,12 +9702,34 @@ export default function App() {
         {/* ROLE CONTEXT SWITCHER */}
         <div style={{ padding: '14px 20px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: isLight ? '#f1f5f9' : '#1e293b' }}>
           <label style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Active Role Scope</label>
-          <select value={currentRole} onChange={(e) => setCurrentRole(e.target.value)} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '6px 10px', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}>
+          <select 
+            value={currentRole} 
+            onChange={(e) => setCurrentRole(e.target.value)} 
+            disabled={!(loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER')}
+            style={{ 
+              width: '100%', 
+              background: isLight ? '#f8fafc' : '#0f172a', 
+              color: '#38bdf8', 
+              border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', 
+              borderRadius: '6px', 
+              padding: '6px 10px', 
+              fontSize: '0.8rem', 
+              fontWeight: '700', 
+              cursor: (loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER') ? 'pointer' : 'default',
+              opacity: (loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER') ? 1 : 0.85
+            }}
+          >
             {customRoles
               .filter(role => {
                 const isUserSuperAdmin = (loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER');
                 if (!isUserSuperAdmin) {
-                  return role.key !== 'SUPER_ADMIN' && role.key !== 'OWNER' && role.role_code !== 'SUPER_ADMIN';
+                  const targetRole = loggedInUser?.role || currentRole;
+                  return (
+                    role.key === targetRole ||
+                    role.role_code === targetRole ||
+                    (role.name && role.name.toUpperCase().replace(/\s+/g, '_') === targetRole) ||
+                    (role.name && role.name.toUpperCase() === targetRole.toUpperCase())
+                  );
                 }
                 return true;
               })
@@ -11693,6 +11724,15 @@ export default function App() {
               handleOpenSecurityAuditModal={handleOpenSecurityAuditModal}
               properties={properties}
               customers={customers}
+              setCustomers={setCustomers}
+              setUsers={setUsers}
+              leadsList={leadsList}
+              setLeadsList={setLeadsList}
+              scheduledVisits={scheduledVisits}
+              setScheduledVisits={setScheduledVisits}
+              bookings={bookings}
+              setBookings={setBookings}
+              syncAllToMongoDB={syncAllToMongoDB}
             />
           )}
 

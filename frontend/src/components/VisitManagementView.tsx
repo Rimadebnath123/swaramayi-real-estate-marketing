@@ -123,7 +123,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
-  const isSuperAdmin = isStrictSuperAdmin || roleUpper.includes('ADMIN');
+  const isSuperAdmin = isStrictSuperAdmin;
 
   const assignedAdvisors = useMemo(() => {
     if (!Array.isArray(users)) return [];
@@ -2001,6 +2001,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                     const isVerified = !!pvaMatch || v.status === 'OTP_VERIFIED' || v.status === 'COMPLETED' || (v.stops && v.stops.some((s: any) => s.otpVerified || s.status === 'VISIT_COMPLETED'));
                     const fallbackPvaId = (v.stops && v.stops.find((s: any) => s.pvaId)?.pvaId) || 'SRM-PVA-2026-000001';
                     const displayPvaId = pvaMatch?.projectVisitAgreementId || fallbackPvaId;
+                    const matchedProp = (properties || []).find((p: any) => p.property_code === (v.propertyCode || v.propCode) || p.id === v.propertyCode);
 
                     return (
                       <tr key={idx} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>

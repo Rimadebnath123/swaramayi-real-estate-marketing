@@ -78,22 +78,21 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
   handleOpenResumeQualification,
   handleOpenLeadModal,
 }) => {
-  // DEDUPLICATE LEADS LIST BY CUSTOMER NUMBER & MOBILE TO PREVENT DUPLICATE ROWS
-  const uniqueLeadsList = React.useMemo(() => {
+  const uniqueLeadsList = React.useMemo<any[]>(() => {
     return Array.from(
-      leadsList.reduce((map: any, item: any) => {
+      leadsList.reduce((map: Map<string, any>, item: any) => {
         const key = item.customer_number || item.customer_id || (item.mobile ? item.mobile.replace(/[^0-9]/g, '') : item.id);
         if (!map.has(key)) {
           map.set(key, item);
         }
         return map;
-      }, new Map()).values()
+      }, new Map<string, any>()).values()
     );
   }, [leadsList]);
 
   // LEADS ACTIVE IN LEAD MANAGEMENT VAULT (EXCLUDES LEADS THAT FILLED ALL 9 STEPS & SENT TO MATCHING MANAGEMENT)
-  const activeVaultLeadsList = React.useMemo(() => {
-    return uniqueLeadsList.filter(l => !(l.last_completed_step >= 9 || l.lead_status === 'MATCHING_PENDING' || l.lead_status === 'MATCHING_DONE'));
+  const activeVaultLeadsList = React.useMemo<any[]>(() => {
+    return uniqueLeadsList.filter((l: any) => !(l.last_completed_step >= 9 || l.lead_status === 'MATCHING_PENDING' || l.lead_status === 'MATCHING_DONE'));
   }, [uniqueLeadsList]);
 
   return (
@@ -184,7 +183,9 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                   style={{ background: 'transparent', border: 'none', color: isLight ? '#0f172a' : '#ffffff', outline: 'none', fontSize: windowWidth <= 640 ? '0.75rem' : '0.82rem', width: '100%', fontWeight: '700' }}
                 />
                 {searchQuery && (
-                  <X size={14} color="#94a3b8" style={{ cursor: 'pointer', flexShrink: 0 }} onClick={() => setSearchQuery('')} title="Clear Search" />
+                  <span title="Clear Search" style={{ display: 'inline-flex' }}>
+                    <X size={14} color="#94a3b8" style={{ cursor: 'pointer', flexShrink: 0 }} onClick={() => setSearchQuery('')} />
+                  </span>
                 )}
               </div>
             </div>

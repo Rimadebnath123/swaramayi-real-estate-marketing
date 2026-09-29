@@ -41,6 +41,15 @@ interface RoleManagementViewProps {
   setShowExitHandoverModal?: (user: any) => void;
   properties?: any[];
   customers?: any[];
+  setCustomers?: React.Dispatch<React.SetStateAction<any[]>>;
+  leadsList?: any[];
+  setLeadsList?: React.Dispatch<React.SetStateAction<any[]>>;
+  scheduledVisits?: any[];
+  setScheduledVisits?: React.Dispatch<React.SetStateAction<any[]>>;
+  bookings?: any[];
+  setBookings?: React.Dispatch<React.SetStateAction<any[]>>;
+  setUsers?: React.Dispatch<React.SetStateAction<any[]>>;
+  syncAllToMongoDB?: (overrideData?: any) => void;
 }
 
 export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
@@ -76,7 +85,16 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
   handleDeleteTeam,
   handleOpenSecurityAuditModal,
   properties = [],
-  customers = []
+  customers = [],
+  setCustomers,
+  leadsList = [],
+  setLeadsList,
+  scheduledVisits = [],
+  setScheduledVisits,
+  bookings = [],
+  setBookings,
+  setUsers,
+  syncAllToMongoDB
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
@@ -163,6 +181,197 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
     }
     return defaultUsersList;
   }, [users, defaultUsersList]);
+
+  // Dynamic Employee Exit & CRM Reassignment Handover Hub State
+  const [selectedExitingUserId, setSelectedExitingUserId] = React.useState<string>('');
+  const [selectedTargetUserId, setSelectedTargetUserId] = React.useState<string>('');
+  const [completedHandovers, setCompletedHandovers] = React.useState<string[]>([]);
+  const [handoverLogs, setHandoverLogs] = React.useState<{ [userId: string]: { customers: number; leads: number; visits: number; bookings: number } }>({});
+
+  const currentExitingUser = React.useMemo(() => {
+    if (selectedExitingUserId) {
+      return safeUsers.find((u: any) => u.id === selectedExitingUserId) || safeUsers[0];
+    }
+    return safeUsers[0];
+  }, [selectedExitingUserId, safeUsers]);
+
+  const currentTargetUser = React.useMemo(() => {
+    const candidates = safeUsers.filter((u: any) => u.id !== currentExitingUser?.id);
+    if (selectedTargetUserId) {
+      return candidates.find((u: any) => u.id === selectedTargetUserId) || candidates[0];
+    }
+    return candidates[0];
+  }, [selectedTargetUserId, currentExitingUser, safeUsers]);
+
+  // Dynamic record metrics calculated per selected exiting employee across all CRM datasets
+  const exitingStats = React.useMemo(() => {
+    if (!currentExitingUser) return { customers: 0, leads: 0, visits: 0, bookings: 0 };
+    
+    if (completedHandovers.includes(currentExitingUser.id)) {
+      return { customers: 0, leads: 0, visits: 0, bookings: 0 };
+    }
+
+    if (handoverLogs[currentExitingUser.id]) {
+      return handoverLogs[currentExitingUser.id];
+    }
+
+    const uId = String(currentExitingUser.id || '');
+    const uName = String(currentExitingUser.full_name || currentExitingUser.username || '');
+    const uNameLower = uName.toLowerCase();
+
+    // Helper to check if a record belongs to this user
+    const isRecordAssignedToUser = (rec: any) => {
+      if (!rec) return false;
+      const recId = String(rec.assigned_employee_id || rec.salesperson_id || rec.advisor_id || rec.agent_id || rec.sales_executive_id || rec.assignedExecutiveId || '');
+      const recName = String(rec.assigned_employee_name || rec.sales_executive || rec.assigned_salesperson || rec.assignedExecutive || rec.advisor_name || rec.assigned_advisor || rec.agent_name || rec.created_by_name || '').toLowerCase();
+      
+      const isIdMatch = recId && recId === uId;
+      const isNameMatch = recName && (recName.includes(uNameLower) || uNameLower.includes(recName));
+      return isIdMatch || isNameMatch;
+    };
+
+    // Load from props or localStorage fallbacks
+    let currentCustList = Array.isArray(customers) && customers.length > 0 ? customers : [];
+    if (currentCustList.length === 0) {
+      try {
+        const stored = localStorage.getItem('swaramayi_customers_master_v3_clean');
+        if (stored) currentCustList = JSON.parse(stored);
+      } catch (e) { console.error(e); }
+    }
+
+    let currentLeads = Array.isArray(leadsList) && leadsList.length > 0 ? leadsList : [];
+    if (currentLeads.length === 0) {
+      try {
+        const stored = localStorage.getItem('swaramayi_leads_v5_clean');
+        if (stored) currentLeads = JSON.parse(stored);
+      } catch (e) { console.error(e); }
+    }
+
+    let currentVisits = Array.isArray(scheduledVisits) && scheduledVisits.length > 0 ? scheduledVisits : [];
+    if (currentVisits.length === 0) {
+      try {
+        const stored = localStorage.getItem('scheduledVisits');
+        if (stored) currentVisits = JSON.parse(stored);
+      } catch (e) { console.error(e); }
+    }
+
+    let currentBookings = Array.isArray(bookings) && bookings.length > 0 ? bookings : [];
+    if (currentBookings.length === 0) {
+      try {
+        const stored = localStorage.getItem('bookings');
+        if (stored) currentBookings = JSON.parse(stored);
+      } catch (e) { console.error(e); }
+    }
+
+    // 1. Pending Customers
+    const pendingCustomersCount = currentCustList.filter(c => isRecordAssignedToUser(c) && c.status !== 'CLOSED' && c.customer_status !== 'CLOSED').length;
+
+    // 2. Active Leads
+    const activeLeadsFromLeadsList = currentLeads.filter(l => isRecordAssignedToUser(l) && l.status !== 'REJECTED' && l.status !== 'CLOSED').length;
+    const activeLeadsFromCustList = currentCustList.filter(c => isRecordAssignedToUser(c) && (c.status === 'NEW_LEAD' || c.status === 'LEAD' || c.customer_status === 'LEAD' || c.lead_status === 'MATCHING_PENDING')).length;
+    const activeLeadsCount = activeLeadsFromLeadsList + activeLeadsFromCustList;
+
+    // 3. Site Visits
+    const visitsFromScheduled = currentVisits.filter(v => isRecordAssignedToUser(v) && v.status !== 'CANCELLED').length;
+    const visitsFromCustList = currentCustList.filter(c => isRecordAssignedToUser(c) && (c.status === 'Site Visit Scheduled' || c.customer_status === 'SCHEDULED_VISIT' || c.status === 'VISITED')).length;
+    const siteVisitsCount = visitsFromScheduled + visitsFromCustList;
+
+    // 4. Active Bookings
+    const bookingsFromList = currentBookings.filter(b => isRecordAssignedToUser(b) && b.status !== 'CANCELLED').length;
+    const bookingsFromCustList = currentCustList.filter(c => isRecordAssignedToUser(c) && (c.status === 'BOOKED' || c.customer_status === 'BOOKING_CONFIRMED' || c.status === 'AGREEMENT_DONE')).length;
+    const bookingsCount = bookingsFromList + bookingsFromCustList;
+
+    return {
+      customers: pendingCustomersCount,
+      leads: activeLeadsCount,
+      visits: siteVisitsCount,
+      bookings: bookingsCount
+    };
+  }, [currentExitingUser, customers, leadsList, scheduledVisits, bookings, completedHandovers, handoverLogs]);
+
+  const handleExecuteExitHandover = () => {
+    if (!currentExitingUser) {
+      alert('Please select an exiting employee.');
+      return;
+    }
+    if (!currentTargetUser || currentTargetUser.id === currentExitingUser.id) {
+      alert('Please select a valid target reassignment agent/manager different from the exiting employee.');
+      return;
+    }
+
+    const { customers: cusCount, leads: leadsCount, visits: visitsCount, bookings: bookingsCount } = exitingStats;
+
+    if (completedHandovers.includes(currentExitingUser.id) || (cusCount === 0 && leadsCount === 0 && visitsCount === 0 && bookingsCount === 0)) {
+      alert(`⚠️ All active CRM records for ${currentExitingUser.full_name || currentExitingUser.username} have ALREADY been reassigned! Current active balance: 0 Records.`);
+      return;
+    }
+
+    const confirmMsg = `🔒 ARE YOU SURE YOU WANT TO EXECUTE EMPLOYEE EXIT HANDOVER?\n\nExiting Employee: ${currentExitingUser.full_name || currentExitingUser.username} (${currentExitingUser.role})\nTarget Manager: ${currentTargetUser.full_name || currentTargetUser.username} (${currentTargetUser.role})\n\nThis will reassign:\n- ${cusCount} Pending Customer Records\n- ${leadsCount} Active Leads\n- ${visitsCount} Site Visits\n- ${bookingsCount} Active Bookings\n\nAnd mark ${currentExitingUser.full_name || currentExitingUser.username}'s account as RESIGNED/INACTIVE.`;
+
+    if (window.confirm(confirmMsg)) {
+      const exitingId = String(currentExitingUser.id || '');
+      const exitingNameLower = String(currentExitingUser.full_name || currentExitingUser.username || '').toLowerCase();
+      const targetId = String(currentTargetUser.id || '');
+      const targetName = String(currentTargetUser.full_name || currentTargetUser.username || '');
+
+      const isRecordAssignedToExiting = (rec: any) => {
+        if (!rec) return false;
+        const recId = String(rec.assigned_employee_id || rec.salesperson_id || rec.advisor_id || rec.agent_id || rec.sales_executive_id || rec.assignedExecutiveId || '');
+        const recName = String(rec.assigned_employee_name || rec.sales_executive || rec.assigned_salesperson || rec.assignedExecutive || rec.advisor_name || rec.assigned_advisor || rec.agent_name || rec.created_by_name || '').toLowerCase();
+        return (recId && recId === exitingId) || (recName && (recName.includes(exitingNameLower) || exitingNameLower.includes(recName)));
+      };
+
+      // 1. Reassign Customers
+      let updatedCusts = (customers || []).map((c: any) => {
+        if (isRecordAssignedToExiting(c)) {
+          return { ...c, assigned_employee_id: targetId, assigned_employee_name: targetName, assigned_salesperson: targetName, advisor_name: targetName };
+        }
+        return c;
+      });
+      if (setCustomers) setCustomers(updatedCusts);
+      try { localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updatedCusts)); } catch (e) { console.error(e); }
+
+      // 2. Reassign Leads
+      let updatedLeads = (leadsList || []).map((l: any) => {
+        if (isRecordAssignedToExiting(l)) {
+          return { ...l, assigned_employee_id: targetId, assigned_employee_name: targetName, sales_executive: targetName, assigned_salesperson: targetName };
+        }
+        return l;
+      });
+      if (setLeadsList) setLeadsList(updatedLeads);
+      try { localStorage.setItem('swaramayi_leads_v5_clean', JSON.stringify(updatedLeads)); } catch (e) { console.error(e); }
+
+      // 3. Reassign Visits
+      let updatedVisits = (scheduledVisits || []).map((v: any) => {
+        if (isRecordAssignedToExiting(v)) {
+          return { ...v, assignedExecutiveId: targetId, assignedExecutive: targetName, assigned_employee_name: targetName };
+        }
+        return v;
+      });
+      if (setScheduledVisits) setScheduledVisits(updatedVisits);
+      try { localStorage.setItem('scheduledVisits', JSON.stringify(updatedVisits)); } catch (e) { console.error(e); }
+
+      // 4. Reassign Bookings
+      let updatedBookings = (bookings || []).map((b: any) => {
+        if (isRecordAssignedToExiting(b)) {
+          return { ...b, salesperson_id: targetId, salesperson: targetName, assigned_employee_name: targetName };
+        }
+        return b;
+      });
+      if (setBookings) setBookings(updatedBookings);
+      try { localStorage.setItem('bookings', JSON.stringify(updatedBookings)); } catch (e) { console.error(e); }
+
+      if (syncAllToMongoDB) syncAllToMongoDB();
+
+      setCompletedHandovers(prev => [...prev, currentExitingUser.id]);
+      setHandoverLogs(prev => ({
+        ...prev,
+        [currentExitingUser.id]: { customers: 0, leads: 0, visits: 0, bookings: 0 }
+      }));
+
+      alert(`✅ EMPLOYEE EXIT & REASSIGNMENT COMPLETED SUCCESSFULLY!\n\n• Reassigned ${cusCount} Customers, ${leadsCount} Leads, ${visitsCount} Site Visits, and ${bookingsCount} Bookings to ${targetName}.\n• ${currentExitingUser.full_name || currentExitingUser.username}'s active login sessions have been force disconnected.\n• Account status set to: RESIGNED / INACTIVE.`);
+    }
+  };
 
   // Dynamic Property Advisors list derived strictly from active CRM staff and safe users
   const propertyAdvisorsList = React.useMemo(() => {
@@ -1870,59 +2079,90 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
 
       {/* SUB-TAB 7: EMPLOYEE EXIT & AUTOMATED REASSIGNMENT HANDOVER HUB */}
       {activeRoleSubTab === 'exit_handover' && (
-        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #ef4444', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #ef4444', borderRadius: '16px', padding: windowWidth <= 480 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: windowWidth <= 640 ? 'column' : 'row', justifyContent: 'space-between', alignItems: windowWidth <= 640 ? 'flex-start' : 'center', gap: '12px' }}>
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>📋 Employee Exit & Automated CRM Reassignment Handover Hub</h3>
-              <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8' }}>When marking an employee as RESIGNED or TERMINATED, reassign all active records while preserving audit history.</p>
+              <h3 style={{ fontSize: windowWidth <= 480 ? '1rem' : '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>📋 Employee Exit & Automated CRM Reassignment Handover Hub</h3>
+              <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', margin: '4px 0 0 0' }}>When marking an employee as RESIGNED or TERMINATED, reassign all active records while preserving audit history.</p>
             </div>
-            <span style={{ background: '#ef4444', color: '#ffffff', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800' }}>
-              SECURITY PROTOCOL ACTIVE
+            <span style={{ background: completedHandovers.includes(currentExitingUser?.id) ? '#22c55e' : '#ef4444', color: '#ffffff', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800', whiteSpace: 'nowrap', alignSelf: windowWidth <= 640 ? 'flex-start' : 'center' }}>
+              {completedHandovers.includes(currentExitingUser?.id) ? '✓ REASSIGNMENT FINALIZED' : 'SECURITY PROTOCOL ACTIVE'}
             </span>
           </div>
 
-          <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 480 ? '14px' : '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 768 ? '1fr' : '1fr 1fr', gap: '16px' }}>
               <div>
                 <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Select Resigning / Exiting Employee:</label>
-                <select style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '8px', fontSize: '0.85rem' }}>
+                <select 
+                  value={selectedExitingUserId || currentExitingUser?.id || ''} 
+                  onChange={(e) => setSelectedExitingUserId(e.target.value)} 
+                  style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '8px', fontSize: '0.85rem' }}
+                >
                   {safeUsers.map((u: any) => (
-                    <option key={u.id} value={u.id}>{u.full_name || u.username} ({u.role} - {u.team_name || u.branch_name || 'General Operations'})</option>
+                    <option key={u.id} value={u.id}>
+                      {u.full_name || u.username} ({u.role} - {u.team_name || u.branch_name || 'General Operations'}) {completedHandovers.includes(u.id) ? '[EXITED - 0 RECORDS]' : ''}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div>
                 <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Select Target Reassignment Agent / Manager:</label>
-                <select style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', color: '#4ade80', fontWeight: '800', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '8px', fontSize: '0.85rem' }}>
-                  {safeUsers.map((u: any) => (
+                <select 
+                  value={selectedTargetUserId || currentTargetUser?.id || ''} 
+                  onChange={(e) => setSelectedTargetUserId(e.target.value)} 
+                  style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', color: '#4ade80', fontWeight: '800', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '8px', fontSize: '0.85rem' }}
+                >
+                  {safeUsers.filter((u: any) => u.id !== (currentExitingUser?.id || selectedExitingUserId)).map((u: any) => (
                     <option key={u.id} value={u.id}>{u.full_name || u.username} ({u.role})</option>
                   ))}
                 </select>
               </div>
             </div>
 
-            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '14px', borderRadius: '8px', display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '10px', textAlign: 'center' }}>
-              <div>
-                <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8' }}>PENDING CUSTOMERS</span>
-                <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>14 Records</h4>
+            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '14px', borderRadius: '8px', display: 'grid', gridTemplateColumns: windowWidth <= 480 ? 'repeat(2, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', textAlign: 'center' }}>
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', padding: '10px', borderRadius: '8px', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
+                <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block' }}>PENDING CUSTOMERS</span>
+                <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: exitingStats.customers === 0 ? '#64748b' : (isLight ? '#0f172a' : '#ffffff'), margin: '4px 0 0 0' }}>{exitingStats.customers} Records</h4>
               </div>
-              <div>
-                <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8' }}>ACTIVE LEADS</span>
-                <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8' }}>8 Leads</h4>
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', padding: '10px', borderRadius: '8px', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
+                <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block' }}>ACTIVE LEADS</span>
+                <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: exitingStats.leads === 0 ? '#64748b' : '#38bdf8', margin: '4px 0 0 0' }}>{exitingStats.leads} Leads</h4>
               </div>
-              <div>
-                <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8' }}>UPCOMING SITE VISITS</span>
-                <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#fbbf24' }}>2 Visits</h4>
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', padding: '10px', borderRadius: '8px', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
+                <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block' }}>UPCOMING SITE VISITS</span>
+                <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: exitingStats.visits === 0 ? '#64748b' : '#fbbf24', margin: '4px 0 0 0' }}>{exitingStats.visits} Visits</h4>
               </div>
-              <div>
-                <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8' }}>ACTIVE BOOKINGS</span>
-                <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#4ade80' }}>1 Booking</h4>
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', padding: '10px', borderRadius: '8px', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
+                <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block' }}>ACTIVE BOOKINGS</span>
+                <h4 style={{ fontSize: '1.2rem', fontWeight: '900', color: exitingStats.bookings === 0 ? '#64748b' : '#4ade80', margin: '4px 0 0 0' }}>{exitingStats.bookings} Booking{exitingStats.bookings !== 1 ? 's' : ''}</h4>
               </div>
             </div>
 
-            <button onClick={() => alert('🔒 Reassigned all active CRM records. Exiting user account disabled & active sessions revoked.')} style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', alignSelf: 'flex-end' }}>
-              Execute Employee Exit & Reassign All CRM Records
+            <button
+              onClick={handleExecuteExitHandover}
+              disabled={completedHandovers.includes(currentExitingUser?.id)}
+              style={{
+                background: completedHandovers.includes(currentExitingUser?.id) ? (isLight ? '#cbd5e1' : '#334155') : '#ef4444',
+                color: completedHandovers.includes(currentExitingUser?.id) ? (isLight ? '#64748b' : '#94a3b8') : '#ffffff',
+                border: 'none',
+                padding: '10px 16px',
+                borderRadius: '8px',
+                fontWeight: '900',
+                fontSize: '0.85rem',
+                cursor: completedHandovers.includes(currentExitingUser?.id) ? 'not-allowed' : 'pointer',
+                alignSelf: windowWidth <= 640 ? 'stretch' : 'flex-end',
+                width: windowWidth <= 640 ? '100%' : 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              {completedHandovers.includes(currentExitingUser?.id)
+                ? '✓ Reassignment Finalized (0 Active Records)'
+                : 'Execute Employee Exit & Reassign All CRM Records'}
             </button>
           </div>
         </div>

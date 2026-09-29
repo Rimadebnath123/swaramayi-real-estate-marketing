@@ -46,7 +46,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
   customers = [],
   onRecycleItem,
 }) => {
-  const isSuperAdmin = !currentRole || currentRole.toUpperCase().includes('SUPER ADMIN') || currentRole.toUpperCase().includes('OWNER') || currentRole.toUpperCase().includes('ADMIN');
+  const isSuperAdmin = !currentRole || currentRole.toUpperCase().includes('SUPER') || currentRole.toUpperCase().includes('OWNER');
   const getCurrentUserBranch = () => {
     const matchedUser = (users || []).find((u: any) => u.role === currentRole) || (users || []).find((u: any) => u.id === 'USR-01') || (users || [])[0];
     if (matchedUser && matchedUser.branch_name) {
@@ -933,7 +933,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justify: 'center',
+                    justifyContent: 'center',
                     gap: '6px'
                   }}
                 >
@@ -954,7 +954,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justify: 'center',
+                    justifyContent: 'center',
                     gap: '6px'
                   }}
                 >
@@ -1366,7 +1366,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                     boxShadow: '0 4px 16px rgba(34, 197, 94, 0.4)',
                     display: 'flex',
                     alignItems: 'center',
-                    justify: 'center',
+                    justifyContent: 'center',
                     gap: '8px'
                   }}
                 >

@@ -42,6 +42,7 @@ interface MatchingManagementViewProps {
   bookings?: any[];
   invoices?: any[];
   agreements?: any[];
+  onRecycleItem?: (itemData: any) => void;
 }
 
 export interface CustomerUsedPropertyCodeInfo {
@@ -195,7 +196,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
-  const isSuperAdmin = isStrictSuperAdmin || roleUpper.includes('ADMIN');
+  const isSuperAdmin = isStrictSuperAdmin;
 
   // Dynamic property status helper
   const getDynamicPropertyStatus = (p: any) => {

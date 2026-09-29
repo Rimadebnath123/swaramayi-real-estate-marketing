@@ -46,7 +46,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
   agreements = [],
   recycledItems = []
 }) => {
-  const isSuperAdmin = !currentRole || currentRole.toUpperCase().includes('SUPER ADMIN') || currentRole.toUpperCase().includes('OWNER') || currentRole.toUpperCase().includes('ADMIN');
+  const isSuperAdmin = !currentRole || currentRole.toUpperCase().includes('SUPER') || currentRole.toUpperCase().includes('OWNER');
 
   const [showEditBookingModal, setShowEditBookingModal] = useState<any | null>(null);
   const [editBookingForm, setEditBookingForm] = useState<any>({});

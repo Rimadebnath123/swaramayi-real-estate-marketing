@@ -52,7 +52,7 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
   syncAllToMongoDB,
   setActiveTab
 }) => {
-  const isSuperAdmin = !currentRole || currentRole.toUpperCase().includes('SUPER ADMIN') || currentRole.toUpperCase().includes('OWNER') || currentRole.toUpperCase().includes('ADMIN');
+  const isSuperAdmin = !currentRole || currentRole.toUpperCase().includes('SUPER') || currentRole.toUpperCase().includes('OWNER');
 
   const handleStoreInBooking = (a: any) => {
     const pva = a.pvaData || a;

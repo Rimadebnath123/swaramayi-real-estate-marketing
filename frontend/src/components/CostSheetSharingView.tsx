@@ -79,7 +79,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
-  const isSuperAdmin = isStrictSuperAdmin || roleUpper.includes('ADMIN');
+  const isSuperAdmin = isStrictSuperAdmin;
 
   const [localCostSheetSubTab, setLocalCostSheetSubTab] = React.useState<'active_cost_sheets' | 'need_to_followup'>('active_cost_sheets');
 

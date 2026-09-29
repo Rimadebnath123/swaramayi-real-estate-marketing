@@ -423,39 +423,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
             isSold: Boolean(p.isSold || p.is_sold || String(p.availability_status).toUpperCase() === 'SOLD' || String(p.availability_status).toUpperCase() === 'BOOKED')
           }));
         } else {
-          if (uNameLower.includes('punita')) {
-            advisorProps = [
-              {
-                code: 'SRM-PROP-2026-000427',
-                title: 'DHRITI APARTMENT',
-                location: 'Barasat, Kolkata',
-                type: 'Residential Flat',
-                price: 3621000,
-                isSold: false
-              },
-              {
-                code: 'SRM-PROP-2026-000426',
-                title: 'GAJAPATI APARTMENT',
-                location: 'Madhyamgram, Kolkata',
-                type: 'Residential Flat',
-                price: 3515900,
-                isSold: false
-              }
-            ];
-          } else if (uNameLower.includes('abinash')) {
-            advisorProps = [
-              {
-                code: 'SRM-PROP-2026-000425',
-                title: 'SHIBALAY',
-                location: 'Barasat, Chapadali',
-                type: 'Residential Flat',
-                price: 3000000,
-                isSold: false
-              }
-            ];
-          } else {
-            advisorProps = [];
-          }
+          advisorProps = [];
         }
       }
 
@@ -1923,8 +1891,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                   {(() => {
                     const allProps = (properties && properties.length > 0) ? properties : [
                       { id: 'SRM-PROP-2026-000421', property_code: 'SRM-PROP-2026-000421', property_title: 'SHIBALAY Apartment', locality: 'Garia, Kolkata' },
-                      { id: 'SRM-PROP-2026-000422', property_code: 'SRM-PROP-2026-000422', property_title: 'Gajapati Residency', locality: 'Alipore, Kolkata' },
-                      { id: 'SRM-PROP-2026-000423', property_code: 'SRM-PROP-2026-000423', property_title: 'Dhriti Greens & Commercial', locality: 'Salt Lake Sector 5, Kolkata' },
                       { id: 'SRM-PROP-2026-000424', property_code: 'SRM-PROP-2026-000424', property_title: 'Regent Park Greens', locality: 'Tollygunge, Kolkata' },
                       { id: 'SRM-PROP-2026-000425', property_code: 'SRM-PROP-2026-000425', property_title: 'Ballygunge Prime Residency', locality: 'Ballygunge, Kolkata' },
                       { id: 'SRM-PROP-2026-000426', property_code: 'SRM-PROP-2026-000426', property_title: 'New Alipore Heights', locality: 'New Alipore, Kolkata' }

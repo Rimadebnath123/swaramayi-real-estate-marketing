@@ -9820,7 +9820,7 @@ export default function App() {
                     Portal Sign In
                   </h3>
                   <p style={{ fontSize: '0.82rem', color: isLight ? '#64748b' : '#94a3b8', margin: '4px 0 0 0' }}>
-                    Enter credentials or select a quick demo role profile
+                    Enter authorized enterprise credentials to log in
                   </p>
                 </div>
 
@@ -9907,35 +9907,7 @@ export default function App() {
 
               </form>
 
-              {/* ONE-CLICK QUICK DEMO PROFILES */}
-              <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
-                <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '10px' }}>
-                  ⚡ One-Click Quick Demo Login Roles
-                </span>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  {[
-                    { label: '👑 Super Admin / Owner', role: 'SUPER_ADMIN', email: 'admin@swaramayi.com' },
-                    { label: '🛡️ Admin Account', role: 'ADMIN', email: 'punita13.pr@gmail.com' }
-                  ].map((profile, idx) => (
-                    <button 
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setLoginEmail(profile.email);
-                        setLoginPassword('Swaramayi@2026');
-                        setCurrentRole(profile.role);
-                        setLoginErrorMsg('');
-                        handleDoLogin(profile.email, profile.role);
-                      }}
-                      style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '2px' }}
-                    >
-                      <span>{profile.label}</span>
-                      <span style={{ fontSize: '0.7rem', color: '#0284c7', opacity: 0.9 }}>{profile.email}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
 
             </div>
           </div>

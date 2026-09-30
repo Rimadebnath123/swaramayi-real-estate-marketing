@@ -1846,7 +1846,6 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                             📌 Send to Followup
                           </button>
                           <button 
-<<<<<<< HEAD
                             onClick={() => {
                               if (stopsList && stopsList.length > 1) {
                                 setShowSelectBookingPropertyModal({ open: true, visit: v, stops: stopsList });
@@ -1855,9 +1854,6 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                 executeCreateBooking(v, singleTitle, v.costSheetId, v.developer);
                               }
                             }}
-=======
-                            onClick={() => setShowConfirmBookingModal({ open: true, visit: v })}
->>>>>>> 097d35d1ab9f130f5fae5049010aa7ac6b770b0c
                             style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}
                             title="Convert visit into Booking Code, select property if multi-visit, remove from Visit Management and transfer to Booking Management"
                           >

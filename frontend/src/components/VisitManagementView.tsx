@@ -219,6 +219,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
   };
 
   const [showEditVisitFollowupModal, setShowEditVisitFollowupModal] = useState<any>(null);
+  const [showSelectBookingPropertyModal, setShowSelectBookingPropertyModal] = useState<{ open: boolean; visit: any; stops: any[] } | null>(null);
   const [editVisitFollowupForm, setEditVisitFollowupForm] = useState<any>({
     followupDate: '',
     followupTime: '',
@@ -226,6 +227,83 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     assignedExecutive: '',
     notes: ''
   });
+
+  const executeCreateBooking = (v: any, targetPropTitle: string, targetCostSheetId?: string, targetDeveloper?: string) => {
+    const generatedBookingCode = (v.visitId && v.visitId.includes('SRM-VS-')) 
+      ? v.visitId.replace('SRM-VS-', 'SRM-BKG-') 
+      : `SRM-BKG-2026-0000${(bookings?.length || 0) + 88}`;
+    
+    const newBookingObj = {
+      id: `bkg-${Date.now()}`,
+      booking_code: generatedBookingCode,
+      booking_date: new Date().toISOString().split('T')[0],
+      customer_name: v.customerName || 'Customer',
+      customer_mobile: v.mobile || '',
+      customer_number: v.customerNumber || '',
+      project_name: targetPropTitle,
+      cost_sheet_id: targetCostSheetId || v.costSheetId || '',
+      developer_name: targetDeveloper || v.developerName || v.developer || 'Swaramayi Partner Developer',
+      tower_unit: 'Unit TBD',
+      agreement_value: '₹51,14,880',
+      token_amount: 100000,
+      payment_mode: 'UPI / Online Bank Transfer',
+      payment_ref: `TXN-SRM-${Math.floor(100000 + Math.random() * 900000)}`,
+      brokerage_rate: '2.0%',
+      brokerage_amount: 102297,
+      approval_status: 'APPROVED_LOCKED',
+      sales_executive: v.assignedExecutive || 'Avishek Das'
+    };
+
+    const updatedBookings = [newBookingObj, ...(bookings || [])];
+    const updatedVisits = (scheduledVisits || []).filter((sv: any) => 
+      sv.visitId !== v.visitId && 
+      sv.costSheetId !== v.costSheetId && 
+      (!v.id || sv.id !== v.id)
+    );
+    const updatedPlans = (visitPlans || []).filter((plan: any) => 
+      plan.visitScheduleId !== v.visitId && 
+      plan.visitPlanId !== v.visitId && 
+      (!v.id || plan.id !== v.id)
+    );
+
+    if (setBookings) setBookings(updatedBookings);
+    try { localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(updatedBookings)); } catch (e) {}
+
+    let updatedProps: any[] = [];
+    if (setProperties && properties.length > 0) {
+      updatedProps = properties.map((p: any) => {
+        const pTitle = (p.title || p.project_name || '').toString().toLowerCase();
+        const vTitle = (targetPropTitle || '').toString().toLowerCase();
+        if (pTitle && vTitle && (pTitle.includes(vTitle) || vTitle.includes(pTitle))) {
+          return { ...p, status: 'BOOKED' };
+        }
+        return p;
+      });
+      setProperties(updatedProps);
+      try { localStorage.setItem('swaramayi_properties_v4_clean', JSON.stringify(updatedProps)); } catch (e) {}
+    }
+
+    if (setScheduledVisits) setScheduledVisits(updatedVisits);
+    try { localStorage.setItem('swaramayi_scheduled_visits_v4_clean', JSON.stringify(updatedVisits)); } catch (e) {}
+
+    if (setVisitPlans) setVisitPlans(updatedPlans);
+    try { localStorage.setItem('swaramayi_visit_plans_v4_clean', JSON.stringify(updatedPlans)); } catch (e) {}
+
+    if (syncAllToMongoDB) {
+      syncAllToMongoDB({
+        bookings: updatedBookings,
+        site_visits: updatedVisits,
+        properties: updatedProps.length > 0 ? updatedProps : undefined
+      });
+    }
+
+    setShowSelectBookingPropertyModal(null);
+    setActiveTab('booking_management');
+    if (setActiveBookingSubTab) {
+      setActiveBookingSubTab('all_bookings');
+    }
+    alert(`🏢 BOOKING CREATED SUCCESSFULLY FOR ${targetPropTitle}!\n\nGenerated Booking Code: ${generatedBookingCode}\nCustomer: ${v.customerName || 'Customer'}\nProperty Booked: ${targetPropTitle}\n\nRecord removed from Visit Management and permanently transferred to Booking Management.`);
+  };
 
   React.useEffect(() => {
     const fetchAdvisorRatings = async () => {
@@ -1768,97 +1846,17 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                           </button>
                           <button 
                             onClick={() => {
-                              const generatedBookingCode = (v.visitId && v.visitId.includes('SRM-VS-')) 
-                                ? v.visitId.replace('SRM-VS-', 'SRM-BKG-') 
-                                : `SRM-BKG-2026-0000${(bookings?.length || 0) + 88}`;
-                              
-                              const newBookingObj = {
-                                id: `bkg-${Date.now()}`,
-                                booking_code: generatedBookingCode,
-                                booking_date: new Date().toISOString().split('T')[0],
-                                customer_name: v.customerName || 'Customer',
-                                customer_mobile: v.mobile || '',
-                                customer_number: v.customerNumber || '',
-                                project_name: v.propertyTitle || 'Property Visit',
-                                developer_name: 'Swaramayi Partner Developer',
-                                tower_unit: 'Unit TBD',
-                                agreement_value: '₹51,14,880',
-                                token_amount: 100000,
-                                payment_mode: 'UPI / Online Bank Transfer',
-                                payment_ref: `TXN-SRM-${Math.floor(100000 + Math.random() * 900000)}`,
-                                brokerage_rate: '2.0%',
-                                brokerage_amount: 102297,
-                                approval_status: 'APPROVED_LOCKED',
-                                sales_executive: v.assignedExecutive || 'Avishek Das'
-                              };
-
-                              const updatedBookings = [newBookingObj, ...(bookings || [])];
-                              const updatedVisits = (scheduledVisits || []).filter((sv: any) => 
-                                sv.visitId !== v.visitId && 
-                                sv.costSheetId !== v.costSheetId && 
-                                (!v.id || sv.id !== v.id)
-                              );
-                              const updatedPlans = (visitPlans || []).filter((plan: any) => 
-                                plan.visitScheduleId !== v.visitId && 
-                                plan.visitPlanId !== v.visitId && 
-                                (!v.id || plan.id !== v.id)
-                              );
-
-                              if (setBookings) {
-                                setBookings(updatedBookings);
+                              if (stopsList && stopsList.length > 1) {
+                                setShowSelectBookingPropertyModal({ open: true, visit: v, stops: stopsList });
+                              } else {
+                                const singleTitle = (v.propertyTitle || 'Property Visit').split(/\s*\(\+/)[0].trim();
+                                executeCreateBooking(v, singleTitle, v.costSheetId, v.developer);
                               }
-                              try {
-                                localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(updatedBookings));
-                              } catch (e) {}
-
-                              let updatedProps: any[] = [];
-                              if (setProperties && properties.length > 0) {
-                                updatedProps = properties.map((p: any) => {
-                                  const pTitle = (p.title || p.project_name || '').toString().toLowerCase();
-                                  const vTitle = (v.propertyTitle || v.project_name || '').toString().toLowerCase();
-                                  if (pTitle && vTitle && (pTitle.includes(vTitle) || vTitle.includes(pTitle))) {
-                                    return { ...p, status: 'BOOKED' };
-                                  }
-                                  return p;
-                                });
-                                setProperties(updatedProps);
-                                try {
-                                  localStorage.setItem('swaramayi_properties_v4_clean', JSON.stringify(updatedProps));
-                                } catch (e) {}
-                              }
-
-                              if (setScheduledVisits) {
-                                setScheduledVisits(updatedVisits);
-                              }
-                              try {
-                                localStorage.setItem('swaramayi_scheduled_visits_v4_clean', JSON.stringify(updatedVisits));
-                              } catch (e) {}
-
-                              if (setVisitPlans) {
-                                setVisitPlans(updatedPlans);
-                              }
-                              try {
-                                localStorage.setItem('swaramayi_visit_plans_v4_clean', JSON.stringify(updatedPlans));
-                              } catch (e) {}
-
-                              if (syncAllToMongoDB) {
-                                syncAllToMongoDB({
-                                  bookings: updatedBookings,
-                                  site_visits: updatedVisits,
-                                  properties: updatedProps.length > 0 ? updatedProps : undefined
-                                });
-                              }
-
-                              setActiveTab('booking_management');
-                              if (setActiveBookingSubTab) {
-                                setActiveBookingSubTab('all_bookings');
-                              }
-                              alert(`🏢 BOOKING CREATED SUCCESSFULLY!\n\nGenerated Booking Code: ${generatedBookingCode}\nCustomer: ${v.customerName || 'Bishwajit Pandey'}\nProperty: ${v.propertyTitle || 'TILOTTAMA APPARTMENT'}\n\nRecord removed from Visit Management and permanently transferred to Booking Management.`);
                             }}
                             style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}
-                            title="Convert visit into Booking Code, remove from Visit Management and transfer to Booking Management"
+                            title="Convert visit into Booking Code, select property if multi-visit, remove from Visit Management and transfer to Booking Management"
                           >
-                            🏢 Booking
+                            🛍️ Booking
                           </button>
 
                           {isSuperAdmin && (
@@ -4334,6 +4332,75 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
             </button>
           </div>
 
+        </div>
+      </div>
+    )}
+
+    {/* MODAL: SELECT VISITED PROPERTY TO BOOK FOR MULTI-VISIT SCHEDULE */}
+    {showSelectBookingPropertyModal && (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '16px' }}>
+        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #a855f7', borderRadius: '20px', width: '100%', maxWidth: '640px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '1.2rem' }}>
+                🛍️
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>Select Visited Property for Unit Booking</h3>
+                <p style={{ fontSize: '0.76rem', color: isLight ? '#64748b' : '#94a3b8', margin: '2px 0 0 0' }}>Customer visited {showSelectBookingPropertyModal.stops.length} properties. Which property does the customer want to book?</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowSelectBookingPropertyModal(null)}
+              style={{ background: 'transparent', border: 'none', color: isLight ? '#64748b' : '#94a3b8', fontSize: '1.4rem', cursor: 'pointer', fontWeight: '900' }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '12px', fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900' }}>👤 Customer: {showSelectBookingPropertyModal.visit.customerName} ({showSelectBookingPropertyModal.visit.customerNumber || showSelectBookingPropertyModal.visit.mobile})</div>
+            <div style={{ color: '#38bdf8', fontWeight: '800', fontFamily: 'monospace' }}>🔑 Master Visit Schedule ID: {showSelectBookingPropertyModal.visit.visitId}</div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '360px', overflowY: 'auto' }}>
+            {showSelectBookingPropertyModal.stops.map((stop: any, sIdx: number) => {
+              const stopNum = stop.stopNum || stop.stopNo || (sIdx + 1);
+              const propTitle = (stop.propertyTitle || 'Visited Property').split(/\s*\(\+/)[0].trim();
+              const localityStr = stop.locality || 'Madhyamgram';
+              const devStr = stop.developer || 'Partner Developer';
+
+              return (
+                <div key={sIdx} style={{ background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1.5px solid #cbd5e1' : '1.5px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ background: '#a855f7', color: '#ffffff', padding: '2px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '900' }}>STOP 0{stopNum}</span>
+                      <h4 style={{ color: '#fbbf24', fontWeight: '900', fontSize: '0.94rem', margin: 0 }}>🏢 {propTitle}</h4>
+                    </div>
+                    <span style={{ fontSize: '0.76rem', color: isLight ? '#475569' : '#cbd5e1' }}>📍 Locality: {localityStr} • Developer: {devStr}</span>
+                    <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'monospace' }}>Cost Sheet ID: {stop.costSheetId || 'CS-2026-0001'}</span>
+                  </div>
+
+                  <button
+                    onClick={() => executeCreateBooking(showSelectBookingPropertyModal.visit, propTitle, stop.costSheetId, devStr)}
+                    style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '10px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)' }}
+                  >
+                    👉 BOOK THIS PROPERTY
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '12px' }}>
+            <button
+              onClick={() => setShowSelectBookingPropertyModal(null)}
+              style={{ background: isLight ? '#f1f5f9' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     )}

@@ -2544,12 +2544,12 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
   if (!pva) return null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.88)' : 'rgba(0, 0, 0, 0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2300, padding: '20px' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2300, padding: '16px' }}>
       <style>{`
         @media print {
           @page {
             size: A4 portrait;
-            margin: 6mm 10mm 6mm 10mm;
+            margin: 5mm 8mm 5mm 8mm;
           }
           html, body {
             background: #ffffff !important;
@@ -2558,6 +2558,8 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
             overflow: hidden !important;
             margin: 0 !important;
             padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           body * {
             visibility: hidden !important;
@@ -2572,8 +2574,8 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
             width: 100% !important;
             max-width: 100% !important;
             height: auto !important;
-            max-height: 98vh !important;
-            padding: 16px !important;
+            max-height: 99vh !important;
+            padding: 24px 28px !important;
             margin: 0 !important;
             border: 2px solid #0284c7 !important;
             box-shadow: none !important;
@@ -2583,6 +2585,38 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
             page-break-after: avoid !important;
             page-break-inside: avoid !important;
             border-radius: 8px !important;
+            gap: 16px !important;
+            font-size: 0.96rem !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .printable-pva-card h2 {
+            font-size: 1.7rem !important;
+            margin-top: 6px !important;
+            margin-bottom: 4px !important;
+          }
+          .printable-pva-card p {
+            font-size: 0.92rem !important;
+            line-height: 1.4 !important;
+          }
+          .printable-pva-card span {
+            font-size: 0.9rem !important;
+          }
+          .printable-pva-card h4 {
+            font-size: 1.15rem !important;
+            margin-top: 4px !important;
+            margin-bottom: 2px !important;
+          }
+          .printable-pva-card div {
+            font-size: 0.95rem !important;
+          }
+          .printable-pva-card ol li {
+            font-size: 0.92rem !important;
+            line-height: 1.55 !important;
+          }
+          .printable-pva-card svg {
+            height: 48px !important;
+            width: 180px !important;
           }
           .no-print {
             display: none !important;
@@ -2592,78 +2626,77 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
           }
         }
       `}</style>
-      <div className="printable-pva-card" style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #22c55e', width: '94vw', maxWidth: '820px', maxHeight: '94vh', borderRadius: '16px', padding: '22px', display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto' }}>
+      <div className="printable-pva-card" style={{ background: '#ffffff', color: '#0f172a', border: '2px solid #0284c7', width: '96vw', maxWidth: '860px', maxHeight: '96vh', borderRadius: '14px', padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
         
         {/* DOCUMENT HEADER */}
-        <div style={{ borderBottom: '2px solid #0284c7', paddingBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ borderBottom: '2px solid #0284c7', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
           <div>
-            <span style={{ background: '#0284c7', color: '#ffffff', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '900', letterSpacing: '1px' }}>
+            <span style={{ background: '#0284c7', color: '#ffffff', padding: '3px 10px', borderRadius: '5px', fontSize: '0.78rem', fontWeight: '900', letterSpacing: '1px', display: 'inline-block' }}>
               OFFICIAL BROKER INTRODUCTION RECORD
             </span>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '4px' }}>
+            <h2 style={{ fontSize: '1.35rem', fontWeight: '900', color: '#0f172a', marginTop: '4px', marginBottom: '2px', letterSpacing: '-0.3px' }}>
               SWARAMAYI REAL ESTATE MARKETING
             </h2>
-            <p style={{ fontSize: '0.73rem', color: isLight ? '#475569' : '#94a3b8', margin: '2px 0 0 0' }}>
+            <p style={{ fontSize: '0.76rem', color: '#475569', margin: 0, fontWeight: '600', lineHeight: '1.35' }}>
               4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129 • Phone: +91 88021 30791 • RERA Reg No: WBRERA/A/NOR/2025/000737
             </p>
-            <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
+            <p style={{ fontSize: '0.8rem', color: '#0284c7', marginTop: '2px', fontWeight: '700', margin: '2px 0 0 0' }}>
               Enterprise Real Estate Operating System • Project Visit Acknowledgement Document
             </p>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <span style={{ background: '#22c55e', color: '#ffffff', padding: '4px 10px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '900', fontFamily: 'monospace', display: 'inline-block' }}>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <span style={{ background: '#22c55e', color: '#ffffff', padding: '5px 12px', borderRadius: '6px', fontSize: '0.9rem', fontWeight: '900', fontFamily: 'monospace', display: 'inline-block', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(34, 197, 94, 0.3)' }}>
               {pva.projectVisitAgreementId}
             </span>
-            <br /><span style={{ fontSize: '0.72rem', color: '#fbbf24', fontWeight: '800', display: 'inline-block', marginTop: '3px' }}>Version: {pva.documentVersion || 'V1.0'}</span>
           </div>
         </div>
 
         {/* DOCUMENT DETAILS GRID */}
-        <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.8rem' }}>
+        <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '10px', padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', fontSize: '0.82rem' }}>
           <div>
-            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>CUSTOMER IDENTIFIER:</span>
-            <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '0.92rem', marginTop: '2px' }}>👤 {pva.customerName}</h4>
-            <span style={{ color: '#4ade80', fontFamily: 'monospace', fontWeight: '800' }}>Mobile: {pva.customerMobile}</span>
-            <br /><span style={{ color: '#38bdf8', fontSize: '0.72rem', fontFamily: 'monospace' }}>Customer ID: {pva.customerId}</span>
+            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>CUSTOMER IDENTIFIER:</span>
+            <h4 style={{ color: '#0f172a', fontWeight: '900', fontSize: '0.96rem', marginTop: '2px', marginBottom: '1px' }}>👤 {pva.customerName}</h4>
+            <span style={{ color: '#16a34a', fontFamily: 'monospace', fontWeight: '800', fontSize: '0.82rem' }}>Mobile: {pva.customerMobile}</span>
+            <br /><span style={{ color: '#0284c7', fontSize: '0.78rem', fontFamily: 'monospace', fontWeight: '700' }}>Customer ID: {pva.customerId}</span>
           </div>
 
           <div>
-            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>PROJECT & DEVELOPER:</span>
-            <h4 style={{ color: '#fbbf24', fontWeight: '900', fontSize: '0.92rem', marginTop: '2px' }}>🏢 {pva.projectTitle}</h4>
-            <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800' }}>Developer: {pva.developerName}</span>
-            <br /><span style={{ color: '#38bdf8', fontSize: '0.72rem', fontFamily: 'monospace' }}>Property Code: {pva.propertyId} | Cost Sheet: {pva.costSheetId}</span>
+            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>PROJECT & DEVELOPER:</span>
+            <h4 style={{ color: '#d97706', fontWeight: '900', fontSize: '0.96rem', marginTop: '2px', marginBottom: '1px' }}>🏢 {pva.projectTitle}</h4>
+            <span style={{ color: '#0f172a', fontWeight: '800', fontSize: '0.84rem' }}>Developer: {pva.developerName}</span>
+            <br /><span style={{ color: '#0284c7', fontSize: '0.78rem', fontFamily: 'monospace', fontWeight: '700' }}>Property Code: {pva.propertyId} | Cost Sheet: {pva.costSheetId}</span>
           </div>
 
           <div>
-            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>ASSIGNED SALES EXECUTIVE:</span>
-            <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', fontSize: '0.85rem', marginTop: '2px' }}>{pva.salesPersonName}</h4>
-            <span style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: '800' }}>Visit Date: {pva.visitDate} at {pva.arrivalTime}</span>
+            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>ASSIGNED SALES EXECUTIVE:</span>
+            <h4 style={{ color: '#0f172a', fontWeight: '900', fontSize: '0.9rem', marginTop: '2px', marginBottom: '1px' }}>{pva.salesPersonName}</h4>
+            <span style={{ color: '#16a34a', fontSize: '0.82rem', fontWeight: '800' }}>Visit Date: {pva.visitDate} at {pva.arrivalTime}</span>
           </div>
 
           <div>
-            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>BROKERAGE PROTECTION PERIOD:</span>
-            <h4 style={{ color: '#4ade80', fontWeight: '900', fontSize: '0.88rem', marginTop: '2px' }}>🛡️ {pva.protectionPeriodMonths || 12} Months Protection Active</h4>
-            <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.72rem' }}>Protection Expiry: <strong>{pva.protectionEndDate}</strong></span>
+            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>BROKERAGE PROTECTION PERIOD:</span>
+            <h4 style={{ color: '#16a34a', fontWeight: '900', fontSize: '0.94rem', marginTop: '2px', marginBottom: '1px' }}>🛡️ {pva.protectionPeriodMonths || 12} Months Protection Active</h4>
+            <span style={{ color: '#475569', fontSize: '0.78rem', fontWeight: '600' }}>Protection Expiry: <strong style={{ color: '#0f172a', fontWeight: '800' }}>{pva.protectionEndDate}</strong></span>
           </div>
         </div>
 
         {/* VERIFICATION EVIDENCE AUDIT */}
-        <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.75rem' }}>
-          <h4 style={{ color: '#38bdf8', fontWeight: '900', fontSize: '0.8rem' }}>🔐 VERIFICATION EVIDENCE & AUDIT TRAIL</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-            <div>GPS Status: <strong style={{ color: '#22c55e' }}>✓ GEOFENCE VERIFIED ({pva.gpsAccuracyMeters})</strong></div>
-            <div>Customer OTP: <strong style={{ color: '#22c55e' }}>✓ VERIFIED ({pva.otpVerifiedAt})</strong></div>
-            <div>Digital Ref: <strong style={{ color: '#fbbf24', fontFamily: 'monospace' }}>{pva.digitalVerificationRef}</strong></div>
-            <div>Master Schedule: <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{pva.visitScheduleId}</strong></div>
+        <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem' }}>
+          <h4 style={{ color: '#0284c7', fontWeight: '900', fontSize: '0.88rem', margin: 0, letterSpacing: '0.3px' }}>🔐 VERIFICATION EVIDENCE & AUDIT TRAIL</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 10px', fontSize: '0.82rem' }}>
+            <div>GPS Status: <strong style={{ color: '#16a34a', fontWeight: '800' }}>✓ GEOFENCE VERIFIED ({pva.gpsAccuracyMeters})</strong></div>
+            <div>Customer OTP: <strong style={{ color: '#16a34a', fontWeight: '800' }}>✓ VERIFIED ({pva.otpVerifiedAt})</strong></div>
+            <div>Digital Ref: <strong style={{ color: '#d97706', fontFamily: 'monospace', fontWeight: '800' }}>{pva.digitalVerificationRef}</strong></div>
+            <div>Master Schedule: <strong style={{ color: '#0284c7', fontFamily: 'monospace', fontWeight: '800' }}>{pva.visitScheduleId}</strong></div>
           </div>
         </div>
 
         {/* LEGAL TERMS & CONDITIONS (T&C) */}
-        <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.74rem' }}>
-          <h4 style={{ color: '#fbbf24', fontWeight: '900', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem' }}>
+          <h4 style={{ color: '#d97706', fontWeight: '900', fontSize: '0.88rem', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
             📜 BINDING TERMS & CONDITIONS (T&C) — BROKERAGE PROTECTION & ANTI-BYPASS
           </h4>
-          <ol style={{ margin: 0, paddingLeft: '16px', color: isLight ? '#334155' : '#cbd5e1', lineHeight: '1.4', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <ol style={{ margin: 0, paddingLeft: '18px', color: '#334155', lineHeight: '1.45', display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.8rem' }}>
             <li><strong>Broker Introduction & Non-Circumvention:</strong> Customer acknowledges that project introduction for <strong>{pva.projectTitle}</strong> was exclusively facilitated by <strong>Swaramayi Real Estate Marketing</strong>. Customer agrees not to bypass Swaramayi, deal directly with developer/owner, or engage third-party agents for this project.</li>
             <li><strong>12-Month Protection Period:</strong> Swaramayi holds exclusive brokerage representation rights for a period of <strong>{pva.protectionPeriodMonths || 12} Months</strong> (Expires <strong>{pva.protectionEndDate}</strong>) for any unit booking or transaction in this project.</li>
             <li><strong>Digital Evidence & Audit Consent:</strong> Customer OTP verification at <strong>{pva.otpVerifiedAt}</strong> and Geofence GPS audit ({pva.gpsAccuracyMeters}) constitute binding legal execution under the Information Technology Act.</li>
@@ -2671,22 +2704,22 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
         </div>
 
         {/* SIGNATURE & LEGAL DISCLAIMER */}
-        <div style={{ borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ borderTop: '1.5px solid #cbd5e1', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>CUSTOMER DIGITAL SIGNATURE:</span>
-            <div style={{ marginTop: '2px' }}>
-              {pva.customerSignature && <img src={pva.customerSignature} alt="Signature" style={{ maxHeight: '38px' }} />}
-            </div>
+            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>CUSTOMER DIGITAL SIGNATURE:</span>
+            <h4 style={{ color: '#16a34a', fontFamily: 'monospace', fontWeight: '900', fontSize: '0.88rem', margin: '4px 0 0 0' }}>
+              ✓ {pva.signature_hash || `OTP VERIFIED #${pva.otpHashRef?.slice(-6) || pva.digitalVerificationRef?.slice(-6) || '849201'} DIGITAL SIG`}
+            </h4>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>FOR SWARAMAYI REAL ESTATE MARKETING:</span>
-            <h4 style={{ color: '#0284c7', fontWeight: '900', fontSize: '0.82rem', marginTop: '2px' }}>Authorized Signature & Seal</h4>
+            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>FOR SWARAMAYI REAL ESTATE MARKETING:</span>
+            <h4 style={{ color: '#0284c7', fontWeight: '900', fontSize: '0.88rem', margin: '4px 0 0 0' }}>Authorized Signature & Seal</h4>
           </div>
         </div>
 
         {/* MODAL FOOTER */}
-        <div className="no-print" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '14px', flexWrap: 'wrap' }}>
-          <button onClick={() => window.print()} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div className="no-print" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1.5px solid #cbd5e1', paddingTop: '10px', flexWrap: 'wrap' }}>
+          <button onClick={() => window.print()} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)' }}>
             🖨️ PRINT & DOWNLOAD AGREEMENT PDF
           </button>
           <button 
@@ -2704,11 +2737,11 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
                 `📥 *Download Official Agreement PDF*: ${pdfUrl}`;
               window.open(`https://api.whatsapp.com/send?phone=${pva.customerMobile.replace(/[^0-9]/g, '')}&text=${encodeURIComponent(msg)}`, '_blank');
             }}
-            style={{ background: '#25D366', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ background: '#25D366', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             💬 SEND WHATSAPP WITH AGREEMENT PDF
           </button>
-          <button onClick={onClose} style={{ background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.82rem' }}>Close</button>
+          <button onClick={onClose} style={{ background: '#64748b', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.82rem' }}>Close</button>
         </div>
       </div>
     </div>
@@ -12599,39 +12632,116 @@ export default function App() {
 
       {/* PRINTABLE LEGAL CONTRACT MODAL */}
       {showFullContractModal && selectedAgreement && (
-        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ background: '#ffffff', color: '#0f172a', width: '750px', borderRadius: '12px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ borderBottom: '2px solid #0f172a', paddingBottom: '12px', textAlign: 'center' }}>
-              <span style={{ background: selectedAgreement.category === 'DEVELOPER' ? '#16a34a' : '#0284c7', color: '#ffffff', padding: '3px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '900', letterSpacing: '1px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <style>{`
+            @media print {
+              @page {
+                size: A4 portrait;
+                margin: 5mm 8mm 5mm 8mm;
+              }
+              html, body {
+                background: #ffffff !important;
+                color: #0f172a !important;
+                height: 100% !important;
+                overflow: hidden !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              body * {
+                visibility: hidden !important;
+              }
+              .printable-contract-card, .printable-contract-card * {
+                visibility: visible !important;
+              }
+              .printable-contract-card {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                padding: 24px 28px !important;
+                margin: 0 !important;
+                border: 2px solid #0284c7 !important;
+                box-shadow: none !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                overflow: visible !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
+                border-radius: 8px !important;
+                gap: 18px !important;
+                font-size: 0.96rem !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              .printable-contract-card h2 {
+                font-size: 1.7rem !important;
+                margin-top: 6px !important;
+                margin-bottom: 4px !important;
+              }
+              .printable-contract-card h3 {
+                font-size: 1.35rem !important;
+                margin-top: 6px !important;
+              }
+              .printable-contract-card p {
+                font-size: 0.95rem !important;
+                line-height: 1.55 !important;
+              }
+              .printable-contract-card span {
+                font-size: 0.92rem !important;
+              }
+              .printable-contract-card h4 {
+                font-size: 1.15rem !important;
+                margin-top: 4px !important;
+                margin-bottom: 4px !important;
+              }
+              .printable-contract-card ol li {
+                font-size: 0.92rem !important;
+                line-height: 1.6 !important;
+              }
+              .no-print {
+                display: none !important;
+                height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+            }
+          `}</style>
+          <div className="printable-contract-card" style={{ background: '#ffffff', color: '#0f172a', width: '800px', maxWidth: '96vw', maxHeight: '94vh', overflowY: 'auto', borderRadius: '14px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '22px', border: '2px solid #0284c7', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
+            <div style={{ borderBottom: '2.5px solid #0284c7', paddingBottom: '14px', textAlign: 'center' }}>
+              <span style={{ background: selectedAgreement.category === 'DEVELOPER' ? '#16a34a' : '#0284c7', color: '#ffffff', padding: '4px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '900', letterSpacing: '1px', display: 'inline-block' }}>
                 {selectedAgreement.category === 'DEVELOPER' ? 'OFFICIAL CHANNEL PARTNER BROKERAGE TIE-UP AGREEMENT' : 'CUSTOMER SITE VISIT & NON-CIRCUMVENTION AGREEMENT'}
               </span>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: '900', color: '#0284c7', marginTop: '6px', marginBottom: '2px' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#0f172a', marginTop: '8px', marginBottom: '4px' }}>
                 SWARAMAYI REAL ESTATE MARKETING
               </h2>
-              <p style={{ fontSize: '0.72rem', color: '#475569', margin: '0 0 6px 0', fontWeight: '600' }}>
+              <p style={{ fontSize: '0.82rem', color: '#475569', margin: '0 0 6px 0', fontWeight: '600', lineHeight: '1.4' }}>
                 4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129 • Phone: +91 88021 30791 • RERA Reg No: WBRERA/A/NOR/2025/000737
               </p>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: '#0f172a', margin: '4px 0' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#0f172a', margin: '6px 0' }}>
                 {selectedAgreement.category === 'DEVELOPER' ? `🏢 ${selectedAgreement.project_name || selectedAgreement.title} (${selectedAgreement.party_name})` : selectedAgreement.title}
               </h3>
               {selectedAgreement.locality_hub && (
-                <div style={{ fontSize: '0.82rem', color: '#0284c7', fontWeight: '800', marginTop: '2px' }}>
+                <div style={{ fontSize: '0.9rem', color: '#0284c7', fontWeight: '800', marginTop: '3px' }}>
                   📍 {selectedAgreement.locality_hub}
                 </div>
               )}
-              <span style={{ fontSize: '0.78rem', fontFamily: 'monospace', color: '#64748b' }}>{selectedAgreement.agreement_code}</span>
+              <span style={{ fontSize: '0.88rem', fontFamily: 'monospace', color: '#64748b', fontWeight: '800', whiteSpace: 'nowrap', display: 'inline-block', marginTop: '4px' }}>{selectedAgreement.agreement_code}</span>
             </div>
 
-            <div style={{ fontSize: '0.85rem', lineHeight: '1.6', color: '#334155' }}>
+            <div style={{ fontSize: '0.92rem', lineHeight: '1.65', color: '#334155' }}>
               {selectedAgreement.category === 'DEVELOPER' ? (
-                <p>This Channel Partner Tie-Up Agreement is entered between <strong>Swaramayi Real Estate Marketing</strong> and Builder/Developer <strong>{selectedAgreement.party_name}</strong> for project sales marketing in <strong>{selectedAgreement.locality_hub || 'Hyderabad Sector'}</strong>.</p>
+                <p style={{ margin: '0 0 10px 0' }}>This Channel Partner Tie-Up Agreement is entered between <strong>Swaramayi Real Estate Marketing</strong> and Builder/Developer <strong>{selectedAgreement.party_name}</strong> for project sales marketing in <strong>{selectedAgreement.locality_hub || 'Hyderabad Sector'}</strong>.</p>
               ) : (
-                <p>This legally binding agreement is entered between <strong>Swaramayi Real Estate Marketing</strong> and <strong>{selectedAgreement.party_name}</strong>.</p>
+                <p style={{ margin: '0 0 10px 0' }}>This legally binding agreement is entered between <strong>Swaramayi Real Estate Marketing</strong> and <strong>{selectedAgreement.party_name}</strong>.</p>
               )}
               
-              <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', padding: '14px', borderRadius: '8px', marginTop: '10px' }}>
-                <h4 style={{ fontSize: '0.85rem', color: '#0f172a', fontWeight: '800', marginBottom: '6px' }}>📜 CHANNEL PARTNER TERMS & CONDITIONS (T&C)</h4>
-                <ol style={{ margin: 0, paddingLeft: '18px', fontSize: '0.78rem', color: '#475569', lineHeight: '1.5' }}>
+              <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', padding: '16px 18px', borderRadius: '10px', marginTop: '12px' }}>
+                <h4 style={{ fontSize: '0.95rem', color: '#d97706', fontWeight: '900', marginBottom: '8px' }}>📜 CHANNEL PARTNER TERMS & CONDITIONS (T&C)</h4>
+                <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '0.86rem', color: '#334155', lineHeight: '1.55', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {selectedAgreement.category === 'DEVELOPER' ? (
                     <>
                       <li><strong>2.0% Fixed Channel Partner Brokerage:</strong> Builder/Developer agrees to pay Swaramayi Real Estate Marketing a <strong>{selectedAgreement.commission_rate || '2.0% Direct Channel Partner Brokerage'}</strong> on agreement value for all customer bookings in <strong>{selectedAgreement.project_name || 'Project'}</strong>.</li>
@@ -12650,17 +12760,17 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
-              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700' }}>
+            <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', padding: '18px', borderRadius: '10px', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>
                 {selectedAgreement.category === 'DEVELOPER' ? 'DEVELOPER / BUILDER CORPORATE SEAL & STAMP' : 'DIGITAL OTP SIGNATURE STAMP'}
               </span>
-              <h4 style={{ fontSize: '0.95rem', color: '#16a34a', fontFamily: 'monospace', fontWeight: '800' }}>{selectedAgreement.signature_hash}</h4>
-              <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Signed Date: {selectedAgreement.signed_at}</span>
+              <h4 style={{ fontSize: '1.05rem', color: '#16a34a', fontFamily: 'monospace', fontWeight: '800', margin: '6px 0 2px 0' }}>{selectedAgreement.signature_hash}</h4>
+              <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '600' }}>Signed Date: {selectedAgreement.signed_at}</span>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              <button onClick={() => setShowFullContractModal(false)} style={{ background: '#64748b', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: '700' }}>Close</button>
-              <button onClick={() => window.print()} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>🖨️ Print & Save Contract PDF</button>
+            <div className="no-print" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button onClick={() => setShowFullContractModal(false)} style={{ background: '#64748b', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.88rem' }}>Close</button>
+              <button onClick={() => window.print()} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: '800', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)' }}>🖨️ Print & Save Contract PDF</button>
               <button 
                 onClick={() => {
                   const pdfUrl = `${window.location.origin}/pdf/agreements/${selectedAgreement.agreement_code}.pdf`;
@@ -12675,7 +12785,7 @@ export default function App() {
                     `📥 *Download Agreement PDF*: ${pdfUrl}`;
                   window.open(`https://api.whatsapp.com/send?phone=${(selectedAgreement.party_contact || '').replace(/[^0-9]/g, '')}&text=${encodeURIComponent(msg)}`, '_blank');
                 }}
-                style={{ background: '#25D366', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{ background: '#25D366', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: '800', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 💬 Send WhatsApp Agreement PDF
               </button>

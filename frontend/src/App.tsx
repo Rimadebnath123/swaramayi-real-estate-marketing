@@ -278,7 +278,7 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: {
       nodeType: 'PICKUP',
       title: plan.customerName ? `${plan.customerName} (Pickup)` : 'Customer Pickup',
       subtitle: `Customer: ${plan.customerName || 'Homebuyer'} (${plan.mobile || plan.customerNumber || 'N/A'})`,
-      address: plan.pickupAddress || 'Barasat Banamalipur, Kolkata, West Bengal - 700124',
+      address: plan.pickupAddress || 'Direct Pickup at Location',
       lat: pickLat,
       lng: pickLng,
       icon: '🟢',
@@ -329,7 +329,7 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: {
       nodeType: 'DROP',
       title: plan.customerName ? `${plan.customerName} (Drop)` : 'Customer Drop Point',
       subtitle: `Customer: ${plan.customerName || 'Homebuyer'}`,
-      address: plan.dropAddress || 'Barasat Chapadali Bus Terminus Hub, Kolkata - 700124',
+      address: plan.dropAddress || 'Direct Drop at Location',
       lat: dropLat,
       lng: dropLng,
       icon: '🔴',
@@ -338,7 +338,33 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: {
       markerColor: '#ef4444'
     };
 
-    return [officeNode, pickupNode, ...projectNodes, dropNode];
+    const transportStr = (plan.transport || '').toLowerCase();
+    const isSelfDrivingMode = transportStr.includes('self') || transportStr.includes('direct') || transportStr.includes('driving');
+    const hasCustomPickup = Boolean(
+      plan.pickupAddress &&
+      plan.pickupAddress.trim() &&
+      !plan.pickupAddress.toLowerCase().includes('barasat banamalipur') &&
+      !plan.pickupAddress.toLowerCase().includes('direct arrival') &&
+      !plan.pickupAddress.toLowerCase().includes('direct pickup')
+    );
+    const hasCustomDrop = Boolean(
+      plan.dropAddress &&
+      plan.dropAddress.trim() &&
+      !plan.dropAddress.toLowerCase().includes('barasat chapadali') &&
+      !plan.dropAddress.toLowerCase().includes('direct departure') &&
+      !plan.dropAddress.toLowerCase().includes('direct drop')
+    );
+
+    const resultNodes = [officeNode];
+    if (!isSelfDrivingMode || hasCustomPickup) {
+      resultNodes.push(pickupNode);
+    }
+    resultNodes.push(...projectNodes);
+    if (!isSelfDrivingMode || hasCustomDrop) {
+      resultNodes.push(dropNode);
+    }
+
+    return resultNodes;
   }, [plan]);
 
   useEffect(() => {
@@ -958,7 +984,11 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: {
               </span>
             </div>
             <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '3px 0 0 0' }}>
-              CURRENT ROUTE: <strong style={{ color: '#38bdf8' }}>Office ➔ Customer Pickup ➔ Projects ➔ Customer Drop</strong>
+              CURRENT ROUTE: <strong style={{ color: '#38bdf8' }}>
+                {(plan?.transport || '').toLowerCase().includes('self') || (plan?.transport || '').toLowerCase().includes('direct') || (plan?.transport || '').toLowerCase().includes('driving')
+                  ? 'Office ➔ Project Sites (Direct Site Arrival & Self Driving)'
+                  : 'Office ➔ Customer Pickup ➔ Projects ➔ Customer Drop'}
+              </strong>
             </p>
           </div>
 
@@ -1149,9 +1179,9 @@ function ScheduleVisitModalContent({
     targetCust?.locality || 
     (targetCustName ? `${targetCustName}'s Residence Address` : 'Customer Residence Address');
 
-  const [pickupAddress, setPickupAddress] = useState<string>(custHomeAddress);
+  const [pickupAddress, setPickupAddress] = useState<string>('');
   const [pickupTime, setPickupTime] = useState<string>('10:00 AM');
-  const [dropAddress, setDropAddress] = useState<string>(custHomeAddress);
+  const [dropAddress, setDropAddress] = useState<string>('');
   const [visitDate, setVisitDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState<string>('10:00 AM');
   const [assignedExec, setAssignedExec] = useState<string>('Avishek Das (Super Admin)');
@@ -1294,12 +1324,13 @@ function ScheduleVisitModalContent({
       visitDate: visitDate,
       startTime: startTime,
       status: 'ASSIGNED',
-      pickupAddress: pickupAddress || 'Barasat Banamalipur, Kolkata, West Bengal - 700124',
+      transport: transportMode || '🏎️ Self Driving / Direct Arrival at Site',
+      pickupAddress: pickupAddress || '',
       pickupLat: '22.720500° N',
       pickupLng: '88.485000° E',
       pickupStatus: 'PENDING',
       pickupTime: pickupTime,
-      dropAddress: dropAddress || 'Barasat Chapadali Bus Terminus Hub, Kolkata, West Bengal - 700124',
+      dropAddress: dropAddress || '',
       dropLat: '22.725000° N',
       dropLng: '88.498000° E',
       dropStatus: 'PENDING',
@@ -1603,12 +1634,12 @@ function ScheduleVisitModalContent({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px' }}>
           <div>
             <label style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: '900', display: 'block', marginBottom: '4px' }}>1. Customer Pickup Address</label>
-            <input type="text" value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.82rem' }} />
+            <input type="text" value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)} placeholder="Type Customer Pickup Address..." style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.82rem' }} />
           </div>
 
           <div>
             <label style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: '900', display: 'block', marginBottom: '4px' }}>2. Customer Drop Address</label>
-            <input type="text" value={dropAddress} onChange={(e) => setDropAddress(e.target.value)} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.82rem' }} />
+            <input type="text" value={dropAddress} onChange={(e) => setDropAddress(e.target.value)} placeholder="Type Customer Drop Address..." style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.82rem' }} />
           </div>
 
           <div>
@@ -1823,9 +1854,9 @@ function VisitDetailModalContent({
 
               <div>
                 <span style={{ fontSize: '0.7rem', color: isLight ? '#475569' : '#94a3b8', fontWeight: '800' }}>PICKUP & DROP LOGISTICS</span>
-                <p style={{ color: isLight ? '#0f172a' : '#ffffff', marginTop: '2px' }}>🟢 Pickup: <strong>{plan.pickupAddress || 'Kondapur, Hyderabad'}</strong></p>
-                <p style={{ color: isLight ? '#0f172a' : '#ffffff', marginTop: '4px' }}>🔴 Drop: <strong>{plan.dropAddress || 'Kondapur, Hyderabad'}</strong></p>
-                <span style={{ color: isLight ? '#b45309' : '#fbbf24', fontSize: '0.75rem', fontWeight: '800', display: 'block', marginTop: '4px' }}>Transport Mode: {plan.transport || 'Cab Pick & Drop'}</span>
+                <p style={{ color: isLight ? '#0f172a' : '#ffffff', marginTop: '2px' }}>🟢 Pickup: <strong>{plan.pickupAddress || ((plan.transport || '').toLowerCase().includes('self') || (plan.transport || '').toLowerCase().includes('direct') ? 'Direct Arrival at Site' : 'Direct Pickup at Location')}</strong></p>
+                <p style={{ color: isLight ? '#0f172a' : '#ffffff', marginTop: '4px' }}>🔴 Drop: <strong>{plan.dropAddress || ((plan.transport || '').toLowerCase().includes('self') || (plan.transport || '').toLowerCase().includes('direct') ? 'Direct Departure from Site' : 'Direct Drop at Location')}</strong></p>
+                <span style={{ color: isLight ? '#b45309' : '#fbbf24', fontSize: '0.75rem', fontWeight: '800', display: 'block', marginTop: '4px' }}>Transport Mode: {plan.transport || '🏎️ Self Driving / Direct Arrival at Site'}</span>
               </div>
             </div>
           )}
@@ -1972,13 +2003,26 @@ function VisitDetailModalContent({
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button 
                   onClick={() => {
-                    const isCabNeeded = 
-                      (plan?.transport || '').toLowerCase().includes('cab') ||
-                      (plan?.transport || '').toLowerCase().includes('pick') ||
-                      Boolean(plan?.pickupAddress || plan?.pickupLat);
+                    const transportStr = (plan?.transport || '').toLowerCase();
+                    const isSelfDrivingMode = transportStr.includes('self') || transportStr.includes('direct') || transportStr.includes('driving');
+                    const hasCustomPickup = Boolean(
+                      plan?.pickupAddress &&
+                      plan.pickupAddress.trim() &&
+                      !plan.pickupAddress.toLowerCase().includes('barasat banamalipur') &&
+                      !plan.pickupAddress.toLowerCase().includes('direct arrival') &&
+                      !plan.pickupAddress.toLowerCase().includes('direct pickup')
+                    );
+                    const isCabNeeded = !isSelfDrivingMode && (
+                      transportStr.includes('cab') ||
+                      transportStr.includes('pick') ||
+                      hasCustomPickup
+                    );
 
-                    const validStops = (plan?.stops || []).filter((s: any) => s && (s.latitude || s.longitude));
+                    const validStops = (plan?.stops || []).filter((s: any) => s && (s.latitude || s.longitude || s.address));
                     const projectCoords = validStops.map((s: any) => {
+                      if (s.address && s.address.trim() && !s.address.toLowerCase().includes('hyderabad') && !s.address.toLowerCase().includes('kondapur')) {
+                        return encodeURIComponent(s.address.trim());
+                      }
                       const lat = (s.latitude || '22.722361').replace(/[^0-9.-]/g, '');
                       const lng = (s.longitude || '88.493403').replace(/[^0-9.-]/g, '');
                       return `${lat},${lng}`;
@@ -1994,14 +2038,14 @@ function VisitDetailModalContent({
                       const dropPt = (cleanDropLat && cleanDropLng) ? `${cleanDropLat},${cleanDropLng}` : (plan.dropAddress ? encodeURIComponent(plan.dropAddress) : '22.725000,88.498000');
 
                       const waypointsStr = [pickPt, ...projectCoords].join('|');
-                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}`, '_blank');
+                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`, '_blank');
                     } else {
                       if (projectCoords.length > 1) {
                         const dest = projectCoords[projectCoords.length - 1];
                         const waypointsStr = projectCoords.slice(0, projectCoords.length - 1).join('|');
-                        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest}&waypoints=${encodeURIComponent(waypointsStr)}`, '_blank');
+                        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest}&waypoints=${encodeURIComponent(waypointsStr)}&travelmode=driving&dirflg=d`, '_blank');
                       } else if (projectCoords.length === 1) {
-                        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${projectCoords[0]}`, '_blank');
+                        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${projectCoords[0]}&travelmode=driving&dirflg=d`, '_blank');
                       }
                     }
                   }}
@@ -2009,26 +2053,30 @@ function VisitDetailModalContent({
                 >
                   🚀 START FULL MULTI-STOP ROUTE NAVIGATION ({ (plan?.stops || []).length } Stops)
                 </button>
-                <button 
-                  onClick={() => {
-                    const cleanLat = plan.pickupLat ? plan.pickupLat.replace(/[^0-9.]/g, '') : '22.720500';
-                    const cleanLng = plan.pickupLng ? plan.pickupLng.replace(/[^0-9.]/g, '') : '88.485000';
-                    window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${cleanLat},${cleanLng}`, '_blank');
-                  }}
-                  style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
-                >
-                  🚀 Navigate to Pickup Location
-                </button>
-                <button 
-                  onClick={() => {
-                    const cleanLat = plan.dropLat ? plan.dropLat.replace(/[^0-9.]/g, '') : '22.725000';
-                    const cleanLng = plan.dropLng ? plan.dropLng.replace(/[^0-9.]/g, '') : '88.498000';
-                    window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${cleanLat},${cleanLng}`, '_blank');
-                  }}
-                  style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
-                >
-                  🚀 Navigate to Drop Location
-                </button>
+                {(!((plan?.transport || '').toLowerCase().includes('self') || (plan?.transport || '').toLowerCase().includes('direct') || (plan?.transport || '').toLowerCase().includes('driving')) || Boolean(plan?.pickupAddress && plan?.pickupAddress.trim() && !plan?.pickupAddress.toLowerCase().includes('direct arrival'))) && (
+                  <button 
+                    onClick={() => {
+                      const cleanLat = plan.pickupLat ? plan.pickupLat.replace(/[^0-9.]/g, '') : '22.720500';
+                      const cleanLng = plan.pickupLng ? plan.pickupLng.replace(/[^0-9.]/g, '') : '88.485000';
+                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${cleanLat},${cleanLng}`, '_blank');
+                    }}
+                    style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
+                  >
+                    🚀 Navigate to Pickup Location
+                  </button>
+                )}
+                {(!((plan?.transport || '').toLowerCase().includes('self') || (plan?.transport || '').toLowerCase().includes('direct') || (plan?.transport || '').toLowerCase().includes('driving')) || Boolean(plan?.dropAddress && plan?.dropAddress.trim() && !plan?.dropAddress.toLowerCase().includes('direct arrival'))) && (
+                  <button 
+                    onClick={() => {
+                      const cleanLat = plan.dropLat ? plan.dropLat.replace(/[^0-9.]/g, '') : '22.725000';
+                      const cleanLng = plan.dropLng ? plan.dropLng.replace(/[^0-9.]/g, '') : '88.498000';
+                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${cleanLat},${cleanLng}`, '_blank');
+                    }}
+                    style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
+                  >
+                    🚀 Navigate to Drop Location
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -3610,11 +3658,13 @@ export default function App() {
       return s.includes('hyderabad') || s.includes('kondapur') || (s.includes('17.4') && s.includes('78.3'));
     };
 
-    let newPickup = p.pickupAddress;
-    if (!newPickup || isHyd(newPickup)) newPickup = 'Barasat Banamalipur, Kolkata, West Bengal - 700124';
+    let newPickup = p.pickupAddress || '';
+    if (isHyd(newPickup)) newPickup = '';
 
-    let newDrop = p.dropAddress;
-    if (!newDrop || isHyd(newDrop)) newDrop = 'Barasat Chapadali Bus Terminus Hub, Kolkata, West Bengal - 700124';
+    let newDrop = p.dropAddress || '';
+    if (isHyd(newDrop)) newDrop = '';
+
+    let newTransport = p.transport || '🏎️ Self Driving / Direct Arrival at Site';
 
     let newPickLat = p.pickupLat;
     if (!newPickLat || isHyd(newPickLat)) newPickLat = '22.720500° N';
@@ -3635,12 +3685,13 @@ export default function App() {
       if (!sLat || isHyd(sLat) || isHyd(s.address)) sLat = '22.722361° N';
       if (!sLng || isHyd(sLng) || isHyd(s.address)) sLng = '88.493403° E';
       let sAddr = s.address;
-      if (!sAddr || isHyd(sAddr)) sAddr = 'Barasat, West Bengal 700124';
+      if (isHyd(sAddr)) sAddr = s.locality || 'Barasat Site';
       return { ...s, latitude: sLat, longitude: sLng, address: sAddr };
     });
 
     return {
       ...p,
+      transport: newTransport,
       pickupAddress: newPickup,
       dropAddress: newDrop,
       pickupLat: newPickLat,
@@ -18788,18 +18839,29 @@ export default function App() {
       {/* MODAL 7: SCHEDULE SITE VISIT FOR COST SHEET MODAL (MULTI-PROPERTY VISIT SCHEDULE CREATOR) */}
       {showScheduleVisitModal && showScheduleVisitModal.open && (() => {
         const initialCS = showScheduleVisitModal.costSheet || individualCostSheets[0];
-        const targetCustomerId = initialCS?.customerId || initialCS?.customerSnapshot?.customerNumber || 'SRM-CUS-2026-000184';
-        const targetCustName = initialCS?.customerSnapshot?.customerName || 'Rohan Deshmukh';
-        const targetCustMobile = initialCS?.customerSnapshot?.mobile || '+91 98490 12345';
+        const rawCustId = (initialCS?.customerId || initialCS?.customerNumber || initialCS?.customerSnapshot?.customerNumber || initialCS?.customerSnapshot?.customerId || '').toString().toLowerCase().trim();
+        const rawCustName = (initialCS?.customerName || initialCS?.name || initialCS?.customerSnapshot?.customerName || '').toString().toLowerCase().trim();
+        const rawCustMob = (initialCS?.mobile || initialCS?.customerMobile || initialCS?.customerSnapshot?.mobile || '').toString().replace(/\D/g, '');
 
-        // Find all cost sheets for this customer
-        const customerCostSheets = individualCostSheets.filter((cs: any) => 
-          cs.customerId === targetCustomerId || 
-          (cs.customerSnapshot && cs.customerSnapshot.customerName === targetCustName)
-        );
+        const targetCustomerId = initialCS?.customerId || initialCS?.customerNumber || initialCS?.customerSnapshot?.customerNumber || 'SRM-CUS-2026-000184';
+        const targetCustName = initialCS?.customerName || initialCS?.customerSnapshot?.customerName || 'Customer';
+        const targetCustMobile = initialCS?.mobile || initialCS?.customerMobile || initialCS?.customerSnapshot?.mobile || '+91 98490 12345';
 
-        // Fallback: if only 1 cost sheet found in vault for customer, include all available cost sheets so user can pick multiple
-        const eligibleCostSheets = customerCostSheets.length >= 2 ? customerCostSheets : individualCostSheets.slice(0, 4);
+        // Find all cost sheets created strictly for this customer
+        const customerCostSheets = individualCostSheets.filter((cs: any) => {
+          if (!cs) return false;
+          const csCustId = (cs.customerId || cs.customerNumber || cs.customerSnapshot?.customerNumber || cs.customerSnapshot?.customerId || '').toString().toLowerCase().trim();
+          const csName = (cs.customerName || cs.name || cs.customerSnapshot?.customerName || '').toString().toLowerCase().trim();
+          const csMob = (cs.mobile || cs.customerMobile || cs.customerSnapshot?.mobile || '').toString().replace(/\D/g, '');
+
+          if (rawCustId && csCustId && rawCustId === csCustId) return true;
+          if (rawCustMob && csMob && rawCustMob.length >= 7 && csMob.length >= 7 && rawCustMob === csMob) return true;
+          if (rawCustName && csName && rawCustName.length > 2 && rawCustName === csName) return true;
+          return false;
+        });
+
+        // Strictly show only the cost sheets that belong to this customer
+        const eligibleCostSheets = customerCostSheets.length > 0 ? customerCostSheets : (initialCS ? [initialCS] : []);
 
         return (
           <ScheduleVisitModalContent isLight={isLight} 
@@ -19116,28 +19178,181 @@ export default function App() {
       )}
 
       {/* MODAL: ROUTE MAP MODAL */}
-      {showRouteMapModal && showRouteMapModal.open && showRouteMapModal.plan && (
-        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: windowWidth <= 640 ? '8px' : '20px' }}>
-          <div className="custom-modal-scrollbar" style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', width: windowWidth <= 640 ? '98vw' : windowWidth <= 1024 ? '95vw' : '800px', maxWidth: '96vw', maxHeight: 'calc(100vh - 32px)', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '18px', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
-              <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>🗺️ INTERACTIVE VISIT ROUTE MAP</h3>
-                <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
-                  Master Schedule: <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{showRouteMapModal.plan.visitPlanId}</strong> — {showRouteMapModal.plan.customerName}
-                </p>
+      {showRouteMapModal && showRouteMapModal.open && showRouteMapModal.plan && (() => {
+        const modalPlan = showRouteMapModal.plan;
+        const modalTransportStr = (modalPlan?.transport || '').toLowerCase();
+        const modalIsSelfDriving = modalTransportStr.includes('self') || modalTransportStr.includes('direct') || modalTransportStr.includes('driving');
+        const modalHasPickup = Boolean(
+          modalPlan?.pickupAddress &&
+          modalPlan.pickupAddress.trim() &&
+          !modalPlan.pickupAddress.toLowerCase().includes('barasat banamalipur') &&
+          !modalPlan.pickupAddress.toLowerCase().includes('direct arrival') &&
+          !modalPlan.pickupAddress.toLowerCase().includes('direct pickup')
+        );
+        const modalHasDrop = Boolean(
+          modalPlan?.dropAddress &&
+          modalPlan.dropAddress.trim() &&
+          !modalPlan.dropAddress.toLowerCase().includes('barasat chapadali') &&
+          !modalPlan.dropAddress.toLowerCase().includes('direct departure') &&
+          !modalPlan.dropAddress.toLowerCase().includes('direct drop')
+        );
+        const modalIsCabNeeded = !modalIsSelfDriving && (
+          modalTransportStr.includes('cab') ||
+          modalTransportStr.includes('pick') ||
+          modalHasPickup
+        );
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: windowWidth <= 640 ? '8px' : '20px' }}>
+            <div className="custom-modal-scrollbar" style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', width: windowWidth <= 640 ? '98vw' : windowWidth <= 1024 ? '95vw' : '800px', maxWidth: '96vw', maxHeight: 'calc(100vh - 32px)', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '18px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>🗺️ INTERACTIVE VISIT ROUTE MAP</h3>
+                  <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
+                    Master Schedule: <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{modalPlan.visitPlanId}</strong> — {modalPlan.customerName}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <button 
+                    onClick={() => {
+                      const validStops = (modalPlan?.stops || []).filter((s: any) => s && (s.latitude || s.longitude || s.address));
+                      const projectCoords = validStops.map((s: any) => {
+                        if (s.address && s.address.trim() && !s.address.toLowerCase().includes('hyderabad') && !s.address.toLowerCase().includes('kondapur')) {
+                          return encodeURIComponent(s.address.trim());
+                        }
+                        const lat = (s.latitude || '22.722361').replace(/[^0-9.-]/g, '');
+                        const lng = (s.longitude || '88.493403').replace(/[^0-9.-]/g, '');
+                        return `${lat},${lng}`;
+                      });
+
+                      const pickPt = modalPlan.pickupAddress ? encodeURIComponent(modalPlan.pickupAddress) : '22.720500,88.485000';
+                      const dropPt = modalPlan.dropAddress ? encodeURIComponent(modalPlan.dropAddress) : '22.725000,88.498000';
+
+                      if (modalIsCabNeeded) {
+                        const waypointsStr = [pickPt, ...projectCoords].join('|');
+                        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`, '_blank');
+                      } else {
+                        if (projectCoords.length > 1) {
+                          const dest = projectCoords[projectCoords.length - 1];
+                          const waypointsStr = projectCoords.slice(0, projectCoords.length - 1).join('|');
+                          window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest}&waypoints=${encodeURIComponent(waypointsStr)}&travelmode=driving&dirflg=d`, '_blank');
+                        } else if (projectCoords.length === 1) {
+                          window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${projectCoords[0]}&travelmode=driving&dirflg=d`, '_blank');
+                        }
+                      }
+                    }}
+                    style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    title="Launch turn-by-turn driving directions in external Google Maps App"
+                  >
+                    📲 Launch External Google Maps App
+                  </button>
+                  <X size={22} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowRouteMapModal(null)} />
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
+              {/* ROUTE FLOW NODES */}
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                
+                <div style={{ textAlign: 'center', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', maxWidth: '220px' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: '900' }}>🏢 START OFFICE</span>
+                  <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '900', margin: 0 }}>HQ Office</h4>
+                  <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', lineHeight: '1.2' }}>{modalPlan.officeAddress || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129'}</span>
+                  <a 
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(modalPlan.officeAddress || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129')}`}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', border: '1px solid #0284c7', padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800', textDecoration: 'none' }}
+                    title="View Office location on Google Maps"
+                  >
+                    📍 View Office
+                  </a>
+                </div>
+
+                {(!modalIsSelfDriving || modalHasPickup) && (
+                  <>
+                    <ArrowRight size={20} color="#0284c7" />
+
+                    <div style={{ textAlign: 'center', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: '#4ade80', fontWeight: '900' }}>🟢 PICKUP</span>
+                      <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '900', margin: 0 }}>Customer Pickup</h4>
+                      <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>{modalPlan.pickupAddress || 'Direct Pickup at Location'}</span>
+                      <a 
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(modalPlan.pickupAddress || 'Direct Pickup at Location')}`}
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid #22c55e', padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800', textDecoration: 'none' }}
+                        title="Drop direct Red Location Pin Pointer on Google Maps for Customer Pickup"
+                      >
+                        📍 View Red Pin Pointer
+                      </a>
+                    </div>
+                  </>
+                )}
+
+                <ArrowRight size={20} color="#0284c7" />
+
+                {(modalPlan.stops || []).map((s: any, idx: number) => (
+                  <React.Fragment key={s.stopId || idx}>
+                    <div style={{ textAlign: 'center', background: s.status === 'VISIT_COMPLETED' ? 'rgba(34, 197, 94, 0.15)' : idx === modalPlan.currentStopIndex ? 'rgba(2, 132, 199, 0.2)' : '#1e293b', border: idx === modalPlan.currentStopIndex ? '2px solid #0284c7' : '1px solid #334155', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ fontSize: '0.7rem', color: '#fbbf24', fontWeight: '900' }}>STOP 0{idx + 1}</span>
+                      <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.82rem', fontWeight: '900', margin: 0 }}>{s.propertyTitle || s.locality || `Stop ${idx + 1}`}</h4>
+                      <span style={{ fontSize: '0.68rem', color: '#38bdf8', fontFamily: 'monospace' }}>{s.distanceFromPrev || s.address}</span>
+                      <a 
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.address || s.propertyTitle || s.locality || 'Barasat West Bengal')}`}
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', border: '1px solid #0284c7', padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800', textDecoration: 'none' }}
+                        title={`Drop direct Red Location Pin Pointer on Google Maps for Stop ${idx + 1}`}
+                      >
+                        📍 View Red Pin Pointer
+                      </a>
+                    </div>
+                    {idx < (modalPlan.stops || []).length - 1 && <ArrowRight size={20} color="#0284c7" />}
+                  </React.Fragment>
+                ))}
+
+                {(!modalIsSelfDriving || modalHasDrop) && (
+                  <>
+                    <ArrowRight size={20} color="#0284c7" />
+
+                    <div style={{ textAlign: 'center', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #ef4444', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ fontSize: '0.7rem', color: '#f87171', fontWeight: '900' }}>🔴 DROP</span>
+                      <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '900', margin: 0 }}>Customer Drop</h4>
+                      <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>{modalPlan.dropAddress || 'Direct Drop at Location'}</span>
+                      <a 
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(modalPlan.dropAddress || 'Direct Drop at Location')}`}
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid #ef4444', padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800', textDecoration: 'none' }}
+                        title="Drop direct Red Location Pin Pointer on Google Maps for Customer Drop"
+                      >
+                        📍 View Red Pin Pointer
+                      </a>
+                    </div>
+                  </>
+                )}
+
+              </div>
+
+              {/* INTERACTIVE LEAFLET MAP CANVAS */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    🗺️ LIVE ROUTE MAP CANVAS (RED PIN POINTERS & CONNECTING PATH)
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                    Click markers on map for individual location details
+                  </span>
+                </div>
+                <InteractiveRoutePlanMap plan={modalPlan} isLight={isLight} />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '14px', flexWrap: 'wrap', gap: '10px' }}>
                 <button 
                   onClick={() => {
-                    const plan = showRouteMapModal.plan;
-                    const isCabNeeded = 
-                      (plan?.transport || '').toLowerCase().includes('cab') ||
-                      (plan?.transport || '').toLowerCase().includes('pick') ||
-                      Boolean(plan?.pickupAddress || plan?.pickupLat);
-
-                    const validStops = (plan?.stops || []).filter((s: any) => s && (s.latitude || s.longitude || s.address));
+                    const validStops = (modalPlan?.stops || []).filter((s: any) => s && (s.latitude || s.longitude || s.address));
                     const projectCoords = validStops.map((s: any) => {
-                      if (s.address && s.address.trim() && !s.address.toLowerCase().includes('hyderabad')) {
+                      if (s.address && s.address.trim() && !s.address.toLowerCase().includes('hyderabad') && !s.address.toLowerCase().includes('kondapur')) {
                         return encodeURIComponent(s.address.trim());
                       }
                       const lat = (s.latitude || '22.722361').replace(/[^0-9.-]/g, '');
@@ -19145,10 +19360,15 @@ export default function App() {
                       return `${lat},${lng}`;
                     });
 
-                    const pickPt = plan.pickupAddress ? encodeURIComponent(plan.pickupAddress) : '22.720500,88.485000';
-                    const dropPt = plan.dropAddress ? encodeURIComponent(plan.dropAddress) : '22.725000,88.498000';
+                    if (modalIsCabNeeded) {
+                      const cleanPickLat = modalPlan.pickupLat ? modalPlan.pickupLat.replace(/[^0-9.-]/g, '') : '';
+                      const cleanPickLng = modalPlan.pickupLng ? modalPlan.pickupLng.replace(/[^0-9.-]/g, '') : '';
+                      const pickPt = (cleanPickLat && cleanPickLng) ? `${cleanPickLat},${cleanPickLng}` : (modalPlan.pickupAddress ? encodeURIComponent(modalPlan.pickupAddress) : '22.720500,88.485000');
 
-                    if (isCabNeeded) {
+                      const cleanDropLat = modalPlan.dropLat ? modalPlan.dropLat.replace(/[^0-9.-]/g, '') : '';
+                      const cleanDropLng = modalPlan.dropLng ? modalPlan.dropLng.replace(/[^0-9.-]/g, '') : '';
+                      const dropPt = (cleanDropLat && cleanDropLng) ? `${cleanDropLat},${cleanDropLng}` : (modalPlan.dropAddress ? encodeURIComponent(modalPlan.dropAddress) : '22.725000,88.498000');
+
                       const waypointsStr = [pickPt, ...projectCoords].join('|');
                       window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`, '_blank');
                     } else {
@@ -19161,150 +19381,16 @@ export default function App() {
                       }
                     }
                   }}
-                  style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                  title="Launch turn-by-turn driving directions in external Google Maps App"
+                  style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.85rem' }}
                 >
-                  📲 Launch External Google Maps App
+                  🚀 LAUNCH GOOGLE MAPS CAR NAVIGATION ({ (modalPlan.stops || []).length } STOPS)
                 </button>
-                <X size={22} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowRouteMapModal(null)} />
+                <button onClick={() => setShowRouteMapModal(null)} style={{ background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem' }}>Close Map</button>
               </div>
-            </div>
-
-            {/* ROUTE FLOW NODES */}
-            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-              
-              <div style={{ textAlign: 'center', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', maxWidth: '220px' }}>
-                <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: '900' }}>🏢 START OFFICE</span>
-                <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '900', margin: 0 }}>HQ Office</h4>
-                <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', lineHeight: '1.2' }}>{showRouteMapModal.plan.officeAddress || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129'}</span>
-                <a 
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(showRouteMapModal.plan.officeAddress || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129')}`}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', border: '1px solid #0284c7', padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800', textDecoration: 'none' }}
-                  title="View Office location on Google Maps"
-                >
-                  📍 View Office
-                </a>
-              </div>
-
-              <ArrowRight size={20} color="#0284c7" />
-
-              <div style={{ textAlign: 'center', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.7rem', color: '#4ade80', fontWeight: '900' }}>🟢 PICKUP</span>
-                <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '900', margin: 0 }}>Customer Pickup</h4>
-                <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>{showRouteMapModal.plan.pickupAddress || 'Barasat Banamalipur, Kolkata'}</span>
-                <a 
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(showRouteMapModal.plan.pickupAddress || 'Barasat Banamalipur Kolkata West Bengal')}`}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid #22c55e', padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800', textDecoration: 'none' }}
-                  title="Drop direct Red Location Pin Pointer on Google Maps for Customer Pickup"
-                >
-                  📍 View Red Pin Pointer
-                </a>
-              </div>
-
-              <ArrowRight size={20} color="#0284c7" />
-
-              {(showRouteMapModal.plan.stops || []).map((s: any, idx: number) => (
-                <React.Fragment key={s.stopId || idx}>
-                  <div style={{ textAlign: 'center', background: s.status === 'VISIT_COMPLETED' ? 'rgba(34, 197, 94, 0.15)' : idx === showRouteMapModal.plan.currentStopIndex ? 'rgba(2, 132, 199, 0.2)' : '#1e293b', border: idx === showRouteMapModal.plan.currentStopIndex ? '2px solid #0284c7' : '1px solid #334155', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ fontSize: '0.7rem', color: '#fbbf24', fontWeight: '900' }}>STOP 0{idx + 1}</span>
-                    <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.82rem', fontWeight: '900', margin: 0 }}>{s.propertyTitle || s.locality || `Stop ${idx + 1}`}</h4>
-                    <span style={{ fontSize: '0.68rem', color: '#38bdf8', fontFamily: 'monospace' }}>{s.distanceFromPrev || s.address}</span>
-                    <a 
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.address || s.propertyTitle || s.locality || 'Barasat West Bengal')}`}
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', border: '1px solid #0284c7', padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800', textDecoration: 'none' }}
-                      title={`Drop direct Red Location Pin Pointer on Google Maps for Stop ${idx + 1}`}
-                    >
-                      📍 View Red Pin Pointer
-                    </a>
-                  </div>
-                  {idx < (showRouteMapModal.plan.stops || []).length - 1 && <ArrowRight size={20} color="#0284c7" />}
-                </React.Fragment>
-              ))}
-
-              <ArrowRight size={20} color="#0284c7" />
-
-              <div style={{ textAlign: 'center', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #ef4444', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '0.7rem', color: '#f87171', fontWeight: '900' }}>🔴 DROP</span>
-                <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', fontWeight: '900', margin: 0 }}>Customer Drop</h4>
-                <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>{showRouteMapModal.plan.dropAddress || 'Barasat Chapadali Bus Hub, Kolkata'}</span>
-                <a 
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(showRouteMapModal.plan.dropAddress || 'Barasat Chapadali Kolkata West Bengal')}`}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid #ef4444', padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800', textDecoration: 'none' }}
-                  title="Drop direct Red Location Pin Pointer on Google Maps for Customer Drop"
-                >
-                  📍 View Red Pin Pointer
-                </a>
-              </div>
-
-            </div>
-
-            {/* INTERACTIVE LEAFLET MAP CANVAS */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  🗺️ LIVE ROUTE MAP CANVAS (RED PIN POINTERS & CONNECTING PATH)
-                </span>
-                <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
-                  Click markers on map for individual location details
-                </span>
-              </div>
-              <InteractiveRoutePlanMap plan={showRouteMapModal.plan} isLight={isLight} />
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '14px', flexWrap: 'wrap', gap: '10px' }}>
-              <button 
-                onClick={() => {
-                  const plan = showRouteMapModal.plan;
-                  const isCabNeeded = 
-                    (plan?.transport || '').toLowerCase().includes('cab') ||
-                    (plan?.transport || '').toLowerCase().includes('pick') ||
-                    Boolean(plan?.pickupAddress || plan?.pickupLat);
-
-                  const validStops = (plan?.stops || []).filter((s: any) => s && (s.latitude || s.longitude));
-                  const projectCoords = validStops.map((s: any) => {
-                    const lat = (s.latitude || '22.722361').replace(/[^0-9.-]/g, '');
-                    const lng = (s.longitude || '88.493403').replace(/[^0-9.-]/g, '');
-                    return `${lat},${lng}`;
-                  });
-
-                  if (isCabNeeded) {
-                    const cleanPickLat = plan.pickupLat ? plan.pickupLat.replace(/[^0-9.-]/g, '') : '';
-                    const cleanPickLng = plan.pickupLng ? plan.pickupLng.replace(/[^0-9.-]/g, '') : '';
-                    const pickPt = (cleanPickLat && cleanPickLng) ? `${cleanPickLat},${cleanPickLng}` : (plan.pickupAddress ? encodeURIComponent(plan.pickupAddress) : '22.720500,88.485000');
-
-                    const cleanDropLat = plan.dropLat ? plan.dropLat.replace(/[^0-9.-]/g, '') : '';
-                    const cleanDropLng = plan.dropLng ? plan.dropLng.replace(/[^0-9.-]/g, '') : '';
-                    const dropPt = (cleanDropLat && cleanDropLng) ? `${cleanDropLat},${cleanDropLng}` : (plan.dropAddress ? encodeURIComponent(plan.dropAddress) : '22.725000,88.498000');
-
-                    const waypointsStr = [pickPt, ...projectCoords].join('|');
-                    window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`, '_blank');
-                  } else {
-                    if (projectCoords.length > 1) {
-                      const dest = projectCoords[projectCoords.length - 1];
-                      const waypointsStr = projectCoords.slice(0, projectCoords.length - 1).join('|');
-                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest}&waypoints=${encodeURIComponent(waypointsStr)}&travelmode=driving&dirflg=d`, '_blank');
-                    } else if (projectCoords.length === 1) {
-                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${projectCoords[0]}&travelmode=driving&dirflg=d`, '_blank');
-                    }
-                  }
-                }}
-                style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.85rem' }}
-              >
-                🚀 LAUNCH GOOGLE MAPS CAR NAVIGATION ({ (showRouteMapModal.plan.stops || []).length } STOPS)
-              </button>
-              <button onClick={() => setShowRouteMapModal(null)} style={{ background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem' }}>Close Map</button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* LEAD MODAL 1: CALL DISPOSITION & NEXT ACTION ENFORCEMENT MODAL */}
       {showCallDispositionModal && showCallDispositionModal.open && showCallDispositionModal.lead && (

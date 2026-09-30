@@ -1071,10 +1071,13 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   const stops = plan.stops || [];
                   const resolvedStops = stops.map((s: any, idx: number) => resolveStopCoords(s, idx));
 
-                  const isCabNeeded = 
-                    (plan.transport || '').toLowerCase().includes('cab') ||
-                    (plan.transport || '').toLowerCase().includes('pick') ||
-                    Boolean(plan.pickupAddress || plan.pickupLat);
+                  const transportStr = (plan.transport || '').toLowerCase();
+                  const isSelfDrivingMode = transportStr.includes('self') || transportStr.includes('direct') || transportStr.includes('driving');
+                  const isCabNeeded = !isSelfDrivingMode && (
+                    transportStr.includes('cab') ||
+                    transportStr.includes('pick') ||
+                    Boolean(plan.pickupAddress && plan.pickupAddress.trim())
+                  );
 
                   if (isCabNeeded) {
                     // 1st Leg: Customer Pickup Address
@@ -1128,6 +1131,9 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   }
                 };
 
+                const currentTransportStr = (currentPlan.transport || '').toLowerCase();
+                const currentIsSelfDriving = currentTransportStr.includes('self') || currentTransportStr.includes('direct') || currentTransportStr.includes('driving');
+
                 return (
                   <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', borderRadius: '20px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1155,18 +1161,20 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                         <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <span style={{ fontSize: '0.72rem', color: '#22c55e', fontWeight: '900' }}>🟢 1. CUSTOMER PICKUP ADDRESS</span>
                           <p style={{ fontSize: '0.82rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
-                            {currentPlan.pickupAddress || 'Barasat Banamalipur, Kolkata, West Bengal - 700124'}
+                            {currentPlan.pickupAddress && currentPlan.pickupAddress.trim() && !currentPlan.pickupAddress.includes('Barasat Banamalipur') ? currentPlan.pickupAddress : (currentIsSelfDriving ? 'Direct Arrival at Project Site (Self Driving)' : 'Direct Pickup at Location')}
                           </p>
-                          <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>Mode: {currentPlan.transport || 'Cab Pick & Drop'}</span>
-                          <a 
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentPlan.pickupAddress || 'Barasat Banamalipur Kolkata West Bengal')}`}
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid #22c55e', padding: '4px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800', textDecoration: 'none', width: 'fit-content' }}
-                            title="Drop direct Red Location Pin Pointer on Google Maps for Customer Pickup"
-                          >
-                            📍 View Red Pin Pointer
-                          </a>
+                          <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>Mode: {currentPlan.transport || (currentIsSelfDriving ? '🏎️ Self Driving / Direct Arrival' : '🚕 Cab Pick & Drop')}</span>
+                          {currentPlan.pickupAddress && currentPlan.pickupAddress.trim() && !currentPlan.pickupAddress.includes('Barasat Banamalipur') && (
+                            <a 
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentPlan.pickupAddress)}`}
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid #22c55e', padding: '4px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800', textDecoration: 'none', width: 'fit-content' }}
+                              title="Drop direct Red Location Pin Pointer on Google Maps for Customer Pickup"
+                            >
+                              📍 View Red Pin Pointer
+                            </a>
+                          )}
                         </div>
 
                         {/* 2. PROJECT SITE ADDRESSES */}
@@ -1194,18 +1202,20 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                         <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #ef4444', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <span style={{ fontSize: '0.72rem', color: '#f87171', fontWeight: '900' }}>🔴 3. CUSTOMER DROP ADDRESS</span>
                           <p style={{ fontSize: '0.82rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
-                            {currentPlan.dropAddress || 'Barasat Chapadali Bus Terminus Hub, Kolkata, West Bengal - 700124'}
+                            {currentPlan.dropAddress && currentPlan.dropAddress.trim() && !currentPlan.dropAddress.includes('Barasat Chapadali') ? currentPlan.dropAddress : (currentIsSelfDriving ? 'Direct Departure from Project Site' : 'Direct Drop at Location')}
                           </p>
-                          <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>Destination End Leg</span>
-                          <a 
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentPlan.dropAddress || 'Barasat Chapadali Kolkata West Bengal')}`}
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid #ef4444', padding: '4px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800', textDecoration: 'none', width: 'fit-content' }}
-                            title="Drop direct Red Location Pin Pointer on Google Maps for Customer Drop"
-                          >
-                            📍 View Red Pin Pointer
-                          </a>
+                          <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>{currentIsSelfDriving ? 'Self-Arranged Travel (No Drop Required)' : 'Destination End Leg'}</span>
+                          {currentPlan.dropAddress && currentPlan.dropAddress.trim() && !currentPlan.dropAddress.includes('Barasat Chapadali') && (
+                            <a 
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentPlan.dropAddress)}`}
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid #ef4444', padding: '4px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800', textDecoration: 'none', width: 'fit-content' }}
+                              title="Drop direct Red Location Pin Pointer on Google Maps for Customer Drop"
+                            >
+                              📍 View Red Pin Pointer
+                            </a>
+                          )}
                         </div>
 
                       </div>

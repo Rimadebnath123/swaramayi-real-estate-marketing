@@ -17,6 +17,7 @@ interface BookingManagementViewProps {
   setBillingInvoiceCategory?: (cat: string) => void;
   customers?: any[];
   properties?: any[];
+  setProperties?: React.Dispatch<React.SetStateAction<any[]>>;
   syncAllToMongoDB?: (overrideData?: any) => Promise<void>;
   onRecycleItem?: (itemData: any) => void;
   projectVisitAgreements?: any[];
@@ -40,6 +41,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
   setBillingInvoiceCategory,
   customers = [],
   properties = [],
+  setProperties,
   syncAllToMongoDB,
   onRecycleItem,
   projectVisitAgreements = [],
@@ -260,6 +262,31 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
       updatedBookings.unshift(registeredBookingObj);
     }
 
+    // Update matching property status to SOLD OUT in Project Management
+    let updatedProps: any[] = [];
+    if (setProperties && properties.length > 0) {
+      updatedProps = properties.map((p: any) => {
+        const pCode = p.property_code || p.id || p.propertyCode;
+        const pTitle = (p.title || '').toString().toLowerCase();
+        const bProject = (b.project_name || '').toString().toLowerCase();
+
+        const isMatch = (
+          (pCode && propCodeLookup && pCode === propCodeLookup) ||
+          (pTitle && bProject && (pTitle.includes(bProject) || bProject.includes(pTitle)))
+        );
+
+        if (isMatch) {
+          return { ...p, status: 'SOLD OUT' };
+        }
+        return p;
+      });
+
+      setProperties(updatedProps);
+      try {
+        localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(updatedProps));
+      } catch (e) {}
+    }
+
     if (setInvoices) {
       setInvoices(updatedInvoices);
     }
@@ -277,7 +304,8 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
     if (syncAllToMongoDB) {
       syncAllToMongoDB({
         bookings: updatedBookings,
-        invoices: updatedInvoices
+        invoices: updatedInvoices,
+        properties: updatedProps.length > 0 ? updatedProps : properties
       });
     }
 

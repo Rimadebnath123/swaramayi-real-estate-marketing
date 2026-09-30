@@ -12514,6 +12514,7 @@ export default function App() {
               setBillingInvoiceCategory={setBillingInvoiceCategory}
               customers={customers}
               properties={properties}
+              setProperties={setProperties}
               syncAllToMongoDB={syncAllToMongoDB}
               onRecycleItem={handleRecycleItem}
               projectVisitAgreements={projectVisitAgreements}
@@ -20719,7 +20720,29 @@ export default function App() {
                 created_date: new Date().toISOString().split('T')[0]
               };
 
-              setInvoices([newInvObj, ...invoices]);
+              const updatedInvs = [newInvObj, ...invoices];
+              setInvoices(updatedInvs);
+
+              if (createInvoiceForm.property_title || createInvoiceForm.property_code) {
+                const targetCode = createInvoiceForm.property_code;
+                const targetTitle = (createInvoiceForm.property_title || '').toLowerCase();
+                const updatedProps = properties.map((p: any) => {
+                  const pCode = p.property_code || p.id || p.propertyCode;
+                  const pTitle = (p.title || '').toLowerCase();
+                  if ((targetCode && pCode === targetCode) || (targetTitle && pTitle && (pTitle.includes(targetTitle) || targetTitle.includes(pTitle)))) {
+                    return { ...p, status: 'SOLD OUT' };
+                  }
+                  return p;
+                });
+                setProperties(updatedProps);
+                try {
+                  localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(updatedProps));
+                } catch (err) {}
+                if (syncAllToMongoDB) {
+                  syncAllToMongoDB({ invoices: updatedInvs, properties: updatedProps });
+                }
+              }
+
               setShowCreateInvoiceModal(false);
               alert(`🎉 Invoice ${invNum} created successfully for ${isDev ? createInvoiceForm.developer_name : createInvoiceForm.customer_name}!`);
             }} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>

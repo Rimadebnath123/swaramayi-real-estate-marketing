@@ -688,6 +688,115 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             }
           });
 
+          (individualCostSheets || []).forEach((cs, idx) => {
+            if (!cs) return;
+            const snap = cs.customerSnapshot || {};
+            const custName = cs.customerName || snap.customerName || cs.name || 'Customer';
+            const custMob = cs.mobile || cs.customerMobile || snap.mobile || '';
+            const cleanMob = custMob.replace(/\D/g, '');
+            const custNum = cs.customerNumber || cs.customerId || snap.customerNumber || snap.customerId || (cleanMob ? `SRM-CUS-2026-${cleanMob.slice(-6)}` : `SRM-CUS-2026-000${180 + idx}`);
+            const numKey = custNum.toLowerCase().trim();
+
+            const numDigits = custNum.replace(/\D/g, '').slice(-6).padStart(6, '0');
+            const reqId = `SRM-MAT-2026-${numDigits || String(500 + idx)}`;
+
+            if (isShiftedToSourcing(reqId, custNum, custName, custMob)) return;
+
+            if ((numKey && !seenCustNums.has(numKey)) || (cleanMob && !seenMobiles.has(cleanMob))) {
+              if (numKey) seenCustNums.add(numKey);
+              if (cleanMob) seenMobiles.add(cleanMob);
+
+              const actualCostSheet = findActualCostSheet(reqId, custNum, custName, custMob) || { costSheetId: cs.costSheetId || cs.id };
+
+              list.push({
+                id: reqId,
+                requestId: reqId,
+                date: cs.createdAt || cs.created_at ? new Date(cs.createdAt || cs.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '29 Sep 2026',
+                customerName: custName,
+                customerNumber: custNum,
+                leadId: cs.leadId || `SRM-LEAD-2026-0012${numDigits.slice(-2)}`,
+                requirementId: `SRM-REQ-2026-0000${numDigits.slice(-2)}`,
+                mobile: custMob,
+                email: cs.email || snap.email || `${custName.toLowerCase().replace(/\s+/g, '.')}@gmail.com`,
+                purpose: cs.investment_purpose || 'Self / End Use',
+                propertyType: cs.propertyType || cs.propertySnapshot?.property_type || 'Flat / Apartment',
+                configuration: cs.configuration || cs.propertySnapshot?.configuration || '2BHK',
+                budget: cs.budget || (cs.propertySnapshot?.basePrice ? `₹${Number(cs.propertySnapshot.basePrice).toLocaleString('en-IN')}` : '₹35L - ₹50L'),
+                budget_min: cs.budget_min || 3500000,
+                budget_max: cs.budget_max || 5000000,
+                preferredArea: cs.preferredArea || cs.propertySnapshot?.locality || 'Madhyamgram, Kolkata',
+                secondaryAreas: cs.secondary_areas || '',
+                radiusKm: 2,
+                possessionStatus: 'Ready to Move',
+                carpetArea: '650 – 1000 Sq.Ft.',
+                facing: 'East Facing',
+                parking: 'Covered Slot',
+                amenities: '24/7 Power Backup, Security',
+                completenessScore: 95,
+                priority: cs.priority || 'HOT',
+                leadScore: 95,
+                assignedExecutive: cs.assignedExecutive || 'Subhankar Mandal',
+                status: 'COST_SHEET_CREATED',
+                costSheetId: actualCostSheet?.costSheetId || actualCostSheet?.id || cs.costSheetId || cs.id,
+                created_at: cs.createdAt || cs.created_at || new Date().toISOString()
+              });
+            }
+          });
+
+          (scheduledVisits || []).forEach((v, idx) => {
+            if (!v) return;
+            const custName = v.customerName || v.customer_name || v.name || 'Customer';
+            const custMob = v.mobile || v.phone || v.customerMobile || '';
+            const cleanMob = custMob.replace(/\D/g, '');
+            const custNum = v.customerNumber || v.customer_number || v.customerId || (cleanMob ? `SRM-CUS-2026-${cleanMob.slice(-6)}` : `SRM-CUS-2026-000${200 + idx}`);
+            const numKey = custNum.toLowerCase().trim();
+
+            const numDigits = custNum.replace(/\D/g, '').slice(-6).padStart(6, '0');
+            const reqId = `SRM-MAT-2026-${numDigits || String(600 + idx)}`;
+
+            if (isShiftedToSourcing(reqId, custNum, custName, custMob)) return;
+
+            if ((numKey && !seenCustNums.has(numKey)) || (cleanMob && !seenMobiles.has(cleanMob))) {
+              if (numKey) seenCustNums.add(numKey);
+              if (cleanMob) seenMobiles.add(cleanMob);
+
+              const actualCostSheet = findActualCostSheet(reqId, custNum, custName, custMob);
+
+              list.push({
+                id: reqId,
+                requestId: reqId,
+                date: v.visitDate || v.date ? new Date(v.visitDate || v.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '29 Sep 2026',
+                customerName: custName,
+                customerNumber: custNum,
+                leadId: `SRM-LEAD-2026-0012${numDigits.slice(-2)}`,
+                requirementId: `SRM-REQ-2026-0000${numDigits.slice(-2)}`,
+                mobile: custMob,
+                email: v.email || `${custName.toLowerCase().replace(/\s+/g, '.')}@gmail.com`,
+                purpose: 'Self / End Use',
+                propertyType: 'Flat / Apartment',
+                configuration: '2BHK',
+                budget: v.budget || '₹35,00,000 - ₹50,00,000',
+                budget_min: 3500000,
+                budget_max: 5000000,
+                preferredArea: v.locality || v.preferredArea || 'Madhyamgram, Kolkata',
+                secondaryAreas: '',
+                radiusKm: 2,
+                possessionStatus: 'Ready to Move',
+                carpetArea: '650 – 1000 Sq.Ft.',
+                facing: 'East Facing',
+                parking: 'Covered Slot',
+                amenities: '24/7 Power Backup, Security',
+                completenessScore: 90,
+                priority: 'HOT',
+                leadScore: 90,
+                assignedExecutive: v.assignedExecutive || 'Subhankar Mandal',
+                status: actualCostSheet ? 'COST_SHEET_CREATED' : 'PENDING',
+                costSheetId: actualCostSheet?.costSheetId || undefined,
+                created_at: v.visitDate || v.date || new Date().toISOString()
+              });
+            }
+          });
+
           return list;
         })();
 

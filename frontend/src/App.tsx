@@ -10737,7 +10737,7 @@ export default function App() {
 
               {/* 1. TOP-LEVEL INTERACTIVE KPI CARDS GRID (12 CARDS WITH REAL-TIME DYNAMIC DATA & DRILL-DOWN) */}
               {(() => {
-                // Combine customers, leadsList, and matchingRequestsQueue to form complete customer/lead pool
+                // Combine customers, leadsList, matchingRequestsQueue, cost sheets, visits, bookings, agreements, and invoices to form complete customer pool
                 const matchingCusts = (matchingRequestsQueue || []).map((m: any) => ({
                   id: m.requestId || m.id || `CUS-${Date.now()}`,
                   customer_number: m.customerNumber || m.customerId || m.customer_number || `SRM-CUS-2026-${(m.mobile || '').slice(-6) || '000188'}`,
@@ -10756,7 +10756,67 @@ export default function App() {
                   assigned_employee_name: m.assignedExecutive || m.salesPersonName,
                   is_new_today: true
                 }));
-                const combinedPool = [...customers, ...leadsList, ...matchingCusts];
+
+                const costSheetCusts = (individualCostSheets || []).map((cs: any) => {
+                  const snap = cs.customerSnapshot || {};
+                  const cName = cs.customerName || snap.customerName || cs.name || 'Customer';
+                  const cMob = cs.mobile || cs.customerMobile || snap.mobile || '';
+                  const cleanM = cMob.replace(/\D/g, '');
+                  const cNum = cs.customerNumber || cs.customerId || snap.customerNumber || snap.customerId || (cleanM ? `SRM-CUS-2026-${cleanM.slice(-6)}` : `SRM-CUS-2026-000189`);
+                  return {
+                    id: `CUS-${cNum}`,
+                    customer_number: cNum,
+                    customerNumber: cNum,
+                    name: cName,
+                    full_name: cName,
+                    mobile: cMob,
+                    phone: cMob,
+                    email: cs.email || snap.email || '',
+                    budget: cs.budget || '₹35L - ₹50L',
+                    status: 'COST_SHEET_CREATED',
+                    created_at: cs.createdAt || cs.created_at || new Date().toISOString()
+                  };
+                });
+
+                const visitCusts = (scheduledVisits || []).map((v: any) => {
+                  const cName = v.customerName || v.customer_name || v.name || 'Customer';
+                  const cMob = v.mobile || v.phone || v.customerMobile || '';
+                  const cleanM = cMob.replace(/\D/g, '');
+                  const cNum = v.customerNumber || v.customer_number || v.customerId || (cleanM ? `SRM-CUS-2026-${cleanM.slice(-6)}` : `SRM-CUS-2026-000189`);
+                  return {
+                    id: `CUS-${cNum}`,
+                    customer_number: cNum,
+                    customerNumber: cNum,
+                    name: cName,
+                    full_name: cName,
+                    mobile: cMob,
+                    phone: cMob,
+                    budget: v.budget || '₹35L - ₹50L',
+                    status: 'SITE_VISIT_SCHEDULED',
+                    created_at: v.visitDate || v.date || new Date().toISOString()
+                  };
+                });
+
+                const bookingCusts = (bookings || []).map((b: any) => {
+                  const cName = b.customer_name || b.customerName || b.name || 'Customer';
+                  const cMob = b.mobile || b.phone || b.customerMobile || '';
+                  const cleanM = cMob.replace(/\D/g, '');
+                  const cNum = b.customer_number || b.customerNumber || b.customerId || (cleanM ? `SRM-CUS-2026-${cleanM.slice(-6)}` : `SRM-CUS-2026-000189`);
+                  return {
+                    id: `CUS-${cNum}`,
+                    customer_number: cNum,
+                    customerNumber: cNum,
+                    name: cName,
+                    full_name: cName,
+                    mobile: cMob,
+                    phone: cMob,
+                    budget: b.booking_value ? `₹${(b.booking_value / 100000).toFixed(2)}L` : '₹35L - ₹50L',
+                    status: 'BOOKING_CONFIRMED',
+                    created_at: b.created_at || b.booking_date || new Date().toISOString()
+                  };
+                });
+
+                const combinedPool = [...customers, ...leadsList, ...matchingCusts, ...costSheetCusts, ...visitCusts, ...bookingCusts];
                 const deduplicatedPool = dedupeCustomerList(combinedPool);
 
                 // Filter customers dynamically based on active filters
@@ -16774,8 +16834,15 @@ export default function App() {
               {drillDownRecords.map((r, idx) => (
                 <div key={idx} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '14px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{r.name || r.title || r.party_name || r.visit_code || r.booking_code}</strong>
-                    <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8' }}>{r.customer_number || r.property_code || r.salesperson || r.developer} • {r.budget || r.final_price || r.booking_value || r.status}</p>
+                    <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>
+                      {r.name || r.full_name || r.customerName || r.customer_name || r.custName || r.title || r.party_name || r.visit_code || r.booking_code || 'Customer'}
+                    </strong>
+                    <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                      {[
+                        r.customer_number || r.customerNumber || r.customerTrackingId || r.customerId || r.customer_id || r.property_code || r.salesperson || r.developer,
+                        r.budget || r.final_price || r.booking_value || r.status
+                      ].filter(Boolean).join(' • ')}
+                    </p>
                   </div>
                   <button onClick={() => alert(`Opening 360° Record View for ${r.name || r.title || r.party_name}`)} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer' }}>View 360°</button>
                 </div>

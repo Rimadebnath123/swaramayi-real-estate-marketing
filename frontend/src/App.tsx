@@ -83,6 +83,42 @@ export const cleanExecutiveName = (val?: string): string => {
   return str.split(/\s+[—\-]\s+/)[0].trim();
 };
 
+export const numberToWordsIndian = (num: number): string => {
+  if (isNaN(num) || num <= 0) return 'Rupees Zero Only';
+
+  const units = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 
+                 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  const convertChunk = (n: number): string => {
+    if (n === 0) return '';
+    if (n < 20) return units[n];
+    if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + units[n % 10] : '');
+    return units[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertChunk(n % 100) : '');
+  };
+
+  const integerPart = Math.floor(Math.abs(num));
+  if (integerPart === 0) return 'Rupees Zero Only';
+
+  const crore = Math.floor(integerPart / 10000000);
+  let remainder = integerPart % 10000000;
+  const lakh = Math.floor(remainder / 100000);
+  remainder = remainder % 100000;
+  const thousand = Math.floor(remainder / 1000);
+  remainder = remainder % 1000;
+  const hundred = remainder;
+
+  const parts: string[] = [];
+
+  if (crore > 0) parts.push(`${convertChunk(crore)} Crore`);
+  if (lakh > 0) parts.push(`${convertChunk(lakh)} Lakh`);
+  if (thousand > 0) parts.push(`${convertChunk(thousand)} Thousand`);
+  if (hundred > 0) parts.push(convertChunk(hundred));
+
+  const words = parts.join(' ').trim();
+  return words ? `Rupees ${words} Only` : 'Rupees Zero Only';
+};
+
 import { ProfileView } from './components/ProfileView';
 import { RecycleBinView } from './components/RecycleBinView';
 import { RoleManagementView } from './components/RoleManagementView';
@@ -20158,66 +20194,393 @@ export default function App() {
       )}
 
       {/* MODAL: ALLOTMENT LETTER & TOKEN RECEIPT PRINT MODAL */}
-      {showAllotmentModal && showAllotmentModal.open && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: windowWidth <= 640 ? '8px' : '20px' }}>
-          <div className="custom-modal-scrollbar" style={{ background: '#ffffff', color: '#0f172a', borderRadius: '16px', width: windowWidth <= 640 ? '98vw' : windowWidth <= 1024 ? '95vw' : '750px', maxWidth: '96vw', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', padding: windowWidth <= 640 ? '16px' : '32px', display: 'flex', flexDirection: 'column', gap: '20px', border: '2px solid #0284c7' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0284c7', paddingBottom: '16px' }}>
-              <div>
-                <h2 style={{ fontSize: windowWidth <= 640 ? '1.1rem' : '1.4rem', fontWeight: '900', color: '#0284c7' }}>SWARAMAYI REAL ESTATE MARKETING</h2>
-                <p style={{ fontSize: '0.8rem', color: '#475569', margin: '2px 0 0 0' }}>Official Property Unit Allotment Letter & Advance Token Receipt</p>
+      {showAllotmentModal && showAllotmentModal.open && showAllotmentModal.booking && (() => {
+        const bkg = showAllotmentModal.booking || {};
+        const parseNum = (val: any, fallback = 0): number => {
+          if (typeof val === 'number') return isNaN(val) ? fallback : val;
+          if (!val) return fallback;
+          const clean = String(val).replace(/[^0-9.]/g, '');
+          const parsed = parseFloat(clean);
+          return isNaN(parsed) ? fallback : parsed;
+        };
+
+        const agreeValNum = parseNum(bkg.agreement_value_num || bkg.agreement_value || bkg.agreementValue, 5114880);
+        const tokenValNum = parseNum(bkg.token_amount || bkg.tokenAmount, 100000);
+        const balanceValNum = Math.max(0, agreeValNum - tokenValNum);
+        const tokenInWordsStr = numberToWordsIndian(tokenValNum);
+
+        const bkgCode = bkg.booking_code || bkg.bookingCode || 'SRM-BKG-2026-000087';
+        const bkgDate = bkg.booking_date || bkg.created_date || new Date().toISOString().split('T')[0];
+
+        const activeT = {
+          headerBg: '#ffffff',
+          headerBorder: '#ca8a04',
+          logoBg: '#ffffff',
+          logoBorder: '#fde047',
+          accentText: '#ca8a04',
+          cardBg: '#fefce8',
+          cardBorder: '#fde047',
+          cardTitle: '#ca8a04',
+          subHeaderBg: '#fef9c3',
+          subHeaderBorder: '#fde047',
+          subHeaderTitle: '#854d0e',
+          subHeaderLink: '#ca8a04',
+          tableHeader: 'linear-gradient(135deg, #ca8a04 0%, #a16207 100%)',
+          totalBorder: '#ca8a04',
+          footerBg: '#fefce8',
+          footerBorder: '#ca8a04',
+          footerText: '#713f12',
+          legalBg: '#713f12',
+          legalText: '#fef08a',
+          btnBg: 'linear-gradient(135deg, #ca8a04 0%, #a16207 100%)',
+          modalBorder: '#ca8a04'
+        };
+
+        return (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px' }}>
+          <style>{`
+            @media print {
+              @page {
+                size: A4 portrait;
+                margin: 0mm;
+              }
+              html, body {
+                background: #ffffff !important;
+                color: #0f172a !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                height: 100vh !important;
+                max-height: 100vh !important;
+                overflow: hidden !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
+              body * {
+                visibility: hidden !important;
+              }
+              .printable-booking-allotment, .printable-booking-allotment * {
+                visibility: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                box-sizing: border-box !important;
+              }
+              .printable-booking-allotment {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 100% !important;
+                max-height: 100vh !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                page-break-before: avoid !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
+                break-before: avoid !important;
+                break-after: avoid !important;
+                break-inside: avoid !important;
+                overflow: hidden !important;
+                border-radius: 0 !important;
+                transform: none !important;
+              }
+              .no-print {
+                display: none !important;
+                height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+            }
+          `}</style>
+
+          <div className="printable-booking-allotment" style={{ background: '#ffffff', color: '#0f172a', borderRadius: '20px', width: '100%', maxWidth: '840px', maxHeight: '92vh', overflowY: 'auto', padding: '0', display: 'flex', flexDirection: 'column', border: `2px solid ${activeT.modalBorder}`, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+            
+            {/* 🌟 CLEAN WHITE & GOLDEN YELLOW HEADER BANNER */}
+            <div style={{ background: activeT.headerBg, padding: '20px 24px', borderBottom: `3px solid ${activeT.headerBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+              
+              {/* LEFT COLUMN: BADGE, TITLE, ADDRESS, SYSTEM SUB-HEADER */}
+              <div style={{ flex: 1, minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <span style={{ background: '#0f172a', color: '#ffffff', padding: '3px 10px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '900', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                    OFFICIAL UNIT ALLOTMENT & ADVANCE RECEIPT
+                  </span>
+                  <span style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800' }}>
+                    STATUS: {bkg.approval_status || 'APPROVED_LOCKED'}
+                  </span>
+                </div>
+
+                {/* LOGO BESIDE COMPANY NAME */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '2px' }}>
+                  <div style={{ background: activeT.logoBg || '#ffffff', border: `2px solid ${activeT.logoBorder || '#fde047'}`, padding: '4px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '46px', height: '46px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', flexShrink: 0 }}>
+                    <img src="/swaramayi-logo.png" alt="Swaramayi Logo" style={{ width: '36px', height: '36px', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLElement).src = 'https://swaramayi-website.vercel.app/logo.png'; }} />
+                  </div>
+
+                  <h1 style={{ fontSize: '1.45rem', fontWeight: '900', color: '#0f172a', margin: 0, letterSpacing: '-0.3px', textTransform: 'uppercase' }}>
+                    SWARAMAYI REAL ESTATE MARKETING
+                  </h1>
+                </div>
+
+                <div style={{ fontSize: '0.74rem', color: '#475569', lineHeight: '1.4' }}>
+                  4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129 • Phone: +91 88021 30791 • RERA Reg No: WBRERA/A/NOR/2025/000737
+                </div>
+
+                <div style={{ fontSize: '0.73rem', fontWeight: '800', color: activeT.accentText, borderTop: '1px solid #e2e8f0', paddingTop: '4px', marginTop: '2px' }}>
+                  Enterprise Real Estate Operating System • Official Property Allotment & Settlement Record
+                </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#0284c7', fontFamily: 'monospace' }}>{showAllotmentModal.booking.booking_code}</span>
-                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Date: {showAllotmentModal.booking.booking_date}</div>
+
+              {/* RIGHT COLUMN: VIBRANT GREEN BOOKING CODE BADGE & DATE */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                <div style={{ background: '#22c55e', color: '#ffffff', padding: '6px 14px', borderRadius: '8px', fontSize: '0.95rem', fontWeight: '900', fontFamily: 'monospace', letterSpacing: '0.5px', boxShadow: '0 2px 8px rgba(34, 197, 94, 0.35)' }}>
+                  {bkgCode}
+                </div>
+
+                <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '700' }}>
+                  📅 Date: <strong style={{ color: '#0f172a' }}>{bkgDate}</strong>
+                </div>
               </div>
+
             </div>
 
-            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px', display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px', fontSize: '0.85rem' }}>
-              <div><strong>Allottee Name:</strong> {showAllotmentModal.booking.customer_name}</div>
-              <div><strong>Customer ID:</strong> {showAllotmentModal.booking.customer_number}</div>
-              <div><strong>Contact Mobile:</strong> {showAllotmentModal.booking.customer_mobile}</div>
-              <div><strong>Project & Developer:</strong> {showAllotmentModal.booking.project_name} ({showAllotmentModal.booking.developer_name})</div>
-              <div><strong>Allotted Unit:</strong> <span style={{ color: '#0284c7', fontWeight: '900' }}>{showAllotmentModal.booking.tower_unit}</span></div>
-              <div><strong>Total Agreement Value:</strong> <span style={{ color: '#16a34a', fontWeight: '900' }}>{showAllotmentModal.booking.agreement_value}</span></div>
-            </div>
-
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', border: '1px solid #cbd5e1' }}>
-              <thead>
-                <tr style={{ background: '#0284c7', color: '#ffffff' }}>
-                  <th style={{ padding: '8px', textAlign: 'left' }}>Particulars</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>Amount Paid (₹)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style={{ padding: '8px', borderBottom: '1px solid #cbd5e1' }}>Advance Booking Token Payment ({showAllotmentModal.booking.payment_mode})</td>
-                  <td style={{ padding: '8px', textAlign: 'right', borderBottom: '1px solid #cbd5e1', fontWeight: '900', color: '#16a34a' }}>₹{Number(showAllotmentModal.booking.token_amount).toLocaleString('en-IN')}</td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '8px' }}>Payment Reference / Transaction ID</td>
-                  <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace' }}>{showAllotmentModal.booking.payment_ref}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', borderTop: '1px solid #cbd5e1', paddingTop: '16px' }}>
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Assigned Sales CRM Executive</span>
-                <div style={{ fontWeight: '800', color: '#0f172a' }}>{showAllotmentModal.booking.sales_executive}</div>
+            {/* MODAL MAIN CONTENT CONTAINER */}
+            <div style={{ padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              
+              {/* CORPORATE CONTACT & ADDRESS SUB-HEADER BANNER */}
+              <div style={{ background: activeT.subHeaderBg, border: `1px solid ${activeT.subHeaderBorder}`, borderRadius: '10px', padding: '10px 14px', fontSize: '0.73rem', color: activeT.subHeaderTitle, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                <div>
+                  🏛️ <strong>Issuing Enterprise Branch:</strong> <span style={{ fontWeight: '900', color: activeT.cardTitle }}>{bkg.branch_name || 'Kolkata Branch'}</span>
+                  <span style={{ margin: '0 8px', opacity: 0.5 }}>|</span>
+                  🏢 <strong>Registered Corporate Office:</strong> 4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, North 24 Parganas, Madhyamgram, Kolkata - 700129
+                </div>
+                <div style={{ display: 'flex', gap: '10px', fontWeight: '700', color: activeT.subHeaderLink, flexWrap: 'wrap' }}>
+                  <span>🆔 WBRERA: WBRERA/A/NOR/2025/000737</span>
+                  <span>📧 Email: avishek@swaramayi.info</span>
+                  <span>📱 Phone: +91 88021 30791</span>
+                  <span>🌐 Web: https://swaramayi-website.vercel.app/</span>
+                </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.75rem', color: '#22c55e', fontWeight: '900' }}>● DIGITAL CORPORATE STAMP & LOCK VERIFIED</span>
-                <div style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace' }}>SHA256-BKG-STAMP-#904128</div>
+
+              {/* TWO-COLUMN INFORMATIONAL CARDS */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                
+                {/* CARD 1: ALLOTTEE & CUSTOMER DETAILS */}
+                <div style={{ background: activeT.cardBg, border: `1px solid ${activeT.cardBorder}`, borderRadius: '10px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.78rem' }}>
+                  <div style={{ borderBottom: `1px solid ${activeT.cardBorder}`, paddingBottom: '4px', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.9rem' }}>👤</span>
+                    <strong style={{ color: activeT.cardTitle, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ALLOTTEE & CUSTOMER DETAILS</strong>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Issuing Branch:</span>
+                    <strong style={{ color: activeT.cardTitle }}>{bkg.branch_name || 'Kolkata Branch'}</strong>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Billed / Allotted To:</span>
+                    <strong style={{ color: '#0f172a' }}>{bkg.customer_name}</strong>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Customer ID:</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{bkg.customer_number || 'SRM-CUS-2026-000185'}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Contact Phone:</span>
+                    <strong>{bkg.customer_mobile || '+91 98765 43210'}</strong>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Email Address:</span>
+                    <span>{bkg.customer_email || 'customer@gmail.com'}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Sales Executive:</span>
+                    <strong style={{ color: '#0f172a' }}>{bkg.sales_executive || 'Ramesh Pawar'}</strong>
+                  </div>
+
+                  <div style={{ borderTop: `1px solid ${activeT.cardBorder}`, paddingTop: '4px', marginTop: '2px' }}>
+                    <span style={{ color: '#64748b', display: 'block', marginBottom: '1px' }}>Customer Address:</span>
+                    <div style={{ fontWeight: '600', color: '#1e293b' }}>{bkg.customer_address || 'Jessore Road, Barasat, Kolkata, West Bengal - 700124'}</div>
+                  </div>
+                </div>
+
+                {/* CARD 2: ALLOTTED PROPERTY & FINANCIAL DETAILS */}
+                <div style={{ background: activeT.cardBg, border: `1px solid ${activeT.cardBorder}`, borderRadius: '10px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.78rem' }}>
+                  <div style={{ borderBottom: `1px solid ${activeT.cardBorder}`, paddingBottom: '4px', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.9rem' }}>🏠</span>
+                    <strong style={{ color: activeT.cardTitle, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ALLOTTED PROPERTY & FINANCIAL DETAILS</strong>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Property Code:</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{bkg.property_code || 'SRM-PROP-2026-000426'}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Project Title:</span>
+                    <strong style={{ color: '#0f172a' }}>{bkg.project_name || bkg.property_title || 'GAJAPATI APARTMENT'}</strong>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Developer / Builder:</span>
+                    <strong>{bkg.developer_name || 'Dhriti Builders & Developers'}</strong>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Allotted Unit / Tower:</span>
+                    <strong style={{ color: activeT.cardTitle, fontSize: '0.85rem' }}>{bkg.tower_unit || 'Block A - Unit 302'}</strong>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Approval & Lock Status:</span>
+                    <span style={{ background: '#22c55e', color: '#ffffff', padding: '1px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800' }}>✓ {bkg.approval_status || 'APPROVED_LOCKED'}</span>
+                  </div>
+
+                  <div style={{ borderTop: `1px solid ${activeT.cardBorder}`, paddingTop: '4px', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748b' }}>Total Agreement Value:</span>
+                      <strong style={{ color: activeT.cardTitle, fontSize: '0.86rem' }}>₹{agreeValNum.toLocaleString('en-IN')}</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748b' }}>Advance Token Paid:</span>
+                      <strong style={{ color: '#16a34a' }}>₹{tokenValNum.toLocaleString('en-IN')}</strong>
+                    </div>
+                  </div>
+                </div>
+
               </div>
+
+              {/* PARTICULARS & ADVANCE TOKEN PAYMENT TABLE */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', border: `1px solid ${activeT.cardBorder}`, borderRadius: '8px', overflow: 'hidden' }}>
+                <thead>
+                  <tr style={{ background: activeT.tableHeader, color: '#ffffff' }}>
+                    <th style={{ padding: '9px 12px', textAlign: 'left', fontWeight: '800' }}>Description of Allotment Particulars</th>
+                    <th style={{ padding: '9px 12px', textAlign: 'right', fontWeight: '800' }}>Agreement Value (₹)</th>
+                    <th style={{ padding: '9px 12px', textAlign: 'right', fontWeight: '800' }}>Token Amount Paid (₹)</th>
+                    <th style={{ padding: '9px 12px', textAlign: 'right', fontWeight: '800' }}>Payment Mode & TXN Ref</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ background: '#ffffff' }}>
+                    <td style={{ padding: '10px 12px', borderBottom: `1px solid ${activeT.cardBorder}` }}>
+                      <strong style={{ fontSize: '0.84rem', color: '#0f172a' }}>Advance Booking Token Payment for {bkg.project_name || 'Property'} ({bkg.tower_unit || 'Unit 302'})</strong>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                        Official Inventory Unit Lock & Registration Processing Advance
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', borderBottom: `1px solid ${activeT.cardBorder}`, fontWeight: '700' }}>
+                      ₹{agreeValNum.toLocaleString('en-IN')}
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', borderBottom: `1px solid ${activeT.cardBorder}`, fontWeight: '900', color: '#16a34a', fontSize: '0.98rem' }}>
+                      ₹{tokenValNum.toLocaleString('en-IN')}
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', borderBottom: `1px solid ${activeT.cardBorder}`, color: '#475569', fontSize: '0.78rem' }}>
+                      <div>{bkg.payment_mode || 'UPI / Online Bank Transfer'}</div>
+                      <div style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0284c7' }}>{bkg.payment_ref || 'TXN-SRM-576683'}</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* TAX BREAKDOWN & AMOUNT IN WORDS SUMMARY */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '14px' }}>
+                
+                <div style={{ flex: 1, background: activeT.cardBg, border: `1px solid ${activeT.cardBorder}`, borderRadius: '10px', padding: '12px 14px', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ color: '#64748b', fontWeight: '800' }}>Advance Token Amount Paid (in words):</span>
+                  <strong style={{ color: activeT.cardTitle, fontSize: '0.84rem', fontStyle: 'italic' }}>
+                    {tokenInWordsStr}
+                  </strong>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px', borderTop: `1px dashed ${activeT.cardBorder}`, paddingTop: '4px' }}>
+                    ℹ Unit {bkg.tower_unit || 'Unit 302'} in {bkg.project_name || 'Project'} is LOCKED & RESERVED for {bkg.customer_name}. Balance payable as per developer payment schedule.
+                  </div>
+                </div>
+
+                <div style={{ width: '330px', background: activeT.cardBg, border: `1px solid ${activeT.cardBorder}`, borderRadius: '10px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.8rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Total Agreement Value:</span>
+                    <strong>₹{agreeValNum.toLocaleString('en-IN')}</strong>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Less Advance Token Paid:</span>
+                    <strong style={{ color: '#16a34a' }}>- ₹{tokenValNum.toLocaleString('en-IN')}</strong>
+                  </div>
+
+                  <div style={{ borderTop: `2px solid ${activeT.totalBorder}`, paddingTop: '6px', marginTop: '2px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: '900', color: '#0f172a', fontSize: '0.82rem' }}>BALANCE AGREEMENT PAYABLE:</span>
+                    <strong style={{ color: activeT.cardTitle, fontSize: '1.15rem', fontWeight: '900' }}>
+                      ₹{balanceValNum.toLocaleString('en-IN')}
+                    </strong>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* 🛡️ LUXURY FOOTER CARD (BANKING DETAILS & DIGITAL SIGNATURE) */}
+              <div style={{ background: activeT.footerBg, border: `1px solid ${activeT.cardBorder}`, borderTop: `3px solid ${activeT.footerBorder}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: activeT.cardTitle, fontWeight: '900', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    🏦 OFFICIAL BANK ACCOUNT DETAILS FOR ALLOTMENT SETTLEMENT
+                  </span>
+                  <div style={{ fontWeight: '800', color: activeT.footerText, fontSize: '0.8rem', marginTop: '3px' }}>
+                    HDFC Bank • A/C: <span style={{ fontFamily: 'monospace' }}>50200018942109</span> • IFSC: <span style={{ fontFamily: 'monospace' }}>HDFC0000128</span> • UPI ID: swaramayi@hdfcbank
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <CheckCircle2 size={15} color="#16a34a" /> AUTHORIZED DIGITAL SIGNATURE
+                  </span>
+                  <div style={{ background: '#ffffff', border: `1px solid ${activeT.cardBorder}`, padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', color: activeT.footerText, fontFamily: 'monospace', fontWeight: '700' }}>
+                    SHA256-BKG-STAMP-#904128
+                  </div>
+                </div>
+              </div>
+
+              {/* 🔒 BOTTOM SLIM LEGAL BAR */}
+              <div style={{ background: activeT.legalBg, color: activeT.legalText, padding: '8px 14px', borderRadius: '8px', textAlign: 'center', fontSize: '0.7rem', fontWeight: '600' }}>
+                🔒 Official Computer-Generated Property Unit Allotment Letter & Advance Token Receipt • Swaramayi Real Estate Marketing
+              </div>
+
+              {/* ACTION BUTTONS */}
+              <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: `1px solid ${activeT.cardBorder}`, paddingTop: '14px' }}>
+                <button 
+                  onClick={() => {
+                    const modalEl = document.querySelector('.printable-booking-allotment');
+                    if (modalEl) modalEl.scrollTop = 0;
+                    window.print();
+                  }} 
+                  style={{ background: activeT.btnBg, color: '#ffffff', border: 'none', padding: '10px 24px', borderRadius: '10px', fontWeight: '900', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)' }}
+                >
+                  🖨️ Print Allotment PDF
+                </button>
+                
+                <button 
+                  onClick={() => setShowAllotmentModal(null)} 
+                  style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '10px 22px', borderRadius: '10px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer' }}
+                >
+                  Close
+                </button>
+              </div>
+
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <button onClick={() => window.print()} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: '900', cursor: 'pointer' }}>🖨️ Print Allotment PDF</button>
-              <button onClick={() => setShowAllotmentModal(null)} style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: '800', cursor: 'pointer' }}>Close</button>
-            </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* MODAL: CREATE CUSTOMER OR DEVELOPER TAX INVOICE */}
       {showCreateInvoiceModal && (
@@ -20239,8 +20602,8 @@ export default function App() {
               const invNum = isDev ? `SRM-INV-DEV-2026-000${invoices.length + 501}` : `SRM-INV-CUS-2026-000${invoices.length + 401}`;
               const taxVal = Number(createInvoiceForm.taxable_value || 200000);
               const applyGst = createInvoiceForm.apply_gst !== false;
-              const cgstRate = Number(createInvoiceForm.cgst_rate !== undefined ? createInvoiceForm.cgst_rate : 9);
-              const sgstRate = Number(createInvoiceForm.sgst_rate !== undefined ? createInvoiceForm.sgst_rate : 9);
+              const cgstRate = applyGst && createInvoiceForm.cgst_rate !== undefined && createInvoiceForm.cgst_rate !== '' ? Number(createInvoiceForm.cgst_rate) : (applyGst ? 9 : 0);
+              const sgstRate = applyGst && createInvoiceForm.sgst_rate !== undefined && createInvoiceForm.sgst_rate !== '' ? Number(createInvoiceForm.sgst_rate) : (applyGst ? 9 : 0);
               const cgst = applyGst ? Math.round(taxVal * (cgstRate / 100)) : 0;
               const sgst = applyGst ? Math.round(taxVal * (sgstRate / 100)) : 0;
               const totalInv = taxVal + cgst + sgst;
@@ -20936,7 +21299,7 @@ export default function App() {
                     <span>Apply GST Tax (Fully Editable Rates & Amounts)</span>
                   </label>
                   <span style={{ fontSize: '0.72rem', fontWeight: '900', color: createInvoiceForm.apply_gst !== false ? '#4ade80' : '#fbbf24', background: createInvoiceForm.apply_gst !== false ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)', padding: '2px 8px', borderRadius: '4px' }}>
-                    {createInvoiceForm.apply_gst !== false ? `🟢 ${Number(createInvoiceForm.cgst_rate || 9) + Number(createInvoiceForm.sgst_rate || 9)}% GST Tax Active` : '🟡 0% Tax Exempt'}
+                    {createInvoiceForm.apply_gst !== false ? `🟢 ${(createInvoiceForm.cgst_rate !== undefined && createInvoiceForm.cgst_rate !== '' ? Number(createInvoiceForm.cgst_rate) : 9) + (createInvoiceForm.sgst_rate !== undefined && createInvoiceForm.sgst_rate !== '' ? Number(createInvoiceForm.sgst_rate) : 9)}% GST Tax Active` : '🟡 0% Tax Exempt'}
                   </span>
                 </div>
 
@@ -21205,42 +21568,46 @@ export default function App() {
 {/* MODAL: PRINT GST TAX INVOICE PDF MODAL */}
       {showPrintInvoiceModal && showPrintInvoiceModal.open && (() => {
         const themePresets = {
-          // OPTION 3. WARM SAND & CHAMPAGNE NUDE
+          // OPTION 1. WARM WHITE & GOLDEN YELLOW
           SAND: {
-            name: 'Warm Sand & Champagne Nude',
-            badge: '🍨 CHAMPAGNE SAND',
-            headerBg: 'linear-gradient(135deg, #451a03 0%, #290e05 100%)',
-            headerBorder: '#d97706',
-            logoBg: 'linear-gradient(135deg, #78350f 0%, #451a03 100%)',
-            logoBorder: '#fde68a',
-            accentText: '#fcd34d',
-            cardBg: '#fffbeb',
-            cardBorder: '#fde68a',
-            cardTitle: '#b45309',
-            subHeaderBg: '#fef3c7',
+            name: 'Warm White & Golden Yellow',
+            badge: '🌟 WHITE & GOLDEN YELLOW',
+            headerBg: '#ffffff',
+            headerBorder: '#ca8a04',
+            headerTitle: '#0f172a',
+            headerAddress: '#334155',
+            logoBg: '#ffffff',
+            logoBorder: '#fde047',
+            accentText: '#ca8a04',
+            cardBg: '#fefce8',
+            cardBorder: '#fde047',
+            cardTitle: '#ca8a04',
+            subHeaderBg: '#fef9c3',
             subHeaderBorder: '#fde047',
-            subHeaderTitle: '#78350f',
-            subHeaderLink: '#b45309',
-            tableHeader: 'linear-gradient(135deg, #451a03 0%, #290e05 100%)',
-            totalBorder: '#b45309',
-            footerBg: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
-            footerBorder: '#b45309',
-            footerText: '#290e05',
-            legalBg: '#290e05',
-            legalText: '#fde68a',
-            btnBg: 'linear-gradient(135deg, #b45309 0%, #78350f 100%)',
-            modalBorder: '#b45309',
-            badgeColor: '#b45309'
+            subHeaderTitle: '#854d0e',
+            subHeaderLink: '#ca8a04',
+            tableHeader: 'linear-gradient(135deg, #ca8a04 0%, #a16207 100%)',
+            totalBorder: '#ca8a04',
+            footerBg: '#fefce8',
+            footerBorder: '#ca8a04',
+            footerText: '#713f12',
+            legalBg: '#713f12',
+            legalText: '#fef08a',
+            btnBg: 'linear-gradient(135deg, #ca8a04 0%, #a16207 100%)',
+            modalBorder: '#ca8a04',
+            badgeColor: '#ca8a04'
           },
-          // OPTION 5. SOFT ICE BLUE & SLATE
+          // OPTION 2. SOFT ICE BLUE & SLATE
           NAVY: {
             name: 'Soft Ice Blue & Slate',
             badge: '💎 ICE BLUE SLATE',
-            headerBg: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+            headerBg: '#f0f9ff',
             headerBorder: '#38bdf8',
-            logoBg: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+            headerTitle: '#0f172a',
+            headerAddress: '#334155',
+            logoBg: '#ffffff',
             logoBorder: '#bae6fd',
-            accentText: '#7dd3fc',
+            accentText: '#0284c7',
             cardBg: '#f0f9ff',
             cardBorder: '#bae6fd',
             cardTitle: '#0284c7',
@@ -21248,20 +21615,63 @@ export default function App() {
             subHeaderBorder: '#bae6fd',
             subHeaderTitle: '#0369a1',
             subHeaderLink: '#0284c7',
-            tableHeader: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+            tableHeader: '#1e293b',
             totalBorder: '#0284c7',
-            footerBg: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+            footerBg: '#f0f9ff',
             footerBorder: '#0284c7',
             footerText: '#0f172a',
             legalBg: '#0f172a',
             legalText: '#bae6fd',
-            btnBg: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+            btnBg: '#0284c7',
             modalBorder: '#0284c7',
             badgeColor: '#0284c7'
           }
         };
 
         const activeT = themePresets[invoiceTemplateTheme] || themePresets.SAND;
+
+        const inv = showPrintInvoiceModal.invoice || {};
+
+        const parseNumVal = (val: any, fallback = 0): number => {
+          if (typeof val === 'number') return isNaN(val) ? fallback : val;
+          if (!val) return fallback;
+          const clean = String(val).replace(/[^0-9.]/g, '');
+          const parsed = parseFloat(clean);
+          return isNaN(parsed) ? fallback : parsed;
+        };
+
+        const parseRateVal = (val: any, fallback = 9): number => {
+          if (val === undefined || val === null || val === '') return fallback;
+          const clean = String(val).replace(/[^0-9.]/g, '');
+          if (clean === '') return fallback;
+          const parsed = parseFloat(clean);
+          return isNaN(parsed) ? fallback : parsed;
+        };
+
+        const agreementValNum = parseNumVal(inv.agreement_value || inv.agreementValue, 8400000);
+        const flatPriceNum = parseNumVal(inv.flat_price || inv.flatPrice, agreementValNum ? Math.round(agreementValNum * 0.95) : 8000000);
+        const brokeragePctNum = parseNumVal(inv.brokerage_percent || inv.brokeragePercent, 2.0) || 2.0;
+
+        const computedTaxable = Math.round(agreementValNum * (brokeragePctNum / 100));
+        const taxableValNum = (inv.taxable_value !== undefined && parseNumVal(inv.taxable_value, 0) > 0)
+          ? parseNumVal(inv.taxable_value, computedTaxable)
+          : computedTaxable;
+
+        const applyGstBool = inv.apply_gst !== false;
+        const cgstRateNum = applyGstBool ? parseRateVal(inv.cgst_rate, 9) : 0;
+        const sgstRateNum = applyGstBool ? parseRateVal(inv.sgst_rate, 9) : 0;
+
+        const cgstAmtNum = applyGstBool
+          ? (inv.cgst_amount !== undefined && typeof inv.cgst_amount === 'number' && inv.cgst_amount >= 0 && cgstRateNum > 0 ? inv.cgst_amount : Math.round(taxableValNum * (cgstRateNum / 100)))
+          : 0;
+
+        const sgstAmtNum = applyGstBool
+          ? (inv.sgst_amount !== undefined && typeof inv.sgst_amount === 'number' && inv.sgst_amount >= 0 && sgstRateNum > 0 ? inv.sgst_amount : Math.round(taxableValNum * (sgstRateNum / 100)))
+          : 0;
+
+        const totalInvoiceAmtNum = taxableValNum + cgstAmtNum + sgstAmtNum;
+
+        const amountInWordsStr = numberToWordsIndian(totalInvoiceAmtNum);
 
         return (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px' }}>
@@ -21343,9 +21753,9 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setInvoiceTemplateTheme('SAND')}
-                  style={{ background: invoiceTemplateTheme === 'SAND' ? '#b45309' : '#1e293b', color: '#ffffff', border: invoiceTemplateTheme === 'SAND' ? '2px solid #d97706' : '1px solid #334155', padding: '5px 12px', borderRadius: '8px', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer' }}
+                  style={{ background: invoiceTemplateTheme === 'SAND' ? '#ca8a04' : '#1e293b', color: '#ffffff', border: invoiceTemplateTheme === 'SAND' ? '2px solid #fde047' : '1px solid #334155', padding: '5px 12px', borderRadius: '8px', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer' }}
                 >
-                  🍨 Warm Sand & Champagne Nude {invoiceTemplateTheme === 'SAND' ? '(Active)' : ''}
+                  🌟 Warm White & Golden Yellow {invoiceTemplateTheme === 'SAND' ? '(Active)' : ''}
                 </button>
 
                 <button
@@ -21367,48 +21777,49 @@ export default function App() {
               </div>
             </div>
 
-            {/* 🌟 LUXURY DYNAMIC HEADER BANNER */}
-            <div style={{ background: activeT.headerBg, color: '#ffffff', padding: '18px 24px', borderBottom: `4px solid ${activeT.headerBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            {/* 🌟 AGREEMENT-MATCHING CLEAN HEADER BANNER */}
+            <div style={{ background: activeT.headerBg, padding: '20px 24px', borderBottom: `3px solid ${activeT.headerBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
               
-              {/* COMPANY BRANDING LOGO & TITLES */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '300px' }}>
-                <img 
-                  src="/swaramayi-logo.png" 
-                  alt="Swaramayi Real Estate Logo" 
-                  style={{ height: '56px', background: '#ffffff', padding: '4px 12px', borderRadius: '14px', boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4)', objectFit: 'contain', flexShrink: 0 }} 
-                />
+              {/* LEFT COLUMN: BADGE, LOGO & TITLE, ADDRESS, SYSTEM SUB-HEADER */}
+              <div style={{ flex: 1, minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <span style={{ background: '#0f172a', color: '#ffffff', padding: '3px 10px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '900', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                    {showPrintInvoiceModal.invoice.invoice_category === 'DEVELOPER' ? 'OFFICIAL DEVELOPER BROKERAGE INVOICE' : 'OFFICIAL CUSTOMER TAX INVOICE'}
+                  </span>
+                  <span style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800' }}>
+                    GSTIN: 36AAACS9012F1Z8
+                  </span>
+                </div>
 
-                <div>
-                  <h1 style={{ fontSize: '1.35rem', fontWeight: '900', color: '#ffffff', margin: 0, letterSpacing: '-0.3px', textTransform: 'uppercase' }}>
+                {/* LOGO BESIDE COMPANY NAME */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', flexWrap: 'nowrap' }}>
+                  <div style={{ background: activeT.logoBg || '#ffffff', border: `2px solid ${activeT.logoBorder || '#fde047'}`, padding: '4px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '42px', height: '42px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', flexShrink: 0 }}>
+                    <img src="/swaramayi-logo.png" alt="Swaramayi Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLElement).src = 'https://swaramayi-website.vercel.app/logo.png'; }} />
+                  </div>
+
+                  <h1 style={{ fontSize: '1.2rem', fontWeight: '900', color: activeT.headerTitle || '#0f172a', margin: 0, letterSpacing: '-0.3px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                     SWARAMAYI REAL ESTATE MARKETING
                   </h1>
-                  
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px', flexWrap: 'wrap' }}>
-                    <span style={{ background: activeT.badgeColor, color: '#ffffff', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '900', letterSpacing: '0.5px' }}>
-                      GSTIN: 36AAACS9012F1Z8
-                    </span>
-                    <span style={{ background: 'rgba(255, 255, 255, 0.25)', color: '#ffffff', padding: '2px 10px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: '900', letterSpacing: '0.5px', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
-                      🏛️ Branch: {showPrintInvoiceModal.invoice.branch_name || 'Kolkata Branch'}
-                    </span>
-                    <span style={{ background: 'rgba(255, 255, 255, 0.15)', color: activeT.accentText, padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '800', border: `1px solid ${activeT.accentText}` }}>
-                      Official GST 18% Tax Invoice
-                    </span>
-                  </div>
+                </div>
+
+                <div style={{ fontSize: '0.74rem', color: activeT.headerAddress || '#334155', lineHeight: '1.4' }}>
+                  {showPrintInvoiceModal.invoice.company_address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129'} • Phone: {showPrintInvoiceModal.invoice.company_mobile || '+91 88021 30791'} • RERA Reg No: {showPrintInvoiceModal.invoice.company_rera_no || 'WBRERA/A/NOR/2025/000737'}
+                </div>
+
+                <div style={{ fontSize: '0.73rem', fontWeight: '800', color: activeT.accentText, borderTop: '1px solid #cbd5e1', paddingTop: '4px', marginTop: '2px' }}>
+                  Enterprise Real Estate Operating System • Official Tax Invoice & Settlement Record
                 </div>
               </div>
 
-              {/* INVOICE CARD BADGE */}
-              <div style={{ background: 'rgba(255, 255, 255, 0.08)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '12px', padding: '10px 14px', textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }}>
-                <span style={{ background: showPrintInvoiceModal.invoice.invoice_category === 'DEVELOPER' ? '#16a34a' : activeT.badgeColor, color: '#ffffff', padding: '2px 8px', borderRadius: '8px', fontSize: '0.68rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {showPrintInvoiceModal.invoice.invoice_category === 'DEVELOPER' ? 'B2B DEVELOPER BROKERAGE INVOICE' : 'B2C CUSTOMER SERVICE INVOICE'}
-                </span>
-                
-                <div style={{ fontSize: '1.05rem', fontWeight: '900', color: activeT.accentText, fontFamily: 'monospace', margin: '2px 0 0 0' }}>
+              {/* RIGHT COLUMN: VIBRANT GREEN INVOICE CODE BADGE & DATE */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                <div style={{ background: '#22c55e', color: '#ffffff', padding: '6px 14px', borderRadius: '8px', fontSize: '0.95rem', fontWeight: '900', fontFamily: 'monospace', letterSpacing: '0.5px', boxShadow: '0 2px 8px rgba(34, 197, 94, 0.35)' }}>
                   {showPrintInvoiceModal.invoice.invoice_number}
                 </div>
-                
-                <div style={{ fontSize: '0.72rem', color: '#ffffff', fontWeight: '700', opacity: 0.9 }}>
-                  📅 Date: <strong>{showPrintInvoiceModal.invoice.created_date || '2026-08-29'}</strong>
+
+                <div style={{ fontSize: '0.74rem', color: activeT.headerAddress || '#334155', fontWeight: '700' }}>
+                  📅 Date: <strong style={{ color: activeT.headerTitle || '#0f172a' }}>{showPrintInvoiceModal.invoice.created_date || '2026-08-29'}</strong>
                 </div>
               </div>
 
@@ -21518,12 +21929,12 @@ export default function App() {
                   <div style={{ borderTop: `1px solid ${activeT.cardBorder}`, paddingTop: '4px', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: '#64748b' }}>Flat Base Price:</span>
-                      <span>{typeof showPrintInvoiceModal.invoice.flat_price === 'number' ? `₹${showPrintInvoiceModal.invoice.flat_price.toLocaleString('en-IN')}` : (showPrintInvoiceModal.invoice.flat_price || '₹80,00,000')}</span>
+                      <span>₹{flatPriceNum.toLocaleString('en-IN')}</span>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: '#64748b' }}>Agreement Value:</span>
-                      <strong style={{ color: activeT.cardTitle }}>{typeof showPrintInvoiceModal.invoice.agreement_value === 'number' ? `₹${showPrintInvoiceModal.invoice.agreement_value.toLocaleString('en-IN')}` : (showPrintInvoiceModal.invoice.agreement_value || '₹84,00,000')}</strong>
+                      <strong style={{ color: activeT.cardTitle }}>₹{agreementValNum.toLocaleString('en-IN')}</strong>
                     </div>
                   </div>
                 </div>
@@ -21536,8 +21947,8 @@ export default function App() {
                   <tr style={{ background: activeT.tableHeader, color: '#ffffff' }}>
                     <th style={{ padding: '9px 12px', textAlign: 'left', fontWeight: '800' }}>Description of Services / Particulars</th>
                     <th style={{ padding: '9px 12px', textAlign: 'right', fontWeight: '800' }}>Taxable Value (₹)</th>
-                    <th style={{ padding: '9px 12px', textAlign: 'right', fontWeight: '800' }}>CGST ({showPrintInvoiceModal.invoice.cgst_rate || '9%'})</th>
-                    <th style={{ padding: '9px 12px', textAlign: 'right', fontWeight: '800' }}>SGST ({showPrintInvoiceModal.invoice.sgst_rate || '9%'})</th>
+                    <th style={{ padding: '9px 12px', textAlign: 'right', fontWeight: '800' }}>CGST ({cgstRateNum}%)</th>
+                    <th style={{ padding: '9px 12px', textAlign: 'right', fontWeight: '800' }}>SGST ({sgstRateNum}%)</th>
                     <th style={{ padding: '9px 12px', textAlign: 'right', fontWeight: '800' }}>Total Invoice Amount (₹)</th>
                   </tr>
                 </thead>
@@ -21546,20 +21957,20 @@ export default function App() {
                     <td style={{ padding: '10px 12px', borderBottom: `1px solid ${activeT.cardBorder}` }}>
                       <strong style={{ fontSize: '0.84rem', color: '#0f172a' }}>{showPrintInvoiceModal.invoice.particulars || 'Property Consultation & Service Charges'}</strong>
                       <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
-                        Calculated at {showPrintInvoiceModal.invoice.brokerage_percent || '2.0'}% of Agreement Value ({typeof showPrintInvoiceModal.invoice.agreement_value === 'number' ? `₹${showPrintInvoiceModal.invoice.agreement_value.toLocaleString('en-IN')}` : (showPrintInvoiceModal.invoice.agreement_value || '₹84,00,000')})
+                        Calculated at {brokeragePctNum}% of Agreement Value (₹{agreementValNum.toLocaleString('en-IN')})
                       </div>
                     </td>
                     <td style={{ padding: '10px 12px', textAlign: 'right', borderBottom: `1px solid ${activeT.cardBorder}`, fontWeight: '700' }}>
-                      ₹{Number(showPrintInvoiceModal.invoice.taxable_value || 168000).toLocaleString('en-IN')}
+                      ₹{taxableValNum.toLocaleString('en-IN')}
                     </td>
                     <td style={{ padding: '10px 12px', textAlign: 'right', borderBottom: `1px solid ${activeT.cardBorder}`, color: '#475569' }}>
-                      ₹{Number(showPrintInvoiceModal.invoice.cgst_amount || Math.round(Number(showPrintInvoiceModal.invoice.taxable_value || 168000) * 0.09)).toLocaleString('en-IN')}
+                      ₹{cgstAmtNum.toLocaleString('en-IN')}
                     </td>
                     <td style={{ padding: '10px 12px', textAlign: 'right', borderBottom: `1px solid ${activeT.cardBorder}`, color: '#475569' }}>
-                      ₹{Number(showPrintInvoiceModal.invoice.sgst_amount || Math.round(Number(showPrintInvoiceModal.invoice.taxable_value || 168000) * 0.09)).toLocaleString('en-IN')}
+                      ₹{sgstAmtNum.toLocaleString('en-IN')}
                     </td>
                     <td style={{ padding: '10px 12px', textAlign: 'right', borderBottom: `1px solid ${activeT.cardBorder}`, fontWeight: '900', color: '#16a34a', fontSize: '0.98rem' }}>
-                      ₹{Number(showPrintInvoiceModal.invoice.total_invoice_amount || Math.round(Number(showPrintInvoiceModal.invoice.taxable_value || 168000) * 1.18)).toLocaleString('en-IN')}
+                      ₹{totalInvoiceAmtNum.toLocaleString('en-IN')}
                     </td>
                   </tr>
                 </tbody>
@@ -21571,33 +21982,33 @@ export default function App() {
                 <div style={{ flex: 1, background: activeT.cardBg, border: `1px solid ${activeT.cardBorder}`, borderRadius: '10px', padding: '12px 14px', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ color: '#64748b', fontWeight: '800' }}>Amount Chargeable (in words):</span>
                   <strong style={{ color: activeT.cardTitle, fontSize: '0.84rem', fontStyle: 'italic' }}>
-                    Rupees One Lakh Ninety-Eight Thousand Two Hundred Forty Only
+                    {amountInWordsStr}
                   </strong>
                   <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px', borderTop: `1px dashed ${activeT.cardBorder}`, paddingTop: '4px' }}>
-                    ℹ Applicable GST Rates: CGST @ 9% + SGST @ 9% = Total GST 18%.
+                    ℹ Applicable GST Rates: CGST @ {cgstRateNum}% + SGST @ {sgstRateNum}% = Total GST {cgstRateNum + sgstRateNum}%.
                   </div>
                 </div>
 
                 <div style={{ width: '310px', background: activeT.cardBg, border: `1px solid ${activeT.cardBorder}`, borderRadius: '10px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.8rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Subtotal (Taxable Value):</span>
-                    <strong>₹{Number(showPrintInvoiceModal.invoice.taxable_value || 168000).toLocaleString('en-IN')}</strong>
+                    <strong>₹{taxableValNum.toLocaleString('en-IN')}</strong>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748b' }}>CGST (9%):</span>
-                    <span>₹{Number(showPrintInvoiceModal.invoice.cgst_amount || Math.round(Number(showPrintInvoiceModal.invoice.taxable_value || 168000) * 0.09)).toLocaleString('en-IN')}</span>
+                    <span style={{ color: '#64748b' }}>CGST ({cgstRateNum}%):</span>
+                    <span>₹{cgstAmtNum.toLocaleString('en-IN')}</span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748b' }}>SGST (9%):</span>
-                    <span>₹{Number(showPrintInvoiceModal.invoice.sgst_amount || Math.round(Number(showPrintInvoiceModal.invoice.taxable_value || 168000) * 0.09)).toLocaleString('en-IN')}</span>
+                    <span style={{ color: '#64748b' }}>SGST ({sgstRateNum}%):</span>
+                    <span>₹{sgstAmtNum.toLocaleString('en-IN')}</span>
                   </div>
 
                   <div style={{ borderTop: `2px solid ${activeT.totalBorder}`, paddingTop: '6px', marginTop: '2px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontWeight: '900', color: '#0f172a', fontSize: '0.85rem' }}>TOTAL AMOUNT:</span>
                     <strong style={{ color: activeT.cardTitle, fontSize: '1.2rem', fontWeight: '900' }}>
-                      ₹{Number(showPrintInvoiceModal.invoice.total_invoice_amount || Math.round(Number(showPrintInvoiceModal.invoice.taxable_value || 168000) * 1.18)).toLocaleString('en-IN')}
+                      ₹{totalInvoiceAmtNum.toLocaleString('en-IN')}
                     </strong>
                   </div>
                 </div>
@@ -21626,10 +22037,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 🔒 BOTTOM SLIM LEGAL BAR */}
-              <div style={{ background: activeT.legalBg, color: activeT.legalText, padding: '8px 14px', borderRadius: '8px', textAlign: 'center', fontSize: '0.7rem', fontWeight: '600' }}>
-                🔒 Official Computer-Generated GST Tax Invoice • Issued under Telangana GST Act 2017 • Swaramayi Real Estate Marketing
-              </div>
 
               {/* ACTION BUTTONS */}
               <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: `1px solid ${activeT.cardBorder}`, paddingTop: '14px' }}>

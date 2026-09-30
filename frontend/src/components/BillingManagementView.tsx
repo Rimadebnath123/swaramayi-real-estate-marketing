@@ -85,8 +85,19 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
 
     const taxVal = Number(editInvoiceForm.taxable_value || 0);
     const applyGst = editInvoiceForm.apply_gst !== false;
-    const cgstRate = Number(editInvoiceForm.cgst_rate !== undefined ? editInvoiceForm.cgst_rate : 9);
-    const sgstRate = Number(editInvoiceForm.sgst_rate !== undefined ? editInvoiceForm.sgst_rate : 9);
+
+    const parseRate = (val: any, fallback = 9): number => {
+      if (val === undefined || val === null || val === '') return fallback;
+      const clean = String(val).replace(/[^0-9.]/g, '');
+      if (clean === '') return fallback;
+      const parsed = parseFloat(clean);
+      return isNaN(parsed) ? fallback : parsed;
+    };
+
+    const cgstRate = applyGst ? parseRate(editInvoiceForm.cgst_rate, 9) : 0;
+    const sgstRate = applyGst ? parseRate(editInvoiceForm.sgst_rate, 9) : 0;
+    const gstRate = applyGst ? parseRate(editInvoiceForm.gst_rate, cgstRate + sgstRate) : 0;
+
     const cgst = applyGst ? Math.round(taxVal * (cgstRate / 100)) : 0;
     const sgst = applyGst ? Math.round(taxVal * (sgstRate / 100)) : 0;
     const total = taxVal + cgst + sgst;
@@ -94,8 +105,10 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
     const updatedInvoice = {
       ...editInvoiceForm,
       taxable_value: taxVal,
-      cgst_rate: cgstRate,
-      sgst_rate: sgstRate,
+      apply_gst: applyGst,
+      gst_rate: String(gstRate),
+      cgst_rate: String(cgstRate),
+      sgst_rate: String(sgstRate),
       cgst_amount: cgst,
       sgst_amount: sgst,
       total_invoice_amount: total
@@ -614,16 +627,36 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                     </td>
 
                     <td style={{ padding: '12px' }}>
-                      <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800' }}>₹{Number(i.taxable_value || 200000).toLocaleString('en-IN')}</span>
-                      <div style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: '700', marginTop: '2px' }}>
-                        + GST 18%: ₹{Number((i.cgst_amount || 18000) + (i.sgst_amount || 18000)).toLocaleString('en-IN')}
-                      </div>
+                      {(() => {
+                        const itemTaxable = Number(i.taxable_value || 0);
+                        const itemCgst = Number(i.cgst_amount || Math.round(itemTaxable * 0.09));
+                        const itemSgst = Number(i.sgst_amount || Math.round(itemTaxable * 0.09));
+                        const itemGst = itemCgst + itemSgst;
+                        return (
+                          <>
+                            <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800' }}>₹{itemTaxable.toLocaleString('en-IN')}</span>
+                            <div style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: '700', marginTop: '2px' }}>
+                              + GST 18%: ₹{itemGst.toLocaleString('en-IN')}
+                            </div>
+                          </>
+                        );
+                      })()}
                     </td>
 
                     <td style={{ padding: '12px' }}>
-                      <span style={{ color: '#4ade80', fontWeight: '900', fontSize: '0.95rem' }}>
-                        ₹{Number(i.total_invoice_amount || 236000).toLocaleString('en-IN')}
-                      </span>
+                      {(() => {
+                        const itemTaxable = Number(i.taxable_value || 0);
+                        const itemCgst = Number(i.cgst_amount || Math.round(itemTaxable * 0.09));
+                        const itemSgst = Number(i.sgst_amount || Math.round(itemTaxable * 0.09));
+                        const itemTotal = (i.total_invoice_amount && Number(i.total_invoice_amount) > itemTaxable)
+                          ? Number(i.total_invoice_amount)
+                          : (itemTaxable + itemCgst + itemSgst);
+                        return (
+                          <span style={{ color: '#4ade80', fontWeight: '900', fontSize: '0.95rem' }}>
+                            ₹{itemTotal.toLocaleString('en-IN')}
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     {/* INTERACTIVE PAYMENT STATUS & MODE COLUMN */}
@@ -771,9 +804,9 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                             const brokPct = Number(i.brokerage_percent || 2.0);
                             const taxVal = Number(i.taxable_value || Math.round(agreeVal * (brokPct / 100)));
                             const applyGst = i.apply_gst !== false;
-                            const cgstRate = Number(i.cgst_rate !== undefined ? i.cgst_rate : 9);
-                            const sgstRate = Number(i.sgst_rate !== undefined ? i.sgst_rate : 9);
-                            const gstRate = Number(i.gst_rate !== undefined ? i.gst_rate : (cgstRate + sgstRate));
+                            const cgstRate = (i.cgst_rate !== undefined && i.cgst_rate !== null && i.cgst_rate !== '') ? Number(i.cgst_rate) : 9;
+                            const sgstRate = (i.sgst_rate !== undefined && i.sgst_rate !== null && i.sgst_rate !== '') ? Number(i.sgst_rate) : 9;
+                            const gstRate = (i.gst_rate !== undefined && i.gst_rate !== null && i.gst_rate !== '') ? Number(i.gst_rate) : (cgstRate + sgstRate);
 
                             setEditInvoiceForm({
                               ...i,
@@ -2067,7 +2100,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                     <span>Apply GST Tax (Fully Editable Rates & Amounts)</span>
                   </label>
                   <span style={{ fontSize: '0.72rem', fontWeight: '900', color: editInvoiceForm.apply_gst !== false ? '#4ade80' : '#fbbf24', background: editInvoiceForm.apply_gst !== false ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)', padding: '2px 8px', borderRadius: '4px' }}>
-                    {editInvoiceForm.apply_gst !== false ? `🟢 ${Number(editInvoiceForm.cgst_rate || 9) + Number(editInvoiceForm.sgst_rate || 9)}% GST Tax Active` : '🟡 0% Tax Exempt'}
+                    {editInvoiceForm.apply_gst !== false ? `🟢 ${(editInvoiceForm.cgst_rate !== undefined && editInvoiceForm.cgst_rate !== '' ? Number(editInvoiceForm.cgst_rate) : 9) + (editInvoiceForm.sgst_rate !== undefined && editInvoiceForm.sgst_rate !== '' ? Number(editInvoiceForm.sgst_rate) : 9)}% GST Tax Active` : '🟡 0% Tax Exempt'}
                   </span>
                 </div>
 

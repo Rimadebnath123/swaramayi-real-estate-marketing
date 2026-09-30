@@ -12,16 +12,25 @@ export const loadGoogleMapsApi = (): Promise<typeof google.maps> => {
     return Promise.resolve((window as any).google.maps);
   }
 
+  const apiKey = getGoogleMapsApiKey();
+  if (!apiKey || apiKey === 'YOUR_API_KEY' || !apiKey.startsWith('AIza')) {
+    return Promise.reject(new Error('VITE_GOOGLE_MAPS_API_KEY_INVALID_OR_MISSING'));
+  }
+
   if (googleMapsPromise) {
     return googleMapsPromise;
   }
 
-  const apiKey = getGoogleMapsApiKey();
-  if (!apiKey) {
-    return Promise.reject(new Error('VITE_GOOGLE_MAPS_API_KEY_MISSING'));
-  }
-
   googleMapsPromise = new Promise((resolve, reject) => {
+    (window as any).gm_authFailure = () => {
+      console.warn('Google Maps Authentication Failed. Auto-switching to Leaflet fallback.');
+      googleMapsPromise = null;
+      const scriptId = 'google-maps-js-sdk';
+      const el = document.getElementById(scriptId);
+      if (el) el.remove();
+      reject(new Error('GOOGLE_MAPS_AUTH_FAILURE'));
+    };
+
     const scriptId = 'google-maps-js-sdk';
     const existingScript = document.getElementById(scriptId);
 

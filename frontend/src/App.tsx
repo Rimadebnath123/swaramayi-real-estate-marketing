@@ -146,23 +146,43 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: {
   const animProgressRef = useRef<{ legIdx: number; pointIdx: number; t: number }>({ legIdx: 0, pointIdx: 0, t: 0 });
   const isNavigatingRef = useRef<boolean>(false);
 
-  // Load Google Maps JS SDK on mount
+  // Load Google Maps JS SDK on mount or auto-fallback to Leaflet
   useEffect(() => {
     let isMounted = true;
-    loadGoogleMapsApi()
-      .then(() => {
-        if (isMounted) {
-          setGoogleMapsReady(true);
-          setApiKeyError(false);
-        }
-      })
-      .catch((err) => {
-        console.warn('Google Maps API Key error or fallback to Leaflet:', err);
-        if (isMounted) {
-          setApiKeyError(true);
-          setGoogleMapsReady(false);
-        }
-      });
+
+    (window as any).gm_authFailure = () => {
+      console.warn('Google Maps API Key Authentication Failed. Auto-switching to Leaflet fallback.');
+      if (isMounted) {
+        setApiKeyError(true);
+        setGoogleMapsReady(false);
+        setLeafletReady(true);
+      }
+    };
+
+    const key = getGoogleMapsApiKey();
+    if (!key || key === 'YOUR_API_KEY' || !key.startsWith('AIza')) {
+      if (isMounted) {
+        setApiKeyError(true);
+        setGoogleMapsReady(false);
+        setLeafletReady(true);
+      }
+    } else {
+      loadGoogleMapsApi()
+        .then(() => {
+          if (isMounted) {
+            setGoogleMapsReady(true);
+            setApiKeyError(false);
+          }
+        })
+        .catch((err) => {
+          console.warn('Google Maps API Key error or fallback to Leaflet:', err);
+          if (isMounted) {
+            setApiKeyError(true);
+            setGoogleMapsReady(false);
+            setLeafletReady(true);
+          }
+        });
+    }
 
     if ((window as any).L) {
       setLeafletReady(true);
@@ -602,10 +622,10 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: {
       leafletMapRef.current = map;
 
       const tileUrl = mapType === 'satellite'
-        ? 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
-        : 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-      L.tileLayer(tileUrl, { maxZoom: 19, attribution: '&copy; Google Maps Road Layer | Swaramayi CRM' }).addTo(map);
+      L.tileLayer(tileUrl, { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors | ArcGIS | Swaramayi CRM' }).addTo(map);
 
       const bounds: any[] = [];
       routeNodes.forEach((node) => {
@@ -884,17 +904,7 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: {
   return (
     <div ref={mapWrapperRef} style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: isLight ? '#ffffff' : '#0f172a', padding: isFullscreen ? '20px' : '0', borderRadius: isFullscreen ? '0' : '14px' }}>
 
-      {/* API KEY CONFIGURATION BANNER NOTIFICATION */}
-      {apiKeyError && (
-        <div style={{ background: 'rgba(234, 179, 8, 0.15)', border: '1px solid #eab308', borderRadius: '10px', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#fef08a', fontSize: '0.78rem' }}>
-          <span>
-            ⚠️ <strong>Google Maps API Key Notice:</strong> Set <code style={{ color: '#38bdf8' }}>VITE_GOOGLE_MAPS_API_KEY</code> in <code style={{ color: '#38bdf8' }}>.env.development</code> to load 3D vector road map tiles and Directions API. Map is currently running in high-accuracy Google Road Overlay mode.
-          </span>
-          <a href="https://console.cloud.google.com/google/maps-apis/overview" target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8', fontWeight: '800', textDecoration: 'underline' }}>
-            Get Google Maps API Key ↗
-          </a>
-        </div>
-      )}
+
 
       {/* LIVE CAR NAVIGATION HUD DISPLAY (REAL-TIME STATUS) */}
       <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', border: '1.5px solid #0284c7', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 6px 18px rgba(0,0,0,0.25)' }}>
@@ -2285,7 +2295,7 @@ function PvaVerificationModalContent({
       propertyId: safeStop.propertyCode || safeStop.propertyId || 'SRM-PROP-2026-000421',
       costSheetId: safeStop.costSheetId || 'SRM-CS-2026-000145',
       projectId: `SRM-PROJ-2026-0000${20 + nextPvaNum}`,
-      projectTitle: safeStop.propertyTitle || 'Project Property',
+      projectTitle: (safeStop.propertyTitle || 'Project Property').split(/\s*\(\+/)[0].trim(),
       locality: safeStop.locality || 'Barasat',
       developerId: `DEV-0${nextPvaNum}`,
       developerName: safeStop.developer || 'Partner Developer',
@@ -2301,6 +2311,9 @@ function PvaVerificationModalContent({
       customerOtpStatus: 'OTP_VERIFIED',
       otpVerifiedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       otpHashRef: `SHA256:verified_otp_${otpInput}`,
+      digitalVerificationRef: `SHA256:verified_otp_${otpInput}`,
+      protectionPeriodMonths: protectionPeriodMonths || 12,
+      protectionEndDate: expDateStr,
       customerAcknowledgementStatus: 'ACKNOWLEDGED',
       customerSignature: signatureData,
       developerRepName: devRepName,
@@ -2543,6 +2556,18 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
   const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
   if (!pva) return null;
 
+  const expDateVal = (pva.protectionEndDate && pva.protectionEndDate !== 'undefined')
+    ? pva.protectionEndDate
+    : (pva.protection_end_date && pva.protection_end_date !== 'undefined')
+      ? pva.protection_end_date
+      : (pva.visitDate && !isNaN(new Date(pva.visitDate).getTime())
+          ? new Date(new Date(pva.visitDate).setFullYear(new Date(pva.visitDate).getFullYear() + 1)).toISOString().split('T')[0]
+          : '2027-02-22');
+
+  const otpHashVal = (pva.digitalVerificationRef && pva.digitalVerificationRef !== 'undefined')
+    ? pva.digitalVerificationRef
+    : (pva.otpHashRef || pva.otpHash || pva.otpAuditHash || `OTP-VERIFIED-${pva.projectVisitAgreementId || 'SRM'}`);
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2300, padding: '16px' }}>
       <style>{`
@@ -2674,13 +2699,20 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
           </div>
 
           <div>
+<<<<<<< Updated upstream
             <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>BROKERAGE PROTECTION PERIOD:</span>
             <h4 style={{ color: '#16a34a', fontWeight: '900', fontSize: '0.94rem', marginTop: '2px', marginBottom: '1px' }}>🛡️ {pva.protectionPeriodMonths || 12} Months Protection Active</h4>
             <span style={{ color: '#475569', fontSize: '0.78rem', fontWeight: '600' }}>Protection Expiry: <strong style={{ color: '#0f172a', fontWeight: '800' }}>{pva.protectionEndDate}</strong></span>
+=======
+            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>BROKERAGE PROTECTION PERIOD:</span>
+            <h4 style={{ color: '#4ade80', fontWeight: '900', fontSize: '0.88rem', marginTop: '2px' }}>🛡️ {pva.protectionPeriodMonths || 12} Months Protection Active</h4>
+            <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.72rem' }}>Protection Expiry: <strong>{expDateVal}</strong></span>
+>>>>>>> Stashed changes
           </div>
         </div>
 
         {/* VERIFICATION EVIDENCE AUDIT */}
+<<<<<<< Updated upstream
         <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem' }}>
           <h4 style={{ color: '#0284c7', fontWeight: '900', fontSize: '0.88rem', margin: 0, letterSpacing: '0.3px' }}>🔐 VERIFICATION EVIDENCE & AUDIT TRAIL</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 10px', fontSize: '0.82rem' }}>
@@ -2688,6 +2720,15 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
             <div>Customer OTP: <strong style={{ color: '#16a34a', fontWeight: '800' }}>✓ VERIFIED ({pva.otpVerifiedAt})</strong></div>
             <div>Digital Ref: <strong style={{ color: '#d97706', fontFamily: 'monospace', fontWeight: '800' }}>{pva.digitalVerificationRef}</strong></div>
             <div>Master Schedule: <strong style={{ color: '#0284c7', fontFamily: 'monospace', fontWeight: '800' }}>{pva.visitScheduleId}</strong></div>
+=======
+        <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.75rem' }}>
+          <h4 style={{ color: '#38bdf8', fontWeight: '900', fontSize: '0.8rem' }}>🔐 VERIFICATION EVIDENCE & AUDIT TRAIL</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <div>GPS Status: <strong style={{ color: '#22c55e' }}>✓ GEOFENCE VERIFIED ({pva.gpsAccuracyMeters || 'Within Radius'})</strong></div>
+            <div>Customer OTP: <strong style={{ color: '#22c55e' }}>✓ VERIFIED ({pva.otpVerifiedAt || 'OTP Verified'})</strong></div>
+            <div>Digital Ref: <strong style={{ color: '#fbbf24', fontFamily: 'monospace' }}>{otpHashVal}</strong></div>
+            <div>Master Schedule: <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{pva.visitScheduleId}</strong></div>
+>>>>>>> Stashed changes
           </div>
         </div>
 
@@ -2698,8 +2739,8 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
           </h4>
           <ol style={{ margin: 0, paddingLeft: '18px', color: '#334155', lineHeight: '1.45', display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.8rem' }}>
             <li><strong>Broker Introduction & Non-Circumvention:</strong> Customer acknowledges that project introduction for <strong>{pva.projectTitle}</strong> was exclusively facilitated by <strong>Swaramayi Real Estate Marketing</strong>. Customer agrees not to bypass Swaramayi, deal directly with developer/owner, or engage third-party agents for this project.</li>
-            <li><strong>12-Month Protection Period:</strong> Swaramayi holds exclusive brokerage representation rights for a period of <strong>{pva.protectionPeriodMonths || 12} Months</strong> (Expires <strong>{pva.protectionEndDate}</strong>) for any unit booking or transaction in this project.</li>
-            <li><strong>Digital Evidence & Audit Consent:</strong> Customer OTP verification at <strong>{pva.otpVerifiedAt}</strong> and Geofence GPS audit ({pva.gpsAccuracyMeters}) constitute binding legal execution under the Information Technology Act.</li>
+            <li><strong>12-Month Protection Period:</strong> Swaramayi holds exclusive brokerage representation rights for a period of <strong>{pva.protectionPeriodMonths || 12} Months</strong> (Expires <strong>{expDateVal}</strong>) for any unit booking or transaction in this project.</li>
+            <li><strong>Digital Evidence & Audit Consent:</strong> Customer OTP verification at <strong>{pva.otpVerifiedAt || 'OTP Verified'}</strong> and Geofence GPS audit ({pva.gpsAccuracyMeters || 'Verified'}) constitute binding legal execution under the Information Technology Act.</li>
           </ol>
         </div>
 
@@ -2724,22 +2765,20 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
           </button>
           <button 
             onClick={() => {
-              const pdfUrl = `${window.location.origin}/pdf/agreements/${pva.projectVisitAgreementId}.pdf`;
-              const msg = `📱 *SWARAMAYI REAL ESTATE MARKETING — OFFICIAL AGREEMENT PDF*\n\n` +
-                `Dear ${pva.customerName},\n\n` +
+              const msg = `📱 *SWARAMAYI REAL ESTATE MARKETING — OFFICIAL AGREEMENT*\n\n` +
+                `Dear ${pva.customerName || 'Customer'},\n\n` +
                 `Here is your official *Project Visit Acknowledgement & Non-Circumvention Agreement*.\n\n` +
-                `📄 *Agreement Code*: ${pva.projectVisitAgreementId}\n` +
-                `🏢 *Project Name*: ${pva.projectTitle}\n` +
-                `📅 *Visit Date*: ${pva.visitDate} at ${pva.arrivalTime}\n` +
-                `🛡️ *Brokerage Protection*: ${pva.protectionPeriodMonths || 12} Months Active (Expires ${pva.protectionEndDate})\n` +
-                `🔐 *OTP Audit Hash*: ${pva.digitalVerificationRef}\n\n` +
-                `📜 *Terms & Conditions*: Non-Circumvention active. Exclusive representation by Swaramayi Real Estate Marketing.\n\n` +
-                `📥 *Download Official Agreement PDF*: ${pdfUrl}`;
-              window.open(`https://api.whatsapp.com/send?phone=${pva.customerMobile.replace(/[^0-9]/g, '')}&text=${encodeURIComponent(msg)}`, '_blank');
+                `📄 *Agreement Code*: ${pva.projectVisitAgreementId || 'SRM-PVA-2026-000001'}\n` +
+                `🏢 *Project Name*: ${pva.projectTitle || 'Project Property'}\n` +
+                `📅 *Visit Date*: ${pva.visitDate || ''}${pva.arrivalTime ? ' at ' + pva.arrivalTime : ''}\n` +
+                `🛡️ *Brokerage Protection*: ${pva.protectionPeriodMonths || 12} Months Active (Expires ${expDateVal})\n` +
+                `🔐 *OTP Audit Hash*: ${otpHashVal}\n\n` +
+                `📜 *Terms & Conditions*: Non-Circumvention active. Exclusive representation by Swaramayi Real Estate Marketing.`;
+              window.open(`https://api.whatsapp.com/send?phone=${(pva.customerMobile || '').replace(/[^0-9]/g, '')}&text=${encodeURIComponent(msg)}`, '_blank');
             }}
             style={{ background: '#25D366', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            💬 SEND WHATSAPP WITH AGREEMENT PDF
+            💬 SEND WHATSAPP AGREEMENT
           </button>
           <button onClick={onClose} style={{ background: '#64748b', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.82rem' }}>Close</button>
         </div>
@@ -9307,7 +9346,8 @@ export default function App() {
     const custName = v.customerName || v.name || v.customer_name || 'Sumanth Varma';
     const fullCustNo = v.customerNumber || v.customer_number || v.customerId || 'SRM-CUS-2026-000186';
     const sevenDigitCustNo = getSevenDigitCustomerNumber(fullCustNo, v.mobile);
-    const propTitle = v.propertyTitle || v.title || 'Aparna Zenon Premium 3BHK';
+    const rawPropTitle = v.propertyTitle || v.title || 'Aparna Zenon Premium 3BHK';
+    const propTitle = rawPropTitle.split(/\s*\(\+/)[0].trim();
     const devName = v.developer || v.developerName || v.developer_name || 'Aparna Constructions';
     const execName = v.assignedExecutive || v.salesPersonName || v.sales_executive || 'Ramesh Pawar (Field Exec)';
     const devPhone = v.developerMobile || v.developer_whatsapp || v.developer_phone || '+91 98490 55443';

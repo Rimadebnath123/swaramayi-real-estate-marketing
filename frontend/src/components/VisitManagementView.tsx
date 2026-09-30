@@ -1330,6 +1330,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                       visitDate: v.visitDate || new Date().toISOString().split('T')[0],
                       protectionStartDate: v.visitDate || new Date().toISOString().split('T')[0],
                       protectionEndDate: '2027-02-22',
+                      digitalVerificationRef: `OTP-VERIFIED-${stopPvaId}`,
                       customerOtpStatus: 'OTP_VERIFIED',
                       geofenceStatus: 'GEOFENCE_VERIFIED',
                       documentUrl: `file:///pva_${stopPvaId}.pdf`
@@ -1627,6 +1628,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                   visitDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   protectionStartDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   protectionEndDate: '2027-02-22',
+                                  digitalVerificationRef: `OTP-VERIFIED-${displayPvaId}`,
                                   customerOtpStatus: 'OTP_VERIFIED',
                                   geofenceStatus: 'GEOFENCE_VERIFIED',
                                   documentUrl: `file:///pva_${displayPvaId}.pdf`
@@ -2138,6 +2140,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                   visitDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   protectionStartDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   protectionEndDate: '2027-02-22',
+                                  digitalVerificationRef: `OTP-VERIFIED-${displayPvaId}`,
                                   customerOtpStatus: 'OTP_VERIFIED',
                                   geofenceStatus: 'GEOFENCE_VERIFIED',
                                   documentUrl: `file:///pva_${displayPvaId}.pdf`

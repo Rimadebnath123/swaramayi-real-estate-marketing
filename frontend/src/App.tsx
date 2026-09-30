@@ -2602,7 +2602,7 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
             max-height: 99vh !important;
             padding: 24px 28px !important;
             margin: 0 !important;
-            border: 2px solid #0284c7 !important;
+            border: none !important;
             box-shadow: none !important;
             background: #ffffff !important;
             color: #0f172a !important;
@@ -2651,7 +2651,7 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
           }
         }
       `}</style>
-      <div className="printable-pva-card" style={{ background: '#ffffff', color: '#0f172a', border: '2px solid #0284c7', width: '96vw', maxWidth: '860px', maxHeight: '96vh', borderRadius: '14px', padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
+      <div className="printable-pva-card" style={{ background: '#ffffff', color: '#0f172a', border: 'none', width: '96vw', maxWidth: '860px', maxHeight: '96vh', borderRadius: '14px', padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
         
         {/* DOCUMENT HEADER */}
         <div style={{ borderBottom: '2px solid #0284c7', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
@@ -12688,7 +12688,7 @@ export default function App() {
                 height: auto !important;
                 padding: 24px 28px !important;
                 margin: 0 !important;
-                border: 2px solid #0284c7 !important;
+                border: none !important;
                 box-shadow: none !important;
                 background: #ffffff !important;
                 color: #0f172a !important;
@@ -12734,7 +12734,7 @@ export default function App() {
               }
             }
           `}</style>
-          <div className="printable-contract-card" style={{ background: '#ffffff', color: '#0f172a', width: '800px', maxWidth: '96vw', maxHeight: '94vh', overflowY: 'auto', borderRadius: '14px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '22px', border: '2px solid #0284c7', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
+          <div className="printable-contract-card" style={{ background: '#ffffff', color: '#0f172a', width: '800px', maxWidth: '96vw', maxHeight: '94vh', overflowY: 'auto', borderRadius: '14px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '22px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
             <div style={{ borderBottom: '2.5px solid #0284c7', paddingBottom: '14px', textAlign: 'center' }}>
               <span style={{ background: selectedAgreement.category === 'DEVELOPER' ? '#16a34a' : '#0284c7', color: '#ffffff', padding: '4px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '900', letterSpacing: '1px', display: 'inline-block' }}>
                 {selectedAgreement.category === 'DEVELOPER' ? 'OFFICIAL CHANNEL PARTNER BROKERAGE TIE-UP AGREEMENT' : 'CUSTOMER SITE VISIT & NON-CIRCUMVENTION AGREEMENT'}

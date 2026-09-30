@@ -2699,36 +2699,20 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
           </div>
 
           <div>
-<<<<<<< Updated upstream
             <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>BROKERAGE PROTECTION PERIOD:</span>
             <h4 style={{ color: '#16a34a', fontWeight: '900', fontSize: '0.94rem', marginTop: '2px', marginBottom: '1px' }}>🛡️ {pva.protectionPeriodMonths || 12} Months Protection Active</h4>
-            <span style={{ color: '#475569', fontSize: '0.78rem', fontWeight: '600' }}>Protection Expiry: <strong style={{ color: '#0f172a', fontWeight: '800' }}>{pva.protectionEndDate}</strong></span>
-=======
-            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>BROKERAGE PROTECTION PERIOD:</span>
-            <h4 style={{ color: '#4ade80', fontWeight: '900', fontSize: '0.88rem', marginTop: '2px' }}>🛡️ {pva.protectionPeriodMonths || 12} Months Protection Active</h4>
-            <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.72rem' }}>Protection Expiry: <strong>{expDateVal}</strong></span>
->>>>>>> Stashed changes
+            <span style={{ color: '#475569', fontSize: '0.78rem', fontWeight: '600' }}>Protection Expiry: <strong style={{ color: '#0f172a', fontWeight: '800' }}>{expDateVal}</strong></span>
           </div>
         </div>
 
         {/* VERIFICATION EVIDENCE AUDIT */}
-<<<<<<< Updated upstream
-        <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem' }}>
+        <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem', color: '#334155' }}>
           <h4 style={{ color: '#0284c7', fontWeight: '900', fontSize: '0.88rem', margin: 0, letterSpacing: '0.3px' }}>🔐 VERIFICATION EVIDENCE & AUDIT TRAIL</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 10px', fontSize: '0.82rem' }}>
-            <div>GPS Status: <strong style={{ color: '#16a34a', fontWeight: '800' }}>✓ GEOFENCE VERIFIED ({pva.gpsAccuracyMeters})</strong></div>
-            <div>Customer OTP: <strong style={{ color: '#16a34a', fontWeight: '800' }}>✓ VERIFIED ({pva.otpVerifiedAt})</strong></div>
-            <div>Digital Ref: <strong style={{ color: '#d97706', fontFamily: 'monospace', fontWeight: '800' }}>{pva.digitalVerificationRef}</strong></div>
+            <div>GPS Status: <strong style={{ color: '#16a34a', fontWeight: '800' }}>✓ GEOFENCE VERIFIED ({pva.gpsAccuracyMeters || 'Within Radius'})</strong></div>
+            <div>Customer OTP: <strong style={{ color: '#16a34a', fontWeight: '800' }}>✓ VERIFIED ({pva.otpVerifiedAt || 'OTP Verified'})</strong></div>
+            <div>Digital Ref: <strong style={{ color: '#d97706', fontFamily: 'monospace', fontWeight: '800' }}>{otpHashVal}</strong></div>
             <div>Master Schedule: <strong style={{ color: '#0284c7', fontFamily: 'monospace', fontWeight: '800' }}>{pva.visitScheduleId}</strong></div>
-=======
-        <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.75rem' }}>
-          <h4 style={{ color: '#38bdf8', fontWeight: '900', fontSize: '0.8rem' }}>🔐 VERIFICATION EVIDENCE & AUDIT TRAIL</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-            <div>GPS Status: <strong style={{ color: '#22c55e' }}>✓ GEOFENCE VERIFIED ({pva.gpsAccuracyMeters || 'Within Radius'})</strong></div>
-            <div>Customer OTP: <strong style={{ color: '#22c55e' }}>✓ VERIFIED ({pva.otpVerifiedAt || 'OTP Verified'})</strong></div>
-            <div>Digital Ref: <strong style={{ color: '#fbbf24', fontFamily: 'monospace' }}>{otpHashVal}</strong></div>
-            <div>Master Schedule: <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{pva.visitScheduleId}</strong></div>
->>>>>>> Stashed changes
           </div>
         </div>
 

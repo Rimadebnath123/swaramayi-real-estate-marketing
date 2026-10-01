@@ -177,10 +177,13 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
   ], []);
 
   const safeUsers = React.useMemo(() => {
-    if (Array.isArray(users)) {
-      return users;
-    }
-    return defaultUsersList;
+    const list = Array.isArray(users) && users.length > 0 ? users : defaultUsersList;
+    return list.filter((u: any) => {
+      const name = (u.full_name || u.username || u.name || '').toLowerCase();
+      const email = (u.email || '').toLowerCase();
+      const id = (u.id || '').toUpperCase();
+      return !(name.includes('rajesh') || name.includes('priya') || email.includes('rajesh') || email.includes('priya') || id === 'USR-03' || id === 'USR-04');
+    });
   }, [users, defaultUsersList]);
 
   // Dynamic Employee Exit & CRM Reassignment Handover Hub State

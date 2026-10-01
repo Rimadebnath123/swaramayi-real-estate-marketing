@@ -152,7 +152,7 @@ export async function getCustomerRequirementsIntelligence(req: AuthRequest, res:
       requirement: '4BHK Villa in Rajarhat, ₹1.5–2.0 Cr',
       matched_properties_count: 3,
       status: 'Pending Verification',
-      assigned_exec: 'Priya Nair',
+      assigned_exec: 'Avishek Das',
       priority: 'HOT'
     }
   ];
@@ -247,7 +247,7 @@ export async function getFollowUpControlCenter(req: AuthRequest, res: Response) 
       requirement: `${c.configuration || '3BHK'} in ${c.preferred_location || 'Kondapur'}`,
       budget: `₹${((c.budget_max || 8500000) / 100000).toFixed(1)}L`,
       lead_score: c.lead_score || 90,
-      assigned_exec: c.assigned_employee_name || 'Priya Nair',
+      assigned_exec: c.assigned_employee_name || 'Avishek Das',
       last_contact: '2026-08-15',
       next_action: 'Send Price Quote & Confirm Visit'
     }));
@@ -318,7 +318,7 @@ export async function getBookingAndBrokerageIntelligence(req: AuthRequest, res: 
 
   const salespersonBrokerage = [
     { salesperson: 'Amit Patel', bookings: 1, expected: 180000, received: 60000, pending: 120000 },
-    { salesperson: 'Priya Nair', bookings: 2, expected: 320000, received: 160000, pending: 160000 }
+    { salesperson: 'Avishek Das', bookings: 2, expected: 320000, received: 160000, pending: 160000 }
   ];
 
   return res.json({
@@ -346,7 +346,7 @@ export async function getTeamPerformanceAnalytics(req: AuthRequest, res: Respons
   const data = dbStore.data;
 
   const salespersonPerformance = [
-    { name: 'Priya Nair', leads: 42, qualified: 32, requirements: 28, property_matches: 24, site_visits: 8, bookings: 2, brokerage: 320000, conversion: '4.8%' },
+    { name: 'Avishek Das', leads: 42, qualified: 32, requirements: 28, property_matches: 24, site_visits: 8, bookings: 2, brokerage: 320000, conversion: '4.8%' },
     { name: 'Amit Patel', leads: 38, qualified: 28, requirements: 24, property_matches: 20, site_visits: 6, bookings: 1, brokerage: 180000, conversion: '2.6%' },
     { name: 'Srinivas Rao', leads: 25, qualified: 18, requirements: 15, property_matches: 12, site_visits: 4, bookings: 1, brokerage: 150000, conversion: '4.0%' }
   ];

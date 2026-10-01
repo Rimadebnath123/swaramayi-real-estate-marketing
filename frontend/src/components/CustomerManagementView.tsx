@@ -857,7 +857,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
         { label: 'Email Address', value: custEmail },
         { label: 'Locality Hub / City', value: location },
         { label: 'Master Ownership', value: 'Company-Owned Permanent Asset' },
-        { label: 'Assigned Relationship Exec', value: cust?.assigned_employee_id || 'Priya Nair (Sales Exec)' },
+        { label: 'Assigned Relationship Exec', value: cust?.assigned_employee_id || 'Punita Roy Chowdhury (Admin)' },
         { label: 'Record Created Timestamp', value: '17 Aug 2026, 10:15 AM' }
       ],
       '2. LEAD INTAKE ID': [
@@ -923,7 +923,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
         { label: 'Site Visit Schedule ID', value: item.id },
         { label: 'Scheduled Date & Time', value: '20 Aug 2026 at 03:30 PM' },
         { label: 'Target Property Site', value: 'Swaramayi Heights Site Lounge' },
-        { label: 'Assigned Escorting Manager', value: 'Priya Nair (Senior Executive)' },
+        { label: 'Assigned Escorting Manager', value: 'Punita Roy Chowdhury (Senior Executive)' },
         { label: 'Visit Confirmation Status', value: 'CONFIRMED BY CUSTOMER' },
         { label: 'Pickup / Transport Required', value: 'Self-Arranged Private Drive' },
         { label: 'Calendar Event Hash', value: 'CAL-HYD-882910' }
@@ -949,7 +949,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
         { label: 'Visit Completion Record ID', value: item.id },
         { label: 'Units Inspected', value: 'Tower A Unit 1204 & Project Model Lounge' },
         { label: 'Total Tour Duration', value: '45 Minutes' },
-        { label: 'Accompanying Executive', value: 'Priya Nair (Sales Exec)' },
+        { label: 'Accompanying Executive', value: 'Punita Roy Chowdhury (Sales Exec)' },
         { label: 'Physical Visit Result', value: 'FULL SITE TOUR COMPLETED' },
         { label: 'Completed Date & Time', value: '20 Aug 2026, 04:15 PM' }
       ],
@@ -1176,7 +1176,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                 </thead>
                 <tbody>
                   {[
-                    { time: 'Today 11:30 AM', target: 'SRM-CUS-2026-000184 (Bishwajit Pandey)', action: 'COST_SHEET_DISPATCHED', exec: 'Priya Nair', details: 'Automated 12-page individual cost sheet emailed & whatsapped with OTP hash #CS88102', status: 'SUCCESS' },
+                    { time: 'Today 11:30 AM', target: 'SRM-CUS-2026-000184 (Bishwajit Pandey)', action: 'COST_SHEET_DISPATCHED', exec: 'Punita Roy Chowdhury', details: 'Automated 12-page individual cost sheet emailed & whatsapped with OTP hash #CS88102', status: 'SUCCESS' },
                     { time: 'Today 10:15 AM', target: 'SRM-LEAD-2026-001245 (Avi Das)', action: 'QUALIFIED_STAGE_UPGRADE', exec: 'Abinash Roy', details: 'Lead score promoted to 98% (Ready to Move in Madhyamgram)', status: 'COMPLETED' },
                     { time: 'Yesterday 04:45 PM', target: 'SRM-CUS-2026-000185 (Sumanth Varma)', action: 'SITE_VISIT_PVA_LOCKED', exec: 'Avishek Das', details: 'Pre-visit non-circumvention mandate digitally signed via OTP verification', status: 'VERIFIED' }
                   ].map((evt, eIdx) => (
@@ -2264,7 +2264,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
               <tbody>
                 {[
                   { risk: 'HIGH RISK', cust: 'SRM-CUS-2026-000184', emp: 'Amit Patel (Sales Exec)', rule: 'Rule 5: Booking detected with My Home Developer without recorded site visit.', action: 'Lock Record Access' },
-                  { risk: 'HIGH RISK', cust: 'SRM-CUS-2026-000142', emp: 'Priya Nair (Sales Exec)', rule: 'Rule 1: Creation attempt of duplicate customer with existing phone +91 98490 11223.', action: 'Block & Audit' },
+                  { risk: 'HIGH RISK', cust: 'SRM-CUS-2026-000142', emp: 'Punita Roy Chowdhury (Admin)', rule: 'Rule 1: Creation attempt of duplicate customer with existing phone +91 98490 11223.', action: 'Block & Audit' },
                   { risk: 'MEDIUM RISK', cust: 'SRM-CUS-2026-000098', emp: 'Kiran Kumar (Sales Exec)', rule: 'Rule 7: Attempted to edit primary mobile number of company customer record.', action: 'Review Change Log' }
                 ].map((item, idx) => (
                   <tr key={idx} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>

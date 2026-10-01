@@ -57,10 +57,10 @@ export const BulkLeadUploadModal: React.FC<BulkLeadUploadModalProps> = ({
 
     const sampleRows = [
       [
-        'Rajesh Sharma',
+        'Ayan Mukherjee',
         '9876543210',
         '9876543211',
-        'rajesh.sharma@example.com',
+        'ayan.mukherjee@example.com',
         'Facebook Ads',
         'Kondapur',
         'Aparna Zenon',
@@ -481,8 +481,8 @@ export const BulkLeadUploadModal: React.FC<BulkLeadUploadModalProps> = ({
                     ))
                   ) : (
                     <>
-                      <option value="USR-07">Priya Nair (Sales Executive)</option>
-                      <option value="USR-02">Rajesh Kumar (Branch Manager)</option>
+                      <option value="USR-01">Avishek Das (Super Admin)</option>
+                      <option value="USR-02">Punita Roy Chowdhury (Admin)</option>
                       <option value="USR-08">Ramesh Pawar (Field Executive)</option>
                     </>
                   )}

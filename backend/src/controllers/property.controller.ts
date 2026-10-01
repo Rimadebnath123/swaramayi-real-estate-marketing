@@ -94,7 +94,7 @@ export async function createProperty(req: AuthRequest, res: Response) {
     verified_at: new Date().toISOString(),
     completeness_score: 96,
     assigned_employee_id: req.user?.id || undefined,
-    assigned_employee_name: assigned_employee_name || 'Priya Nair',
+    assigned_employee_name: assigned_employee_name || 'Avishek Das',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     is_deleted: false
@@ -195,8 +195,8 @@ export async function shareProperty(req: AuthRequest, res: Response) {
     id: uuidv4(),
     property_id: property.property_code,
     customer_id: customer_id || 'SRM-CUS-2026-000184',
-    employee_id: req.user?.id || 'USR-04',
-    employee_name: req.user?.username || 'Priya Nair',
+    employee_id: req.user?.id || 'USR-01',
+    employee_name: req.user?.username || 'Avishek Das',
     channel: channel || 'WhatsApp',
     shared_at: new Date().toISOString()
   };

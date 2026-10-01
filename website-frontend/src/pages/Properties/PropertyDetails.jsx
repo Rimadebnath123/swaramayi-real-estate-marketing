@@ -592,7 +592,7 @@ export default function PropertyDetails() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Priya Das"
+                    placeholder="e.g. Ananya Das"
                     value={ratingCustomerName}
                     onChange={(e) => setRatingCustomerName(e.target.value)}
                     className="w-full px-3.5 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs text-navy-900 font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none"

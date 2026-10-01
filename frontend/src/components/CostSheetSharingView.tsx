@@ -362,9 +362,9 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                         const createdAtStr = item.createdAt || item.created_at || 'Just Now';
                         const createdByStr = (() => {
                           const cb = item.createdBy || item.created_by;
-                          if (cb && !cb.includes('Priya Nair')) return cb;
+                          if (cb) return cb;
                           const as = item.customerSnapshot?.assignedSalesperson;
-                          if (as && !as.includes('Priya Nair')) return as;
+                          if (as) return as;
                           return 'Avishek Das (Super Admin)';
                         })();
 

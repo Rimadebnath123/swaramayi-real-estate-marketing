@@ -16,6 +16,8 @@ export interface UserRecord {
   is_locked?: boolean;
   user_status?: 'ACTIVE' | 'INVITED' | 'PENDING' | 'SUSPENDED' | 'LOCKED' | 'RESIGNED' | 'TERMINATED';
   password_hash?: string;
+  password?: string;
+  designation?: string;
   company_id?: string;
   is_mfa_enabled?: boolean;
 }

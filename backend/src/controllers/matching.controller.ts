@@ -162,7 +162,7 @@ export async function sendPropertyRecommendations(req: AuthRequest, res: Respons
     share_code: recCode, // SRM-REC-2026-000101
     customer_number: customer.customer_number,
     customer_name: customer.full_name,
-    employee_name: req.user?.username || 'Priya Nair (Sales Exec)',
+    employee_name: req.user?.username || 'Avishek Das (Super Admin)',
     property_codes,
     channel: channel || 'WhatsApp',
     view_token: viewToken,
@@ -260,7 +260,7 @@ export async function scheduleSiteVisit(req: AuthRequest, res: Response) {
     customer_name: customer?.full_name || 'Rohan Deshmukh',
     property_code: property?.property_code || property_code,
     property_title: property?.property_title || 'Aparna Zenon',
-    sales_executive: req.user?.username || 'Priya Nair (Sales Exec)',
+    sales_executive: req.user?.username || 'Avishek Das (Super Admin)',
     scheduled_date: scheduled_date || new Date().toISOString().split('T')[0],
     scheduled_time: scheduled_time || '11:00 AM',
     otp_code: otpCode,
@@ -310,7 +310,7 @@ export async function confirmUnitBooking(req: AuthRequest, res: Response) {
     agreement_value: numAgreementVal,
     token_amount_paid: Number(token_amount_paid) || 200000,
     payment_mode: 'UPI / NEFT',
-    sales_executive: req.user?.username || 'Priya Nair (Sales Exec)',
+    sales_executive: req.user?.username || 'Avishek Das (Super Admin)',
     booking_date: new Date().toISOString().split('T')[0],
     status: 'CONFIRMED'
   };

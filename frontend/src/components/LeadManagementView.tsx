@@ -2,7 +2,7 @@ import React from 'react';
 import { GitMerge, Calendar, Sparkles, UserPlus, Search, X, ArrowDown, FileSpreadsheet } from 'lucide-react';
 
 const cleanExecutiveName = (val?: string): string => {
-  if (!val) return 'Priya Nair (Sales Exec)';
+  if (!val) return 'Avishek Das (Super Admin)';
   const str = String(val).trim();
   return str.split(/\s+[—\-]\s+/)[0].trim();
 };
@@ -222,7 +222,7 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
               <h3 style={{ fontSize: windowWidth <= 640 ? '0.9rem' : '1.05rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
                 📋 Central Lead Master Vault ({(leadInboxTab === 'matching' ? uniqueLeadsList : activeVaultLeadsList).filter(l => {
                   if (leadInboxTab === 'unassigned') return !l.assigned_employee_id || l.assigned_employee_id === 'Unassigned';
-                  if (leadInboxTab === 'my_leads') return l.assigned_employee_id === 'USR-07' || l.assigned_employee_name?.includes('Priya');
+                  if (leadInboxTab === 'my_leads') return l.assigned_employee_id === 'USR-01' || l.assigned_employee_name?.includes('Avishek');
                   if (leadInboxTab === 'today_followups') return l.next_followup && l.next_followup.startsWith(new Date().toISOString().split('T')[0]);
                   if (leadInboxTab === 'overdue_followups') return l.next_followup && new Date(l.next_followup) < new Date() && !l.next_followup.startsWith(new Date().toISOString().split('T')[0]);
                   if (leadInboxTab === 'nurture') return l.lead_status === 'NURTURE' || l.lead_status === 'RECYCLE';
@@ -394,7 +394,7 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                           </td>
 
                           <td style={{ padding: '12px' }}>
-                            <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.78rem' }}>{cleanExecutiveName(lead.assigned_employee_name || 'Priya Nair (Sales Exec)')}</span>
+                            <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.78rem' }}>{cleanExecutiveName(lead.assigned_employee_name || 'Avishek Das (Super Admin)')}</span>
                           </td>
 
                           <td style={{ padding: '12px', textAlign: 'center' }}>

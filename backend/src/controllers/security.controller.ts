@@ -166,8 +166,8 @@ export async function reassignEmployeeExit(req: AuthRequest, res: Response) {
   let reassignedCustomersCount = 0;
   dbStore.data.customers.forEach(c => {
     if (c.assigned_employee_id === resigning_user_id || c.assigned_employee_name === user?.full_name || c.assigned_employee_name === user?.username) {
-      c.assigned_employee_id = new_assigned_agent_id || 'USR-05';
-      c.assigned_employee_name = new_assigned_agent_name || 'Priya Nair (Sales Exec)';
+      c.assigned_employee_id = new_assigned_agent_id || 'USR-01';
+      c.assigned_employee_name = new_assigned_agent_name || 'Avishek Das (Super Admin)';
       reassignedCustomersCount++;
     }
   });

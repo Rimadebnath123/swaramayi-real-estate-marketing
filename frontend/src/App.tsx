@@ -1159,8 +1159,7 @@ function ScheduleVisitModalContent({
     }
     return [
       { id: 'EXE-01', name: 'Avishek Das (Super Admin)', value: 'Avishek Das (Super Admin)', label: 'Avishek Das (Super Admin)' },
-      { id: 'EXE-02', name: 'Punita Roy Chowdhury (ADMIN)', value: 'Punita Roy Chowdhury (ADMIN)', label: 'Punita Roy Chowdhury (ADMIN)' },
-      { id: 'EXE-03', name: 'Priya Nair (Sales Exec)', value: 'Priya Nair (Sales Exec)', label: 'Priya Nair (Sales Exec)' }
+      { id: 'EXE-02', name: 'Punita Roy Chowdhury (ADMIN)', value: 'Punita Roy Chowdhury (ADMIN)', label: 'Punita Roy Chowdhury (ADMIN)' }
     ];
   }, [dynamicSalesExecutives]);
 
@@ -3296,7 +3295,7 @@ export default function App() {
   const [csDiscount, setCsDiscount] = useState<number>(200000);
   const [csVersion, setCsVersion] = useState<string>('CS-2026-000145-V2');
   const [csVersionHistory, setCsVersionHistory] = useState<any[]>([
-    { version: 'CS-2026-000145-V1', date: '17 Aug 2026 11:30 AM', user: 'Priya Nair (Sales Exec)', amount: '₹1,56,80,000', reason: 'Initial Auto-Generated Cost Sheet' },
+    { version: 'CS-2026-000145-V1', date: '17 Aug 2026 11:30 AM', user: 'Avishek Das (Super Admin)', amount: '₹1,56,80,000', reason: 'Initial Auto-Generated Cost Sheet' },
     { version: 'CS-2026-000145-V2', date: '17 Aug 2026 03:15 PM', user: 'Rahul Sharma (Team Lead)', amount: '₹1,54,80,000', reason: 'Negotiated ₹2,00,000 Special Discount Applied' }
   ]);
 
@@ -3520,6 +3519,21 @@ export default function App() {
                 name.includes('avishek das') || mob.includes('9432328947') ||
                 name.includes('honey sing') || mob.includes('6567788888') || num.includes('000188')
               );
+            });
+            localStorage.setItem(key, JSON.stringify(cleaned));
+          }
+        }
+      });
+      ['swaramayi_users_v7', 'swaramayi_users_v6', 'swaramayi_users_v8'].forEach(key => {
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed.filter((u: any) => {
+              const name = (u.full_name || u.username || u.name || '').toString().toLowerCase();
+              const email = (u.email || '').toString().toLowerCase();
+              const id = (u.id || '').toString().toUpperCase();
+              return !(name.includes('rajesh') || name.includes('priya') || email.includes('rajesh') || email.includes('priya') || id === 'USR-03' || id === 'USR-04');
             });
             localStorage.setItem(key, JSON.stringify(cleaned));
           }
@@ -4397,7 +4411,7 @@ export default function App() {
         source: newCustomerForm.lead_source || 'Meta Ads / Google Ads',
         campaign: newCustomerForm.campaign_id || 'CMP-2026-8802',
         score: 92,
-        assignedExecutive: 'Priya Nair (Sales Exec)',
+        assignedExecutive: 'Avishek Das (Super Admin)',
         status: 'QUALIFIED'
       };
     }
@@ -4514,19 +4528,50 @@ export default function App() {
 
   // 1. Employee Directory (Strict Single Super Admin Master Store - Direct MongoDB Source)
   const [users, setUsers] = useState<any[]>(() => {
+    const defaultCoreUsers = [
+      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'avishek@swaramayi.info', password: 'Swaramayi@2026', mobile: '+91 94323 28947', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' },
+      { id: 'USR-02', username: 'Punita Roy Chowdhury', full_name: 'Punita Roy Chowdhury', email: 'punita13.pr@gmail.com', password: 'Swaramayi@2026', mobile: '+91 90383 25675', role: 'ADMIN', designation: 'System Administrator', branch_name: 'Head Office (Kolkata)', department: 'Sales Operations', team_name: 'Corporate Leadership Squad', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE' }
+    ];
     try {
+      ['swaramayi_users_v7', 'swaramayi_users_v6', 'swaramayi_users_v8', 'swaramayi_users_v5', 'swaramayi_users'].forEach(k => {
+        try {
+          const s = localStorage.getItem(k);
+          if (s) {
+            const parsed = JSON.parse(s);
+            if (Array.isArray(parsed)) {
+              const cleaned = parsed.filter((u: any) => {
+                const name = (u.full_name || u.username || u.name || '').toLowerCase();
+                const email = (u.email || '').toLowerCase();
+                const id = (u.id || '').toUpperCase();
+                return !(name.includes('rajesh') || name.includes('priya') || email.includes('rajesh') || email.includes('priya') || id === 'USR-03' || id === 'USR-04');
+              });
+              localStorage.setItem(k, JSON.stringify(cleaned));
+            }
+          }
+        } catch (e) {}
+      });
       const saved = localStorage.getItem('swaramayi_users_v7');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const filtered = parsed.filter((u: any) => {
+            const name = (u.full_name || u.username || u.name || '').toLowerCase();
+            const email = (u.email || '').toLowerCase();
+            const id = (u.id || '').toUpperCase();
+            return !(name.includes('rajesh') || name.includes('priya') || email.includes('rajesh') || email.includes('priya') || id === 'USR-03' || id === 'USR-04');
+          });
+          const loadedIds = new Set(filtered.map((u: any) => u.id));
+          const missingDefaults = defaultCoreUsers.filter(d => !loadedIds.has(d.id));
+          const res = [...filtered, ...missingDefaults];
+          localStorage.setItem('swaramayi_users_v7', JSON.stringify(res));
+          return res;
+        }
       }
     } catch (e) {
       console.error('Error loading users from localStorage:', e);
     }
-    return [
-      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'avishek@swaramayi.info', password: 'Swaramayi@2026', mobile: '+91 94323 28947', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' },
-      { id: 'USR-02', username: 'Punita Roy Chowdhury', full_name: 'Punita Roy Chowdhury', email: 'punita13.pr@gmail.com', password: 'Swaramayi@2026', mobile: '+91 90383 25675', role: 'ADMIN', designation: 'System Administrator', branch_name: 'Head Office (Kolkata)', department: 'Sales Operations', team_name: 'Corporate Leadership Squad', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE' }
-    ];
+    try { localStorage.setItem('swaramayi_users_v7', JSON.stringify(defaultCoreUsers)); } catch (e) {}
+    return defaultCoreUsers;
   });
 
   // Authenticated Logged-In User State (Persisted in Session Storage)
@@ -6587,8 +6632,8 @@ export default function App() {
       amenities: newCustomerForm.amenities || existingCustomer?.amenities || '',
       brokerage_rate: newCustomerForm.brokerage_rate || existingCustomer?.brokerage_rate || '2.0%',
       brokerage_payer: newCustomerForm.brokerage_payer || existingCustomer?.brokerage_payer || 'CUSTOMER',
-      assigned_employee_id: newCustomerForm.assigned_employee_id || existingCustomer?.assigned_employee_id || (dynamicSalesExecutives[0]?.value || 'Priya Nair (Sales Exec)'),
-      assigned_salesperson: newCustomerForm.assigned_employee_id || existingCustomer?.assigned_salesperson || (dynamicSalesExecutives[0]?.value || 'Priya Nair (Sales Exec)'),
+      assigned_employee_id: newCustomerForm.assigned_employee_id || existingCustomer?.assigned_employee_id || (dynamicSalesExecutives[0]?.value || 'Avishek Das (Super Admin)'),
+      assigned_salesperson: newCustomerForm.assigned_employee_id || existingCustomer?.assigned_salesperson || (dynamicSalesExecutives[0]?.value || 'Avishek Das (Super Admin)'),
       lead_status: leadStatus,
       call_disposition: disp,
       priority: priority,
@@ -6815,8 +6860,8 @@ export default function App() {
       amenities: newCustomerForm.amenities || '',
       brokerage_rate: newCustomerForm.brokerage_rate || '',
       brokerage_payer: newCustomerForm.brokerage_payer || '',
-      assigned_employee_id: newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)',
-      assigned_employee_name: newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)',
+      assigned_employee_id: newCustomerForm.assigned_employee_id || 'Avishek Das (Super Admin)',
+      assigned_employee_name: newCustomerForm.assigned_employee_id || 'Avishek Das (Super Admin)',
       lead_status: 'QUALIFICATION_DRAFT',
       call_disposition: 'QUALIFICATION_DRAFT',
       status: 'DRAFT',
@@ -6867,7 +6912,7 @@ export default function App() {
       amenities: newCustomerForm.amenities || '',
       brokerage_rate: newCustomerForm.brokerage_rate || '',
       brokerage_payer: newCustomerForm.brokerage_payer || '',
-      assigned_salesperson: newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)',
+      assigned_salesperson: newCustomerForm.assigned_employee_id || 'Avishek Das (Super Admin)',
       created_at: existingCustomer ? (existingCustomer.created_at || todayStr) : todayStr,
       updated_at: new Date().toISOString()
     };
@@ -6958,8 +7003,8 @@ export default function App() {
       decision_timeline: lead.decision_timeline || 'Immediate (< 30 Days)',
       brokerage_rate: lead.brokerage_rate !== undefined && lead.brokerage_rate !== null ? lead.brokerage_rate : '',
       brokerage_payer: lead.brokerage_payer !== undefined && lead.brokerage_payer !== null ? lead.brokerage_payer : '',
-      assigned_employee_id: lead.assigned_employee_id || lead.assigned_employee_name || 'Priya Nair (Sales Exec)',
-      assigned_employee_name: lead.assigned_employee_name || 'Priya Nair (Sales Exec)'
+      assigned_employee_id: lead.assigned_employee_id || lead.assigned_employee_name || 'Avishek Das (Super Admin)',
+      assigned_employee_name: lead.assigned_employee_name || 'Avishek Das (Super Admin)'
     });
 
     setNewLeadForm({
@@ -7221,7 +7266,14 @@ export default function App() {
               extractAllIdentifiers(r).forEach(id => recycledSet.add(id));
             });
 
-            if (Array.isArray(mData.users) && mData.users.length > 0) setUsers(mData.users);
+            if (Array.isArray(mData.users) && mData.users.length > 0) {
+              setUsers(prev => {
+                const map = new Map();
+                (prev || []).forEach((u: any) => map.set(u.id || u.username, u));
+                (mData.users || []).forEach((u: any) => map.set(u.id || u.username, u));
+                return Array.from(map.values());
+              });
+            }
             if (Array.isArray(mData.teams) && mData.teams.length > 0) setTeams(mData.teams);
             if (Array.isArray(mData.branches) && mData.branches.length > 0) {
               setBranches(mData.branches.map((b: any) => ({
@@ -7774,7 +7826,7 @@ export default function App() {
     satisfaction: '😍 Highly Satisfied (Ready for Booking)',
     reason: '',
     buyer_intent: '🔥 HOT - Booking Lead',
-    exec: 'Priya Nair (Sales Exec)',
+    exec: 'Avishek Das (Super Admin)',
     budget_min: '₹35 Lakhs',
     budget_max: '₹75 Lakhs',
     prefArea: 'Kolkata',
@@ -7825,7 +7877,7 @@ export default function App() {
       const propCode = defaultVisit?.propertyCode || properties[0]?.property_code || properties[0]?.id || 'SRM-PROP-01';
       const locality = defaultVisit?.locality || properties[0]?.locality || 'Barasat, Kolkata';
       const visitId = defaultVisit?.visitId || `SRM-VS-2026-${Date.now().toString().slice(-6)}`;
-      const exec = defaultVisit?.assignedFieldExecutive || 'Priya Nair (Sales Exec)';
+      const exec = defaultVisit?.assignedFieldExecutive || 'Avishek Das (Super Admin)';
 
       setSalesFeedbackForm({
         feedbackId: `FB-${Date.now().toString().slice(-6)}`,
@@ -9327,7 +9379,7 @@ export default function App() {
       project_posting_id: newPropertyForm.project_posting_id || 'PRJ-POST-2026-8802',
       key_custody: newPropertyForm.key_custody || 'Builder Site Office',
       description: newPropertyForm.description || 'Pool facing Vastu East, 3 balconies',
-      site_person_name: newPropertyForm.site_person_name || 'Rajesh Kumar (Site Manager)',
+      site_person_name: newPropertyForm.site_person_name || 'Avishek Das (Super Admin)',
       site_person_contact: newPropertyForm.site_person_contact || '+91 98490 77665',
       map_x: 35 + Math.random() * 30,
       map_y: 35 + Math.random() * 30
@@ -9405,8 +9457,8 @@ export default function App() {
       call_disposition: callDisp,
       next_action: callDisp === 'NOT_INTERESTED' ? 'Closed / Archived' : (callDisp === 'NO_RESPONSE' ? 'Retry Callback' : 'Initial Consultation'),
       next_followup: new Date(Date.now() + (callDisp === 'NO_RESPONSE' ? 6 : 24) * 3600000).toISOString(),
-      assigned_employee_id: 'USR-07',
-      assigned_employee_name: 'Priya Nair (Sales Exec)',
+      assigned_employee_id: 'USR-01',
+      assigned_employee_name: 'Avishek Das (Super Admin)',
       created_by: 'USR-01',
       quality_score: callDisp === 'NOT_INTERESTED' ? 15 : (callDisp === 'NO_RESPONSE' ? 40 : 88),
       created_at: new Date().toISOString(),
@@ -14346,22 +14398,22 @@ export default function App() {
 
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Assigned Branch Manager *</label>
-                  <input 
-                    type="text" 
-                    list="branch-manager-suggestions" 
+                  <select 
                     value={newBranchForm.manager_name} 
                     onChange={(e) => setNewBranchForm({ ...newBranchForm, manager_name: e.target.value })} 
-                    placeholder="Type custom manager name or select from list..." 
                     style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }} 
-                    required 
-                  />
-                  <datalist id="branch-manager-suggestions">
-                    {Array.from(new Set([
-                      ...users.map(u => `${u.full_name || u.username} (${u.role})`)
-                    ])).filter(Boolean).map((mName, i) => (
-                      <option key={i} value={mName} />
-                    ))}
-                  </datalist>
+                    required
+                  >
+                    <option value="">Select Branch Manager...</option>
+                    {users.map((u: any, i: number) => {
+                      const displayName = `${u.full_name || u.username} (${u.role || 'USER'})`;
+                      return (
+                        <option key={u.id || i} value={displayName}>
+                          👤 {displayName}
+                        </option>
+                      );
+                    })}
+                  </select>
                 </div>
               </div>
 
@@ -14448,22 +14500,22 @@ export default function App() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Assigned Team Lead *</label>
-                  <input 
-                    type="text" 
-                    list="team-lead-suggestions" 
+                  <select 
                     value={newTeamForm.leader_name} 
                     onChange={(e) => setNewTeamForm({ ...newTeamForm, leader_name: e.target.value })} 
-                    placeholder="Type custom lead name or select from list..." 
                     style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }} 
-                    required 
-                  />
-                  <datalist id="team-lead-suggestions">
-                    {Array.from(new Set([
-                      ...users.map(u => `${u.full_name || u.username} (${u.role})`)
-                    ])).filter(Boolean).map((mName, i) => (
-                      <option key={i} value={mName} />
-                    ))}
-                  </datalist>
+                    required
+                  >
+                    <option value="">Select Team Lead...</option>
+                    {users.map((u: any, i: number) => {
+                      const displayName = `${u.full_name || u.username} (${u.role || 'USER'})`;
+                      return (
+                        <option key={u.id || i} value={displayName}>
+                          👤 {displayName}
+                        </option>
+                      );
+                    })}
+                  </select>
                 </div>
 
                 <div>
@@ -15254,7 +15306,7 @@ export default function App() {
 
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Referrer Name & Contact (If Applicable)</label>
-                  <input type="text" value={newCustomerForm.referral_name} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, referral_name: e.target.value })} placeholder="e.g. Dr. Rajesh Sharma (+91 98480 12345)" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} />
+                  <input type="text" value={newCustomerForm.referral_name} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, referral_name: e.target.value })} placeholder="e.g. Dr. Anirban Roy (+91 98480 12345)" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} />
                 </div>
               </div>
             )}
@@ -16379,7 +16431,7 @@ export default function App() {
                       <strong style={{ display: 'block', color: '#38bdf8', fontWeight: '900' }}>
                         {(() => {
                           const curExec = newCustomerForm.assigned_employee_id || newCustomerForm.assigned_salesperson || newCustomerForm.assigned_employee_name;
-                          if (!curExec || curExec === 'USR-07' || curExec === 'Priya Nair (Sales Exec)') {
+                          if (!curExec || curExec === 'USR-07') {
                             return dynamicSalesExecutives[0]?.label || dynamicSalesExecutives[0]?.name || 'Avishek Das';
                           }
                           const matchExec = dynamicSalesExecutives.find((x: any) => 
@@ -16428,7 +16480,7 @@ export default function App() {
                     <select 
                       value={(() => {
                         const cur = newCustomerForm.assigned_employee_id || newCustomerForm.assigned_salesperson || newCustomerForm.assigned_employee_name;
-                        if (!cur || cur === 'USR-07' || cur === 'Priya Nair (Sales Exec)') return dynamicSalesExecutives[0]?.value || 'Avishek Das';
+                        if (!cur || cur === 'USR-07') return dynamicSalesExecutives[0]?.value || 'Avishek Das';
                         const match = dynamicSalesExecutives.find((x: any) => 
                           x.value === cur || x.name === cur || x.id === cur || (x.label && x.label.includes(cur)) || (cur && cur.includes(x.name))
                         );
@@ -16476,8 +16528,8 @@ export default function App() {
                       const matchExec = dynamicSalesExecutives.find((x: any) => 
                         x.value === curExec || x.name === curExec || x.id === curExec || (x.label && x.label.includes(curExec)) || (curExec && curExec.includes(x.name))
                       );
-                      const selectedExecLabel = matchExec ? matchExec.label : (curExec && curExec !== 'USR-07' && curExec !== 'Priya Nair (Sales Exec)' ? curExec : (dynamicSalesExecutives[0]?.label || dynamicSalesExecutives[0]?.name || 'Avishek Das'));
-                      const selectedExecName = matchExec ? matchExec.name : (curExec && curExec !== 'USR-07' && curExec !== 'Priya Nair (Sales Exec)' ? curExec : (dynamicSalesExecutives[0]?.name || 'Avishek Das'));
+                      const selectedExecLabel = matchExec ? matchExec.label : (curExec && curExec !== 'USR-07' ? curExec : (dynamicSalesExecutives[0]?.label || dynamicSalesExecutives[0]?.name || 'Avishek Das'));
+                      const selectedExecName = matchExec ? matchExec.name : (curExec && curExec !== 'USR-07' ? curExec : (dynamicSalesExecutives[0]?.name || 'Avishek Das'));
 
                       const existingCustomer = customers.find(c => 
                         (targetCustCode && c.customer_number === targetCustCode) ||
@@ -17059,7 +17111,7 @@ export default function App() {
                 <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
                     <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', textTransform: 'uppercase', fontWeight: '800' }}>ASSIGNED SALES EXECUTIVE</span>
-                    <h4 style={{ fontSize: '0.9rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: '2px 0 0 0' }}>{viewIdDetailsModal.data.assignedExecutive || 'Priya Nair (Sales Exec)'}</h4>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: '2px 0 0 0' }}>{viewIdDetailsModal.data.assignedExecutive || 'Avishek Das (Super Admin)'}</h4>
                   </div>
                   <div>
                     <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', textTransform: 'uppercase', fontWeight: '800' }}>SYSTEM STATUS</span>
@@ -18121,8 +18173,8 @@ export default function App() {
                 <div><span style={{ color: '#64748b', fontSize: '0.7rem' }}>Prepared By:</span> <strong style={{ color: '#0f172a', display: 'block' }}>{(() => {
                   const cb = showViewIndividualCostSheetModal.costSheet?.createdBy;
                   const as = showViewIndividualCostSheetModal.costSheet?.customerSnapshot?.assignedSalesperson;
-                  if (cb && !cb.includes('Priya Nair')) return cb;
-                  if (as && !as.includes('Priya Nair')) return as;
+                  if (cb) return cb;
+                  if (as) return as;
                   return (users && users[0]?.full_name) ? `${users[0].full_name} (${users[0].role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'})` : 'Avishek Das (Super Admin)';
                 })()}</strong></div>
               </div>
@@ -19537,7 +19589,7 @@ export default function App() {
                       radiusKm: (lead.radius_km !== undefined && lead.radius_km !== null) ? lead.radius_km : ((lead.radiusKm !== undefined && lead.radiusKm !== null) ? lead.radiusKm : 2),
                       possessionStatus: 'Ready to Move',
                       priority: 'HOT',
-                      assignedExecutive: lead.assigned_employee_name || 'Priya Nair (Sales Exec)',
+                      assignedExecutive: lead.assigned_employee_name || 'Avishek Das (Super Admin)',
                       status: 'MATCHING_PENDING'
                     };
                     setMatchingRequestsQueue(prev => [newReq, ...prev]);
@@ -19689,8 +19741,8 @@ export default function App() {
                 <h4 style={{ color: '#38bdf8', fontWeight: '900' }}>📜 AUDIT TRAIL & JOURNEY TIMELINE LOGS</h4>
                 {[
                   { time: '24 Aug 10:30 AM', event: `Lead Captured into Central Database (${showLead360Drawer.lead.lead_number})`, by: 'Meta Ads API' },
-                  { time: '24 Aug 11:00 AM', event: `Customer Master Linked (ID: ${showLead360Drawer.lead.customer_number || 'SRM-CUS-2026-000184'})`, by: 'Priya Nair' },
-                  { time: '24 Aug 11:20 AM', event: `Call Disposition Logged: ${showLead360Drawer.lead.call_disposition}`, by: 'Priya Nair' }
+                  { time: '24 Aug 11:00 AM', event: `Customer Master Linked (ID: ${showLead360Drawer.lead.customer_number || 'SRM-CUS-2026-000184'})`, by: 'Punita Roy Chowdhury' },
+                  { time: '24 Aug 11:20 AM', event: `Call Disposition Logged: ${showLead360Drawer.lead.call_disposition}`, by: 'Punita Roy Chowdhury' }
                 ].map((log, idx) => (
                   <div key={idx} style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '8px 10px', display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}>{log.event}</span>
@@ -19721,12 +19773,12 @@ export default function App() {
               <br />
               <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Customer Name:</span> <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{showTransferLeadModal.lead.customer_name}</strong>
               <br />
-              <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Current Owner:</span> <strong style={{ color: '#ef4444' }}>{showTransferLeadModal.lead.assigned_employee_name || 'Priya Nair'}</strong>
+              <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Current Owner:</span> <strong style={{ color: '#ef4444' }}>{showTransferLeadModal.lead.assigned_employee_name || 'Punita Roy Chowdhury'}</strong>
             </div>
 
             <div>
               <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Target Sales Executive / Manager *:</label>
-              <select value={transferLeadForm.newOwnerId || (dynamicSalesExecutives[0]?.value || 'Priya Nair')} onChange={(e) => setTransferLeadForm({ ...transferLeadForm, newOwnerId: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', color: '#4ade80', fontWeight: '800', border: '1px solid #0284c7', borderRadius: '6px', padding: '8px', fontSize: '0.85rem' }}>
+              <select value={transferLeadForm.newOwnerId || (dynamicSalesExecutives[0]?.value || 'Avishek Das')} onChange={(e) => setTransferLeadForm({ ...transferLeadForm, newOwnerId: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', color: '#4ade80', fontWeight: '800', border: '1px solid #0284c7', borderRadius: '6px', padding: '8px', fontSize: '0.85rem' }}>
                 {dynamicSalesExecutives.map((exec: any) => (
                   <option key={exec.id || exec.name} value={exec.value}>
                     👤 {exec.label}
@@ -19752,7 +19804,7 @@ export default function App() {
                 onClick={() => {
                   if (!transferLeadForm.reason) return alert('⚠️ Please provide a reason for lead transfer.');
                   const lead = showTransferLeadModal.lead;
-                  const newOwnerName = transferLeadForm.newOwnerId === 'USR-04' ? 'Rahul Sharma (Team Lead)' : transferLeadForm.newOwnerId === 'USR-14' ? 'Ramesh Pawar (Field Exec)' : 'Priya Nair (Sales Exec)';
+                  const newOwnerName = transferLeadForm.newOwnerId === 'USR-02' ? 'Punita Roy Chowdhury (Admin)' : 'Avishek Das (Super Admin)';
                   
                   const updatedLeads = leadsList.map(l => l.id === lead.id ? { ...l, assigned_employee_id: transferLeadForm.newOwnerId, assigned_employee_name: newOwnerName, updated_at: new Date().toISOString() } : l);
                   setLeadsList(updatedLeads);

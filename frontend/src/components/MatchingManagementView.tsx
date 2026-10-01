@@ -1304,7 +1304,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                   </div>
                   <div>
                     <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', textTransform: 'uppercase', fontWeight: '800' }}>CREATED BY & STATUS</span>
-                    <h4 style={{ fontSize: '0.82rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>{activeMatchingReq.assignedExecutive || 'Priya Nair (Sales Exec)'}</h4>
+                    <h4 style={{ fontSize: '0.82rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>{activeMatchingReq.assignedExecutive || 'Avishek Das (Super Admin)'}</h4>
                     <span style={{ background: activeMatchingReq.status === 'COST_SHEET_CREATED' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)', color: activeMatchingReq.status === 'COST_SHEET_CREATED' ? '#4ade80' : '#fbbf24', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '900' }}>{activeMatchingReq.status}</span>
                   </div>
                 </div>

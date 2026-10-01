@@ -963,13 +963,13 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
             /* MOBILE COCKPIT VIEW (WHEN USER SWITCHES TO MOBILE COCKPIT MODE) */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* SELECTOR FOR ACTIVE VISIT PLAN */}
-              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: windowWidth <= 640 ? 'column' : 'row', justifyContent: 'space-between', alignItems: windowWidth <= 640 ? 'stretch' : 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: windowWidth <= 640 ? 'column' : 'row', alignItems: windowWidth <= 640 ? 'flex-start' : 'center', gap: '10px', width: windowWidth <= 640 ? '100%' : 'auto' }}>
                   <span style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>Active Visit Plan:</span>
                   <select 
                     value={selectedVisitPlanId} 
                     onChange={(e) => setSelectedVisitPlanId(e.target.value)} 
-                    style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', color: '#38bdf8', fontWeight: '900', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+                    style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', color: '#38bdf8', fontWeight: '900', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', width: '100%', maxWidth: '100%', boxSizing: 'border-box', textOverflow: 'ellipsis' }}
                   >
                     {visitPlans.map(plan => (
                       <option key={plan.visitPlanId} value={plan.visitPlanId}>
@@ -981,7 +981,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
 
                 <button 
                   onClick={() => setRoutePlannerMode('compact_table' as any)} 
-                  style={{ background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}
+                  style={{ background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: 'center' }}
                 >
                   ⬅️ Back to Compact Register Table
                 </button>
@@ -1117,15 +1117,15 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
 
                     // Sequence: Origin (Visitor Live Current Location) -> 1st Waypoint (Customer Pickup) -> Waypoints 2..N (Project Sites) -> Final Destination (Customer Drop)
                     const waypointsStr = [pickupPt, ...projectCoordsStr].join('|');
-                    return `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`;
+                    return `https://www.google.com/maps/dir/?api=1&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`;
                   } else {
                     if (resolvedStops.length > 1) {
                       const destStop = resolvedStops[resolvedStops.length - 1];
                       const waypointsStr = resolvedStops.slice(0, resolvedStops.length - 1).map((c: any) => `${c.lat},${c.lng}`).join('|');
-                      return `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destStop.lat},${destStop.lng}&waypoints=${encodeURIComponent(waypointsStr)}&travelmode=driving&dirflg=d`;
+                      return `https://www.google.com/maps/dir/?api=1&destination=${destStop.lat},${destStop.lng}&waypoints=${encodeURIComponent(waypointsStr)}&travelmode=driving&dirflg=d`;
                     } else if (resolvedStops.length === 1) {
                       const c = resolvedStops[0];
-                      return `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${c.lat},${c.lng}&travelmode=driving&dirflg=d`;
+                      return `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}&travelmode=driving&dirflg=d`;
                     }
                     return 'https://www.google.com/maps';
                   }
@@ -1136,15 +1136,15 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
 
                 return (
                   <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', borderRadius: '20px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
+                    <div style={{ display: 'flex', flexDirection: windowWidth <= 640 ? 'column' : 'row', justifyContent: 'space-between', alignItems: windowWidth <= 640 ? 'stretch' : 'center', gap: windowWidth <= 640 ? '12px' : '0' }}>
+                      <div style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                         <span style={{ color: '#fbbf24', fontWeight: '900', fontSize: '0.8rem' }}>📱 TODAY'S VISIT PLAN</span>
-                        <h3 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '1.2rem', marginTop: '2px' }}>{currentPlan.visitPlanId} — {currentPlan.customerName}</h3>
+                        <h3 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '1.2rem', marginTop: '2px', wordBreak: 'break-word' }}>{currentPlan.visitPlanId} — {currentPlan.customerName}</h3>
                         <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.78rem' }}>{totalStops} Stops • {completedStops}/{totalStops} Completed • {currentPlan.status}</span>
                       </div>
                       <button 
                         onClick={() => setShowVisitDetailModal({ open: true, plan: currentPlan })}
-                        style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer' }}
+                        style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', width: windowWidth <= 640 ? '100%' : 'auto', textAlign: 'center' }}
                       >
                         OPEN VISIT DETAILS
                       </button>

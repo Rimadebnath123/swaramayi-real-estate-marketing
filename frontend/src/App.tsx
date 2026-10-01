@@ -1153,13 +1153,17 @@ function ScheduleVisitModalContent({
 }: any) {
   const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
 
-  const execList = Array.isArray(dynamicSalesExecutives) && dynamicSalesExecutives.length > 0
-    ? dynamicSalesExecutives
-    : [
-        { id: 'EXE-01', name: 'Avishek Das (Super Admin)', value: 'Avishek Das (Super Admin)', label: 'Avishek Das (Super Admin)' },
-        { id: 'EXE-02', name: 'Priya Nair (Sales Exec)', value: 'Priya Nair (Sales Exec)', label: 'Priya Nair (Sales Exec)' },
-        { id: 'EXE-03', name: 'Sanjay Dutt (Senior Consultant)', value: 'Sanjay Dutt (Senior Consultant)', label: 'Sanjay Dutt (Senior Consultant)' }
-      ];
+  const execList = React.useMemo(() => {
+    if (Array.isArray(dynamicSalesExecutives) && dynamicSalesExecutives.length > 0) {
+      return dynamicSalesExecutives;
+    }
+    return [
+      { id: 'EXE-01', name: 'Avishek Das (Super Admin)', value: 'Avishek Das (Super Admin)', label: 'Avishek Das (Super Admin)' },
+      { id: 'EXE-02', name: 'Punita Roy Chowdhury (ADMIN)', value: 'Punita Roy Chowdhury (ADMIN)', label: 'Punita Roy Chowdhury (ADMIN)' },
+      { id: 'EXE-03', name: 'Priya Nair (Sales Exec)', value: 'Priya Nair (Sales Exec)', label: 'Priya Nair (Sales Exec)' }
+    ];
+  }, [dynamicSalesExecutives]);
+
   const [selectedCsIds, setSelectedCsIds] = useState<string[]>(
     initialCS ? [initialCS.costSheetId] : (eligibleCostSheets[0] ? [eligibleCostSheets[0].costSheetId] : [])
   );
@@ -1184,7 +1188,25 @@ function ScheduleVisitModalContent({
   const [dropAddress, setDropAddress] = useState<string>('');
   const [visitDate, setVisitDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState<string>('10:00 AM');
-  const [assignedExec, setAssignedExec] = useState<string>('Avishek Das (Super Admin)');
+
+  const defaultExecValue = React.useMemo(() => {
+    const custExec = targetCust?.assigned_executive || targetCust?.assigned_salesperson || targetCust?.assigned_employee_name || initialCS?.customerSnapshot?.assigned_executive;
+    if (custExec) {
+      const clean = custExec.replace(/\(.*\)/, '').trim();
+      const match = execList.find((e: any) => e.value === clean || e.name === clean || (e.value && e.value.toLowerCase().includes(clean.toLowerCase())));
+      if (match) return match.value;
+    }
+    return execList[0]?.value || 'Avishek Das (Super Admin)';
+  }, [targetCust, initialCS, execList]);
+
+  const [assignedExec, setAssignedExec] = useState<string>(defaultExecValue);
+
+  React.useEffect(() => {
+    if (defaultExecValue) {
+      setAssignedExec(defaultExecValue);
+    }
+  }, [defaultExecValue]);
+
   const [transportMode, setTransportMode] = useState<string>('🚗 Cab Pick & Drop Needed');
 
   const [orderedStops, setOrderedStops] = useState<any[]>(() => {
@@ -1677,7 +1699,7 @@ function ScheduleVisitModalContent({
 
           <div>
             <label style={{ fontSize: '0.75rem', color: '#4ade80', fontWeight: '900', display: 'block', marginBottom: '4px' }}>5. Assigned Sales Executive</label>
-            <select value={assignedExec || (execList[0]?.value || 'Priya Nair')} onChange={(e) => setAssignedExec(e.target.value)} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontWeight: '800', padding: '8px 10px', borderRadius: '6px', fontSize: '0.82rem' }}>
+            <select value={assignedExec} onChange={(e) => setAssignedExec(e.target.value)} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontWeight: '800', padding: '8px 10px', borderRadius: '6px', fontSize: '0.82rem' }}>
               {execList.map((exec: any) => (
                 <option key={exec.id || exec.name} value={exec.value}>
                   👤 {exec.label || exec.name || exec.value}
@@ -1961,11 +1983,11 @@ function VisitDetailModalContent({
                                         const lng = (s.longitude || '88.493403').replace(/[^0-9.-]/g, '');
                                         return `${lat},${lng}`;
                                       }).join('|');
-                                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destLat},${destLng}&waypoints=${encodeURIComponent(waypointsStr)}`, '_blank');
+                                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&waypoints=${encodeURIComponent(waypointsStr)}`, '_blank');
                                     } else {
                                       const cleanLat = (stop.latitude || '22.722361').replace(/[^0-9.-]/g, '');
                                       const cleanLng = (stop.longitude || '88.493403').replace(/[^0-9.-]/g, '');
-                                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${cleanLat},${cleanLng}`, '_blank');
+                                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}`, '_blank');
                                     }
                                   }}
                                   style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem' }}
@@ -2038,14 +2060,14 @@ function VisitDetailModalContent({
                       const dropPt = (cleanDropLat && cleanDropLng) ? `${cleanDropLat},${cleanDropLng}` : (plan.dropAddress ? encodeURIComponent(plan.dropAddress) : '22.725000,88.498000');
 
                       const waypointsStr = [pickPt, ...projectCoords].join('|');
-                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`, '_blank');
+                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`, '_blank');
                     } else {
                       if (projectCoords.length > 1) {
                         const dest = projectCoords[projectCoords.length - 1];
                         const waypointsStr = projectCoords.slice(0, projectCoords.length - 1).join('|');
-                        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest}&waypoints=${encodeURIComponent(waypointsStr)}&travelmode=driving&dirflg=d`, '_blank');
+                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&waypoints=${encodeURIComponent(waypointsStr)}&travelmode=driving&dirflg=d`, '_blank');
                       } else if (projectCoords.length === 1) {
-                        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${projectCoords[0]}&travelmode=driving&dirflg=d`, '_blank');
+                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${projectCoords[0]}&travelmode=driving&dirflg=d`, '_blank');
                       }
                     }
                   }}
@@ -2058,7 +2080,7 @@ function VisitDetailModalContent({
                     onClick={() => {
                       const cleanLat = plan.pickupLat ? plan.pickupLat.replace(/[^0-9.]/g, '') : '22.720500';
                       const cleanLng = plan.pickupLng ? plan.pickupLng.replace(/[^0-9.]/g, '') : '88.485000';
-                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${cleanLat},${cleanLng}`, '_blank');
+                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}`, '_blank');
                     }}
                     style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
                   >
@@ -2070,7 +2092,7 @@ function VisitDetailModalContent({
                     onClick={() => {
                       const cleanLat = plan.dropLat ? plan.dropLat.replace(/[^0-9.]/g, '') : '22.725000';
                       const cleanLng = plan.dropLng ? plan.dropLng.replace(/[^0-9.]/g, '') : '88.498000';
-                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${cleanLat},${cleanLng}`, '_blank');
+                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}`, '_blank');
                     }}
                     style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
                   >
@@ -2184,7 +2206,7 @@ function IndividualStopModalContent({
   const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
   const cleanLat = stop.latitude.replace(/[^0-9.]/g, '') || '22.722361';
   const cleanLng = stop.longitude.replace(/[^0-9.]/g, '') || '88.493403';
-  const mapsDirUrl = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${cleanLat},${cleanLng}`;
+  const mapsDirUrl = `https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}&travelmode=driving`;
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2100, padding: '20px' }}>
@@ -19230,14 +19252,14 @@ export default function App() {
 
                       if (modalIsCabNeeded) {
                         const waypointsStr = [pickPt, ...projectCoords].join('|');
-                        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`, '_blank');
+                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`, '_blank');
                       } else {
                         if (projectCoords.length > 1) {
                           const dest = projectCoords[projectCoords.length - 1];
                           const waypointsStr = projectCoords.slice(0, projectCoords.length - 1).join('|');
-                          window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest}&waypoints=${encodeURIComponent(waypointsStr)}&travelmode=driving&dirflg=d`, '_blank');
+                          window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&waypoints=${encodeURIComponent(waypointsStr)}&travelmode=driving&dirflg=d`, '_blank');
                         } else if (projectCoords.length === 1) {
-                          window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${projectCoords[0]}&travelmode=driving&dirflg=d`, '_blank');
+                          window.open(`https://www.google.com/maps/dir/?api=1&destination=${projectCoords[0]}&travelmode=driving&dirflg=d`, '_blank');
                         }
                       }
                     }}
@@ -19370,14 +19392,14 @@ export default function App() {
                       const dropPt = (cleanDropLat && cleanDropLng) ? `${cleanDropLat},${cleanDropLng}` : (modalPlan.dropAddress ? encodeURIComponent(modalPlan.dropAddress) : '22.725000,88.498000');
 
                       const waypointsStr = [pickPt, ...projectCoords].join('|');
-                      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`, '_blank');
+                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${dropPt}&waypoints=${waypointsStr}&travelmode=driving&dirflg=d`, '_blank');
                     } else {
                       if (projectCoords.length > 1) {
                         const dest = projectCoords[projectCoords.length - 1];
                         const waypointsStr = projectCoords.slice(0, projectCoords.length - 1).join('|');
-                        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest}&waypoints=${encodeURIComponent(waypointsStr)}&travelmode=driving&dirflg=d`, '_blank');
+                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&waypoints=${encodeURIComponent(waypointsStr)}&travelmode=driving&dirflg=d`, '_blank');
                       } else if (projectCoords.length === 1) {
-                        window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${projectCoords[0]}&travelmode=driving&dirflg=d`, '_blank');
+                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${projectCoords[0]}&travelmode=driving&dirflg=d`, '_blank');
                       }
                     }
                   }}

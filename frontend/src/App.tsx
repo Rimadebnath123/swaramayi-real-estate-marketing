@@ -1656,12 +1656,22 @@ function ScheduleVisitModalContent({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px' }}>
           <div>
             <label style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: '900', display: 'block', marginBottom: '4px' }}>1. Customer Pickup Address</label>
-            <input type="text" value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)} placeholder="Type Customer Pickup Address..." style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.82rem' }} />
+            <LocationAutocompleteInput 
+              value={pickupAddress} 
+              onChange={(val) => setPickupAddress(val)} 
+              placeholder="Type Customer Pickup Address..." 
+              isLight={isLight}
+            />
           </div>
 
           <div>
             <label style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: '900', display: 'block', marginBottom: '4px' }}>2. Customer Drop Address</label>
-            <input type="text" value={dropAddress} onChange={(e) => setDropAddress(e.target.value)} placeholder="Type Customer Drop Address..." style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 10px', borderRadius: '6px', fontSize: '0.82rem' }} />
+            <LocationAutocompleteInput 
+              value={dropAddress} 
+              onChange={(val) => setDropAddress(val)} 
+              placeholder="Type Customer Drop Address..." 
+              isLight={isLight}
+            />
           </div>
 
           <div>

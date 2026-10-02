@@ -46,6 +46,7 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
 
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [itemToPurge, setItemToPurge] = useState<RecycleBinItem | null>(null);
   const [showEmptyConfirmModal, setShowEmptyConfirmModal] = useState<boolean>(false);
@@ -53,6 +54,52 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const filteredItems = recycledItems.filter(item => {
+    const matchesCat = filterCategory === 'ALL' || item.category === filterCategory;
+    const q = searchQuery.toLowerCase();
+    const matchesQuery = !q || 
+      (item.title || '').toLowerCase().includes(q) ||
+      (item.id || '').toLowerCase().includes(q) ||
+      (item.details || '').toLowerCase().includes(q) ||
+      (item.deletedBy || '').toLowerCase().includes(q) ||
+      (item.originalLocation || '').toLowerCase().includes(q);
+    return matchesCat && matchesQuery;
+  });
+
+  const isAllSelected = filteredItems.length > 0 && filteredItems.every(i => selectedItemIds.includes(i.id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedItemIds([]);
+    } else {
+      setSelectedItemIds(filteredItems.map(i => i.id));
+    }
+  };
+
+  const handleToggleSelectItem = (id: string) => {
+    setSelectedItemIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkRestore = () => {
+    const itemsToRestore = recycledItems.filter(i => selectedItemIds.includes(i.id));
+    if (itemsToRestore.length === 0) return;
+    itemsToRestore.forEach(item => onRestoreItem(item));
+    showToast(`✅ Restored ${itemsToRestore.length} selected item(s)!`);
+    setSelectedItemIds([]);
+  };
+
+  const handleBulkPurge = () => {
+    const itemsToPurge = recycledItems.filter(i => selectedItemIds.includes(i.id));
+    if (itemsToPurge.length === 0) return;
+    if (window.confirm(`⚠️ PERMANENT DELETION CONFIRMATION:\n\nAre you sure you want to permanently purge ${itemsToPurge.length} selected item(s) from the Recycle Bin? This action CANNOT be undone.`)) {
+      itemsToPurge.forEach(item => onPurgeItem(item));
+      showToast(`🗑️ Permanently purged ${itemsToPurge.length} selected item(s).`);
+      setSelectedItemIds([]);
+    }
   };
 
   const handleRestore = (item: RecycleBinItem) => {
@@ -72,18 +119,6 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
     setShowEmptyConfirmModal(false);
     showToast(`✨ Recycle Bin has been completely emptied.`);
   };
-
-  const filteredItems = recycledItems.filter(item => {
-    const matchesCat = filterCategory === 'ALL' || item.category === filterCategory;
-    const q = searchQuery.toLowerCase();
-    const matchesQuery = !q || 
-      (item.title || '').toLowerCase().includes(q) ||
-      (item.id || '').toLowerCase().includes(q) ||
-      (item.details || '').toLowerCase().includes(q) ||
-      (item.deletedBy || '').toLowerCase().includes(q) ||
-      (item.originalLocation || '').toLowerCase().includes(q);
-    return matchesCat && matchesQuery;
-  });
 
   const getCategoryIcon = (cat: RecycleBinItem['category']) => {
     switch (cat) {
@@ -280,6 +315,84 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
         </div>
       </div>
 
+        {/* BULK SELECTION ACTION BAR */}
+      {selectedItemIds.length > 0 && (
+        <div style={{
+          background: isLight ? '#e0f2fe' : '#0c4a6e',
+          border: '1.5px solid #0284c7',
+          borderRadius: '10px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontWeight: '800', color: isLight ? '#0369a1' : '#38bdf8', fontSize: '0.88rem' }}>
+              ☑️ {selectedItemIds.length} item(s) selected
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={handleBulkRestore}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 14px',
+                borderRadius: '6px',
+                background: '#10b981',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: '800',
+                fontSize: '0.82rem',
+                cursor: 'pointer'
+              }}
+            >
+              <RotateCcw size={15} /> Restore Selected ({selectedItemIds.length})
+            </button>
+
+            <button
+              onClick={handleBulkPurge}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 14px',
+                borderRadius: '6px',
+                background: '#ef4444',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: '800',
+                fontSize: '0.82rem',
+                cursor: 'pointer'
+              }}
+            >
+              <Trash2 size={15} /> Purge Selected ({selectedItemIds.length})
+            </button>
+
+            <button
+              onClick={() => setSelectedItemIds([])}
+              style={{
+                padding: '7px 12px',
+                borderRadius: '6px',
+                background: isLight ? '#cbd5e1' : '#334155',
+                color: isLight ? '#0f172a' : '#ffffff',
+                border: 'none',
+                fontWeight: '700',
+                fontSize: '0.8rem',
+                cursor: 'pointer'
+              }}
+            >
+              Deselect All
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* RECYCLE BIN ITEMS TABLE / LIST */}
       <div style={{
         background: bgCard,
@@ -305,8 +418,8 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
               <div
                 key={item.id}
                 style={{
-                  background: isLight ? '#f8fafc' : '#020617',
-                  border: `1px solid ${borderCol}`,
+                  background: selectedItemIds.includes(item.id) ? (isLight ? 'rgba(56, 189, 248, 0.12)' : 'rgba(56, 189, 248, 0.18)') : (isLight ? '#f8fafc' : '#020617'),
+                  border: selectedItemIds.includes(item.id) ? '1.5px solid #0284c7' : `1px solid ${borderCol}`,
                   borderRadius: '10px',
                   padding: '14px',
                   display: 'flex',
@@ -315,19 +428,27 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    background: isLight ? '#ffffff' : '#1e293b',
-                    border: `1px solid ${borderCol}`,
-                    fontSize: '0.78rem',
-                    fontWeight: '700'
-                  }}>
-                    {getCategoryIcon(item.category)}
-                    <span>{item.category}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedItemIds.includes(item.id)}
+                      onChange={() => handleToggleSelectItem(item.id)}
+                      style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#0284c7' }}
+                    />
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      background: isLight ? '#ffffff' : '#1e293b',
+                      border: `1px solid ${borderCol}`,
+                      fontSize: '0.78rem',
+                      fontWeight: '700'
+                    }}>
+                      {getCategoryIcon(item.category)}
+                      <span>{item.category}</span>
+                    </div>
                   </div>
 
                   <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800', fontSize: '0.8rem' }}>
@@ -415,6 +536,15 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em'
                 }}>
+                  <th style={{ padding: '12px 14px', width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={handleToggleSelectAll}
+                      style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#0284c7' }}
+                      title={isAllSelected ? "Deselect All" : "Select All Items"}
+                    />
+                  </th>
                   <th style={{ padding: '12px 16px' }}>Item ID / Record Title</th>
                   <th style={{ padding: '12px 16px' }}>Category</th>
                   <th style={{ padding: '12px 16px' }}>Original Vault</th>
@@ -427,8 +557,17 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
                 {filteredItems.map(item => (
                   <tr key={item.id} style={{
                     borderBottom: `1px solid ${borderCol}`,
+                    background: selectedItemIds.includes(item.id) ? (isLight ? 'rgba(56, 189, 248, 0.08)' : 'rgba(56, 189, 248, 0.15)') : 'transparent',
                     transition: 'background 0.15s ease'
                   }}>
+                    <td style={{ padding: '14px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedItemIds.includes(item.id)}
+                        onChange={() => handleToggleSelectItem(item.id)}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#0284c7' }}
+                      />
+                    </td>
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ fontWeight: '700', color: textMain, marginBottom: '2px' }}>
                         {item.title}

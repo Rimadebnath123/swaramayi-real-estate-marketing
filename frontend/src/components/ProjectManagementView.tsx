@@ -1,6 +1,6 @@
 import { extractAllIdentifiers, isItemInRecycledSet } from '../App';
 import React from 'react';
-import { Upload, Building2, Share2, ArrowRightLeft, Compass, Navigation, Camera, Video, Search, X, Download } from 'lucide-react';
+import { Upload, Building2, Share2, ArrowRightLeft, Compass, Navigation, Camera, Video, Search, X, Download, Trash2 } from 'lucide-react';
 
 interface ProjectManagementViewProps {
   currentRole?: string;
@@ -201,6 +201,52 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
   const [editingDevId, setEditingDevId] = React.useState<string | null>(null);
   const [editDevForm, setEditDevForm] = React.useState<{ id: string; name: string; mobile: string; email: string }>({ id: '', name: '', mobile: '', email: '' });
+
+  const [selectedPropertyIds, setSelectedPropertyIds] = React.useState<string[]>([]);
+
+  const filteredPropertyList = React.useMemo(() => {
+    return properties.filter(p => matchesSearchQuery(p, searchQuery));
+  }, [properties, searchQuery, matchesSearchQuery]);
+
+  const isAllPropertiesSelected = filteredPropertyList.length > 0 && filteredPropertyList.every(p => selectedPropertyIds.includes(p.id));
+
+  const handleToggleSelectAllProperties = () => {
+    if (isAllPropertiesSelected) {
+      setSelectedPropertyIds([]);
+    } else {
+      setSelectedPropertyIds(filteredPropertyList.map(p => p.id));
+    }
+  };
+
+  const handleToggleSelectProperty = (id: string) => {
+    setSelectedPropertyIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkRecycleProperties = () => {
+    if (selectedPropertyIds.length === 0) return;
+    if (window.confirm(`Are you sure you want to move ${selectedPropertyIds.length} selected property item(s) to the Recycle Bin?`)) {
+      const itemsToRecycle = properties.filter(p => selectedPropertyIds.includes(p.id));
+      itemsToRecycle.forEach(p => {
+        if (onRecycleItem) {
+          onRecycleItem({
+            id: p.id || p.property_code || `PROP-${Date.now()}`,
+            title: `Property - ${p.title || p.property_title || p.property_code || 'Unit'} (${p.property_code || p.id})`,
+            category: 'Project',
+            originalLocation: 'Project & Property Inventory Management System',
+            details: `Developer: ${p.developer || 'N/A'}, Price: ${p.final_price || 'N/A'}, Config: ${p.configuration || 'N/A'}`,
+            originalData: p
+          });
+        }
+      });
+      if (setProperties) {
+        setProperties(prev => prev.filter(p => !selectedPropertyIds.includes(p.id)));
+      }
+      setSelectedPropertyIds([]);
+      alert(`🗑️ Successfully moved ${itemsToRecycle.length} property item(s) to Recycle Bin.`);
+    }
+  };
 
   // SYNC DEVELOPER MASTER LIST WITH DEVELOPERS PROP AND LOCALSTORAGE
   React.useEffect(() => {
@@ -3255,6 +3301,61 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             </div>
           </div>
 
+          {selectedPropertyIds.length > 0 && (
+            <div style={{
+              background: isLight ? '#e0f2fe' : '#0c4a6e',
+              border: '1.5px solid #0284c7',
+              borderRadius: '10px',
+              padding: '12px 16px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <span style={{ fontWeight: '800', color: isLight ? '#0369a1' : '#38bdf8', fontSize: '0.88rem' }}>
+                ☑️ {selectedPropertyIds.length} property item(s) selected
+              </span>
+
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={handleBulkRecycleProperties}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 14px',
+                    borderRadius: '6px',
+                    background: '#ef4444',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontWeight: '800',
+                    fontSize: '0.82rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Trash2 size={15} /> Move Selected ({selectedPropertyIds.length}) to Recycle Bin
+                </button>
+
+                <button
+                  onClick={() => setSelectedPropertyIds([])}
+                  style={{
+                    padding: '7px 12px',
+                    borderRadius: '6px',
+                    background: isLight ? '#cbd5e1' : '#334155',
+                    color: isLight ? '#0f172a' : '#ffffff',
+                    border: 'none',
+                    fontWeight: '700',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+          )}
+
           {windowWidth <= 768 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {properties
@@ -3379,12 +3480,18 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       return { border: '1.5px solid #22c55e', bg: 'rgba(34, 197, 94, 0.18)', color: '#4ade80' };
                     };
 
-                    const badgeStyle = getStatusBadgeStyle(normalizedStatus);
+                    const isSelected = selectedPropertyIds.includes(p.id);
 
                     return (
-                      <div key={p.id} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div key={p.id} style={{ background: isSelected ? (isLight ? 'rgba(56, 189, 248, 0.12)' : 'rgba(56, 189, 248, 0.18)') : (isLight ? '#f8fafc' : '#0f172a'), border: isSelected ? '1.5px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectProperty(p.id)}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#0284c7' }}
+                            />
                             <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.85rem' }}>{p.property_code}</span>
                             <span style={{ fontSize: '0.7rem', color: '#a855f7', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid #a855f7', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
                               🏢 {p.property_type || p.type || 'Flat'}
@@ -3491,6 +3598,15 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                    <th style={{ width: '40px', padding: '12px 8px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={isAllPropertiesSelected}
+                        onChange={handleToggleSelectAllProperties}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#0284c7' }}
+                        title="Select / Deselect All Properties"
+                      />
+                    </th>
                     <th style={{ padding: '12px' }}>Code</th>
                     <th style={{ padding: '12px' }}>Title & Project</th>
                     <th style={{ padding: '12px' }}>Developer Name & Project Code</th>
@@ -3562,8 +3678,18 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       const availCountForType = isEv ? availEv : isOpen ? availOpen : availCovered;
                       const totalCapForType = isEv ? totalEvCap : isOpen ? totalOpenCap : totalCoveredCap;
 
+                      const isSelected = selectedPropertyIds.includes(p.id);
+
                       return (
-                        <tr key={p.id} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+                        <tr key={p.id} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: isSelected ? (isLight ? 'rgba(56, 189, 248, 0.12)' : 'rgba(56, 189, 248, 0.18)') : undefined }}>
+                          <td style={{ width: '40px', padding: '12px 8px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectProperty(p.id)}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#0284c7' }}
+                            />
+                          </td>
                           <td style={{ padding: '12px', fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800' }}>{p.property_code}</td>
                           <td style={{ padding: '12px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
                             <div>{displayTitle}</div>

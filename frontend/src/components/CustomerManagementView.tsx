@@ -110,6 +110,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
 
   const [selectedTransactionPdf, setSelectedTransactionPdf] = useState<any | null>(null);
   const [vaultViewMode, setVaultViewMode] = useState<'cards' | 'table'>(windowWidth <= 1024 ? 'cards' : 'table');
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
 
   const salesExecOptions = React.useMemo(() => {
     if (users && Array.isArray(users) && users.length > 0) {
@@ -1485,6 +1486,57 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                 </div>
               );
             }
+            const isAllCustomersSelected = filteredCustomers.length > 0 && filteredCustomers.every(c => selectedCustomerIds.includes(c.id));
+
+            const handleToggleSelectAllCustomers = () => {
+              if (isAllCustomersSelected) {
+                setSelectedCustomerIds([]);
+              } else {
+                setSelectedCustomerIds(filteredCustomers.map(c => c.id));
+              }
+            };
+
+            const handleToggleSelectCustomer = (id: string) => {
+              setSelectedCustomerIds(prev => 
+                prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+              );
+            };
+
+            const handleBulkRecycleCustomers = () => {
+              const custsToDelete = filteredCustomers.filter(c => selectedCustomerIds.includes(c.id));
+              if (custsToDelete.length === 0) return;
+
+              if (window.confirm(`⚠️ CONFIRM BULK DELETION:\n\nAre you sure you want to move ${custsToDelete.length} selected customer record(s) to the Recycle Bin?`)) {
+                custsToDelete.forEach(c => {
+                  if (onRecycleItem) {
+                    onRecycleItem({
+                      id: c.id || c.customer_number || `CUS-${Date.now()}`,
+                      title: `Customer - ${c.name || 'Client'} (${c.customer_number || c.id})`,
+                      category: 'Customer',
+                      originalLocation: 'Customer Management Vault',
+                      details: `Mobile: ${c.mobile || 'N/A'}, Locality: ${c.locality || 'N/A'}`,
+                      originalData: c
+                    });
+                  }
+                });
+
+                const targetIds = new Set(selectedCustomerIds);
+                if (setCustomers) {
+                  setCustomers((prev: any[]) => {
+                    const updated = (prev || []).filter((cust: any) => cust && !targetIds.has(cust.id));
+                    try {
+                      localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
+                      localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
+                    } catch (e) {}
+                    if (syncAllToMongoDB) syncAllToMongoDB({ customers: updated });
+                    return updated;
+                  });
+                }
+
+                setSelectedCustomerIds([]);
+                alert(`🗑️ ${custsToDelete.length} customer record(s) moved to Recycle Bin.`);
+              }
+            };
 
             const handleDeleteCustomerAction = (c: any) => {
               if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete customer record ${c.customer_number || c.id} (${c.name})? It will be moved to Recycle Bin.`)) {
@@ -1610,33 +1662,95 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
               }
             };
 
-            if (vaultViewMode === 'cards') {
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  {filteredCustomers.map(c => {
-                    const matchingLead = leadsList.find(l => (l.customer_number && l.customer_number === c.customer_number) || (l.mobile && c.mobile && l.mobile.replace(/\D/g, '') === c.mobile.replace(/\D/g, ''))) || c.leadData;
-                    const {
-                      matchingText,
-                      matchingCostSheet,
-                      matchingPva,
-                      matchingVisit,
-                      matchingBooking,
-                      matchingAgreement,
-                      matchingInvoice
-                    } = resolveCustomerProgression(c);
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {selectedCustomerIds.length > 0 && (
+                  <div style={{
+                    background: isLight ? '#e0f2fe' : '#0c4a6e',
+                    border: '1.5px solid #0284c7',
+                    borderRadius: '10px',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    justify: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}>
+                    <span style={{ fontWeight: '800', color: isLight ? '#0369a1' : '#38bdf8', fontSize: '0.88rem' }}>
+                      ☑️ {selectedCustomerIds.length} customer(s) selected
+                    </span>
 
-                    return (
-                      <div key={c.id} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '14px', padding: windowWidth <= 640 ? '14px' : '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {/* CARD HEADER ROW */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <span 
-                              onClick={() => openIdDetailsModal(c.customer_number, 'CUSTOMER_ID')}
-                              style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', cursor: 'pointer', textDecoration: 'underline', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.85rem' }}
-                              title="Click to view full Customer details"
-                            >
-                              🆔 {c.customer_number}
-                            </span>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={handleBulkRecycleCustomers}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '7px 14px',
+                          borderRadius: '6px',
+                          background: '#ef4444',
+                          color: '#ffffff',
+                          border: 'none',
+                          fontWeight: '800',
+                          fontSize: '0.82rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Trash2 size={15} /> Move Selected ({selectedCustomerIds.length}) to Recycle Bin
+                      </button>
+
+                      <button
+                        onClick={() => setSelectedCustomerIds([])}
+                        style={{
+                          padding: '7px 12px',
+                          borderRadius: '6px',
+                          background: isLight ? '#cbd5e1' : '#334155',
+                          color: isLight ? '#0f172a' : '#ffffff',
+                          border: 'none',
+                          fontWeight: '700',
+                          fontSize: '0.8rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Deselect All
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {vaultViewMode === 'cards' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {filteredCustomers.map(c => {
+                      const matchingLead = leadsList.find(l => (l.customer_number && l.customer_number === c.customer_number) || (l.mobile && c.mobile && l.mobile.replace(/\D/g, '') === c.mobile.replace(/\D/g, ''))) || c.leadData;
+                      const {
+                        matchingText,
+                        matchingCostSheet,
+                        matchingPva,
+                        matchingVisit,
+                        matchingBooking,
+                        matchingAgreement,
+                        matchingInvoice
+                      } = resolveCustomerProgression(c);
+
+                      return (
+                        <div key={c.id} style={{ background: selectedCustomerIds.includes(c.id) ? (isLight ? 'rgba(56, 189, 248, 0.12)' : 'rgba(56, 189, 248, 0.18)') : (isLight ? '#f8fafc' : '#0f172a'), border: selectedCustomerIds.includes(c.id) ? '1.5px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), borderRadius: '14px', padding: windowWidth <= 640 ? '14px' : '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {/* CARD HEADER ROW */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <input
+                                type="checkbox"
+                                checked={selectedCustomerIds.includes(c.id)}
+                                onChange={() => handleToggleSelectCustomer(c.id)}
+                                style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#0284c7' }}
+                              />
+                              <span 
+                                onClick={() => openIdDetailsModal(c.customer_number, 'CUSTOMER_ID')}
+                                style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', cursor: 'pointer', textDecoration: 'underline', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.85rem' }}
+                                title="Click to view full Customer details"
+                              >
+                                🆔 {c.customer_number}
+                              </span>
                             {matchingLead && (
                               <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '2px 6px', borderRadius: '4px' }}>
                                 📋 {matchingLead.lead_number}
@@ -1771,14 +1885,20 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                     );
                   })}
                 </div>
-              );
-            }
-
-            return (
-              <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              ) : (
+                <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                 <table style={{ width: '100%', minWidth: '980px', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                   <thead>
                     <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                      <th style={{ width: '40px', padding: '12px 8px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isAllCustomersSelected}
+                          onChange={handleToggleSelectAllCustomers}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#0284c7' }}
+                          title="Select / Deselect All Customers"
+                        />
+                      </th>
                       <th style={{ padding: '12px', whiteSpace: 'nowrap', minWidth: '130px' }}>Customer Tracking ID</th>
                       <th style={{ padding: '12px', whiteSpace: 'nowrap', minWidth: '170px' }}>Full Name & Contact</th>
                       <th style={{ padding: '12px', whiteSpace: 'nowrap', minWidth: '180px' }}>Lead Ingestion Info</th>
@@ -1800,8 +1920,18 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                         matchingInvoice
                       } = resolveCustomerProgression(c);
 
+                      const isSelected = selectedCustomerIds.includes(c.id);
+
                       return (
-                        <tr key={c.id} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+                        <tr key={c.id} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: isSelected ? (isLight ? 'rgba(56, 189, 248, 0.12)' : 'rgba(56, 189, 248, 0.18)') : undefined }}>
+                          <td style={{ width: '40px', padding: '12px 8px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectCustomer(c.id)}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#0284c7' }}
+                            />
+                          </td>
                           <td style={{ padding: '12px' }}>
                             <span 
                               onClick={() => openIdDetailsModal(c.customer_number, 'CUSTOMER_ID')}
@@ -1956,7 +2086,9 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                   </tbody>
                 </table>
               </div>
-            );
+            )}
+          </div>
+        );
           })()}
         </div>
       )}

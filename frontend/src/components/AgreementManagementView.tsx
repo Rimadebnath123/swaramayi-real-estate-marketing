@@ -58,7 +58,7 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
     const pva = a.pvaData || a;
     const custName = a.party_name || pva.customerName || 'Customer';
     const custMobile = a.party_contact || pva.customerMobile || '+91 78766 70000';
-    const rawTitle = a.title || pva.projectTitle || 'GAJAPATI APARTMENT';
+    const rawTitle = a.title || pva.projectTitle || '';
     const projName = rawTitle.includes('—') ? rawTitle.split('—')[1].trim() : rawTitle;
     const custNum = pva.customerId || pva.customerNumber || a.customer_number || `SRM-CUS-2026-000${Date.now().toString().slice(-3)}`;
     const bkgCode = `SRM-BKG-2026-000${(bookings?.length || 0) + 188}`;
@@ -143,7 +143,7 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
               };
               const stop = (plan?.stops && plan.stops.length > 0) ? plan.stops[0] : { 
                 stopId: 'SRM-VSTOP-2026-000001', 
-                propertyTitle: 'GAJAPATI APARTMENT', 
+                propertyTitle: '', 
                 propertyCode: 'SRM-PROP-2026-000426', 
                 costSheetId: 'COST-SHEET-2026-000001', 
                 developer: 'Dhriti Builders & Developers', 

@@ -442,7 +442,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
     // 5. Auto-incorporate scheduled site visits
     (scheduledVisits || []).forEach(v => {
       if (!v) return;
-      const custNum = v.customerNumber || v.customer_number || v.customerId || `SRM-CUS-2026-${String(v.id || v.visitId || '000189').replace(/\D/g, '').slice(-6) || '000189'}`;
+      const custNum = v.customerNumber || v.customer_number || v.customerId || (String(v.id || v.visitId || '').replace(/\D/g, '').slice(-6) ? `SRM-CUS-2026-${String(v.id || v.visitId || '').replace(/\D/g, '').slice(-6)}` : '');
       const custName = v.customerName || v.customer_name || v.name || 'Customer';
       const custMob = v.mobile || v.phone || v.customerMobile || '';
       const cleanMob = custMob ? custMob.replace(/\D/g, '') : '';
@@ -843,11 +843,11 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
   };
 
   const getTransactionPdfPayload = (item: any, cust: any) => {
-    const custName = cust?.name || 'Valued Customer';
-    const custNum = cust?.customer_number || 'SRM-CUS-2026-000188';
-    const custPhone = cust?.mobile || '+91 98490 11223';
-    const custEmail = cust?.email || 'customer@swaramayi.com';
-    const location = cust?.preferredArea || 'Kondapur, Hyderabad';
+    const custName = cust?.name || cust?.full_name || 'N/A';
+    const custNum = cust?.customer_number || cust?.id || '';
+    const custPhone = cust?.mobile || cust?.phone || '';
+    const custEmail = cust?.email || '';
+    const location = cust?.preferredArea || cust?.locality || cust?.city || '';
 
     const baseDetails: Record<string, any> = {
       '1. CUSTOMER MASTER ID': [

@@ -3466,81 +3466,7 @@ export default function App() {
     notes: 'Sharing updated cost sheet with special discount pricing.'
   });
 
-  // Automatic LocalStorage Cleanup Effect to Purge Stale Demo Data
-  useEffect(() => {
-    try {
-      const keysToClean = [
-        'swaramayi_leads_v4',
-        'swaramayi_customers_v3',
-        'swaramayi_properties_v3',
-        'swaramayi_cost_sheet_shares_v3',
-        'swaramayi_indiv_cost_sheets_v4',
-        'swaramayi_bookings_v2',
-        'swaramayi_agreements_vault_v4',
-        'swaramayi_invoices_v4',
-        'swaramayi_matching_queue_v3',
-        'swaramayi_scheduled_visits_v3',
-        'swaramayi_visit_plans_v3',
-        'swaramayi_project_visit_agreements_v1',
-        'swaramayi_developers_v1',
-        'swaramayi_users_v6'
-      ];
-      keysToClean.forEach(k => localStorage.removeItem(k));
-    } catch (e) {}
 
-    // Scrub stale demo records from local storage
-    try {
-      ['swaramayi_customers_master_v3_clean', 'swaramayi_customers_v7_clean'].forEach(key => {
-        const saved = localStorage.getItem(key);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            const cleaned = parsed.filter((c: any) => {
-              const name = (c.name || c.full_name || '').toString().toLowerCase();
-              const num = (c.customer_number || c.id || '').toString().toUpperCase();
-              return !(name.includes('rohan deshmukh') || num === 'SRM-CUS-2026-000184' || name.includes('sumanth varma') || num === 'SRM-CUS-2026-000186' || name.includes('honey sing') || num === 'SRM-CUS-2026-000188');
-            });
-            localStorage.setItem(key, JSON.stringify(cleaned));
-          }
-        }
-      });
-      ['swaramayi_leads_v7_clean', 'swaramayi_leads_v5_clean'].forEach(key => {
-        const saved = localStorage.getItem(key);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            const cleaned = parsed.filter((l: any) => {
-              const name = (l.name || l.customer_name || l.full_name || '').toString().toLowerCase();
-              const mob = (l.mobile || l.phone || '').toString().replace(/\D/g, '');
-              const num = (l.customer_number || l.lead_number || l.id || '').toString().toUpperCase();
-              return !(
-                name.includes('rohan deshmukh') || num.includes('000184') ||
-                name.includes('sumanth varma') || num.includes('000186') ||
-                name.includes('avishek das') || mob.includes('9432328947') ||
-                name.includes('honey sing') || mob.includes('6567788888') || num.includes('000188')
-              );
-            });
-            localStorage.setItem(key, JSON.stringify(cleaned));
-          }
-        }
-      });
-      ['swaramayi_users_v7', 'swaramayi_users_v6', 'swaramayi_users_v8'].forEach(key => {
-        const saved = localStorage.getItem(key);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            const cleaned = parsed.filter((u: any) => {
-              const name = (u.full_name || u.username || u.name || '').toString().toLowerCase();
-              const email = (u.email || '').toString().toLowerCase();
-              const id = (u.id || '').toString().toUpperCase();
-              return !(name.includes('rajesh') || name.includes('priya') || email.includes('rajesh') || email.includes('priya') || id === 'USR-03' || id === 'USR-04');
-            });
-            localStorage.setItem(key, JSON.stringify(cleaned));
-          }
-        }
-      });
-    } catch (e) {}
-  }, []);
 
   // 10-Step Lead Intake Wizard Step State & Matching Requests Queue (Persistent)
   const [leadIntakeStep, setLeadIntakeStep] = useState<number>(1);
@@ -4052,32 +3978,12 @@ export default function App() {
 
   const [showBulkImportPropertyModal, setShowBulkImportPropertyModal] = useState(false);
   const [bulkPropertyCsvText, setBulkPropertyCsvText] = useState(
-    `ProjectID, PropertyTitle, DeveloperName, Locality, City, PropertyCategoryType, BHKConfiguration, SuperBuiltupArea, DeductionPct, CarpetArea, VastuFacing, PossessionStatus, HandoverMonthAndYear, AskingPrice, PricePerSqft, GSTPct, AmenityCharges, ParkingRequired, CarParkingSlot, ParkingPrice, MonthlyMaintenance, StatusInventory, TowerBlock, FloorNumber, TotalFloors, UnitNumber, Furnishing, KeysCustody, ProjectPostingID, ArchitecturalDescription\n` +
-    `"SRM-PROJ-2026-000088", "GAJAPATI APARTMENT 2BHK", "BABLA DUTTA", "Barasat, Kolkata", "Kolkata", "Flat / Apartment (New / Builder)", "2BHK", "1,050 Sq.Ft.", "35%", "700.35 Sq.Ft.", "East Facing", "Under Construction", "June 2027", "₹35,15,900", "₹5,020/Sq.Ft.", "5%", "150000", "YES", "Covered Basement & 1 Slot", "300000", "₹1,500/Month", "AVAILABLE", "Tower A", "3rd Floor", "G+4 Floors", "Flat 302", "Semi-Furnished", "Developer Site Office", "POST-2026-99", "Corner flat with double balcony and cross ventilation"\n` +
-    `"SRM-PROJ-2026-000089", "My Home Sayuk 3BHK Residence", "My Home Group", "Tellapur", "Hyderabad", "Flat / Apartment (New / Builder)", "3BHK", "2,450 Sq.Ft.", "25%", "1,837.50 Sq.Ft.", "East Facing", "Ready to Move In (Immediate)", "Immediate", "₹1.65 Crore", "₹8,918/Sq.Ft.", "0%", "200000", "YES", "2 Covered Slots + EV", "400000", "₹4,500/Month", "AVAILABLE", "Tower A", "14th Floor", "G+29 Floors", "Flat 1402", "Semi-Furnished", "Key in Lockbox at Site", "POST-2026-101", "Premium high-rise apartment with lake view balcony"\n` +
-    `"SRM-PROJ-2026-000090", "Dhriti Residency 2BHK Unit 402", "Dhriti Builders", "Madhyamgram", "Kolkata", "Flat / Apartment (Resale)", "2BHK", "950 Sq.Ft.", "25%", "712.50 Sq.Ft.", "East Facing", "Ready to Move In (Immediate)", "Immediate", "₹35.84 Lakhs", "₹4,000/Sq.Ft.", "0%", "100000", "YES", "1 Covered Slot", "250000", "₹1,200/Month", "AVAILABLE", "Block A", "Top Floor", "G+4 Floors", "Flat 402", "Unfurnished", "Owner Direct Key", "POST-2026-102", "Well maintained 2BHK flat near Madhyamgram station"\n` +
-    `"SRM-PROJ-2026-000091", "Rajapushpa Imperia 2BHK Suite", "Rajapushpa Properties", "Tellapur", "Hyderabad", "Flat / Apartment (New / Builder)", "2BHK", "1,780 Sq.Ft.", "24%", "1,352.80 Sq.Ft.", "North-East Facing", "Ready to Move In (Immediate)", "Immediate", "₹1.15 Crore", "₹8,518/Sq.Ft.", "0%", "175000", "YES", "1 Covered Slot", "350000", "₹3,800/Month", "AVAILABLE", "Block 2", "8th Floor", "G+35 Floors", "Flat 805", "Unfurnished", "Site Manager Custody", "POST-2026-103", "Spacious 2BHK suite facing central club courtyard"\n` +
-    `"SRM-PROJ-2026-000092", "Aparna Zenith 4BHK Sky Villa", "Aparna Constructions", "Gachibowli", "Hyderabad", "Flat / Apartment (New / Builder)", "4BHK", "3,600 Sq.Ft.", "22%", "2,808.00 Sq.Ft.", "West Facing", "Under Construction", "December 2026", "₹2.75 Crore", "₹9,821/Sq.Ft.", "5%", "300000", "YES", "3 Covered Slots + EV Charger", "650000", "₹7,500/Month", "AVAILABLE", "Tower 3", "28th Floor", "G+32 Floors", "Flat 2801", "Fully Furnished", "Builder Sales Desk", "POST-2026-104", "Ultra luxury pent-house sky villa with private terrace garden"\n` +
-    `"SRM-PROJ-2026-000093", "Jayabheri Peak 5BHK Villa 12", "Jayabheri Properties", "Kokapet", "Hyderabad", "Gated Villa (New / Builder)", "Villa", "5,800 Sq.Ft.", "22%", "4,524.00 Sq.Ft.", "East Facing", "Ready to Move In (Immediate)", "Immediate", "₹5.20 Crore", "₹11,555/Sq.Ft.", "0%", "500000", "YES", "4 Private Parking Slots", "750000", "₹12,000/Month", "AVAILABLE", "Villa Block 5", "G+2 Floor", "G+2 Floors", "Villa 12", "Fully Furnished", "Gated Villa Security", "POST-2026-105", "Independent luxury villa with private swimming pool & lift"\n` +
-    `"SRM-PROJ-2026-000094", "Lansum Elena 3BHK Residence", "Lansum Properties", "Kokapet", "Hyderabad", "Flat / Apartment (New / Builder)", "3BHK", "2,550 Sq.Ft.", "25%", "1,912.50 Sq.Ft.", "North Facing", "Ready to Move In (Immediate)", "Immediate", "₹1.85 Crore", "₹9,635/Sq.Ft.", "0%", "220000", "YES", "2 Covered Slots", "400000", "₹5,000/Month", "AVAILABLE", "Tower B", "12th Floor", "G+30 Floors", "Flat 1204", "Semi-Furnished", "Lansum CRM Office", "POST-2026-106", "3BHK corner residence with panoramic Financial District views"\n` +
-    `"SRM-PROJ-2026-000095", "Star Horizon 2BHK Smart Home", "Star Builders", "Madhyamgram", "Kolkata", "Flat / Apartment (New / Builder)", "2BHK", "1,080 Sq.Ft.", "24%", "820.80 Sq.Ft.", "South-East Facing", "Under Construction", "June 2026", "₹42.50 Lakhs", "₹5,182/Sq.Ft.", "5%", "120000", "YES", "1 Covered Slot", "280000", "₹1,400/Month", "AVAILABLE", "Block B", "4th Floor", "G+5 Floors", "Flat 401", "Unfurnished", "Star Builders Office", "POST-2026-107", "Smart home enabled 2BHK unit with biometric entrance"\n` +
-    `"SRM-PROJ-2026-000096", "Cyber Towers Commercial Unit 402", "Cybertech Infra", "HITEC City", "Hyderabad", "Commercial Space (New / Builder)", "1BHK", "2,100 Sq.Ft.", "28%", "1,512.00 Sq.Ft.", "North Facing", "Ready to Move In (Immediate)", "Immediate", "₹1.75 Crore", "₹11,666/Sq.Ft.", "18%", "250000", "YES", "3 Reserved Basement Slots", "600000", "₹8,000/Month", "AVAILABLE", "Block C", "4th Floor", "G+15 Floors", "Unit 402", "Unfurnished", "Facility Manager Office", "POST-2026-108", "Grade A commercial office space in prime HITEC City tech corridor"\n` +
-    `"SRM-PROJ-2026-000097", "Prestige High Fields 3BHK Unit 2202", "Prestige Group", "Financial District", "Hyderabad", "Flat / Apartment (New / Builder)", "3BHK", "2,300 Sq.Ft.", "24%", "1,748.00 Sq.Ft.", "North-East Facing", "Ready to Move In (Immediate)", "Immediate", "₹1.72 Crore", "₹9,885/Sq.Ft.", "0%", "200000", "YES", "2 Covered Slots + EV", "420000", "₹4,800/Month", "AVAILABLE", "Tower 2", "22nd Floor", "G+33 Floors", "Flat 2202", "Unfurnished", "Prestige Club Desk", "POST-2026-109", "3BHK luxury flat with high ceiling and green hill view"`
+    `ProjectID, PropertyTitle, DeveloperName, Locality, City, PropertyCategoryType, BHKConfiguration, SuperBuiltupArea, DeductionPct, CarpetArea, VastuFacing, PossessionStatus, HandoverMonthAndYear, AskingPrice, PricePerSqft, GSTPct, AmenityCharges, ParkingRequired, CarParkingSlot, ParkingPrice, MonthlyMaintenance, StatusInventory, TowerBlock, FloorNumber, TotalFloors, UnitNumber, Furnishing, KeysCustody, ProjectPostingID, ArchitecturalDescription`
   );
 
   const [showBulkImportProjectDeveloperModal, setShowBulkImportProjectDeveloperModal] = useState(false);
   const [bulkProjectDevCsvText, setBulkProjectDevCsvText] = useState(
-    `DeveloperName, ProjectTitle, DeveloperMobile, DeveloperAltMobile, Email, Locality, City, FullAddress, Latitude, Longitude, PossessionStatus, HandoverMonthAndYear, TotalCoveredParkingCapacity, CoveredParkingRate, TotalEVParkingCapacity, EVParkingRate, TotalOpenParkingCapacity, OpenParkingRate, SelectedAmenities, BuildingPhotos\n` +
-    `"KRISHNA DAS (SWARAMAYI DEVELOPERS)", "SHIBALAY RESIDENCY", "9883395102", "7044293951", "krishnadas@swaramayi.com", "BARASAT, CHAPADALI", "Kolkata", "Chapadali Bus Terminus Hub, Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124", "22.722361", "88.493403", "Under Construction", "December 2026", "24", "300000", "6", "450000", "12", "150000", "Elevator; Gym; Swimming Pool; 24/7 Security; Power Backup", "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00"\n` +
-    `"My Home Group", "My Home Sayuk Phase 1", "9849088776", "9849088777", "sales@myhomegroup.in", "Barasat", "Kolkata", "Station Road, Barasat, West Bengal 700124", "22.720500", "88.485000", "Ready to Move", "Immediate", "50", "400000", "10", "600000", "20", "200000", "24/7 Power Backup; Water Supply; Security; Swimming Pool; Clubhouse", "https://images.unsplash.com/photo-1570129477492-45c003edd2be"\n` +
-    `"Dhriti Builders", "Dhriti Residency", "9831012345", "9831054321", "info@dhritibuilders.com", "Madhyamgram", "Kolkata", "Jessore Road, Madhyamgram, Kolkata 700129", "22.698021", "88.463723", "Ready to Move", "Immediate", "15", "250000", "4", "350000", "8", "120000", "Elevator; CCTV cameras; Fire Safety; Security", "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9"\n` +
-    `"Rajapushpa Properties", "Rajapushpa Imperia Block 2", "9121098765", "9121098766", "contact@rajapushpa.in", "Barasat Dakbangla", "Kolkata", "Dakbangla More, Barasat, West Bengal 700124", "22.715420", "88.479150", "Ready to Move", "Immediate", "40", "350000", "8", "500000", "15", "180000", "Gymnasium; Swimming Pool; Clubhouse; Children Play Area; Gardens", "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00"\n` +
-    `"Aparna Constructions", "Aparna Zenith Sky Suites", "9000112233", "9000112234", "sales@aparnaconstructions.com", "Barasat Chapadali", "Kolkata", "Chapadali Crossing, Barasat, West Bengal 700124", "22.722361", "88.493403", "Under Construction", "December 2026", "60", "450000", "15", "650000", "25", "250000", "Yoga Deck; Senior Citizen Park; EV Charging Stations; Luxury Clubhouse", "https://images.unsplash.com/photo-1570129477492-45c003edd2be"\n` +
-    `"Jayabheri Properties", "Jayabheri Peak County", "9888877776", "9888877775", "contact@jayabherigroup.com", "Barasat Colony", "Kolkata", "Colony More, Barasat, West Bengal 700124", "22.725000", "88.498000", "Ready to Move", "Immediate", "30", "500000", "10", "750000", "10", "300000", "Private Lawn; Private Lift; Solar Power; Swimming Pool; 24/7 Security", "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9"\n` +
-    `"Lansum Properties", "Lansum Elena Residences", "9955443322", "9955443321", "sales@lansum.com", "Barasat Hela Battala", "Kolkata", "Hela Battala, Barasat, West Bengal 700124", "22.718000", "88.488000", "Ready to Move", "Immediate", "35", "400000", "8", "600000", "12", "200000", "Clubhouse; Squash Court; Infinity Pool; Gymnasium", "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00"\n` +
-    `"Star Builders", "Star Horizon Phase 2", "9830099887", "9830099888", "contact@starbuilders.in", "Madhyamgram", "Kolkata", "Sodalpur Road, Madhyamgram, Kolkata 700129", "22.695500", "88.461000", "Under Construction", "June 2026", "18", "280000", "4", "400000", "8", "130000", "Rooftop Garden; Intercom Facility; CCTV cameras; Power Backup", "https://images.unsplash.com/photo-1570129477492-45c003edd2be"\n` +
-    `"Cybertech Infra", "Cyber Towers Sector 4", "9700012345", "9700012346", "leasing@cybertechinfra.com", "Barasat Champadali", "Kolkata", "Jessore Road, Barasat, West Bengal 700124", "22.710000", "88.475000", "Ready to Move", "Immediate", "50", "450000", "12", "600000", "20", "220000", "24/7 Security; High Speed Elevators; Central AC; 24/7 Power Backup", "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9"\n` +
-    `"Prestige Group", "Prestige High Fields Phase 1", "9010101010", "9010101011", "contact@prestigeconstructions.com", "Barasat Kanamor", "Kolkata", "Kanamor Road, Barasat, West Bengal 700124", "22.723000", "88.490000", "Ready to Move", "Immediate", "80", "420000", "20", "600000", "30", "220000", "Supermarket; Pharmacy; Badminton Court; Tennis Court; Swimming Pool", "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00"`
+    `DeveloperName, ProjectTitle, DeveloperMobile, DeveloperAltMobile, Email, Locality, City, FullAddress, Latitude, Longitude, PossessionStatus, HandoverMonthAndYear, TotalCoveredParkingCapacity, CoveredParkingRate, TotalEVParkingCapacity, EVParkingRate, TotalOpenParkingCapacity, OpenParkingRate, SelectedAmenities, BuildingPhotos`
   );
 
   const handleOpenLeadModal = () => {
@@ -4246,9 +4152,9 @@ export default function App() {
     });
 
     if (foundCust) {
-      const numDigits = (foundCust.id || foundCust.customer_number || '189').toString().replace(/\D/g, '').slice(-6).padStart(6, '0');
-      const reqId = `SRM-MAT-2026-${numDigits || '988588'}`;
-      const custNum = foundCust.customer_number || foundCust.customer_id || `SRM-CUS-2026-${numDigits || '000189'}`;
+      const numDigits = (foundCust.id || foundCust.customer_number || '').toString().replace(/\D/g, '').slice(-6).padStart(6, '0');
+      const reqId = `SRM-MAT-2026-${numDigits || '000001'}`;
+      const custNum = foundCust.customer_number || foundCust.customer_id || (numDigits ? `SRM-CUS-2026-${numDigits}` : '');
 
       return {
         id: reqId,
@@ -4284,9 +4190,9 @@ export default function App() {
 
     // 3. Fallback to selectedCust if available
     if (selectedCust) {
-      const numDigits = (selectedCust.id || selectedCust.customer_number || '189').toString().replace(/\D/g, '').slice(-6).padStart(6, '0');
-      const reqId = `SRM-MAT-2026-${numDigits || '988588'}`;
-      const custNum = selectedCust.customer_number || selectedCust.customer_id || `SRM-CUS-2026-${numDigits || '000189'}`;
+      const numDigits = (selectedCust.id || selectedCust.customer_number || '').toString().replace(/\D/g, '').slice(-6).padStart(6, '0');
+      const reqId = `SRM-MAT-2026-${numDigits || '000001'}`;
+      const custNum = selectedCust.customer_number || selectedCust.customer_id || (numDigits ? `SRM-CUS-2026-${numDigits}` : '');
 
       return {
         id: reqId,
@@ -4543,7 +4449,7 @@ export default function App() {
                 const name = (u.full_name || u.username || u.name || '').toLowerCase();
                 const email = (u.email || '').toLowerCase();
                 const id = (u.id || '').toUpperCase();
-                return !(name.includes('rajesh') || name.includes('priya') || email.includes('rajesh') || email.includes('priya') || id === 'USR-03' || id === 'USR-04');
+                return !(name.includes('rajesh') || name.includes('priya') || email.includes('rajesh') || email.includes('priya'));
               });
               localStorage.setItem(k, JSON.stringify(cleaned));
             }
@@ -4558,7 +4464,7 @@ export default function App() {
             const name = (u.full_name || u.username || u.name || '').toLowerCase();
             const email = (u.email || '').toLowerCase();
             const id = (u.id || '').toUpperCase();
-            return !(name.includes('rajesh') || name.includes('priya') || email.includes('rajesh') || email.includes('priya') || id === 'USR-03' || id === 'USR-04');
+            return !(name.includes('rajesh') || name.includes('priya') || email.includes('rajesh') || email.includes('priya'));
           });
           const loadedIds = new Set(filtered.map((u: any) => u.id));
           const missingDefaults = defaultCoreUsers.filter(d => !loadedIds.has(d.id));
@@ -5866,7 +5772,7 @@ export default function App() {
   const handleRowLevelCreateCostSheet = (prop: any) => {
     const currentReq = resolveCurrentMatchingReq(selectedMatchingId);
 
-    const custId = currentReq?.customerNumber || selectedCust?.customer_number || 'SRM-CUS-2026-000189';
+    const custId = currentReq?.customerNumber || selectedCust?.customer_number || '';
     const matchId = currentReq?.requestId || selectedMatchingId || 'SRM-MAT-2026-988588';
     const propCode = prop.property_code || prop.id;
 
@@ -6291,8 +6197,8 @@ export default function App() {
         updated.unshift({
           requestId: matchId,
           customerName: custName,
-          customerNumber: custId || `SRM-CUS-2026-${cleanMob.slice(-6) || '000189'}`,
-          mobile: mob || '+91 9432328947',
+          customerNumber: custId || (cleanMob ? `SRM-CUS-2026-${cleanMob.slice(-6)}` : ''),
+          mobile: mob || '',
           configuration: '3BHK / 2BHK',
           preferredArea: item.locality || item.propertyTitle || 'Barasat, Kolkata',
           budget: '₹40,00,000 - ₹80,00,000',
@@ -7421,6 +7327,13 @@ export default function App() {
                 localStorage.setItem('swaramayi_developers_v1', JSON.stringify(cleanDevs));
               } catch (e) {}
             }
+            if (Array.isArray(mData.users) && mData.users.length > 0) {
+              const cleanUsers = mData.users.filter((u: any) => u && typeof u === 'object');
+              setUsers(cleanUsers);
+              try {
+                localStorage.setItem('swaramayi_users_v7', JSON.stringify(cleanUsers));
+              } catch (e) {}
+            }
           }
         }
       } catch (e) {
@@ -7920,7 +7833,7 @@ export default function App() {
       custName: salesFeedbackForm.customerName,
       custMobile: salesFeedbackForm.custMobile,
       custCode: salesFeedbackForm.custCode || (salesFeedbackForm.custMobile ? `SRM-CUS-2026-${salesFeedbackForm.custMobile.replace(/\D/g, '').slice(-6)}` : 'SRM-CUS-2026-000188'),
-      propTitle: salesFeedbackForm.propTitle || (salesFeedbackForm as any).propertyTitle || 'GAJAPATI APARTMENT',
+      propTitle: salesFeedbackForm.propTitle || (salesFeedbackForm as any).propertyTitle || '',
       propCode: salesFeedbackForm.propCode || 'SRM-PROP-2026-000426',
       locality: salesFeedbackForm.locality || 'Barasat, Kolkata',
       rating: ratingNum,
@@ -8004,39 +7917,39 @@ export default function App() {
   const [createInvoiceForm, setCreateInvoiceForm] = useState({
     invoice_category: 'CUSTOMER',
     branch_name: 'Head Office (Kolkata)',
-    property_code: 'SRM-PROP-2026-000421',
-    property_title: 'Aparna Zenon Premium 3BHK Residence',
-    developer_name: 'Aparna Constructions',
-    developer_gstin: '36AAACA1234F1Z5',
-    developer_contact_person: 'Mr. S. K. Reddy (VP Sales)',
-    developer_mobile: '+91 98490 99887',
-    developer_email: 'billing@aparnaconstructions.com',
-    developer_address: 'Aparna Infra Towers, Road No 12, Banjara Hills, Hyderabad - 500034',
-    developer_rera_id: 'P02400001234',
-    developer_place_of_supply: '36 - Telangana',
-    property_locality: 'Kondapur, Hyderabad',
-    property_configuration: '3 BHK Luxury Apartment',
+    property_code: '',
+    property_title: '',
+    developer_name: '',
+    developer_gstin: '',
+    developer_contact_person: '',
+    developer_mobile: '',
+    developer_email: '',
+    developer_address: '',
+    developer_rera_id: '',
+    developer_place_of_supply: '',
+    property_locality: '',
+    property_configuration: '',
     customer_name: '',
     customer_number: '',
     customer_mobile: '',
     customer_email: '',
     customer_address: '',
-    place_of_supply: '36 - Telangana',
-    customer_gstin_pan: '36ABCDE1234F1Z5',
-    particulars: 'Property Consultation & Processing Charges',
-    flat_price: '8000000',
-    parking_price: '400000',
-    agreement_value: '8400000',
-    brokerage_percent: '2.0',
-    taxable_value: '168000',
+    place_of_supply: '',
+    customer_gstin_pan: '',
+    particulars: '',
+    flat_price: '',
+    parking_price: '',
+    agreement_value: '',
+    brokerage_percent: '',
+    taxable_value: '',
     apply_gst: true,
-    gst_rate: '18',
-    cgst_rate: '9',
-    sgst_rate: '9',
-    bank_name: 'HDFC Bank',
-    bank_account_number: '50200018942109',
-    bank_ifsc_code: 'HDFC0000128',
-    bank_upi_id: 'swaramayi@hdfcbank'
+    gst_rate: '',
+    cgst_rate: '',
+    sgst_rate: '',
+    bank_name: '',
+    bank_account_number: '',
+    bank_ifsc_code: '',
+    bank_upi_id: ''
   });
 
   useEffect(() => {
@@ -10897,7 +10810,7 @@ export default function App() {
                   const cName = cs.customerName || snap.customerName || cs.name || 'Customer';
                   const cMob = cs.mobile || cs.customerMobile || snap.mobile || '';
                   const cleanM = cMob.replace(/\D/g, '');
-                  const cNum = cs.customerNumber || cs.customerId || snap.customerNumber || snap.customerId || (cleanM ? `SRM-CUS-2026-${cleanM.slice(-6)}` : `SRM-CUS-2026-000189`);
+                  const cNum = cs.customerNumber || cs.customerId || snap.customerNumber || snap.customerId || (cleanM ? `SRM-CUS-2026-${cleanM.slice(-6)}` : '');
                   return {
                     id: `CUS-${cNum}`,
                     customer_number: cNum,
@@ -10917,7 +10830,7 @@ export default function App() {
                   const cName = v.customerName || v.customer_name || v.name || 'Customer';
                   const cMob = v.mobile || v.phone || v.customerMobile || '';
                   const cleanM = cMob.replace(/\D/g, '');
-                  const cNum = v.customerNumber || v.customer_number || v.customerId || (cleanM ? `SRM-CUS-2026-${cleanM.slice(-6)}` : `SRM-CUS-2026-000189`);
+                  const cNum = v.customerNumber || v.customer_number || v.customerId || (cleanM ? `SRM-CUS-2026-${cleanM.slice(-6)}` : '');
                   return {
                     id: `CUS-${cNum}`,
                     customer_number: cNum,
@@ -10936,7 +10849,7 @@ export default function App() {
                   const cName = b.customer_name || b.customerName || b.name || 'Customer';
                   const cMob = b.mobile || b.phone || b.customerMobile || '';
                   const cleanM = cMob.replace(/\D/g, '');
-                  const cNum = b.customer_number || b.customerNumber || b.customerId || (cleanM ? `SRM-CUS-2026-${cleanM.slice(-6)}` : `SRM-CUS-2026-000189`);
+                  const cNum = b.customer_number || b.customerNumber || b.customerId || (cleanM ? `SRM-CUS-2026-${cleanM.slice(-6)}` : '');
                   return {
                     id: `CUS-${cNum}`,
                     customer_number: cNum,
@@ -18076,7 +17989,7 @@ export default function App() {
                   onClick={() => {
                     const cs = showViewIndividualCostSheetModal.costSheet;
                     const custName = cs.customerSnapshot?.customerName || 'Customer';
-                    const custId = cs.customerId || cs.customerSnapshot?.customerNumber || 'SRM-CUS-2026-000189';
+                    const custId = cs.customerId || cs.customerSnapshot?.customerNumber || '';
                     const mob = cs.customerSnapshot?.mobile || '';
                     const cleanMob = mob.replace(/\D/g, '');
                     const matchId = cs.matchId || cs.matchingId || cs.parentMatchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
@@ -20667,7 +20580,7 @@ export default function App() {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Project Title:</span>
-                    <strong style={{ color: '#0f172a' }}>{bkg.project_name || bkg.property_title || 'GAJAPATI APARTMENT'}</strong>
+                    <strong style={{ color: '#0f172a' }}>{bkg.project_name || bkg.property_title || ''}</strong>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -22676,11 +22589,11 @@ export default function App() {
                 <button 
                   onClick={() => {
                     const custInfo = showUpdateRequirementModal.customer || {};
-                    const custName = custInfo.custName || custInfo.customerName || 'Supriya Chattopadhyay';
-                    const custCode = custInfo.custCode || custInfo.customerNumber || 'SRM-CUS-2026-000189';
-                    const custMobile = custInfo.mobile || custInfo.custMobile || '9830597778';
-                    const visitId = custInfo.visitId || 'SRM-VS-2026-000088';
-                    const costSheetId = custInfo.costSheetId || 'COST-SHEET-2026-000002';
+                    const custName = custInfo.custName || custInfo.customerName || 'Customer';
+                    const custCode = custInfo.custCode || custInfo.customerNumber || '';
+                    const custMobile = custInfo.mobile || custInfo.custMobile || '';
+                    const visitId = custInfo.visitId || '';
+                    const costSheetId = custInfo.costSheetId || '';
                     const newBudgetStr = `${updateReqForm.budget_min} - ${updateReqForm.budget_max}`;
 
                     // Generate dedicated Re-Rank Code derived from Visit ID

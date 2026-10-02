@@ -125,7 +125,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
       ? b.customer_email
       : (matchedCust?.email || `${custName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@gmail.com`);
 
-    const propTitle = b.project_name || matchedProp?.title || 'GAJAPATI APARTMENT';
+    const propTitle = b.project_name || matchedProp?.title || '';
     const propLocality = matchedProp?.locality || b.locality || (b.project_name?.includes('Barasat') || b.project_name?.includes('Kolkata') ? 'Barasat, Kolkata' : 'Barasat, Kolkata');
     const custAddress = b.customer_address || matchedCust?.address || matchedCust?.full_address || matchedProp?.full_address || (matchedCust?.preferredArea ? `Jessore Road, ${matchedCust.preferredArea}, West Bengal - 700124` : 'Jessore Road, Barasat, Kolkata, West Bengal - 700124');
     const placeOfSupply = b.place_of_supply || matchedCust?.place_of_supply || matchedCust?.state || (propLocality.includes('Kolkata') || propTitle.includes('Kolkata') || (matchedCust?.preferredArea && matchedCust.preferredArea.includes('Kolkata')) ? '19 - West Bengal' : '19 - West Bengal');
@@ -345,7 +345,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
       const custName = pva.customerName || pva.party_name || 'Customer';
       if (recycledKeys.has(custName.toLowerCase().trim())) return;
 
-      const projName = pva.projectTitle || pva.project_name || 'GAJAPATI APARTMENT';
+      const projName = pva.projectTitle || pva.project_name || '';
       const key = `${custName.toLowerCase().trim()}_${projName.toLowerCase().trim()}`;
       const pvaCode = (pva.projectVisitAgreementId || '').toLowerCase().trim();
 
@@ -359,8 +359,8 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
           booking_code: bkgCode,
           agreement_code: pva.projectVisitAgreementId || `SRM-PVA-2026-000001`,
           customer_name: custName,
-          customer_number: pva.customerId || pva.customerNumber || `SRM-CUS-2026-000189`,
-          customer_mobile: pva.customerMobile || '+91 78766 70000',
+          customer_number: pva.customerId || pva.customerNumber || '',
+          customer_mobile: pva.customerMobile || '',
           project_name: projName,
           developer_name: pva.developerName || 'Dhriti Builders & Developers',
           property_title: projName,

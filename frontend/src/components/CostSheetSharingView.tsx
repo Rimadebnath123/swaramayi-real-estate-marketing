@@ -337,7 +337,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
 
                         const custName = item.customerSnapshot?.customerName || item.customerName || matchedCust?.full_name || matchedCust?.name || 'Prospect Customer';
                         const custMobile = item.customerSnapshot?.mobile || item.mobile || matchedCust?.mobile || 'N/A';
-                        const custNum = item.customerId || item.customerSnapshot?.customerNumber || matchedCust?.customer_number || 'SRM-CUS-2026-000189';
+                        const custNum = item.customerId || item.customerSnapshot?.customerNumber || matchedCust?.customer_number || '';
 
                         const matchId = item.matchId || item.matchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
                         const matchScore = item.matchSnapshot?.matchScore || item.matchScore || (matchedCust?.quality_score) || 88;
@@ -477,7 +477,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                               <button 
                                 onClick={() => {
                                   const custName = item.customerSnapshot?.customerName || item.customerName || 'Customer';
-                                  const custId = item.customerId || item.customerSnapshot?.customerNumber || 'SRM-CUS-2026-000189';
+                                  const custId = item.customerId || item.customerSnapshot?.customerNumber || '';
                                   const mob = item.customerSnapshot?.mobile || item.mobile || '';
                                   const propTitle = item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || 'Property';
 
@@ -503,7 +503,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                               <button 
                                 onClick={() => {
                                   const custName = item.customerSnapshot?.customerName || item.customerName || 'Customer';
-                                  const custId = item.customerId || item.customerSnapshot?.customerNumber || 'SRM-CUS-2026-000189';
+                                  const custId = item.customerId || item.customerSnapshot?.customerNumber || '';
                                   const mob = item.customerSnapshot?.mobile || item.mobile || '';
                                   const cleanMob = mob.replace(/\D/g, '');
                                   const matchId = item.matchId || item.matchingId || item.parentMatchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');

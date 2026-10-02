@@ -166,7 +166,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     customerMobile: '',
     propertyTitle: '',
     visitScheduleId: '',
-    assignedExecutive: 'Avishek Das',
+    assignedExecutive: 'Unassigned',
     followupDate: new Date().toISOString().split('T')[0],
     followupTime: '05:00 PM',
     priority: 'HIGH',
@@ -252,7 +252,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       brokerage_rate: '2.0%',
       brokerage_amount: 102297,
       approval_status: 'APPROVED_LOCKED',
-      sales_executive: v.assignedExecutive || 'Avishek Das'
+      sales_executive: v.assignedExecutive || 'Unassigned'
     };
 
     const updatedBookings = [newBookingObj, ...(bookings || [])];
@@ -363,7 +363,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
               date: v.created_at ? new Date(v.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
               customerName: v.customer_name || v.customerName || 'Customer',
               customerMobile: v.customer_number || v.customerNumber || v.mobile || '',
-              advisorName: v.sales_executive || v.assignedExecutive || 'Avishek Das',
+              advisorName: v.sales_executive || v.assignedExecutive || 'Unassigned',
               propertyTitle: v.propertyTitle || 'Property Visit',
               rating: rNum,
               feedbackText: noteText,
@@ -465,7 +465,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
   const [rescheduleForm, setRescheduleForm] = useState({
     visitDate: '',
     visitTime: '10:00 AM',
-    assignedExecutive: 'Avishek Das',
+    assignedExecutive: 'Unassigned',
     transport: '🚗 Cab Pick & Drop Needed',
     rescheduleReason: 'Customer requested date change',
     stayType: 'NO_STAY',
@@ -477,7 +477,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     setRescheduleForm({
       visitDate: v.visitDate || new Date().toISOString().split('T')[0],
       visitTime: v.visitTime || '10:00 AM',
-      assignedExecutive: v.assignedExecutive || 'Avishek Das',
+      assignedExecutive: v.assignedExecutive || 'Unassigned',
       transport: v.transport || '🚗 Cab Pick & Drop Needed',
       rescheduleReason: v.rescheduleReason || 'Customer requested schedule adjustment',
       stayType: v.stayType || 'NO_STAY',
@@ -1322,7 +1322,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   const firstStop = (matchedPlan?.stops && matchedPlan.stops[0]) || (v.stops && v.stops[0]) || null;
                   const cleanPropTitle = (firstStop && firstStop.propertyTitle) 
                     ? firstStop.propertyTitle 
-                    : (v.propertyTitle && !v.propertyTitle.includes('Properties (') ? v.propertyTitle : (firstStop?.propertyTitle || 'GAJAPATI APARTMENT'));
+                    : (v.propertyTitle && !v.propertyTitle.includes('Properties (') ? v.propertyTitle : (firstStop?.propertyTitle || ''));
 
                   const cleanPropCode = firstStop?.propertyCode || v.propertyCode || v.propCode || 'SRM-PROP-2026-000426';
                   const cleanLocality = firstStop?.locality || v.locality || 'Barasat, Kolkata';
@@ -1415,7 +1415,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                       projectTitle: stopItem.propertyTitle || cleanPropTitle,
                       locality: stopItem.locality || cleanLocality,
                       developerName: stopItem.developer || matchedProp?.developerName || matchedProp?.developer || 'Developer Partner',
-                      salesPersonName: v.assignedExecutive || 'Avishek Das',
+                      salesPersonName: v.assignedExecutive || 'Unassigned',
                       visitDate: v.visitDate || new Date().toISOString().split('T')[0],
                       protectionStartDate: v.visitDate || new Date().toISOString().split('T')[0],
                       protectionEndDate: '2027-02-22',
@@ -1673,7 +1673,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                           customerNumber: v.customerNumber || matchedCust?.custCode || '',
                                           mobile: v.mobile || matchedCust?.mobile || '',
                                           email: v.email || matchedCust?.email || '',
-                                          assignedExecutive: v.assignedExecutive || 'Avishek Das',
+                                          assignedExecutive: v.assignedExecutive || 'Unassigned',
                                           visitDate: v.visitDate || new Date().toISOString().split('T')[0],
                                           visitTime: v.visitTime || '10:00 AM',
                                           stops: stopsList
@@ -1713,7 +1713,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                   projectTitle: cleanPropTitle,
                                   locality: cleanLocality,
                                   developerName: matchedProp?.developerName || matchedProp?.developer || 'Developer Partner',
-                                  salesPersonName: v.assignedExecutive || 'Avishek Das',
+                                  salesPersonName: v.assignedExecutive || 'Unassigned',
                                   visitDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   protectionStartDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   protectionEndDate: '2027-02-22',
@@ -1739,7 +1739,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                   customerNumber: v.customerNumber || matchedCust?.custCode || '',
                                   mobile: v.mobile || matchedCust?.mobile || '',
                                   email: v.email || matchedCust?.email || '',
-                                  assignedExecutive: v.assignedExecutive || 'Avishek Das',
+                                  assignedExecutive: v.assignedExecutive || 'Unassigned',
                                   visitDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   visitTime: v.visitTime || '10:00 AM',
                                   stops: [
@@ -2145,7 +2145,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                   projectTitle: v.propertyTitle || 'Property Visit',
                                   locality: v.locality || '',
                                   developerName: matchedProp?.developerName || matchedProp?.developer || 'Developer Partner',
-                                  salesPersonName: v.assignedExecutive || 'Avishek Das',
+                                  salesPersonName: v.assignedExecutive || 'Unassigned',
                                   visitDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   protectionStartDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   protectionEndDate: '2027-02-22',
@@ -2173,7 +2173,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                   customerNumber: v.customerNumber || matchedCust?.customer_number || '',
                                   mobile: v.mobile || matchedCust?.mobile || '',
                                   email: v.email || matchedCust?.email || '',
-                                  assignedExecutive: v.assignedExecutive || 'Avishek Das',
+                                  assignedExecutive: v.assignedExecutive || 'Unassigned',
                                   visitDate: v.visitDate || new Date().toISOString().split('T')[0],
                                   visitTime: v.visitTime || '10:00 AM',
                                   stops: [
@@ -3209,7 +3209,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                         <br /><span style={{ fontSize: '0.75rem', color: '#4ade80', fontFamily: 'monospace' }}>{item.customerMobile || item.customerPhone || ''}</span>
                       </td>
                       <td style={{ padding: '12px', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800' }}>
-                        {item.advisorName || 'Avishek Das'}
+                        {item.advisorName || 'Unassigned'}
                       </td>
                       <td style={{ padding: '12px', color: isLight ? '#64748b' : '#94a3b8' }}>
                         {item.propertyTitle || 'Property Visit'}
@@ -3503,7 +3503,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                     followupDate: item.followupDate || new Date().toISOString().split('T')[0],
                                     followupTime: item.followupTime || '17:00',
                                     priority: item.priority || 'HIGH',
-                                    assignedExecutive: item.assignedExecutive || 'Avishek Das',
+                                    assignedExecutive: item.assignedExecutive || 'Unassigned',
                                     notes: item.notes || ''
                                   });
                                 }}
@@ -3699,7 +3699,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                         customerMobile: newFollowupForm.customerMobile,
                         propertyTitle: newFollowupForm.propertyTitle || 'General Site Visit',
                         visitScheduleId: newFollowupForm.visitScheduleId || '',
-                        assignedExecutive: newFollowupForm.assignedExecutive || 'Avishek Das',
+                        assignedExecutive: newFollowupForm.assignedExecutive || 'Unassigned',
                         followupDate: newFollowupForm.followupDate || todayStr,
                         followupTime: newFollowupForm.followupTime || '05:00 PM',
                         priority: newFollowupForm.priority || 'HIGH',
@@ -3714,7 +3714,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                         customerMobile: '',
                         propertyTitle: '',
                         visitScheduleId: '',
-                        assignedExecutive: 'Avishek Das',
+                        assignedExecutive: 'Unassigned',
                         followupDate: todayStr,
                         followupTime: '05:00 PM',
                         priority: 'HIGH',
@@ -4080,7 +4080,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       const custMobile = v.mobile || v.customerMobile || v.customerNumber || '';
       const propTitle = v.propertyTitle || v.title || 'Property Site Visit';
       const visitId = v.visitId || v.visitScheduleId || v.costSheetId || 'SRM-VS-2026';
-      const execName = v.assignedExecutive || 'Avishek Das';
+      const execName = v.assignedExecutive || 'Unassigned';
 
       return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '16px' }}>
@@ -4228,8 +4228,8 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       const generatedBookingCode = (v.visitId && v.visitId.includes('SRM-VS-')) 
         ? v.visitId.replace('SRM-VS-', 'SRM-BKG-') 
         : `SRM-BKG-2026-0000${(bookings?.length || 0) + 88}`;
-      const custName = v.customerName || v.party_name || 'Anup Mondal';
-      const propTitle = v.propertyTitle || v.project_name || v.title || 'LOKNATH APPARTMENT (+1 more: SHREEMADHU MEADOWS)';
+      const custName = v.customerName || v.party_name || 'N/A';
+      const propTitle = v.propertyTitle || v.project_name || v.title || 'N/A';
 
       const handleConfirmBookingTransfer = () => {
         const newBookingObj = {
@@ -4249,7 +4249,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
           brokerage_rate: '2.0%',
           brokerage_amount: 102297,
           approval_status: 'APPROVED_LOCKED',
-          sales_executive: v.assignedExecutive || 'Avishek Das'
+          sales_executive: v.assignedExecutive || 'Unassigned'
         };
 
         const updatedBookings = [newBookingObj, ...(bookings || [])];

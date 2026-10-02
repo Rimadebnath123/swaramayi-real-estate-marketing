@@ -149,7 +149,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
     const custMobile = inv.customer_mobile || matchedCust?.mobile || '+91 88765 97975';
     const custEmail = inv.customer_email || matchedCust?.email || 'rishita@gmail.com';
 
-    const propTitle = inv.property_title || matchedProp?.title || 'GAJAPATI APARTMENT';
+    const propTitle = inv.property_title || matchedProp?.title || '';
     const propLocality = inv.property_locality || matchedProp?.locality || 'Barasat, Kolkata';
     const devName = inv.developer_name || matchedProp?.developer || 'Dhriti Builders & Developers';
     const agreeVal = Number(inv.agreement_value || (inv.flat_price ? Number(inv.flat_price) + Number(inv.parking_price || 0) : inv.taxable_value ? Math.round(Number(inv.taxable_value) / 0.02) : 5114880));
@@ -274,26 +274,26 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
               setCreateInvoiceForm({
                 invoice_category: billingInvoiceCategory,
                 branch_name: getCurrentUserBranch(),
-                customer_name: 'Rohan Deshmukh',
-                customer_number: 'SRM-CUS-2026-000184',
-                customer_mobile: '+91 90490 12345',
-                customer_email: 'rohan.deshmukh@gmail.com',
-                customer_address: 'Flat 402, Royal Heights, Jubilee Hills, Hyderabad - 500033',
-                place_of_supply: '36 - Telangana',
-                customer_gstin_pan: '36ABCDE1234F1Z5',
-                developer_name: billingInvoiceCategory === 'DEVELOPER' ? 'Aparna Constructions' : 'Aparna Constructions',
-                developer_gstin: '36AAACA1234F1Z5',
-                property_title: 'Aparna Zenon Premium 3BHK Residence',
-                particulars: billingInvoiceCategory === 'DEVELOPER' ? '2.0% Channel Partner Success Fee / Brokerage' : 'Property Consultation & Processing Charges',
-                brokerage_percent: '2.0',
-                flat_price: '8000000',
-                parking_price: '400000',
-                agreement_value: '8400000',
-                taxable_value: '168000',
-                bank_name: 'HDFC Bank',
-                bank_account_number: '50200018942109',
-                bank_ifsc_code: 'HDFC0000128',
-                bank_upi_id: 'swaramayi@hdfcbank'
+                customer_name: '',
+                customer_number: '',
+                customer_mobile: '',
+                customer_email: '',
+                customer_address: '',
+                place_of_supply: '',
+                customer_gstin_pan: '',
+                developer_name: '',
+                developer_gstin: '',
+                property_title: '',
+                particulars: '',
+                brokerage_percent: '',
+                flat_price: '',
+                parking_price: '',
+                agreement_value: '',
+                taxable_value: '',
+                bank_name: '',
+                bank_account_number: '',
+                bank_ifsc_code: '',
+                bank_upi_id: ''
               });
               setShowCreateInvoiceModal(true);
             }}
@@ -814,7 +814,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                               branch_name: i.branch_name || 'Head Office (Kolkata)',
                               created_date: i.created_date || new Date().toISOString().split('T')[0],
                               property_code: i.property_code || matchedProp?.property_code || 'SRM-PROP-2026-000426',
-                              property_title: i.property_title || matchedProp?.title || 'GAJAPATI APARTMENT',
+                              property_title: i.property_title || matchedProp?.title || '',
                               developer_name: i.developer_name || matchedProp?.developer || 'Dhriti Builders & Developers',
                               developer_gstin: devGstin,
                               developer_rera_id: i.developer_rera_id || matchedProp?.rera_id || 'WBRERA/P/NOR/2024/000842',
@@ -842,10 +842,10 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                               gst_rate: String(gstRate),
                               cgst_rate: String(cgstRate),
                               sgst_rate: String(sgstRate),
-                              bank_name: i.bank_name || 'HDFC Bank',
-                              bank_account_number: i.bank_account_number || '50200018942109',
-                              bank_ifsc_code: i.bank_ifsc_code || 'HDFC0000128',
-                              bank_upi_id: i.bank_upi_id || 'swaramayi@hdfcbank',
+                              bank_name: i.bank_name || '',
+                              bank_account_number: i.bank_account_number || '',
+                              bank_ifsc_code: i.bank_ifsc_code || '',
+                              bank_upi_id: i.bank_upi_id || '',
                               company_address: i.company_address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, North 24 Parganas, Madhyamgram, Kolkata - 700129',
                               company_rera_no: i.company_rera_no || 'WBRERA/A/NOR/2025/000737',
                               company_email: i.company_email || 'avishek@swaramayi.info',
@@ -1292,12 +1292,12 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                   <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', textAlign: 'center' }}>
                     <div style={{ background: '#ffffff', padding: '16px', borderRadius: '12px', border: '2px solid #22c55e', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
                       <img 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`upi://pay?pa=${showCustomerPaymentPortal.bank_upi_id || 'swaramayi@hdfcbank'}&pn=Swaramayi%20Real%20Estate&am=${showCustomerPaymentPortal.total_invoice_amount}&tr=${showCustomerPaymentPortal.invoice_number}`)}`} 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`upi://pay?pa=${showCustomerPaymentPortal.bank_upi_id || ''}&pn=Swaramayi%20Real%20Estate&am=${showCustomerPaymentPortal.total_invoice_amount}&tr=${showCustomerPaymentPortal.invoice_number}`)}`} 
                         alt="UPI QR Code" 
                         style={{ width: '160px', height: '160px' }}
                       />
                       <span style={{ fontSize: '0.75rem', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>
-                        VPA: {showCustomerPaymentPortal.bank_upi_id || 'swaramayi@hdfcbank'}
+                        VPA: {showCustomerPaymentPortal.bank_upi_id || 'N/A'}
                       </span>
                     </div>
 
@@ -1318,20 +1318,20 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                   <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div>
                       <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Cardholder Full Name</label>
-                      <input type="text" defaultValue={showCustomerPaymentPortal.customer_name || 'Rohan Deshmukh'} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.82rem' }} />
+                      <input type="text" defaultValue={showCustomerPaymentPortal.customer_name || ''} placeholder="Enter Cardholder Name" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.82rem' }} />
                     </div>
                     <div>
                       <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>16-Digit Card Number</label>
-                      <input type="text" defaultValue="4532 8910 2034 9012" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace' }} />
+                      <input type="text" placeholder="XXXX XXXX XXXX XXXX" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace' }} />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
                         <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Expiry Date (MM/YY)</label>
-                        <input type="text" defaultValue="09/29" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace' }} />
+                        <input type="text" placeholder="MM/YY" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace' }} />
                       </div>
                       <div>
                         <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>CVV Security Code</label>
-                        <input type="password" defaultValue="849" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace' }} />
+                        <input type="password" placeholder="CVV" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace' }} />
                       </div>
                     </div>
                   </div>
@@ -1340,9 +1340,9 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                 {/* TAB 3: NET BANKING / NEFT */}
                 {portalPaymentTab === 'NEFT' && (
                   <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.82rem' }}>
-                    <div><strong>Beneficiary Bank:</strong> {showCustomerPaymentPortal.bank_name || 'HDFC Bank'}</div>
-                    <div><strong>Account Number:</strong> <span style={{ fontFamily: 'monospace', color: '#38bdf8' }}>{showCustomerPaymentPortal.bank_account_number || '50200018942109'}</span></div>
-                    <div><strong>IFSC Code:</strong> <span style={{ fontFamily: 'monospace', color: '#38bdf8' }}>{showCustomerPaymentPortal.bank_ifsc_code || 'HDFC0000128'}</span></div>
+                    <div><strong>Beneficiary Bank:</strong> {showCustomerPaymentPortal.bank_name || 'N/A'}</div>
+                    <div><strong>Account Number:</strong> <span style={{ fontFamily: 'monospace', color: '#38bdf8' }}>{showCustomerPaymentPortal.bank_account_number || 'N/A'}</span></div>
+                    <div><strong>IFSC Code:</strong> <span style={{ fontFamily: 'monospace', color: '#38bdf8' }}>{showCustomerPaymentPortal.bank_ifsc_code || 'N/A'}</span></div>
                     <div><strong>Account Name:</strong> Swaramayi Real Estate</div>
                     <div style={{ gridColumn: 'span 2', fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>
                       Transfer amount via NEFT / RTGS / IMPS and click "Complete Secure Payment" below.
@@ -1763,28 +1763,18 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                       onChange={(e) => {
                         const val = e.target.value;
                         if (!val) return;
-                        const devList: Record<string, any> = {
-                          'Dhriti Builders & Developers': { gstin: '19AAACD4567E1Z2', contact: 'Mr. R. K. Sen (VP Sales)', mobile: '+91 98300 12345', email: 'billing@dhritibuilders.com', address: 'Dhriti Towers, Jessore Road, Barasat, Kolkata - 700124', rera: 'WBRERA/P/NOR/2024/000842', pos: '19 - West Bengal' },
-                          'Swaramayi Partner Developer': { gstin: '19AAACD4567E1Z2', contact: 'Mr. Animesh Sen', mobile: '+91 98300 12345', email: 'billing@dhritibuilders.com', address: 'Dhriti Towers, Jessore Road, Barasat, Kolkata - 700124', rera: 'WBRERA/P/NOR/2024/000842', pos: '19 - West Bengal' },
-                          'Merlin Group': { gstin: '19AAACM9988D1Z4', contact: 'Mr. S. Chatterjee (GM Sales)', mobile: '+91 98310 99887', email: 'billing@merlingroup.in', address: 'Merlin Oxford, 22 Prince Anwar Shah Road, Kolkata - 700033', rera: 'WBRERA/P/KOL/2024/000215', pos: '19 - West Bengal' },
-                          'PS Group': { gstin: '19AAACP1122K1Z8', contact: 'Mr. A. Banerjee (Finance Head)', mobile: '+91 98300 44556', email: 'billing@psgroup.in', address: 'PS Srijan Corporate Park, Sector V, Salt Lake, Kolkata - 700091', rera: 'WBRERA/P/NOR/2024/000321', pos: '19 - West Bengal' },
-                          'Aparna Constructions': { gstin: '36AAACA1234F1Z5', contact: 'Mr. S. K. Reddy (VP Sales)', mobile: '+91 98490 99887', email: 'billing@aparnaconstructions.com', address: 'Aparna Infra Towers, Road No 12, Banjara Hills, Hyderabad - 500034', rera: 'P02400001234', pos: '36 - Telangana' },
-                          'My Home Group': { gstin: '36AABCM5678G1Z9', contact: 'Mr. V. Ramakrishna (GM Accounts)', mobile: '+91 91210 55443', email: 'accounts@myhomegroup.in', address: 'My Home Hub, Hitech City Main Rd, Madhapur, Hyderabad - 500081', rera: 'P02400002156', pos: '36 - Telangana' },
-                          'Prestige Group': { gstin: '36AAACP9876H1Z2', contact: 'Ms. Ananya Sharma (Finance Lead)', mobile: '+91 98800 11223', email: 'billing.hyd@prestigeconstructions.com', address: 'Prestige Falcon Towers, Financial District, Nanakramguda, Hyderabad - 500032', rera: 'P02400003980', pos: '36 - Telangana' },
-                          'Sumadhura Infracon': { gstin: '36AABCS4321J1Z4', contact: 'Mr. K. Mahesh (Channel Partner Mgr)', mobile: '+91 90001 88776', email: 'cp.billing@sumadhura.com', address: 'Sumadhura Horizon, Mindspace Circle, Hitech City, Hyderabad - 500081', rera: 'P02400004512', pos: '36 - Telangana' }
-                        };
-                        const devInfo = devList[val];
-                        if (devInfo) {
+                        const matchedProp = properties.find(p => (p.developer || p.developer_name || '').toLowerCase() === val.toLowerCase());
+                        if (matchedProp) {
                           setEditInvoiceForm({
                             ...editInvoiceForm,
                             developer_name: val,
-                            developer_gstin: devInfo.gstin,
-                            developer_contact_person: devInfo.contact,
-                            developer_mobile: devInfo.mobile,
-                            developer_email: devInfo.email,
-                            developer_address: devInfo.address,
-                            developer_rera_id: devInfo.rera,
-                            developer_place_of_supply: devInfo.pos
+                            developer_gstin: matchedProp.developer_gstin || '',
+                            developer_contact_person: matchedProp.developer_contact_person || '',
+                            developer_mobile: matchedProp.developer_mobile || '',
+                            developer_email: matchedProp.developer_email || '',
+                            developer_address: matchedProp.developer_address || '',
+                            developer_rera_id: matchedProp.rera_id || matchedProp.developer_rera_id || '',
+                            developer_place_of_supply: matchedProp.place_of_supply || ''
                           });
                         } else {
                           setEditInvoiceForm({ ...editInvoiceForm, developer_name: val });
@@ -1793,14 +1783,9 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', color: '#4ade80', padding: '7px 10px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '800' }}
                     >
                       <option value="">-- Select Developer / Builder Entity --</option>
-                      <option value="Dhriti Builders & Developers">🏢 Dhriti Builders & Developers (Kolkata)</option>
-                      <option value="Swaramayi Partner Developer">🏢 Swaramayi Partner Developer</option>
-                      <option value="Merlin Group">🏢 Merlin Group (Kolkata)</option>
-                      <option value="PS Group">🏢 PS Group (Kolkata)</option>
-                      <option value="Aparna Constructions">🏢 Aparna Constructions & Estates Pvt Ltd</option>
-                      <option value="My Home Group">🏢 My Home Group (My Home Constructions)</option>
-                      <option value="Prestige Group">🏢 Prestige Estates Projects Ltd</option>
-                      <option value="Sumadhura Infracon">🏢 Sumadhura Infracon Pvt Ltd</option>
+                      {Array.from(new Set(properties.map(p => p.developer || p.developer_name).filter(Boolean))).map((devName: any) => (
+                        <option key={devName} value={devName}>🏢 {devName}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -1812,7 +1797,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                         type="text" 
                         value={editInvoiceForm.developer_name || ''} 
                         onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, developer_name: e.target.value })} 
-                        placeholder="Dhriti Builders & Developers" 
+                        placeholder="Developer Name" 
                         style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} 
                         required 
                       />
@@ -1824,7 +1809,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                         type="text" 
                         value={editInvoiceForm.developer_gstin || ''} 
                         onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, developer_gstin: e.target.value })} 
-                        placeholder="19AAACD4567E1Z2" 
+                        placeholder="GSTIN Number" 
                         style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace', fontWeight: '800' }} 
                         required 
                       />
@@ -1834,9 +1819,9 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                       <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>🏛️ Developer RERA Reg. No.</label>
                       <input 
                         type="text" 
-                        value={editInvoiceForm.developer_rera_id || 'WBRERA/P/NOR/2024/000842'} 
+                        value={editInvoiceForm.developer_rera_id || ''} 
                         onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, developer_rera_id: e.target.value })} 
-                        placeholder="WBRERA/P/NOR/2024/000842" 
+                        placeholder="RERA Registration No." 
                         style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace' }} 
                       />
                     </div>
@@ -2192,9 +2177,9 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                         <input 
                           type="text" 
                           disabled={!isUserSuperAdmin}
-                          value={editInvoiceForm.bank_account_number || '50200018942109'} 
+                          value={editInvoiceForm.bank_account_number || ''} 
                           onChange={(e) => isUserSuperAdmin && setEditInvoiceForm({ ...editInvoiceForm, bank_account_number: e.target.value })} 
-                          placeholder="50200018942109" 
+                          placeholder="Account Number" 
                           style={{ width: '100%', background: !isUserSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace', cursor: !isUserSuperAdmin ? 'not-allowed' : 'text', opacity: !isUserSuperAdmin ? 0.75 : 1 }} 
                         />
                       </div>
@@ -2204,9 +2189,9 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                         <input 
                           type="text" 
                           disabled={!isUserSuperAdmin}
-                          value={editInvoiceForm.bank_ifsc_code || 'HDFC0000128'} 
+                          value={editInvoiceForm.bank_ifsc_code || ''} 
                           onChange={(e) => isUserSuperAdmin && setEditInvoiceForm({ ...editInvoiceForm, bank_ifsc_code: e.target.value })} 
-                          placeholder="HDFC0000128" 
+                          placeholder="IFSC Code" 
                           style={{ width: '100%', background: !isUserSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace', cursor: !isUserSuperAdmin ? 'not-allowed' : 'text', opacity: !isUserSuperAdmin ? 0.75 : 1 }} 
                         />
                       </div>
@@ -2216,9 +2201,9 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                         <input 
                           type="text" 
                           disabled={!isUserSuperAdmin}
-                          value={editInvoiceForm.bank_upi_id || 'swaramayi@hdfcbank'} 
+                          value={editInvoiceForm.bank_upi_id || ''} 
                           onChange={(e) => isUserSuperAdmin && setEditInvoiceForm({ ...editInvoiceForm, bank_upi_id: e.target.value })} 
-                          placeholder="swaramayi@hdfcbank" 
+                          placeholder="name@bank" 
                           style={{ width: '100%', background: !isUserSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', cursor: !isUserSuperAdmin ? 'not-allowed' : 'text', opacity: !isUserSuperAdmin ? 0.75 : 1 }} 
                         />
                       </div>

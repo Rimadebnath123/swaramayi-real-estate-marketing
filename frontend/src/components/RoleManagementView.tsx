@@ -182,7 +182,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       const name = (u.full_name || u.username || u.name || '').toLowerCase();
       const email = (u.email || '').toLowerCase();
       const id = (u.id || '').toUpperCase();
-      return !(name.includes('rajesh') || name.includes('priya') || email.includes('rajesh') || email.includes('priya') || id === 'USR-03' || id === 'USR-04');
+      return !(name.includes('rajesh') || name.includes('priya') || email.includes('rajesh') || email.includes('priya'));
     });
   }, [users, defaultUsersList]);
 

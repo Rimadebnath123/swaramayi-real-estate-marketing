@@ -50,6 +50,7 @@ interface RoleManagementViewProps {
   setBookings?: React.Dispatch<React.SetStateAction<any[]>>;
   setUsers?: React.Dispatch<React.SetStateAction<any[]>>;
   syncAllToMongoDB?: (overrideData?: any) => void;
+  loggedInUser?: any;
 }
 
 export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
@@ -94,7 +95,8 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
   bookings = [],
   setBookings,
   setUsers,
-  syncAllToMongoDB
+  syncAllToMongoDB,
+  loggedInUser
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
@@ -186,6 +188,59 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
     });
   }, [users, defaultUsersList]);
 
+  const currentUserProfile = React.useMemo(() => {
+    if (loggedInUser) {
+      const match = safeUsers.find((u: any) => u.id === loggedInUser.id || (u.email && loggedInUser.email && u.email.toLowerCase() === loggedInUser.email.toLowerCase()));
+      return match || loggedInUser;
+    }
+    return null;
+  }, [loggedInUser, safeUsers]);
+
+  const currentUserRole = (currentUserProfile?.role || currentRole || '').toUpperCase();
+  const isUserSuperAdmin = currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'OWNER' || (!loggedInUser && (isStrictSuperAdmin || currentRole === 'SUPER_ADMIN'));
+
+  const currentUserBranch = (currentUserProfile?.branch_name || currentUserProfile?.branch || '').trim();
+
+  const isSameBranch = React.useCallback((b1?: string, b2?: string) => {
+    if (!b1 || !b2) return false;
+    const s1 = b1.toLowerCase().trim();
+    const s2 = b2.toLowerCase().trim();
+    if (s1 === s2) return true;
+    const clean1 = s1.replace(/\(.*\)/g, '').replace(/branch/g, '').trim();
+    const clean2 = s2.replace(/\(.*\)/g, '').replace(/branch/g, '').trim();
+    return clean1.length > 0 && clean2.length > 0 && (clean1.includes(clean2) || clean2.includes(clean1));
+  }, []);
+
+  const visibleUsers = React.useMemo(() => {
+    if (isUserSuperAdmin) {
+      return safeUsers;
+    }
+    return safeUsers.filter((u: any) => {
+      const targetRole = (u.role || '').toUpperCase();
+      const isSuper = targetRole === 'SUPER_ADMIN' || targetRole === 'OWNER' || u.id === 'USR-01' || (u.full_name && u.full_name.toLowerCase().includes('avishek'));
+      if (isSuper) return true;
+      const targetBranch = u.branch_name || u.branch || '';
+      return isSameBranch(currentUserBranch, targetBranch);
+    });
+  }, [safeUsers, isUserSuperAdmin, currentUserBranch, isSameBranch]);
+
+  const safeBranches = branches || [];
+  const safeTeams = teams || [];
+
+  const visibleBranches = React.useMemo(() => {
+    if (isUserSuperAdmin) {
+      return safeBranches;
+    }
+    return safeBranches.filter((b: any) => isSameBranch(currentUserBranch, b.branch_name || b.name || ''));
+  }, [safeBranches, isUserSuperAdmin, currentUserBranch, isSameBranch]);
+
+  const visibleTeams = React.useMemo(() => {
+    if (isUserSuperAdmin) {
+      return safeTeams;
+    }
+    return safeTeams.filter((t: any) => isSameBranch(currentUserBranch, t.branch_name || ''));
+  }, [safeTeams, isUserSuperAdmin, currentUserBranch, isSameBranch]);
+
   // Dynamic Employee Exit & CRM Reassignment Handover Hub State
   const [selectedExitingUserId, setSelectedExitingUserId] = React.useState<string>('');
   const [selectedTargetUserId, setSelectedTargetUserId] = React.useState<string>('');
@@ -194,18 +249,18 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
 
   const currentExitingUser = React.useMemo(() => {
     if (selectedExitingUserId) {
-      return safeUsers.find((u: any) => u.id === selectedExitingUserId) || safeUsers[0];
+      return visibleUsers.find((u: any) => u.id === selectedExitingUserId) || visibleUsers[0];
     }
-    return safeUsers[0];
-  }, [selectedExitingUserId, safeUsers]);
+    return visibleUsers[0];
+  }, [selectedExitingUserId, visibleUsers]);
 
   const currentTargetUser = React.useMemo(() => {
-    const candidates = safeUsers.filter((u: any) => u.id !== currentExitingUser?.id);
+    const candidates = visibleUsers.filter((u: any) => u.id !== currentExitingUser?.id);
     if (selectedTargetUserId) {
       return candidates.find((u: any) => u.id === selectedTargetUserId) || candidates[0];
     }
     return candidates[0];
-  }, [selectedTargetUserId, currentExitingUser, safeUsers]);
+  }, [selectedTargetUserId, currentExitingUser, visibleUsers]);
 
   // Dynamic record metrics calculated per selected exiting employee across all CRM datasets
   const exitingStats = React.useMemo(() => {
@@ -379,7 +434,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
 
   // Dynamic Property Advisors list derived strictly from active CRM staff and safe users
   const propertyAdvisorsList = React.useMemo(() => {
-    const staffFromUsers = (safeUsers || []).filter((u: any) => {
+    const staffFromUsers = (visibleUsers || []).filter((u: any) => {
       const r = String(u.role || '').toUpperCase();
       return r !== 'SUPER_ADMIN' && r !== 'OWNER' && u.id !== 'USR-01';
     });
@@ -558,8 +613,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
   const filterCategory = userRoleFilterCategory ?? internalFilterCategory;
   const setFilterCategory = setUserRoleFilterCategory ?? setInternalFilterCategory;
 
-  const safeBranches = branches || [];
-  const safeTeams = teams || [];
   const safeSessions = activeSessions || [];
 
   const safeApprovals = (approvalRequests && approvalRequests.length > 0 ? approvalRequests : localApprovals);
@@ -939,10 +992,12 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', width: windowWidth <= 640 ? '100%' : 'auto' }}>
           {isSuperAdmin && (
+            <button onClick={() => handleOpenAddUserModal()} style={{ flex: windowWidth <= 480 ? '1 1 100%' : 'initial', background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <UserPlus size={15} /> + Add User
+            </button>
+          )}
+          {isStrictSuperAdmin && (
             <>
-              <button onClick={() => handleOpenAddUserModal()} style={{ flex: windowWidth <= 480 ? '1 1 100%' : 'initial', background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                <UserPlus size={15} /> + Add User
-              </button>
               <button onClick={() => setShowCustomRoleModal(true)} style={{ flex: windowWidth <= 480 ? '1 1 100%' : 'initial', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 <ShieldCheck size={15} color="#0284c7" /> + Add Custom Role
               </button>
@@ -1010,7 +1065,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
           onClick={() => setActiveRoleSubTab('employee_directory')} 
           style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'employee_directory' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'employee_directory' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
-          👥 Employee Directory ({safeUsers.filter(u => isSuperAdmin || (u.role !== 'SUPER_ADMIN' && u.role !== 'OWNER' && u.id !== 'USR-01')).length})
+          👥 Employee Directory ({visibleUsers.length})
         </button>
         <button 
           onClick={() => setActiveRoleSubTab('assigned_property_advisors')} 
@@ -1022,13 +1077,13 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
           onClick={() => setActiveRoleSubTab('branches_offices')} 
           style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'branches_offices' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'branches_offices' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
-          🏢 Enterprise Branches & Offices ({safeBranches.length})
+          🏢 Enterprise Branches & Offices ({visibleBranches.length})
         </button>
         <button 
           onClick={() => setActiveRoleSubTab('sales_teams_squads')} 
           style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', background: activeRoleSubTab === 'sales_teams_squads' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeRoleSubTab === 'sales_teams_squads' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
-          🎯 Teams & Squads ({safeTeams.length})
+          🎯 Teams & Squads ({visibleTeams.length})
         </button>
 
         <button 
@@ -1168,7 +1223,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                   fontWeight: '700'
                 }}
               >
-                <option value="ALL">All Roles ({safeUsers.length})</option>
+                <option value="ALL">All Roles ({visibleUsers.length})</option>
                 <option value="SUPER_ADMIN">Super Admins / Owners</option>
                 <option value="ADMIN">Admins</option>
                 <option value="BRANCH_MANAGER">Branch Managers</option>
@@ -1206,8 +1261,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
           {/* USER DATA DISPLAY: MOBILE CARDS OR DESKTOP TABLE */}
           {windowWidth <= 768 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {safeUsers
-                .filter(u => isSuperAdmin || (u.role !== 'SUPER_ADMIN' && u.role !== 'OWNER' && u.id !== 'USR-01'))
+              {visibleUsers
                 .filter(u => filterCategory === 'ALL' || u.role === filterCategory)
                 .filter(u => !searchQuery || JSON.stringify(u).toLowerCase().includes(searchQuery.toLowerCase()))
                 .map((u: any) => (
@@ -1297,8 +1351,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {safeUsers
-                    .filter(u => isSuperAdmin || (u.role !== 'SUPER_ADMIN' && u.role !== 'OWNER' && u.id !== 'USR-01'))
+                  {visibleUsers
                     .filter(u => filterCategory === 'ALL' || u.role === filterCategory)
                     .filter(u => !searchQuery || JSON.stringify(u).toLowerCase().includes(searchQuery.toLowerCase()))
                     .map((u: any) => (
@@ -1378,7 +1431,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       {/* SUB-TAB 3: ENTERPRISE BRANCHES & OFFICES */}
       {activeRoleSubTab === 'branches_offices' && (
         <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 768 ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
-          {safeBranches.map((b: any) => {
+          {visibleBranches.map((b: any) => {
             const assignedTeams = safeTeams.filter((t: any) => t.branch_id === b.id || t.branch_name === b.branch_name || (b.branch_name && t.branch_name && t.branch_name.toLowerCase().includes(b.branch_name.toLowerCase())));
 
             return (
@@ -1459,7 +1512,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       {/* SUB-TAB 4: TEAMS & SQUADS */}
       {activeRoleSubTab === 'sales_teams_squads' && (
         <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 768 ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
-          {safeTeams.map((t: any, idx: number) => {
+          {visibleTeams.map((t: any, idx: number) => {
             const teamId = t.id || `TEAM-0${idx + 1}`;
             const teamName = t.team_name || t.name || 'Sales Team';
             const matchedBranch = safeBranches.find((b: any) => b.branch_name === t.branch_name || b.id === t.branch_id);

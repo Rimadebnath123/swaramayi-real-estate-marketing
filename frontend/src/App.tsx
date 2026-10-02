@@ -12136,6 +12136,7 @@ export default function App() {
               bookings={bookings}
               setBookings={setBookings}
               syncAllToMongoDB={syncAllToMongoDB}
+              loggedInUser={loggedInUser}
             />
           )}
 
@@ -14101,7 +14102,13 @@ export default function App() {
                     style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
                   >
                     {customRoles
-                      .filter(r => currentRole === 'SUPER_ADMIN' || (r.key !== 'SUPER_ADMIN' && r.role_code !== 'SUPER_ADMIN'))
+                      .filter(r => {
+                        const rKey = (r.key || r.role_code || '').toUpperCase();
+                        const isUserSuperAdmin = (loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER' || currentRole === 'SUPER_ADMIN' || currentRole === 'OWNER');
+                        if (isUserSuperAdmin) return true;
+                        // Admin cannot create/assign another ADMIN or SUPER_ADMIN / OWNER
+                        return rKey !== 'SUPER_ADMIN' && rKey !== 'ADMIN' && rKey !== 'OWNER';
+                      })
                       .map((role, i) => {
                         const cleanRoleName = (role.name || role.key || '').replace(/^[\d\.\s]+/, '').trim();
                         const roleValue = role.key || role.role_code;
@@ -14126,7 +14133,15 @@ export default function App() {
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }} 
                       required 
                     >
-                      {Array.from(new Map((branches || []).map((b: any) => [b.branch_name, b])).values()).map((b: any, i: number) => (
+                      {Array.from(new Map((branches || []).map((b: any) => [b.branch_name, b])).values())
+                        .filter((b: any) => {
+                          const isUserSuperAdmin = (loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER' || currentRole === 'SUPER_ADMIN' || currentRole === 'OWNER');
+                          if (isUserSuperAdmin) return true;
+                          const userBranch = (loggedInUser?.branch_name || loggedInUser?.branch || '').toLowerCase();
+                          const targetBranch = (b.branch_name || b.name || '').toLowerCase();
+                          return userBranch && targetBranch && (userBranch.includes(targetBranch) || targetBranch.includes(userBranch));
+                        })
+                        .map((b: any, i: number) => (
                         <option key={i} value={b.branch_name}>
                           {b.branch_name} ({b.address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129'})
                         </option>

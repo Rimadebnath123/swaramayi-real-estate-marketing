@@ -2394,6 +2394,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       <option value="3BHK">3BHK Flat</option>
                       <option value="4BHK">4BHK Luxury Apartment</option>
                       <option value="Villa">Gated Villa</option>
+                      <option value="Commercial">Commercial</option>
                     </select>
                   </div>
                 </div>
@@ -5094,6 +5095,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                         <option value="5BHK">5BHK / Sky Villa</option>
                         <option value="Duplex Villa">Duplex Villa</option>
                         <option value="Penthouse">Penthouse</option>
+                        <option value="Commercial">Commercial</option>
                       </select>
                     </div>
 

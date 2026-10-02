@@ -13172,6 +13172,7 @@ export default function App() {
                       <option value="3BHK">3BHK Flat</option>
                       <option value="4BHK">4BHK Luxury Apartment</option>
                       <option value="5BHK Villa">5BHK Villa</option>
+                      <option value="Commercial">Commercial</option>
                     </select>
                   </div>
 
@@ -14855,6 +14856,7 @@ export default function App() {
                         <option value="3BHK">3BHK Flat</option>
                         <option value="4BHK">4BHK Luxury Apartment</option>
                         <option value="5BHK+ Villa">5BHK+ Villa</option>
+                        <option value="Commercial">Commercial</option>
                       </select>
                     </div>
                   </div>
@@ -15593,6 +15595,7 @@ export default function App() {
                       <option value="3BHK">3 BHK</option>
                       <option value="4BHK">4 BHK</option>
                       <option value="5+ BHK / Duplex">5+ BHK / Duplex Penthouse</option>
+                      <option value="Commercial">Commercial</option>
                     </select>
                   </div>
 
@@ -19924,10 +19927,12 @@ export default function App() {
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Configuration (BHK) *</label>
                   <select value={updateReqForm.configuration} onChange={(e) => setUpdateReqForm({ ...updateReqForm, configuration: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#fbbf24', fontWeight: '800', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}>
+                    <option value="1BHK">1BHK</option>
                     <option value="2BHK">2BHK</option>
                     <option value="3BHK">3BHK</option>
                     <option value="4BHK">4BHK</option>
                     <option value="5BHK Villa">5BHK Villa</option>
+                    <option value="Commercial">Commercial</option>
                   </select>
                 </div>
               </div>
@@ -22429,6 +22434,7 @@ export default function App() {
                       <option value="3BHK">3BHK</option>
                       <option value="4BHK">4BHK</option>
                       <option value="5BHK Villa">5BHK Villa</option>
+                      <option value="Commercial">Commercial</option>
                     </select>
                   </div>
                   <div>

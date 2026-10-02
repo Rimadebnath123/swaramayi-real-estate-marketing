@@ -847,10 +847,12 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Configuration</label>
                   <select value={newRequestForm.configuration} onChange={(e) => setNewRequestForm({ ...newRequestForm, configuration: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}>
+                    <option value="1BHK">1BHK</option>
                     <option value="2BHK">2BHK</option>
                     <option value="3BHK">3BHK</option>
                     <option value="4BHK">4BHK</option>
                     <option value="Penthouse">Penthouse</option>
+                    <option value="Commercial">Commercial</option>
                   </select>
                 </div>
               </div>

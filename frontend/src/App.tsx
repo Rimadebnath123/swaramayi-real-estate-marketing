@@ -4435,8 +4435,7 @@ export default function App() {
   // 1. Employee Directory (Strict Single Super Admin Master Store - Direct MongoDB Source)
   const [users, setUsers] = useState<any[]>(() => {
     const defaultCoreUsers = [
-      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'avishek@swaramayi.info', password: 'Swaramayi@2026', mobile: '+91 94323 28947', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' },
-      { id: 'USR-02', username: 'Punita Roy Chowdhury', full_name: 'Punita Roy Chowdhury', email: 'punita13.pr@gmail.com', password: 'Swaramayi@2026', mobile: '+91 90383 25675', role: 'ADMIN', designation: 'System Administrator', branch_name: 'Head Office (Kolkata)', department: 'Sales Operations', team_name: 'Corporate Leadership Squad', manager_name: 'Avishek Das (Super Admin)', is_active: true, user_status: 'ACTIVE' }
+      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'avishek@swaramayi.info', password: 'Swaramayi@2026', mobile: '+91 94323 28947', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' }
     ];
     try {
       ['swaramayi_users_v7', 'swaramayi_users_v6', 'swaramayi_users_v8', 'swaramayi_users_v5', 'swaramayi_users'].forEach(k => {
@@ -7329,10 +7328,16 @@ export default function App() {
             }
             if (Array.isArray(mData.users) && mData.users.length > 0) {
               const cleanUsers = mData.users.filter((u: any) => u && typeof u === 'object');
-              setUsers(cleanUsers);
-              try {
-                localStorage.setItem('swaramayi_users_v7', JSON.stringify(cleanUsers));
-              } catch (e) {}
+              setUsers(prev => {
+                const userMap = new Map();
+                (prev || []).forEach((u: any) => { if (u && u.id) userMap.set(u.id, u); });
+                (cleanUsers || []).forEach((u: any) => { if (u && u.id) userMap.set(u.id, u); });
+                const mergedUsers = Array.from(userMap.values());
+                try {
+                  localStorage.setItem('swaramayi_users_v7', JSON.stringify(mergedUsers));
+                } catch (e) {}
+                return mergedUsers;
+              });
             }
           }
         }
@@ -7350,7 +7355,7 @@ export default function App() {
     if (isMongoLoadedRef.current) {
       syncAllToMongoDB();
     }
-  }, [properties, customers, leadsList, bookings, invoices, agreements, developers, matchingRequestsQueue]);
+  }, [users, properties, customers, leadsList, bookings, invoices, agreements, developers, matchingRequestsQueue]);
   const [rawSelectedAgreement, setSelectedAgreement] = useState<any>(null);
   const selectedAgreement = rawSelectedAgreement || agreements[0] || { id: 'AGR-01', agreement_code: 'SRM-AGR-CUS-2026-000301', agreement_type: 'CUSTOMER_SITE_VISIT', title: 'Customer Site Visit Agreement', party_name: 'Rohan Deshmukh', party_contact: '+91 98490 12345', property_details: 'SRM-PROP-2026-000421 (Aparna Zenon 3BHK)', signed_status: 'EXECUTED_SIGNED', signature_hash: 'OTP-VERIFIED-#482901-DIGITAL-SIG', signed_at: '16 Aug 2026 11:35 AM' };
 

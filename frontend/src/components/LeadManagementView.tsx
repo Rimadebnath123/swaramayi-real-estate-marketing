@@ -140,8 +140,9 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
               { id: 'interested', label: 'Interested Leads', count: activeVaultLeadsList.filter(l => ['INTERESTED', 'CONNECTED_INTERESTED'].includes(l.lead_status) || ['INTERESTED', 'CONNECTED_INTERESTED'].includes(l.call_disposition)).length, color: '#4ade80' },
               { id: 'not_interested', label: '❌ Not Interested', count: activeVaultLeadsList.filter(l => l.lead_status === 'NOT_INTERESTED' || l.call_disposition === 'NOT_INTERESTED').length, color: '#ef4444', badgeBg: '#ef4444' },
               { id: 'no_response', label: '📵 No Response', count: activeVaultLeadsList.filter(l => l.lead_status === 'NO_RESPONSE' || l.call_disposition === 'NO_RESPONSE').length, color: '#eab308', badgeBg: '#eab308' },
-              { id: 'call_back_later', label: '⏳ Call Back Later', count: activeVaultLeadsList.filter(l => l.lead_status === 'CALL_BACK_LATER' || l.call_disposition === 'CALL_BACK_LATER' || l.lead_status === 'PENDING_CALL' || l.call_disposition === 'PENDING_CALL').length, color: '#38bdf8', badgeBg: '#0284c7' },
-              { id: 'matching', label: 'Matching Pending', count: uniqueLeadsList.filter(l => ['MATCHING_PENDING', 'MATCHING_DONE'].includes(l.lead_status)).length, color: '#c084fc' }
+              { id: 'call_back_later', label: '⏳ Call Back Later', count: activeVaultLeadsList.filter(l => l.lead_status === 'CALL_BACK_LATER' || l.call_disposition === 'CALL_BACK_LATER').length, color: '#38bdf8', badgeBg: '#0284c7' },
+              { id: 'matching', label: 'Matching Pending', count: uniqueLeadsList.filter(l => ['MATCHING_PENDING', 'MATCHING_DONE'].includes(l.lead_status)).length, color: '#c084fc' },
+              { id: 'pending_call', label: '📞 Pending Call', count: activeVaultLeadsList.filter(l => l.lead_status === 'PENDING_CALL' || l.call_disposition === 'PENDING_CALL').length, color: '#e056fd', badgeBg: '#a855f7' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -231,6 +232,7 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                   if (leadInboxTab === 'no_response') return l.lead_status === 'NO_RESPONSE' || l.call_disposition === 'NO_RESPONSE';
                   if (leadInboxTab === 'call_back_later') return l.lead_status === 'CALL_BACK_LATER' || l.call_disposition === 'CALL_BACK_LATER';
                   if (leadInboxTab === 'matching') return ['MATCHING_PENDING', 'MATCHING_DONE'].includes(l.lead_status);
+                  if (leadInboxTab === 'pending_call') return l.lead_status === 'PENDING_CALL' || l.call_disposition === 'PENDING_CALL';
                   if (leadInboxTab === 'visit') return ['VISIT_PLANNED', 'VISIT_COMPLETED'].includes(l.lead_status);
                   if (leadInboxTab === 'converted') return ['CONVERTED', 'BOOKING_PROCESS'].includes(l.lead_status);
                   if (leadInboxTab === 'lost_closed') return ['LOST', 'CANCELLED'].includes(l.lead_status);
@@ -267,8 +269,9 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                       if (leadInboxTab === 'interested') return ['INTERESTED', 'CONNECTED_INTERESTED'].includes(l.lead_status) || ['INTERESTED', 'CONNECTED_INTERESTED'].includes(l.call_disposition);
                       if (leadInboxTab === 'not_interested') return l.lead_status === 'NOT_INTERESTED' || l.call_disposition === 'NOT_INTERESTED';
                       if (leadInboxTab === 'no_response') return l.lead_status === 'NO_RESPONSE' || l.call_disposition === 'NO_RESPONSE';
-                      if (leadInboxTab === 'call_back_later') return ['CALL_BACK_LATER', 'PENDING_CALL'].includes(l.lead_status) || ['CALL_BACK_LATER', 'PENDING_CALL'].includes(l.call_disposition);
+                      if (leadInboxTab === 'call_back_later') return l.lead_status === 'CALL_BACK_LATER' || l.call_disposition === 'CALL_BACK_LATER';
                       if (leadInboxTab === 'matching') return ['MATCHING_PENDING', 'MATCHING_DONE'].includes(l.lead_status);
+                      if (leadInboxTab === 'pending_call') return l.lead_status === 'PENDING_CALL' || l.call_disposition === 'PENDING_CALL';
                       return true;
                     })
                     .filter(l => leadSourceFilter === 'ALL' || l.source === leadSourceFilter)

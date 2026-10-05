@@ -38,6 +38,8 @@ interface CostSheetSharingViewProps {
   setSelectedCust?: (cust: any) => void;
   setShowShiftToMatchingModal?: (val: any) => void;
   onRecycleItem?: (itemData: any) => void;
+  setUpdateReqForm?: (val: any) => void;
+  setShowUpdateRequirementModal?: (val: any) => void;
 }
 
 export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
@@ -76,6 +78,8 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
   properties = [],
   setSelectedCust,
   setShowShiftToMatchingModal,
+  setUpdateReqForm,
+  setShowUpdateRequirementModal,
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
@@ -530,6 +534,41 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                               >
                                 ⚡ Shift to Matching
                               </button>
+                              {setShowUpdateRequirementModal && (
+                                <button 
+                                  onClick={() => {
+                                    const custName = item.customerSnapshot?.customerName || item.customerName || 'Customer';
+                                    const custId = item.customerId || item.customerSnapshot?.customerNumber || item.mobile || 'SRM-CUS-2026';
+                                    const mob = item.customerSnapshot?.mobile || item.mobile || '';
+                                    const propCode = item.propertySnapshot?.propertyCode || item.propertySnapshot?.code || item.propertyCode || 'SRM-PROP-2026-000426';
+                                    const propTitle = item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || 'Property';
+
+                                    if (setUpdateReqForm) {
+                                      setUpdateReqForm({
+                                        budget_min: '₹50 Lakhs',
+                                        budget_max: '₹1.5 Crores',
+                                        preferredArea: propTitle || 'Barasat, Kolkata',
+                                        configuration: '3BHK',
+                                        dislike_reason: 'Over Budget',
+                                        remarks: ''
+                                      });
+                                    }
+                                    setShowUpdateRequirementModal({ 
+                                      open: true, 
+                                      customer: { 
+                                        custName, 
+                                        custCode: custId, 
+                                        mobile: mob, 
+                                        propertyCode: propCode
+                                      } 
+                                    });
+                                  }}
+                                  style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}
+                                  title="Update buyer preferences & requirements on-the-spot"
+                                >
+                                  ✏️ Update Requirement
+                                </button>
+                              )}
                               {isSuperAdmin && (
                                 <button 
                                   onClick={() => {

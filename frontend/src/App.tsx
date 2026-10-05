@@ -12402,6 +12402,8 @@ export default function App() {
               setSelectedCust={setSelectedCust}
               setShowShiftToMatchingModal={setShowShiftToMatchingModal}
               onRecycleItem={handleRecycleItem}
+              setUpdateReqForm={setUpdateReqForm}
+              setShowUpdateRequirementModal={setShowUpdateRequirementModal}
             />
           )}
 

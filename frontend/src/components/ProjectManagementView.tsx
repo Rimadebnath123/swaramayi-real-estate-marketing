@@ -4189,24 +4189,45 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           (prop.title && p.title && prop.title.toLowerCase().trim() === p.title.toLowerCase().trim())
                         ).length;
 
-                        const matchedProp = properties.find(prop => 
+                        const isDevOtpVerified = Boolean(
+                          p.otp_verified ||
+                          p.devProjectOtpVerified ||
+                          dev.otp_verified ||
+                          matchedMaster?.otp_verified ||
+                          verifiedDevProjectsList.some((vp: any) => 
+                            (vp.developer && dev.name && vp.developer.toLowerCase().trim() === dev.name.toLowerCase().trim()) ||
+                            (vp.project && p.title && vp.project.toLowerCase().trim() === p.title.toLowerCase().trim())
+                          ) ||
+                          devProjectOtpVerified
+                        );
+
+                        const rawMatchedProp = properties.find(prop => 
                           (prop.project_id && (prop.project_id === projCodeStr || prop.project_id === p.code || prop.project_id === p.id)) ||
                           (prop.property_code && (prop.property_code === projCodeStr || prop.property_code === p.code || prop.property_code === p.id)) ||
                           (prop.title && p.title && prop.title.toLowerCase().trim() === p.title.toLowerCase().trim())
-                        ) || {
+                        );
+
+                        const matchedProp = {
                           id: projCodeStr,
                           property_code: projCodeStr,
                           title: p.title,
                           developer: dev.name,
                           developer_id: dev.id,
-                          locality: p.locality || 'Barasat, Kolkata',
-                          full_address: `${p.title}, ${p.locality || 'Barasat'}, North 24 Parganas, Kolkata, West Bengal`,
-                          latitude: matchedMaster?.latitude || '22.722361',
-                          longitude: matchedMaster?.longitude || '88.493403',
-                          configuration: '2BHK',
-                          carpet_area: '700 Sq.Ft.',
-                          final_price: '₹35,00,000',
-                          status: 'LIVE'
+                          developer_mobile: dev.mobile,
+                          developer_email: dev.email,
+                          locality: p.locality || rawMatchedProp?.locality || 'Barasat, Kolkata',
+                          full_address: rawMatchedProp?.full_address || `${p.title}, ${p.locality || 'Barasat'}, North 24 Parganas, Kolkata, West Bengal`,
+                          latitude: rawMatchedProp?.latitude || matchedMaster?.latitude || '22.722361',
+                          longitude: rawMatchedProp?.longitude || matchedMaster?.longitude || '88.493403',
+                          configuration: rawMatchedProp?.configuration || '2BHK',
+                          carpet_area: rawMatchedProp?.carpet_area || '700 Sq.Ft.',
+                          super_builtup_area: rawMatchedProp?.super_builtup_area || '950 Sq.Ft.',
+                          final_price: rawMatchedProp?.final_price || '₹35,00,000',
+                          price_sqft: rawMatchedProp?.price_sqft || '₹3,684',
+                          status: rawMatchedProp?.status || 'LIVE',
+                          ...rawMatchedProp,
+                          otp_verified: isDevOtpVerified,
+                          devProjectOtpVerified: isDevOtpVerified
                         };
 
                         return (
@@ -4227,10 +4248,24 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                              <span style={{ fontSize: '0.68rem', background: 'rgba(2, 132, 199, 0.15)', color: '#0284c7', border: '1px solid #0284c7', padding: '2px 6px', borderRadius: '4px', fontWeight: '900', fontFamily: 'monospace' }}>
+                              <span 
+                                onClick={() => {
+                                  setShowDevVaultModal(false);
+                                  setViewPropertyModal(matchedProp);
+                                }}
+                                style={{ fontSize: '0.68rem', background: 'rgba(2, 132, 199, 0.15)', color: '#0284c7', border: '1px solid #0284c7', padding: '2px 6px', borderRadius: '4px', fontWeight: '900', fontFamily: 'monospace', cursor: 'pointer' }}
+                                title="Click to view full property details for this property code"
+                              >
                                 🔑 {projCodeStr}
                               </span>
-                              <span style={{ fontSize: '0.85rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
+                              <span 
+                                onClick={() => {
+                                  setShowDevVaultModal(false);
+                                  setViewPropertyModal(matchedProp);
+                                }}
+                                style={{ fontSize: '0.85rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', cursor: 'pointer' }}
+                                title="Click to view property details"
+                              >
                                 🏢 {p.title}
                               </span>
                               {p.locality && (
@@ -4240,6 +4275,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                               )}
                               <span style={{ fontSize: '0.68rem', background: 'rgba(34, 197, 94, 0.18)', color: '#22c55e', border: '1px solid #22c55e', padding: '2px 8px', borderRadius: '10px', fontWeight: '900' }}>
                                 🏠 {unitsCount} Unit{unitsCount === 1 ? '' : 's'}
+                              </span>
+                              <span style={{ fontSize: '0.68rem', background: isDevOtpVerified ? 'rgba(34, 197, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: isDevOtpVerified ? '#22c55e' : '#f59e0b', border: `1px solid ${isDevOtpVerified ? '#22c55e' : '#f59e0b'}`, padding: '2px 8px', borderRadius: '10px', fontWeight: '900' }}>
+                                {isDevOtpVerified ? '✓ OTP VERIFIED' : '⚠️ OTP PENDING'}
                               </span>
                             </div>
 
@@ -4491,7 +4529,34 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>OTP Verification Protocol</span>
-                      <span style={{ background: '#22c55e', color: '#ffffff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800' }}>✓ 1-TIME OTP VERIFIED</span>
+                      {(() => {
+                        const isModalOtpVerified = Boolean(
+                          viewPropertyModal.otp_verified ||
+                          viewPropertyModal.devProjectOtpVerified ||
+                          viewPropertyModal.verified ||
+                          verifiedDevProjectsList.some((vp: any) => 
+                            (vp.developer && viewPropertyModal.developer && vp.developer.toLowerCase().trim() === viewPropertyModal.developer.toLowerCase().trim()) ||
+                            (vp.project && viewPropertyModal.title && vp.project.toLowerCase().trim() === viewPropertyModal.title.toLowerCase().trim())
+                          ) ||
+                          devObj?.otp_verified ||
+                          devObj?.verified ||
+                          matchedMaster?.otp_verified ||
+                          matchedMaster?.verified ||
+                          devProjectOtpVerified
+                        );
+                        return (
+                          <span style={{ 
+                            background: isModalOtpVerified ? '#22c55e' : '#f59e0b', 
+                            color: '#ffffff', 
+                            padding: '2px 8px', 
+                            borderRadius: '4px', 
+                            fontSize: '0.72rem', 
+                            fontWeight: '800' 
+                          }}>
+                            {isModalOtpVerified ? '✓ 1-TIME OTP VERIFIED' : '⚠️ UNVERIFIED (OTP PENDING)'}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

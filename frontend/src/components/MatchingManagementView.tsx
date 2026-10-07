@@ -1677,7 +1677,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     budget_flexibility: activeMatchingReq.budget_flexibility || selectedCust?.budget_flexibility,
                     preferredArea: activeMatchingReq.preferredArea || selectedCust?.preferredArea,
                     secondary_areas: activeMatchingReq.secondary_areas || activeMatchingReq.secondaryAreas || selectedCust?.secondary_areas,
-                    configuration: activeMatchingReq.configuration || selectedCust?.configuration
+                    configuration: activeMatchingReq.configuration || selectedCust?.configuration,
+                    parking: activeMatchingReq.parking || activeMatchingReq.parkingRequired || selectedCust?.parking || selectedCust?.parking_required
                   };
                   const res = calculatePropertyMatchScore(currentMatchingCust, p);
                   let matchVal = res.total;

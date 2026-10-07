@@ -9694,9 +9694,70 @@ export default function App() {
       breakdown.bhk = 12;
     }
 
+    // --- 3.5 STRICT PARKING REQUIREMENT CHECK ---
+    const isPropertyParkingAvailable = (propObj: any): boolean => {
+      if (!propObj) return false;
+      const pStr = String(
+        propObj.car_parking || 
+        propObj.parking || 
+        propObj.parkingSlot || 
+        propObj.parking_slot || 
+        propObj.parking_type || 
+        propObj.parking_slot_type || 
+        ''
+      ).trim().toLowerCase();
+
+      if (pStr) {
+        if (pStr === 'no' || pStr === 'not available' || pStr === 'none' || pStr === '0' || pStr.includes('no parking') || pStr.includes('not available')) {
+          return false;
+        }
+        if (pStr.includes('covered') || pStr.includes('open') || pStr.includes('ev') || pStr.includes('slot') || pStr.includes('available') || pStr.includes('yes') || pStr.includes('parking')) {
+          return true;
+        }
+      }
+
+      const pReq = String(propObj.parkingRequired || propObj.parking_required || '').trim().toUpperCase();
+      if (pReq === 'YES' || pReq === 'REQUIRED' || pReq === 'AVAILABLE') return true;
+      if (pReq === 'NO' || pReq === 'NOT_REQUIRED' || pReq === 'NOT AVAILABLE') return false;
+
+      const coveredCap = Number(propObj.total_covered_parking_capacity || 0);
+      const openCap = Number(propObj.total_open_parking_capacity || 0);
+      const evCap = Number(propObj.total_ev_parking_capacity || 0);
+      if (coveredCap > 0 || openCap > 0 || evCap > 0) return true;
+
+      const pPrice = parseFloat(String(propObj.parking_price || propObj.parking_charge || propObj.covered_parking_rate || 0).replace(/[^0-9.]/g, ''));
+      if (!isNaN(pPrice) && pPrice > 0) return true;
+
+      return true;
+    };
+
+    const custParkingReq = String(
+      customer?.parking || 
+      customer?.parking_required || 
+      customer?.parkingType || 
+      customer?.parking_type || 
+      ''
+    ).trim().toLowerCase();
+
+    const isParkingStrictlyRequired = (
+      custParkingReq === 'required' || 
+      custParkingReq.includes('covered') || 
+      custParkingReq.includes('open') || 
+      custParkingReq.includes('ev') ||
+      custParkingReq.includes('yes')
+    ) && custParkingReq !== 'not required';
+
+    let isParkingMatch = true;
+    if (isParkingStrictlyRequired) {
+      const propHasParking = isPropertyParkingAvailable(property);
+      if (!propHasParking) {
+        isParkingMatch = false; // STRICT PARKING MISMATCH
+      }
+    }
+
     // STRICT MATCH FILTER RULE:
-    // If Location, Budget OR BHK fails to match customer preference, return total = 0
-    if (!isBudMatch || !isLocMatch || !isBhkMatch) {
+    // If Location, Budget, BHK OR Parking Requirement fails to match customer preference, return total = 0
+    if (!isBudMatch || !isLocMatch || !isBhkMatch || !isParkingMatch) {
       return { 
         total: 0, 
         breakdown: { ...breakdown, bud: isBudMatch ? breakdown.bud : 0, loc: isLocMatch ? breakdown.loc : 0, bhk: isBhkMatch ? breakdown.bhk : 0 }, 

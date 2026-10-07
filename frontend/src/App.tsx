@@ -17477,7 +17477,14 @@ export default function App() {
                   propertyType: parts[5] || 'Flat / Apartment (New / Builder)',
                   configuration: parts[6] || '2BHK',
                   superBuiltupArea: parts[7] || '1,050 Sq.Ft.',
-                  deductionPct: parts[8] || '35%',
+                  deductionPct: parts[8] || (() => {
+                    const sN = parseFloat(String(parts[7] || '').replace(/,/g, '').replace(/[^0-9.]/g, ''));
+                    const cN = parseFloat(String(parts[9] || '').replace(/,/g, '').replace(/[^0-9.]/g, ''));
+                    if (sN > 0 && cN > 0 && sN >= cN) {
+                      return `${Math.round(((sN - cN) / sN) * 100)}%`;
+                    }
+                    return '35%';
+                  })(),
                   carpet_area: parts[9] || '700.35 Sq.Ft.',
                   facing: parts[10] || 'East Facing',
                   possessionStatus: parts[11] || 'Under Construction',
@@ -18170,7 +18177,7 @@ export default function App() {
                       const parts = [tower, floorStr, unitStr].filter(Boolean);
                       return parts.length > 0 ? parts.join(', ') : 'N/A';
                     })()}</strong></div>
-                    <div><span style={{ color: '#64748b' }}>Carpet Area:</span> <strong style={{ color: '#d97706', fontWeight: '800' }}>{(() => {
+                    <div><span style={{ color: '#64748b' }}>Super Built-Up Area:</span> <strong style={{ color: '#d97706', fontWeight: '800' }}>{(() => {
                       const cs = showViewIndividualCostSheetModal.costSheet;
                       const ps = cs?.propertySnapshot || {};
                       const propCode = cs?.propertyCode || ps?.propertyCode || cs?.propertyId;
@@ -18178,15 +18185,11 @@ export default function App() {
                         (p.property_code && p.property_code.toLowerCase() === String(propCode).toLowerCase()) ||
                         (p.id && String(p.id).toLowerCase() === String(propCode).toLowerCase())
                       );
-                      const rawCarpet = matchedProp?.carpet_area || matchedProp?.carpetArea || ps.carpetArea || ps.carpet_area;
-                      if (rawCarpet) {
-                        const num = parseSqftToNumeric(rawCarpet);
+                      const rawSuper = matchedProp?.super_builtup_area || matchedProp?.superBuiltupArea || ps.superBuiltupArea || ps.super_builtup_area;
+                      if (rawSuper) {
+                        const num = parseSqftToNumeric(rawSuper);
                         if (num > 0) return `${num.toLocaleString('en-IN')} Sq.Ft.`;
-                        return String(rawCarpet);
-                      }
-                      const superNum = parseSqftToNumeric(matchedProp?.super_builtup_area || matchedProp?.superBuiltupArea || ps.superBuiltupArea || ps.super_builtup_area || 1140);
-                      if (superNum > 0) {
-                        return `${Math.round(superNum * 0.78).toLocaleString('en-IN')} Sq.Ft.`;
+                        return String(rawSuper);
                       }
                       return 'N/A';
                     })()}</strong></div>
@@ -18195,11 +18198,27 @@ export default function App() {
                       const ps = cs?.pricingSnapshot || {};
                       const propSnap = cs?.propertySnapshot || {};
                       const pBreakup = cs?.formattedPriceBreakup || {};
-                      const basePrice = ps.basePrice || (pBreakup.basePriceStr ? parseFloat(String(pBreakup.basePriceStr).replace(/,/g, '').replace(/[^\d.]/g, '')) : 0) || 0;
-                      const superArea = parseFloat(String(propSnap.superBuiltupArea || propSnap.super_builtup_area || propSnap.builtupArea || propSnap.carpetArea || '').replace(/,/g, '').replace(/[^\d.]/g, '')) || 0;
-                      if (basePrice > 0 && superArea > 0) {
-                        return `₹${Math.round(basePrice / superArea).toLocaleString('en-IN')}/Sq.Ft.`;
+                      const propCode = cs?.propertyCode || propSnap?.propertyCode || cs?.propertyId;
+                      const matchedProp = properties.find((p: any) => 
+                        (p.property_code && p.property_code.toLowerCase() === String(propCode).toLowerCase()) ||
+                        (p.id && String(p.id).toLowerCase() === String(propCode).toLowerCase())
+                      );
+
+                      const rawRate = matchedProp?.price_sqft || matchedProp?.price_per_sqft || matchedProp?.rate_per_sqft || matchedProp?.rate_sqft || matchedProp?.asking_rate;
+                      let rateNum = rawRate ? parseSqftToNumeric(rawRate) : 0;
+
+                      if (rateNum === 0) {
+                        const basePrice = parsePriceToNumeric(matchedProp?.final_price || matchedProp?.base_price || ps.basePrice || pBreakup.basePriceStr || 0);
+                        const superArea = parseSqftToNumeric(matchedProp?.super_builtup_area || matchedProp?.superBuiltupArea || propSnap.superBuiltupArea || propSnap.super_builtup_area || 0);
+                        if (basePrice > 0 && superArea > 0) {
+                          rateNum = Math.round(basePrice / superArea);
+                        }
                       }
+
+                      if (rateNum > 0) {
+                        return `₹${rateNum.toLocaleString('en-IN')}/Sq.Ft.`;
+                      }
+
                       return pBreakup.ratePerSqftStr || (ps.ratePerSqft ? `₹${Number(ps.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A');
                     })()}</strong></div>
                     <div><span style={{ color: '#64748b' }}>Facing & Possession:</span> <strong style={{ color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.propertySnapshot?.facing} • {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.possessionStatus}</strong></div>
@@ -18266,25 +18285,31 @@ export default function App() {
                   <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: '800', background: '#e0f2fe', padding: '4px 12px', borderRadius: '6px', border: '1px solid #7dd3fc' }}>
                     Rate per Sq.Ft.: {(() => {
                       const cs = showViewIndividualCostSheetModal.costSheet;
-                      const ps = cs?.propertySnapshot || {};
-                      const propCode = cs?.propertyCode || ps?.propertyCode || cs?.propertyId;
+                      const ps = cs?.pricingSnapshot || {};
+                      const propSnap = cs?.propertySnapshot || {};
+                      const pBreakup = cs?.formattedPriceBreakup || {};
+                      const propCode = cs?.propertyCode || propSnap?.propertyCode || cs?.propertyId;
                       const matchedProp = properties.find((p: any) => 
                         (p.property_code && p.property_code.toLowerCase() === String(propCode).toLowerCase()) ||
                         (p.id && String(p.id).toLowerCase() === String(propCode).toLowerCase())
                       );
-                      if (matchedProp) {
-                        const rawRate = matchedProp.price_sqft || matchedProp.price_per_sqft || matchedProp.rate_per_sqft || matchedProp.rate_sqft || matchedProp.asking_rate;
-                        if (rawRate) {
-                          const parsed = typeof rawRate === 'number' ? rawRate : parseFloat(String(rawRate).replace(/[^0-9.]/g, ''));
-                          if (!isNaN(parsed) && parsed > 0) return `₹${Math.round(parsed).toLocaleString('en-IN')}/Sq.Ft.`;
-                        }
-                        const basePrice = parsePriceToNumeric(matchedProp.total_price || matchedProp.price || matchedProp.base_price || matchedProp.asking_price || 0);
-                        const superArea = parseSqftToNumeric(matchedProp.super_builtup_area || matchedProp.carpet_area || 0);
+
+                      const rawRate = matchedProp?.price_sqft || matchedProp?.price_per_sqft || matchedProp?.rate_per_sqft || matchedProp?.rate_sqft || matchedProp?.asking_rate;
+                      let rateNum = rawRate ? parseSqftToNumeric(rawRate) : 0;
+
+                      if (rateNum === 0) {
+                        const basePrice = parsePriceToNumeric(matchedProp?.final_price || matchedProp?.base_price || ps.basePrice || pBreakup.basePriceStr || 0);
+                        const superArea = parseSqftToNumeric(matchedProp?.super_builtup_area || matchedProp?.superBuiltupArea || propSnap.superBuiltupArea || propSnap.super_builtup_area || 0);
                         if (basePrice > 0 && superArea > 0) {
-                          return `₹${Math.round(basePrice / superArea).toLocaleString('en-IN')}/Sq.Ft.`;
+                          rateNum = Math.round(basePrice / superArea);
                         }
                       }
-                      return cs?.formattedPriceBreakup?.ratePerSqftStr || (cs?.pricingSnapshot?.ratePerSqft ? `₹${Number(cs.pricingSnapshot.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A');
+
+                      if (rateNum > 0) {
+                        return `₹${rateNum.toLocaleString('en-IN')}/Sq.Ft.`;
+                      }
+
+                      return pBreakup.ratePerSqftStr || (ps.ratePerSqft ? `₹${Number(ps.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'N/A');
                     })()}
                   </span>
                 </h4>
@@ -18302,18 +18327,33 @@ export default function App() {
                       <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0f172a' }}>
                         1. Base Property Asking Price
                         <span style={{ display: 'block', fontSize: '0.73rem', color: '#0284c7', fontWeight: '600', marginTop: '2px' }}>
-                          (@ {(() => {
+                          {(() => {
                             const cs = showViewIndividualCostSheetModal.costSheet;
                             const ps = cs?.pricingSnapshot || {};
                             const propSnap = cs?.propertySnapshot || {};
                             const pBreakup = cs?.formattedPriceBreakup || {};
-                            const basePrice = ps.basePrice || (pBreakup.basePriceStr ? parseFloat(String(pBreakup.basePriceStr).replace(/,/g, '').replace(/[^\d.]/g, '')) : 0) || 0;
-                            const superArea = parseFloat(String(propSnap.superBuiltupArea || propSnap.super_builtup_area || propSnap.builtupArea || propSnap.carpetArea || '').replace(/,/g, '').replace(/[^\d.]/g, '')) || 0;
-                            if (basePrice > 0 && superArea > 0) {
-                              return `₹${Math.round(basePrice / superArea).toLocaleString('en-IN')}/Sq.Ft.`;
+                            const propCode = cs?.propertyCode || propSnap?.propertyCode || cs?.propertyId;
+                            const matchedProp = properties.find((p: any) => 
+                              (p.property_code && p.property_code.toLowerCase() === String(propCode).toLowerCase()) ||
+                              (p.id && String(p.id).toLowerCase() === String(propCode).toLowerCase())
+                            );
+
+                            const rawSuper = matchedProp?.super_builtup_area || matchedProp?.superBuiltupArea || propSnap.superBuiltupArea || propSnap.super_builtup_area;
+                            const superNum = parseSqftToNumeric(rawSuper);
+                            const superStr = superNum > 0 ? `${superNum.toLocaleString('en-IN')} Sq.Ft.` : (rawSuper || 'N/A');
+
+                            const rawRate = matchedProp?.price_sqft || matchedProp?.price_per_sqft || matchedProp?.rate_per_sqft || matchedProp?.rate_sqft || matchedProp?.asking_rate;
+                            let rateNum = rawRate ? parseSqftToNumeric(rawRate) : 0;
+                            if (rateNum === 0) {
+                              const basePrice = parsePriceToNumeric(matchedProp?.final_price || matchedProp?.base_price || ps.basePrice || pBreakup.basePriceStr || 0);
+                              if (basePrice > 0 && superNum > 0) {
+                                rateNum = Math.round(basePrice / superNum);
+                              }
                             }
-                            return pBreakup.ratePerSqftStr || (ps.ratePerSqft ? `₹${Number(ps.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'Rate N/A');
-                          })()} on {showViewIndividualCostSheetModal.costSheet.propertySnapshot?.superBuiltupArea || showViewIndividualCostSheetModal.costSheet.propertySnapshot?.super_builtup_area || '1,283 Sq.Ft.'} Super Built-Up Area)
+                            const rateStr = rateNum > 0 ? `₹${rateNum.toLocaleString('en-IN')}/Sq.Ft.` : (pBreakup.ratePerSqftStr || (ps.ratePerSqft ? `₹${Number(ps.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : 'Rate N/A'));
+
+                            return `(@ ${rateStr} on ${superStr} Super Built-Up Area)`;
+                          })()}
                         </span>
                       </td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: '#0f172a' }}>{showViewIndividualCostSheetModal.costSheet.formattedPriceBreakup?.basePriceStr}</td>

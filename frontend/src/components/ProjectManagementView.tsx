@@ -2,6 +2,27 @@ import { extractAllIdentifiers, isItemInRecycledSet } from '../App';
 import React from 'react';
 import { Upload, Building2, Share2, ArrowRightLeft, Compass, Navigation, Camera, Video, Search, X, Download, Trash2 } from 'lucide-react';
 
+export const parseSqftValue = (val: any): number => {
+  if (val === null || val === undefined) return 0;
+  const cleaned = String(val).replace(/,/g, '').replace(/[^0-9.]/g, '');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+};
+
+export const parseDeductionPct = (val: any, superArea?: any, carpetArea?: any): number => {
+  if (val !== null && val !== undefined && String(val).trim() !== '') {
+    const cleaned = String(val).replace(/[^0-9.]/g, '');
+    const num = parseFloat(cleaned);
+    if (!isNaN(num) && num >= 0 && num <= 100) return num;
+  }
+  const sNum = parseSqftValue(superArea);
+  const cNum = parseSqftValue(carpetArea);
+  if (sNum > 0 && cNum > 0 && sNum >= cNum) {
+    return Math.round(((sNum - cNum) / sNum) * 100);
+  }
+  return 35;
+};
+
 interface ProjectManagementViewProps {
   currentRole?: string;
   isLight: boolean;
@@ -2453,17 +2474,18 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       value={newPropertyForm.super_builtup_area} 
                       onChange={(e) => {
                         const superVal = e.target.value;
-                        const superNum = parseFloat(superVal.replace(/[^0-9.]/g, ''));
-                        const pctNum = parseFloat((newPropertyForm.deduction_pct || '35%').replace(/[^0-9.]/g, '')) || 0;
+                        const superNum = parseSqftValue(superVal);
+                        const pctNum = parseDeductionPct(newPropertyForm.deduction_pct, superVal, newPropertyForm.carpet_area);
                         let computedCarpet = newPropertyForm.carpet_area;
-                        if (!isNaN(superNum) && superNum > 0) {
+                        if (superNum > 0) {
                           const carpetNum = superNum * (1 - pctNum / 100);
                           computedCarpet = `${Math.round(carpetNum * 100) / 100} Sq.Ft.`;
                         }
                         setNewPropertyForm({
                           ...newPropertyForm,
                           super_builtup_area: superVal,
-                          carpet_area: computedCarpet
+                          carpet_area: computedCarpet,
+                          deduction_pct: `${pctNum}%`
                         });
                       }} 
                       placeholder="e.g. 827" 
@@ -2473,32 +2495,44 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
                   <div>
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Deduction / Loading (%) *</label>
-                    <select 
-                      value={newPropertyForm.deduction_pct || '35%'} 
-                      onChange={(e) => {
-                        const pctVal = e.target.value;
-                        const pctNum = parseFloat(pctVal.replace(/[^0-9.]/g, '')) || 0;
-                        const superNum = parseFloat((newPropertyForm.super_builtup_area || '').replace(/[^0-9.]/g, ''));
-                        let computedCarpet = newPropertyForm.carpet_area;
-                        if (!isNaN(superNum) && superNum > 0) {
-                          const carpetNum = superNum * (1 - pctNum / 100);
-                          computedCarpet = `${Math.round(carpetNum * 100) / 100} Sq.Ft.`;
-                        }
-                        setNewPropertyForm({
-                          ...newPropertyForm,
-                          deduction_pct: pctVal,
-                          carpet_area: computedCarpet
-                        });
-                      }} 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #eab308', color: '#eab308', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }}
-                    >
-                      <option value="35%">35% Deduction (Standard Builder Loading)</option>
-                      <option value="30%">30% Deduction</option>
-                      <option value="25%">25% Deduction</option>
-                      <option value="20%">20% Deduction</option>
-                      <option value="40%">40% Deduction (High Common Area)</option>
-                      <option value="0%">0% Deduction (Direct Carpet = Super)</option>
-                    </select>
+                    {(() => {
+                      const currentPctNum = parseDeductionPct(newPropertyForm.deduction_pct, newPropertyForm.super_builtup_area, newPropertyForm.carpet_area);
+                      const standardPcts = [35, 30, 25, 20, 40, 0];
+                      const isCustom = !standardPcts.includes(currentPctNum);
+                      const selectValue = `${currentPctNum}%`;
+
+                      return (
+                        <select 
+                          value={selectValue} 
+                          onChange={(e) => {
+                            const pctVal = e.target.value;
+                            const pctNum = parseDeductionPct(pctVal);
+                            const superNum = parseSqftValue(newPropertyForm.super_builtup_area);
+                            let computedCarpet = newPropertyForm.carpet_area;
+                            if (superNum > 0) {
+                              const carpetNum = superNum * (1 - pctNum / 100);
+                              computedCarpet = `${Math.round(carpetNum * 100) / 100} Sq.Ft.`;
+                            }
+                            setNewPropertyForm({
+                              ...newPropertyForm,
+                              deduction_pct: `${pctNum}%`,
+                              carpet_area: computedCarpet
+                            });
+                          }} 
+                          style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #eab308', color: '#eab308', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }}
+                        >
+                          <option value="35%">35% Deduction (Standard Builder Loading)</option>
+                          <option value="30%">30% Deduction</option>
+                          <option value="25%">25% Deduction</option>
+                          <option value="20%">20% Deduction</option>
+                          <option value="40%">40% Deduction (High Common Area)</option>
+                          <option value="0%">0% Deduction (Direct Carpet = Super)</option>
+                          {isCustom && (
+                            <option value={`${currentPctNum}%`}>{currentPctNum}% Deduction (Custom)</option>
+                          )}
+                        </select>
+                      );
+                    })()}
                   </div>
 
                   <div>
@@ -2506,7 +2540,21 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     <input 
                       type="text" 
                       value={newPropertyForm.carpet_area} 
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, carpet_area: e.target.value })} 
+                      onChange={(e) => {
+                        const carpetVal = e.target.value;
+                        const carpetNum = parseSqftValue(carpetVal);
+                        const superNum = parseSqftValue(newPropertyForm.super_builtup_area);
+                        let computedDedPct = newPropertyForm.deduction_pct;
+                        if (superNum > 0 && carpetNum > 0 && superNum >= carpetNum) {
+                          const dynamicPct = Math.round(((superNum - carpetNum) / superNum) * 100);
+                          computedDedPct = `${dynamicPct}%`;
+                        }
+                        setNewPropertyForm({ 
+                          ...newPropertyForm, 
+                          carpet_area: carpetVal,
+                          deduction_pct: computedDedPct || `${parseDeductionPct(newPropertyForm.deduction_pct)}%`
+                        });
+                      }} 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #38bdf8', color: '#38bdf8', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
                       required 
                     />
@@ -2589,16 +2637,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
                 {/* DEDUCTION AUTO-CALCULATION SUMMARY CARD */}
                 {(() => {
-                  const superNum = parseFloat((newPropertyForm.super_builtup_area || '').replace(/[^0-9.]/g, ''));
-                  const pctNum = parseFloat((newPropertyForm.deduction_pct || '35%').replace(/[^0-9.]/g, '')) || 0;
-                  if (!isNaN(superNum) && superNum > 0) {
+                  const superNum = parseSqftValue(newPropertyForm.super_builtup_area);
+                  const pctNum = parseDeductionPct(newPropertyForm.deduction_pct, newPropertyForm.super_builtup_area, newPropertyForm.carpet_area);
+                  if (superNum > 0) {
                     const deductionVal = superNum * (pctNum / 100);
                     const carpetVal = superNum - deductionVal;
                     return (
                       <div style={{ background: 'rgba(234, 179, 8, 0.12)', border: '1px solid #eab308', borderRadius: '8px', padding: '10px 14px', fontSize: '0.8rem', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                         <div>
                           <span style={{ color: '#eab308', fontWeight: '900' }}>📐 LIVE DEDUCTION CALCULATION:</span>{' '}
-                          <strong>{superNum} Sq.Ft.</strong> (Super Built-up) − <strong>{pctNum}%</strong> Deduction ({Math.round(deductionVal * 100) / 100} Sq.Ft.) = <strong style={{ color: '#38bdf8', fontSize: '0.9rem' }}>{Math.round(carpetVal * 100) / 100} Sq.Ft. (Carpet Area)</strong>
+                          <strong>{superNum} Sq.Ft.</strong> (Super Built up) − <strong>{pctNum}% Deduction</strong> ({Math.round(deductionVal * 100) / 100} Sq.Ft.) = <strong style={{ color: '#38bdf8', fontSize: '0.9rem' }}>{Math.round(carpetVal * 100) / 100} Sq.Ft. (Carpet Area)</strong>
                         </div>
                         <span style={{ background: '#eab308', color: '#0f172a', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '900' }}>
                           AUTO-CALCULATED
@@ -4509,7 +4557,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Deduction / Loading (%)</span>
-                      <strong style={{ color: '#eab308', fontWeight: '900' }}>{viewPropertyModal.deduction_pct || '35%'}</strong>
+                      <strong style={{ color: '#eab308', fontWeight: '900' }}>{`${parseDeductionPct(viewPropertyModal.deduction_pct, viewPropertyModal.super_builtup_area || superBuiltupDisp, viewPropertyModal.carpet_area)}%`}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Tower / Block Name</span>
@@ -5237,16 +5285,17 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                         value={sliderUnitForm.superBuiltupArea} 
                         onChange={(e) => {
                           const superVal = e.target.value;
-                          const sNum = parseFloat(superVal.replace(/[^0-9.]/g, '')) || 0;
-                          const dedPct = parseFloat(sliderUnitForm.deductionPct || '35') || 35;
+                          const sNum = parseSqftValue(superVal);
+                          const dedPct = parseDeductionPct(sliderUnitForm.deductionPct, superVal, sliderUnitForm.carpetArea);
                           const calcCarpet = sNum > 0 ? (sNum * (1 - dedPct / 100)).toFixed(1) + ' Sq.Ft.' : sliderUnitForm.carpetArea;
                           
-                          const rateNum = parseFloat(sliderUnitForm.priceSqft?.replace(/[^0-9.]/g, '') || '5131') || 0;
+                          const rateNum = parseSqftValue(sliderUnitForm.priceSqft || '5131');
                           const calcBase = sNum > 0 && rateNum > 0 ? '₹' + Math.round(sNum * rateNum).toLocaleString('en-IN') : sliderUnitForm.basePrice;
 
                           setSliderUnitForm({ 
                             ...sliderUnitForm, 
                             superBuiltupArea: superVal,
+                            deductionPct: `${dedPct}%`,
                             carpetArea: calcCarpet,
                             basePrice: calcBase
                           });
@@ -5258,29 +5307,61 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
                     <div>
                       <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Super to Carpet Deduction %</label>
-                      <select 
-                        value={sliderUnitForm.deductionPct || '35%'} 
-                        onChange={(e) => {
-                          const dedStr = e.target.value;
-                          const dedPct = parseFloat(dedStr) || 35;
-                          const sNum = parseFloat(sliderUnitForm.superBuiltupArea?.replace(/[^0-9.]/g, '') || '0') || 0;
-                          const calcCarpet = sNum > 0 ? (sNum * (1 - dedPct / 100)).toFixed(1) + ' Sq.Ft.' : sliderUnitForm.carpetArea;
-                          setSliderUnitForm({ ...sliderUnitForm, deductionPct: dedStr, carpetArea: calcCarpet });
-                        }} 
-                        style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '800' }}
-                      >
-                        <option value="35%">35% Deduction (Standard Builder Loading)</option>
-                        <option value="30%">30% Deduction</option>
-                        <option value="25%">25% Deduction</option>
-                        <option value="20%">20% Deduction</option>
-                        <option value="40%">40% Deduction</option>
-                        <option value="0%">0% Deduction (No Loading)</option>
-                      </select>
+                      {(() => {
+                        const currentPctNum = parseDeductionPct(sliderUnitForm.deductionPct, sliderUnitForm.superBuiltupArea, sliderUnitForm.carpetArea);
+                        const standardPcts = [35, 30, 25, 20, 40, 0];
+                        const isCustom = !standardPcts.includes(currentPctNum);
+                        const selectValue = `${currentPctNum}%`;
+
+                        return (
+                          <select 
+                            value={selectValue} 
+                            onChange={(e) => {
+                              const dedStr = e.target.value;
+                              const dedPct = parseDeductionPct(dedStr);
+                              const sNum = parseSqftValue(sliderUnitForm.superBuiltupArea);
+                              const calcCarpet = sNum > 0 ? (sNum * (1 - dedPct / 100)).toFixed(1) + ' Sq.Ft.' : sliderUnitForm.carpetArea;
+                              setSliderUnitForm({ ...sliderUnitForm, deductionPct: `${dedPct}%`, carpetArea: calcCarpet });
+                            }} 
+                            style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '800' }}
+                          >
+                            <option value="35%">35% Deduction (Standard Builder Loading)</option>
+                            <option value="30%">30% Deduction</option>
+                            <option value="25%">25% Deduction</option>
+                            <option value="20%">20% Deduction</option>
+                            <option value="40%">40% Deduction</option>
+                            <option value="0%">0% Deduction (No Loading)</option>
+                            {isCustom && (
+                              <option value={`${currentPctNum}%`}>{currentPctNum}% Deduction (Custom)</option>
+                            )}
+                          </select>
+                        );
+                      })()}
                     </div>
 
                     <div>
                       <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Carpet Area (Sq.Ft.) *</label>
-                      <input type="text" value={sliderUnitForm.carpetArea} onChange={(e) => setSliderUnitForm({ ...sliderUnitForm, carpetArea: e.target.value })} placeholder="e.g. 898.1 Sq.Ft." style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: '1.5px solid #38bdf8', color: '#38bdf8', fontWeight: '900', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem' }} />
+                      <input 
+                        type="text" 
+                        value={sliderUnitForm.carpetArea} 
+                        onChange={(e) => {
+                          const carpetVal = e.target.value;
+                          const cNum = parseSqftValue(carpetVal);
+                          const sNum = parseSqftValue(sliderUnitForm.superBuiltupArea);
+                          let computedDedPct = sliderUnitForm.deductionPct;
+                          if (sNum > 0 && cNum > 0 && sNum >= cNum) {
+                            const dynamicPct = Math.round(((sNum - cNum) / sNum) * 100);
+                            computedDedPct = `${dynamicPct}%`;
+                          }
+                          setSliderUnitForm({ 
+                            ...sliderUnitForm, 
+                            carpetArea: carpetVal,
+                            deductionPct: computedDedPct || `${parseDeductionPct(sliderUnitForm.deductionPct)}%`
+                          });
+                        }} 
+                        placeholder="e.g. 898.1 Sq.Ft." 
+                        style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: '1.5px solid #38bdf8', color: '#38bdf8', fontWeight: '900', padding: '8px 12px', borderRadius: '8px', fontSize: '0.88rem' }} 
+                      />
                     </div>
 
                     <div>

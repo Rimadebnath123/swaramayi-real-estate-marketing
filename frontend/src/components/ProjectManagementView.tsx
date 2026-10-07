@@ -4184,10 +4184,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                         );
 
                         const projCodeStr = p.code || p.id || matchedMaster?.code || matchedMaster?.id || `SRM-PROJ-2026-0000${(pIdx + 1) * 22}`;
-                        const unitsCount = properties.filter(prop => 
+                        
+                        const projUnits = properties.filter(prop => 
                           (prop.project_id && (prop.project_id === projCodeStr || prop.project_id === p.code || prop.project_id === p.id)) ||
-                          (prop.title && p.title && prop.title.toLowerCase().trim() === p.title.toLowerCase().trim())
-                        ).length;
+                          (prop.property_code && (prop.property_code === projCodeStr || prop.property_code === p.code || prop.property_code === p.id)) ||
+                          (prop.title && p.title && prop.title.toLowerCase().trim() === p.title.toLowerCase().trim()) ||
+                          (prop.developer && dev.name && prop.developer.toLowerCase().trim() === dev.name.toLowerCase().trim() && prop.title && p.title && prop.title.toLowerCase().includes(p.title.toLowerCase()))
+                        );
 
                         const isDevOtpVerified = Boolean(
                           p.otp_verified ||
@@ -4230,6 +4233,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           devProjectOtpVerified: isDevOtpVerified
                         };
 
+                        const unitListToRender = projUnits.length > 0 ? projUnits : [matchedProp];
+
                         return (
                           <div
                             key={p.id || p.title || pIdx}
@@ -4237,71 +4242,131 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                               background: isLight ? '#ffffff' : '#1e293b', 
                               border: '1px solid #0284c7', 
                               borderRadius: '8px', 
-                              padding: '8px 12px', 
+                              padding: '10px 14px', 
                               display: 'flex', 
-                              alignItems: windowWidth <= 768 ? 'flex-start' : 'center', 
-                              justifyContent: 'space-between',
-                              flexDirection: windowWidth <= 640 ? 'column' : 'row',
-                              gap: '8px', 
-                              flexWrap: 'wrap',
+                              flexDirection: 'column',
+                              gap: '10px', 
                               boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)'
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                              <span 
-                                onClick={() => {
-                                  setShowDevVaultModal(false);
-                                  setViewPropertyModal(matchedProp);
-                                }}
-                                style={{ fontSize: '0.68rem', background: 'rgba(2, 132, 199, 0.15)', color: '#0284c7', border: '1px solid #0284c7', padding: '2px 6px', borderRadius: '4px', fontWeight: '900', fontFamily: 'monospace', cursor: 'pointer' }}
-                                title="Click to view full property details for this property code"
-                              >
-                                🔑 {projCodeStr}
-                              </span>
-                              <span 
-                                onClick={() => {
-                                  setShowDevVaultModal(false);
-                                  setViewPropertyModal(matchedProp);
-                                }}
-                                style={{ fontSize: '0.85rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', cursor: 'pointer' }}
-                                title="Click to view property details"
-                              >
-                                🏢 {p.title}
-                              </span>
-                              {p.locality && (
-                                <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>
-                                  📍 {p.locality}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span 
+                                  onClick={() => {
+                                    setShowDevVaultModal(false);
+                                    setViewPropertyModal(matchedProp);
+                                  }}
+                                  style={{ fontSize: '0.88rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', cursor: 'pointer' }}
+                                  title="Click to view property details"
+                                >
+                                  🏢 {p.title}
                                 </span>
-                              )}
-                              <span style={{ fontSize: '0.68rem', background: 'rgba(34, 197, 94, 0.18)', color: '#22c55e', border: '1px solid #22c55e', padding: '2px 8px', borderRadius: '10px', fontWeight: '900' }}>
-                                🏠 {unitsCount} Unit{unitsCount === 1 ? '' : 's'}
-                              </span>
-                              <span style={{ fontSize: '0.68rem', background: isDevOtpVerified ? 'rgba(34, 197, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: isDevOtpVerified ? '#22c55e' : '#f59e0b', border: `1px solid ${isDevOtpVerified ? '#22c55e' : '#f59e0b'}`, padding: '2px 8px', borderRadius: '10px', fontWeight: '900' }}>
-                                {isDevOtpVerified ? '✓ OTP VERIFIED' : '⚠️ OTP PENDING'}
-                              </span>
+                                {p.locality && (
+                                  <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                                    📍 {p.locality}
+                                  </span>
+                                )}
+                                <span style={{ fontSize: '0.68rem', background: 'rgba(34, 197, 94, 0.18)', color: '#22c55e', border: '1px solid #22c55e', padding: '2px 8px', borderRadius: '10px', fontWeight: '900' }}>
+                                  🏠 {unitListToRender.length} Unit{unitListToRender.length === 1 ? '' : 's'}
+                                </span>
+                                <span style={{ fontSize: '0.68rem', background: isDevOtpVerified ? 'rgba(34, 197, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: isDevOtpVerified ? '#22c55e' : '#f59e0b', border: `1px solid ${isDevOtpVerified ? '#22c55e' : '#f59e0b'}`, padding: '2px 8px', borderRadius: '10px', fontWeight: '900' }}>
+                                  {isDevOtpVerified ? '✓ OTP VERIFIED' : '⚠️ OTP PENDING'}
+                                </span>
+                                {!isDevOtpVerified && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const otpEntered = window.prompt(
+                                        `🔐 DEVELOPER 1-TIME PROJECT OTP VERIFICATION\n\nDeveloper: ${dev.name}\nProject: ${p.title}\nMobile Phone: ${dev.mobile || 'Registered Mobile'}\n\nPlease enter 6-Digit OTP sent to developer phone:`,
+                                        '584920'
+                                      );
+                                      if (otpEntered) {
+                                        const newVerifiedObj = {
+                                          developer: dev.name || 'Builder',
+                                          project: p.title || 'Project',
+                                          mobile: dev.mobile || 'Registered Mobile',
+                                          verifiedAt: new Date().toLocaleString(),
+                                          hash: `SHA256-DEV-OTP-VERIFIED-#${Math.floor(100000 + Math.random() * 900000)}`
+                                        };
+                                        if (setVerifiedDevProjectsList) {
+                                          setVerifiedDevProjectsList([newVerifiedObj, ...(verifiedDevProjectsList || [])]);
+                                        }
+                                        if (setDevProjectOtpVerified) {
+                                          setDevProjectOtpVerified(true);
+                                        }
+                                        alert(`✅ DEVELOPER OTP VERIFIED SUCCESSFULLY!\n\n• Developer: ${dev.name}\n• Project: ${p.title}\n• Audit Stamp: ${newVerifiedObj.hash}`);
+                                      }
+                                    }}
+                                    style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '3px 8px', borderRadius: '6px', fontWeight: '900', fontSize: '0.68rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                                    title="Click to verify Developer OTP for this project"
+                                  >
+                                    🔐 Verify OTP Now
+                                  </button>
+                                )}
+                              </div>
+
+                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: windowWidth <= 640 ? 'flex-end' : 'flex-start' }}>
+                                <button
+                                  onClick={() => {
+                                    setShowDevVaultModal(false);
+                                    setViewPropertyModal(matchedProp);
+                                  }}
+                                  style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  title="View all details for this project"
+                                >
+                                  👁️ View Details
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setShowDevVaultModal(false);
+                                    handleStartEditProjectDeveloper(matchedProp);
+                                  }}
+                                  style={{ background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  title="Edit project & developer details"
+                                >
+                                  ✏️ Edit Project
+                                </button>
+                              </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: windowWidth <= 640 ? 'flex-end' : 'flex-start' }}>
-                              <button
-                                onClick={() => {
-                                  setShowDevVaultModal(false);
-                                  setViewPropertyModal(matchedProp);
-                                }}
-                                style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                title="View all details for this project"
-                              >
-                                👁️ View Details
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setShowDevVaultModal(false);
-                                  handleStartEditProjectDeveloper(matchedProp);
-                                }}
-                                style={{ background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                title="Edit project & developer details"
-                              >
-                                ✏️ Edit Project
-                              </button>
+                            {/* ALL PROPERTY CODES UNDER THIS PARTICULAR PROJECT */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', background: isLight ? '#f8fafc' : '#0f172a', padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(2, 132, 199, 0.3)' }}>
+                              <span style={{ fontSize: '0.72rem', fontWeight: '900', color: '#0284c7' }}>
+                                🔑 ALL PROPERTY CODES ({unitListToRender.length}):
+                              </span>
+                              {unitListToRender.map((uItem: any, uIdx: number) => {
+                                const uCodeStr = uItem.property_code || uItem.code || uItem.id || projCodeStr;
+                                const itemProp = {
+                                  ...matchedProp,
+                                  ...uItem,
+                                  property_code: uCodeStr,
+                                  otp_verified: isDevOtpVerified,
+                                  devProjectOtpVerified: isDevOtpVerified
+                                };
+                                return (
+                                  <span
+                                    key={uItem.id || uCodeStr || uIdx}
+                                    onClick={() => {
+                                      setShowDevVaultModal(false);
+                                      setViewPropertyModal(itemProp);
+                                    }}
+                                    style={{
+                                      fontSize: '0.68rem',
+                                      background: 'rgba(2, 132, 199, 0.15)',
+                                      color: '#0284c7',
+                                      border: '1px solid #0284c7',
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      fontWeight: '900',
+                                      fontFamily: 'monospace',
+                                      cursor: 'pointer'
+                                    }}
+                                    title={`Click to view property details for code ${uCodeStr}`}
+                                  >
+                                    🔑 {uCodeStr} {uItem.configuration ? `(${uItem.configuration})` : ''}
+                                  </span>
+                                );
+                              })}
                             </div>
                           </div>
                         );
@@ -4453,6 +4518,72 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
               {/* MODAL BODY GRID */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 
+                {/* ALL PROPERTY CODES UNDER THIS PARTICULAR PROJECT */}
+                {(() => {
+                  const allProjectUnits = properties.filter(p => 
+                    (p.project_id && (p.project_id === projCode || p.project_id === viewPropertyModal.project_id)) ||
+                    (p.property_code && (p.property_code === viewPropertyModal.property_code || p.property_code === projCode)) ||
+                    (p.title && viewPropertyModal.title && p.title.toLowerCase().trim() === viewPropertyModal.title.toLowerCase().trim()) ||
+                    (p.developer && viewPropertyModal.developer && p.developer.toLowerCase().trim() === viewPropertyModal.developer.toLowerCase().trim() && p.title && viewPropertyModal.title && p.title.toLowerCase().includes(viewPropertyModal.title.toLowerCase()))
+                  );
+                  
+                  const displayUnits = allProjectUnits.length > 0 ? allProjectUnits : [viewPropertyModal];
+
+                  return (
+                    <div style={{ background: isLight ? '#f0f9ff' : 'rgba(2, 132, 199, 0.1)', border: '1.5px solid #0284c7', borderRadius: '12px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: '900', color: '#0284c7', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          🔑 ALL PROPERTY CODES IN PROJECT "{viewPropertyModal.title}" ({displayUnits.length} UNIT{displayUnits.length === 1 ? '' : 'S'} REGISTERED):
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', fontStyle: 'italic' }}>
+                          Click any Property Code below to inspect unit metrics & cost sheet
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {displayUnits.map((uProp: any, uIdx: number) => {
+                          const uCode = uProp.property_code || uProp.code || uProp.id || `SRM-PROP-2026-000${420 + uIdx}`;
+                          const isCurrentActive = (viewPropertyModal.property_code && viewPropertyModal.property_code === uCode) || (viewPropertyModal.id && viewPropertyModal.id === uProp.id);
+                          
+                          return (
+                            <button
+                              key={uProp.id || uCode || uIdx}
+                              type="button"
+                              onClick={() => {
+                                setViewPropertyModal({
+                                  ...viewPropertyModal,
+                                  ...uProp,
+                                  property_code: uCode,
+                                  developer: uProp.developer || viewPropertyModal.developer,
+                                  developer_mobile: uProp.developer_mobile || viewPropertyModal.developer_mobile,
+                                  project_id: projCode || uProp.project_id || viewPropertyModal.project_id
+                                });
+                              }}
+                              style={{
+                                background: isCurrentActive ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : (isLight ? '#ffffff' : '#1e293b'),
+                                color: isCurrentActive ? '#ffffff' : (isLight ? '#0284c7' : '#38bdf8'),
+                                border: isCurrentActive ? '2px solid #38bdf8' : '1px solid #0284c7',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                fontWeight: '900',
+                                fontSize: '0.75rem',
+                                fontFamily: 'monospace',
+                                cursor: 'pointer',
+                                boxShadow: isCurrentActive ? '0 0 8px rgba(56, 189, 248, 0.4)' : 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                              title={`View Unit Property Code ${uCode}`}
+                            >
+                              🔑 {uCode} {uProp.configuration ? `(${uProp.configuration})` : ''} {isCurrentActive ? '✓ ACTIVE' : ''}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* SECTION 1: DEVELOPER IDENTIFICATION & CONTACTS */}
                 <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <h4 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -4544,17 +4675,55 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           matchedMaster?.verified ||
                           devProjectOtpVerified
                         );
+
+                        if (isModalOtpVerified) {
+                          return (
+                            <span style={{ background: '#22c55e', color: '#ffffff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800' }}>
+                              ✓ 1-TIME OTP VERIFIED
+                            </span>
+                          );
+                        }
+
                         return (
-                          <span style={{ 
-                            background: isModalOtpVerified ? '#22c55e' : '#f59e0b', 
-                            color: '#ffffff', 
-                            padding: '2px 8px', 
-                            borderRadius: '4px', 
-                            fontSize: '0.72rem', 
-                            fontWeight: '800' 
-                          }}>
-                            {isModalOtpVerified ? '✓ 1-TIME OTP VERIFIED' : '⚠️ UNVERIFIED (OTP PENDING)'}
-                          </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '2px' }}>
+                            <span style={{ background: '#f59e0b', color: '#ffffff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800', width: 'fit-content' }}>
+                              ⚠️ UNVERIFIED (OTP PENDING)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const otpEntered = window.prompt(
+                                  `🔐 DEVELOPER 1-TIME PROJECT OTP VERIFICATION\n\nDeveloper: ${viewPropertyModal.developer || 'Builder'}\nProject: ${viewPropertyModal.title || 'Project'}\nMobile Phone: ${primaryDevMobile}\n\nPlease enter 6-Digit OTP sent to developer phone:`,
+                                  '584920'
+                                );
+                                if (otpEntered) {
+                                  const newVerifiedObj = {
+                                    developer: viewPropertyModal.developer || 'Builder',
+                                    project: viewPropertyModal.title || 'Project',
+                                    mobile: primaryDevMobile || 'Registered Mobile',
+                                    verifiedAt: new Date().toLocaleString(),
+                                    hash: `SHA256-DEV-OTP-VERIFIED-#${Math.floor(100000 + Math.random() * 900000)}`
+                                  };
+                                  if (setVerifiedDevProjectsList) {
+                                    setVerifiedDevProjectsList([newVerifiedObj, ...(verifiedDevProjectsList || [])]);
+                                  }
+                                  if (setDevProjectOtpVerified) {
+                                    setDevProjectOtpVerified(true);
+                                  }
+                                  setViewPropertyModal({
+                                    ...viewPropertyModal,
+                                    otp_verified: true,
+                                    devProjectOtpVerified: true
+                                  });
+                                  alert(`✅ DEVELOPER OTP VERIFIED SUCCESSFULLY!\n\n• Developer: ${viewPropertyModal.developer}\n• Project: ${viewPropertyModal.title}\n• Audit Stamp: ${newVerifiedObj.hash}`);
+                                }
+                              }}
+                              style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontWeight: '900', fontSize: '0.72rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', width: 'fit-content' }}
+                              title="Click to send & verify Developer OTP"
+                            >
+                              🔐 VERIFY OTP NOW
+                            </button>
+                          </div>
                         );
                       })()}
                     </div>

@@ -3861,7 +3861,7 @@ export default function App() {
     carpet_area_min: '1,400',
     carpet_area_max: '2,200',
     area_unit: 'Sq.Ft.',
-    parking: 'Covered Slot + EV Charger',
+    parking: 'Required',
     amenities: 'Swimming Pool, Gym, Clubhouse, Power Backup, Gated Community',
     possession_status: 'Ready to Move',
     purchase_timeline: 'Immediate (< 30 Days)',
@@ -16058,12 +16058,19 @@ export default function App() {
                   
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Parking Type Required</label>
-                    <select value={newCustomerForm.parking} onChange={(e) => setNewCustomerForm({ ...newCustomerForm, parking: e.target.value })} style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}>
-                      <option value="Covered Slot + EV Charger">Covered Slot + EV Charger</option>
-                      <option value="Covered Slot">Covered Car Parking</option>
-                      <option value="Open Parking">Open Parking</option>
-                      <option value="Not Required">Not Required</option>
-                    </select>
+                    {(() => {
+                      const currentVal = newCustomerForm.parking === 'Not Required' ? 'Not Required' : 'Required';
+                      return (
+                        <select 
+                          value={currentVal} 
+                          onChange={(e) => setNewCustomerForm({ ...newCustomerForm, parking: e.target.value })} 
+                          style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}
+                        >
+                          <option value="Not Required">Not Required</option>
+                          <option value="Required">Required</option>
+                        </select>
+                      );
+                    })()}
                   </div>
 
                   <div>

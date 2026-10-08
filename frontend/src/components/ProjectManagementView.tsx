@@ -278,7 +278,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       party_contact: cleanContact,
       property_details: `${cleanProj} • ${cleanDev} • ${cleanLoc}`,
       commission_rate: '2.0% Direct Channel Partner Brokerage T&C',
-      protection_period: '90 Days Client Protection Active',
+      protection_period: '12 Months Client Protection Active',
       signed_status: isOtpVerified ? 'EXECUTED_SIGNED' : 'PENDING_OTP',
       signature_hash: otpHash || `SHA256-DEV-OTP-VERIFIED-#${Math.floor(100000 + Math.random() * 900000)}`,
       signed_at: new Date().toLocaleString(),

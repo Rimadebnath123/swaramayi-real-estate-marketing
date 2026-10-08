@@ -12904,7 +12904,7 @@ export default function App() {
 
         const protectionHeader = isDev ? 'CHANNEL PARTNER TERMS & BROKERAGE:' : 'BROKERAGE PROTECTION PERIOD:';
         const protectionText = isDev
-          ? `🛡️ ${selectedAgreement.protection_period || '90 Days Client Protection Active'}`
+          ? `🛡️ ${(!selectedAgreement.protection_period || selectedAgreement.protection_period.includes('90')) ? '12 Months Client Protection Active' : selectedAgreement.protection_period}`
           : `🛡️ ${selectedAgreement.protection_period || '12 Months Protection Active'}`;
         const protectionSub = isDev
           ? `Commission Rate: ${selectedAgreement.commission_rate || '2.0% Direct Channel Partner Brokerage'}`
@@ -13047,7 +13047,7 @@ export default function App() {
                   {isDev ? (
                     <>
                       <li><strong>Direct Channel Partner Representation & Commission:</strong> Builder/Developer appoints <strong>Swaramayi Real Estate Marketing</strong> as authorized Channel Partner for <strong>{projectTitle}</strong>. Builder/Developer agrees to pay <strong>{selectedAgreement.commission_rate || '2.0% Direct Channel Partner Brokerage'}</strong> on agreement value for all customer bookings introduced by Swaramayi.</li>
-                      <li><strong>90-Day Protection Period & Anti-Bypass:</strong> Builder/Developer recognizes a <strong>90-Day Protection Period</strong> ({selectedAgreement.protection_period || 'Active'}) for all buyers introduced by Swaramayi and agrees not to circumvent or deal directly with buyers.</li>
+                      <li><strong>12-Month Protection Period & Anti-Bypass:</strong> Builder/Developer recognizes a <strong>12-Month Protection Period</strong> (12 Months Client Protection Active) for all buyers introduced by Swaramayi and agrees not to circumvent or deal directly with buyers.</li>
                       <li><strong>Digital Evidence & Audit Consent:</strong> Developer OTP verification and corporate digital signature stamp constitute binding legal channel partner execution under the Information Technology Act.</li>
                     </>
                   ) : (

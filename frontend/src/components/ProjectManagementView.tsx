@@ -438,8 +438,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const [newDevMobileInput, setNewDevMobileInput] = React.useState<string>('');
   const [newDevAltMobileInput, setNewDevAltMobileInput] = React.useState<string>('');
   const [newDevProjectTitleInput, setNewDevProjectTitleInput] = React.useState<string>('');
-  const [newDevEmailInput, setNewDevEmailInput] = React.useState<string>('');
   const [viewPropertyModal, setViewPropertyModal] = React.useState<any | null>(null);
+
+  // 🔍 ADVANCE MASTER PROJECT SEARCH MODAL STATES
+  const [showAdvanceProjectSearchModal, setShowAdvanceProjectSearchModal] = React.useState<boolean>(false);
+  const [advProjSearchQuery, setAdvProjSearchQuery] = React.useState<string>('');
+  const [advProjDevFilter, setAdvProjDevFilter] = React.useState<string>('');
+  const [advProjLocalityFilter, setAdvProjLocalityFilter] = React.useState<string>('');
+  const [advProjOtpFilter, setAdvProjOtpFilter] = React.useState<string>('ALL');
 
   const handleStartEditProjectDeveloper = React.useCallback((p: any) => {
     if (!p) return;
@@ -2285,11 +2291,21 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     />
                   </div>
 
-                  {/* 2. SELECT FROM REGISTERED MASTER PROJECTS DROPDOWN */}
+                  {/* 2. SELECT FROM REGISTERED MASTER PROJECTS DROPDOWN WITH ADVANCE SEARCH BUTTON */}
                   <div>
-                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
-                      Or Select Registered Master Project
-                    </label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>
+                        Or Select Registered Master Project
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvanceProjectSearchModal(true)}
+                        style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '2px 10px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)' }}
+                        title="Open Advance Master Project Search & Multi-criteria Filter Modal"
+                      >
+                        ⚡ 🔍 Advance Search
+                      </button>
+                    </div>
                     <select 
                       value={newPropertyForm.project_id || ''} 
                       onChange={(e) => {
@@ -5947,6 +5963,291 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* ⚡ 🔍 ADVANCE MASTER PROJECT SEARCH & LINKING VAULT MODAL */}
+      {showAdvanceProjectSearchModal && (() => {
+        const allProjs = getAllMasterProjects();
+
+        // Distinct developers & localities for quick filter dropdowns
+        const devOptions: string[] = Array.from(new Set(allProjs.map((p: any) => p.developer).filter(Boolean))).sort();
+        const localityOptions: string[] = Array.from(new Set(allProjs.map((p: any) => p.locality).filter(Boolean))).sort();
+
+        const filteredAdvProjects = allProjs.filter((p: any) => {
+          // 1. Keyword search (Code, Title, Developer, Locality, Address)
+          if (advProjSearchQuery.trim()) {
+            const q = advProjSearchQuery.toLowerCase().trim();
+            const matchCode = (p.code || p.id || '').toLowerCase().includes(q);
+            const matchTitle = (p.title || '').toLowerCase().includes(q);
+            const matchDev = (p.developer || '').toLowerCase().includes(q);
+            const matchLocality = (p.locality || '').toLowerCase().includes(q);
+            const matchRera = (p.rera_id || '').toLowerCase().includes(q);
+            const matchHera = (p.hera_no || '').toLowerCase().includes(q);
+            if (!matchCode && !matchTitle && !matchDev && !matchLocality && !matchRera && !matchHera) {
+              return false;
+            }
+          }
+
+          // 2. Developer filter
+          if (advProjDevFilter && (p.developer || '').toLowerCase().trim() !== advProjDevFilter.toLowerCase().trim()) {
+            return false;
+          }
+
+          // 3. Locality filter
+          if (advProjLocalityFilter && (p.locality || '').toLowerCase().trim() !== advProjLocalityFilter.toLowerCase().trim()) {
+            return false;
+          }
+
+          // 4. OTP status filter
+          const isOtpVer = Boolean(
+            p.otp_verified ||
+            p.devProjectOtpVerified ||
+            verifiedDevProjectsList.some((vp: any) => 
+              (vp.developer && p.developer && vp.developer.toLowerCase().trim() === p.developer.toLowerCase().trim()) ||
+              (vp.project && p.title && vp.project.toLowerCase().trim() === p.title.toLowerCase().trim())
+            ) ||
+            devProjectOtpVerified
+          );
+
+          if (advProjOtpFilter === 'VERIFIED' && !isOtpVer) return false;
+          if (advProjOtpFilter === 'PENDING' && isOtpVer) return false;
+
+          return true;
+        });
+
+        return (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: windowWidth <= 640 ? '10px' : '20px' }}>
+            <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1.5px solid #0284c7', borderRadius: windowWidth <= 640 ? '16px' : '24px', width: '100%', maxWidth: '980px', maxHeight: '90vh', overflowY: 'auto', padding: windowWidth <= 640 ? '16px' : '28px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* MODAL HEADER */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: isLight ? '2px solid #e2e8f0' : '2px solid #334155', paddingBottom: '16px' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: '900', color: isLight ? '#0284c7' : '#38bdf8', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+                    ⚡ 🔍 ADVANCE MASTER PROJECT SEARCH & LINKING VAULT
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', margin: '4px 0 0 0' }}>
+                    Multi-criteria advance search across builder name, project title, master codes, locality hub, and OTP credentials. Select any project to link inventory.
+                  </p>
+                </div>
+                <button onClick={() => setShowAdvanceProjectSearchModal(false)} style={{ background: isLight ? '#f1f5f9' : '#0f172a', border: 'none', color: isLight ? '#64748b' : '#94a3b8', padding: '8px', borderRadius: '10px', cursor: 'pointer' }}>
+                  <X size={22} />
+                </button>
+              </div>
+
+              {/* ADVANCE FILTER CONTROLS GRID */}
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: '900', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  🎛️ Advance Search Criteria & Multi-field Filters
+                </span>
+
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : windowWidth <= 900 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '10px' }}>
+                  {/* FILTER 1: KEYWORD SEARCH */}
+                  <div>
+                    <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      🔍 Search Keyword (Title, Code, Dev)
+                    </label>
+                    <input 
+                      type="text"
+                      value={advProjSearchQuery}
+                      onChange={(e) => setAdvProjSearchQuery(e.target.value)}
+                      placeholder="Type Project Name, ID..."
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700' }}
+                    />
+                  </div>
+
+                  {/* FILTER 2: DEVELOPER / BUILDER FILTER */}
+                  <div>
+                    <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      🏢 Developer / Builder Name
+                    </label>
+                    <select
+                      value={advProjDevFilter}
+                      onChange={(e) => setAdvProjDevFilter(e.target.value)}
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700' }}
+                    >
+                      <option value="">🏢 All Developers ({devOptions.length})</option>
+                      {devOptions.map(dev => (
+                        <option key={dev} value={dev}>{dev}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* FILTER 3: LOCALITY HUB FILTER */}
+                  <div>
+                    <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      📍 Locality Hub / Sector
+                    </label>
+                    <select
+                      value={advProjLocalityFilter}
+                      onChange={(e) => setAdvProjLocalityFilter(e.target.value)}
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700' }}
+                    >
+                      <option value="">📍 All Localities ({localityOptions.length})</option>
+                      {localityOptions.map(loc => (
+                        <option key={loc} value={loc}>{loc}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* FILTER 4: OTP STATUS FILTER */}
+                  <div>
+                    <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                      🔐 OTP Verification Protocol
+                    </label>
+                    <select
+                      value={advProjOtpFilter}
+                      onChange={(e) => setAdvProjOtpFilter(e.target.value)}
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700' }}
+                    >
+                      <option value="ALL">🔐 All OTP Statuses</option>
+                      <option value="VERIFIED">✓ Verified OTP Only</option>
+                      <option value="PENDING">⚠️ Pending OTP Only</option>
+                    </select>
+                  </div>
+                </div>
+
+                {(advProjSearchQuery || advProjDevFilter || advProjLocalityFilter || advProjOtpFilter !== 'ALL') && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdvProjSearchQuery('');
+                        setAdvProjDevFilter('');
+                        setAdvProjLocalityFilter('');
+                        setAdvProjOtpFilter('ALL');
+                      }}
+                      style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '4px 12px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                      🔄 Reset All Filters
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* RESULTS SUMMARY BAR */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>
+                  📋 REGISTERED MASTER PROJECTS FOUND ({filteredAdvProjects.length}):
+                </span>
+                <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                  Showing {filteredAdvProjects.length} of {allProjs.length} total vault projects
+                </span>
+              </div>
+
+              {/* SEARCH RESULTS CARDS LIST */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {filteredAdvProjects.length === 0 ? (
+                  <div style={{ padding: '30px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', fontStyle: 'italic', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px', border: '1px solid #cbd5e1' }}>
+                    🔍 No master projects match your advance search criteria. Try adjusting your keyword or clearing filters.
+                  </div>
+                ) : (
+                  filteredAdvProjects.map((p: any) => {
+                    const pCode = p.code || p.id;
+                    const unitsCount = properties.filter(prop => 
+                      (prop.project_id && (prop.project_id === pCode || prop.project_id === p.id)) ||
+                      (prop.title && p.title && prop.title.toLowerCase().trim() === p.title.toLowerCase().trim())
+                    ).length;
+
+                    const isOtpVer = Boolean(
+                      p.otp_verified ||
+                      p.devProjectOtpVerified ||
+                      verifiedDevProjectsList.some((vp: any) => 
+                        (vp.developer && p.developer && vp.developer.toLowerCase().trim() === p.developer.toLowerCase().trim()) ||
+                        (vp.project && p.title && vp.project.toLowerCase().trim() === p.title.toLowerCase().trim())
+                      ) ||
+                      devProjectOtpVerified
+                    );
+
+                    return (
+                      <div
+                        key={p.id || p.code}
+                        style={{
+                          background: isLight ? '#ffffff' : '#0f172a',
+                          border: '1.5px solid #0284c7',
+                          borderRadius: '12px',
+                          padding: '16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '12px',
+                          boxShadow: '0 4px 12px rgba(2, 132, 199, 0.12)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.78rem', background: 'rgba(2, 132, 199, 0.15)', color: '#0284c7', border: '1px solid #0284c7', padding: '3px 10px', borderRadius: '6px', fontWeight: '900', fontFamily: 'monospace' }}>
+                              🔑 {pCode}
+                            </span>
+                            <h4 style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
+                              🏢 {p.title}
+                            </h4>
+                            <span style={{ fontSize: '0.72rem', background: 'rgba(34, 197, 94, 0.18)', color: '#22c55e', border: '1px solid #22c55e', padding: '2px 8px', borderRadius: '10px', fontWeight: '900' }}>
+                              🏠 {unitsCount} Unit{unitsCount === 1 ? '' : 's'} Linked
+                            </span>
+                            <span style={{ fontSize: '0.72rem', background: isOtpVer ? 'rgba(34, 197, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: isOtpVer ? '#22c55e' : '#f59e0b', border: `1px solid ${isOtpVer ? '#22c55e' : '#f59e0b'}`, padding: '2px 8px', borderRadius: '10px', fontWeight: '900' }}>
+                              {isOtpVer ? '✓ OTP VERIFIED' : '⚠️ OTP PENDING'}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewPropertyForm((prev: any) => ({
+                                ...prev,
+                                project_id: p.id || p.code,
+                                developer: p.developer || prev.developer,
+                                developer_id: p.developer_id || prev.developer_id,
+                                title: p.title || prev.title,
+                                locality: p.locality || prev.locality,
+                                latitude: p.latitude || prev.latitude,
+                                longitude: p.longitude || prev.longitude,
+                                rera_id: p.rera_id || prev.rera_id || '',
+                                hera_no: p.hera_no || prev.hera_no || '',
+                                selected_amenities: p.amenities && p.amenities.length > 0 ? p.amenities : prev.selected_amenities,
+                                building_photos: p.building_photos && p.building_photos.length > 0 ? p.building_photos : prev.building_photos
+                              }));
+                              if (p.mobile) setDevProjectMobile(p.mobile);
+                              if (p.altMobile && setDevProjectAltMobile) setDevProjectAltMobile(p.altMobile);
+                              setShowAdvanceProjectSearchModal(false);
+                              alert(`✅ MASTER PROJECT LINKED SUCCESSFULLY!\n\n• Master Project Code: ${p.code || p.id}\n• Project Title: ${p.title}\n• Builder/Developer: ${p.developer}\n• Locality Hub: ${p.locality}`);
+                            }}
+                            style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)' }}
+                          >
+                            🎯 SELECT & LINK THIS MASTER PROJECT
+                          </button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : windowWidth <= 900 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '10px', fontSize: '0.82rem', background: isLight ? '#f8fafc' : '#1e293b', padding: '12px', borderRadius: '8px' }}>
+                          <div>
+                            <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: '700' }}>Builder / Developer</span>
+                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>🏢 {p.developer || 'N/A'}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: '700' }}>Developer Phone</span>
+                            <strong style={{ color: '#4ade80' }}>📱 {p.mobile || 'N/A'}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: '700' }}>Locality Hub / Sector</span>
+                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>📍 {p.locality || 'N/A'}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: '700' }}>GPS Coordinates</span>
+                            <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{p.latitude && p.longitude ? `${p.latitude}, ${p.longitude}` : 'N/A'}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '14px' }}>
+                <button onClick={() => setShowAdvanceProjectSearchModal(false)} style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '8px 20px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
+                  Close Advance Search
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

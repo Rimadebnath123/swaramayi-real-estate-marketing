@@ -13124,6 +13124,225 @@ export default function App() {
         />
       )}
 
+      {/* MODAL: VIEW INDIVIDUAL COST SHEET DETAILS */}
+      {showViewIndividualCostSheetModal && showViewIndividualCostSheetModal.open && showViewIndividualCostSheetModal.costSheet && (() => {
+        const cs = showViewIndividualCostSheetModal.costSheet;
+        const cust = cs.customerSnapshot || {};
+        const prop = cs.propertySnapshot || {};
+        const match = cs.matchSnapshot || {};
+        const pricing = cs.pricingSnapshot || {};
+        const pb = cs.formattedPriceBreakup || {};
+
+        const custName = cust.customerName || cs.customerName || 'Prospect Customer';
+        const custMobile = cust.mobile || cs.mobile || 'N/A';
+        const custId = cust.customerId || cs.customerId || 'SRM-CUS-2026-000100';
+
+        const propTitle = prop.propertyTitle || prop.projectName || cs.propertyTitle || 'Property';
+        const devName = prop.developerName || cs.developerName || 'Swaramayi Developer Partner';
+        const locality = prop.locality || cs.locality || 'Locality';
+        const bhk = prop.bhk || prop.configuration || cs.bhk || '2BHK';
+        const propCode = prop.propertyCode || cs.propertyCode || cs.propertyId || 'SRM-PROP-2026-000421';
+
+        const matchId = match.matchId || cs.matchId || 'SRM-MAT-2026-000100';
+        const matchScore = match.matchScore || cs.matchScore || 88;
+
+        const basePriceStr = pb.basePriceStr || (pricing.basePrice ? `₹${Number(pricing.basePrice).toLocaleString('en-IN')}` : '₹0');
+        const ratePerSqftStr = pb.ratePerSqftStr || (pricing.ratePerSqft ? `₹${Number(pricing.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : '₹0/Sq.Ft.');
+        const floorRiseStr = pb.floorRiseStr || (pricing.floorRise ? `₹${Number(pricing.floorRise).toLocaleString('en-IN')}` : 'Included in Flat Price');
+        const plcStr = pb.plcStr || (pricing.plc ? `₹${Number(pricing.plc).toLocaleString('en-IN')}` : 'Included in Flat Price');
+        const parkingStr = pb.parkingStr || (pricing.parkingCharge ? `₹${Number(pricing.parkingCharge).toLocaleString('en-IN')}` : 'Included in Flat Price');
+        const clubStr = pb.clubStr || (pricing.clubCharge ? `₹${Number(pricing.clubCharge).toLocaleString('en-IN')}` : 'Included in Flat Price');
+        const maintStr = pb.maintenanceStr || (pricing.maintenance ? `₹${Number(pricing.maintenance).toLocaleString('en-IN')}` : 'Included in Flat Price');
+        const infraStr = pb.infrastructureStr || (pricing.infrastructureCharge ? `₹${Number(pricing.infrastructureCharge).toLocaleString('en-IN')}` : 'Included in Flat Price');
+        const subtotalStr = pb.subtotalStr || (pricing.subtotalBeforeTax ? `₹${Number(pricing.subtotalBeforeTax).toLocaleString('en-IN')}` : basePriceStr);
+
+        const gstStr = pb.gstStr || (pricing.gstAmount ? `₹${Number(pricing.gstAmount).toLocaleString('en-IN')} (${pricing.gstPct || 5}%)` : `₹0 (${pricing.gstPct || 5}%)`);
+        const stampStr = pb.stampDutyStr || (pricing.stampDutyAmount ? `₹${Number(pricing.stampDutyAmount).toLocaleString('en-IN')} (${pricing.stampDutyPct || 5}%)` : `₹0 (${pricing.stampDutyPct || 5}%)`);
+        const regStr = pb.registrationStr || (pricing.registrationAmount ? `₹${Number(pricing.registrationAmount).toLocaleString('en-IN')} (${pricing.registrationPct || 1}%)` : `₹0 (${pricing.registrationPct || 1}%)`);
+        const brokStr = pb.brokerageStr || '0% (Zero Brokerage for Buyer)';
+        const totalEstStr = pb.totalEstimatedCostStr || (pricing.totalEstimatedCost ? `₹${Number(pricing.totalEstimatedCost).toLocaleString('en-IN')}` : '₹0');
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
+            <div className="printable-contract-card custom-modal-scrollbar" style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', width: '96vw', maxWidth: '880px', maxHeight: '96vh', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
+              
+              {/* HEADER */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0284c7', paddingBottom: '12px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ background: '#0284c7', color: '#ffffff', padding: '3px 10px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '900', fontFamily: 'monospace' }}>
+                      {cs.costSheetId}
+                    </span>
+                    <span style={{ background: cs.versionNumber > 1 ? '#fbbf24' : '#22c55e', color: '#0f172a', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '900' }}>
+                      {cs.version || 'V01'}
+                    </span>
+                    <span style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '800' }}>
+                      {cs.status || 'GENERATED'}
+                    </span>
+                  </div>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', margin: '6px 0 2px 0' }}>
+                    SWARAMAYI REAL ESTATE MARKETING — OFFICIAL COST SHEET
+                  </h2>
+                  <p style={{ fontSize: '0.76rem', color: isLight ? '#64748b' : '#94a3b8', margin: 0 }}>
+                    1 Property = 1 Individual Cost Sheet Vault Record • Enforced Transparency
+                  </p>
+                </div>
+                <X size={24} color={isLight ? '#64748b' : '#94a3b8'} style={{ cursor: 'pointer' }} onClick={() => setShowViewIndividualCostSheetModal(null)} />
+              </div>
+
+              {/* SUMMARY CARDS (CUSTOMER, PROPERTY, MATCH) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                
+                {/* CUSTOMER CARD */}
+                <div style={{ background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '10px', padding: '12px', fontSize: '0.8rem' }}>
+                  <span style={{ color: '#0284c7', fontWeight: '900', fontSize: '0.75rem', textTransform: 'uppercase' }}>👤 Customer Details</span>
+                  <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '0.92rem', margin: '4px 0 2px 0' }}>{custName}</h4>
+                  <div style={{ color: '#22c55e', fontWeight: '800', fontFamily: 'monospace', fontSize: '0.8rem' }}>Mobile: {custMobile}</div>
+                  <div style={{ color: '#0284c7', fontWeight: '700', fontFamily: 'monospace', fontSize: '0.75rem' }}>ID: {custId}</div>
+                  {cust.email && <div style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.72rem', marginTop: '2px', wordBreak: 'break-all' }}>{cust.email}</div>}
+                </div>
+
+                {/* PROPERTY CARD */}
+                <div style={{ background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '10px', padding: '12px', fontSize: '0.8rem' }}>
+                  <span style={{ color: '#d97706', fontWeight: '900', fontSize: '0.75rem', textTransform: 'uppercase' }}>🏢 Property Details</span>
+                  <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '0.92rem', margin: '4px 0 2px 0' }}>{propTitle}</h4>
+                  <div style={{ color: isLight ? '#334155' : '#cbd5e1', fontWeight: '700', fontSize: '0.8rem' }}>{locality} • {devName}</div>
+                  <div style={{ color: '#38bdf8', fontWeight: '800', fontFamily: 'monospace', fontSize: '0.75rem' }}>Code: {propCode}</div>
+                  <div style={{ color: '#a855f7', fontWeight: '800', fontSize: '0.75rem', marginTop: '2px' }}>{bhk} ({prop.superBuiltupArea || prop.carpetArea || '1250 Sq.Ft.'})</div>
+                </div>
+
+                {/* MATCH CARD */}
+                <div style={{ background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '10px', padding: '12px', fontSize: '0.8rem' }}>
+                  <span style={{ color: '#16a34a', fontWeight: '900', fontSize: '0.75rem', textTransform: 'uppercase' }}>🔥 AI Match & Version</span>
+                  <h4 style={{ color: '#fbbf24', fontWeight: '900', fontSize: '0.92rem', margin: '4px 0 2px 0', fontFamily: 'monospace' }}>{matchId}</h4>
+                  <div style={{ color: '#22c55e', fontWeight: '900', fontSize: '0.85rem' }}>Match Score: {matchScore}%</div>
+                  <div style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', marginTop: '2px' }}>Created: {cs.createdAt ? new Date(cs.createdAt).toLocaleDateString() : 'Active'}</div>
+                  <div style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.72rem' }}>By: {cs.createdBy || 'Super Admin'}</div>
+                </div>
+
+              </div>
+
+              {/* ITEMIZED PRICING BREAKUP TABLE */}
+              <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1.5px solid #cbd5e1' : '1.5px solid #334155', borderRadius: '12px', overflow: 'hidden' }}>
+                <div style={{ background: isLight ? '#f1f5f9' : '#0f172a', padding: '10px 16px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
+                    💰 ITEMIZED PRICING & ESTIMATED COST BREAKUP
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: '#0284c7', fontWeight: '800' }}>Asking Rate: {ratePerSqftStr}</span>
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr style={{ background: isLight ? '#f8fafc' : '#1e293b', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', textAlign: 'left', color: isLight ? '#64748b' : '#94a3b8' }}>
+                      <th style={{ padding: '8px 16px' }}>Particular / Charge Component</th>
+                      <th style={{ padding: '8px 16px', textAlign: 'right' }}>Amount / Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody style={{ color: isLight ? '#0f172a' : '#ffffff' }}>
+                    <tr style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                      <td style={{ padding: '8px 16px', fontWeight: '700' }}>Flat Base Price</td>
+                      <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: '900', color: '#0284c7' }}>{basePriceStr}</td>
+                    </tr>
+                    <tr style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                      <td style={{ padding: '8px 16px' }}>Floor Rise Charge</td>
+                      <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: '600' }}>{floorRiseStr}</td>
+                    </tr>
+                    <tr style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                      <td style={{ padding: '8px 16px' }}>Preferred Location Charge (PLC)</td>
+                      <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: '600' }}>{plcStr}</td>
+                    </tr>
+                    <tr style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                      <td style={{ padding: '8px 16px' }}>Car Parking Slot Fee</td>
+                      <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: '600' }}>{parkingStr}</td>
+                    </tr>
+                    <tr style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                      <td style={{ padding: '8px 16px' }}>Clubhouse & Amenities Charge</td>
+                      <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: '600' }}>{clubStr}</td>
+                    </tr>
+                    <tr style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                      <td style={{ padding: '8px 16px' }}>Advance Maintenance Charge</td>
+                      <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: '600' }}>{maintStr}</td>
+                    </tr>
+                    <tr style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                      <td style={{ padding: '8px 16px' }}>Infrastructure & Legal Documentation Fee</td>
+                      <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: '600' }}>{infraStr}</td>
+                    </tr>
+
+                    {/* SUBTOTAL BEFORE TAX */}
+                    <tr style={{ background: isLight ? '#f1f5f9' : '#0f172a', fontWeight: '900', borderBottom: isLight ? '1.5px solid #cbd5e1' : '1.5px solid #334155' }}>
+                      <td style={{ padding: '9px 16px', color: isLight ? '#0f172a' : '#ffffff' }}>Subtotal (Before Taxes & Statutory Fees)</td>
+                      <td style={{ padding: '9px 16px', textAlign: 'right', color: '#0284c7', fontSize: '0.9rem' }}>{subtotalStr}</td>
+                    </tr>
+
+                    <tr style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                      <td style={{ padding: '8px 16px' }}>GST (Goods & Services Tax)</td>
+                      <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: '600', color: '#d97706' }}>{gstStr}</td>
+                    </tr>
+                    <tr style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                      <td style={{ padding: '8px 16px' }}>Stamp Duty Charge</td>
+                      <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: '600', color: '#d97706' }}>{stampStr}</td>
+                    </tr>
+                    <tr style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                      <td style={{ padding: '8px 16px' }}>Registration Fee</td>
+                      <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: '600', color: '#d97706' }}>{regStr}</td>
+                    </tr>
+                    <tr style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #334155' }}>
+                      <td style={{ padding: '8px 16px' }}>Brokerage Fee / Channel Partner Fee</td>
+                      <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: '600', color: '#22c55e' }}>{brokStr}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* TOTAL ESTIMATED COST BANNER */}
+                <div style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.9, fontWeight: '800', letterSpacing: '0.5px' }}>FINAL ESTIMATED INVESTMENT</span>
+                    <h2 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '2px 0 0 0' }}>TOTAL ESTIMATED COST</h2>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '1.6rem', fontWeight: '900', fontFamily: 'monospace' }}>{totalEstStr}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* FOOTER & ACTIONS */}
+              <div className="no-print" style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+                <button onClick={() => setShowViewIndividualCostSheetModal(null)} style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}>
+                  Close
+                </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={() => window.print()} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    🖨️ Print PDF
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const msg = `📱 *SWARAMAYI REAL ESTATE MARKETING — OFFICIAL COST SHEET*
+                      
+Dear ${custName},
+                        
+Here is your official *Cost Sheet Breakup* (${cs.costSheetId} ${cs.version || 'V01'}):
+                        
+🏢 *Property*: ${propTitle} (${bhk})
+📍 *Locality*: ${locality}
+💰 *Base Price*: ${basePriceStr}
+📊 *Asking Rate*: ${ratePerSqftStr}
+💵 *Total Estimated Cost*: ${totalEstStr}
+                        
+Thank you for choosing Swaramayi Real Estate Marketing!`;
+                      window.open(`https://api.whatsapp.com/send?phone=${(custMobile || '').replace(/[^0-9]/g, '')}&text=${encodeURIComponent(msg)}`, '_blank');
+                    }}
+                    style={{ background: '#25D366', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    💬 WhatsApp Cost Sheet
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
       {/* MODAL: DEVELOPER CUSTOMER INTRODUCTION REPORT */}
       {showDeveloperIntroductionReportModal && (
         <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: windowWidth <= 640 ? '8px' : '20px' }}>

@@ -1,6 +1,6 @@
 import { extractAllIdentifiers, isItemInRecycledSet } from '../App';
 import React from 'react';
-import { Upload, Building2, Share2, ArrowRightLeft, Compass, Navigation, Camera, Video, Search, X, Download, Trash2 } from 'lucide-react';
+import { Upload, Building2, Share2, ArrowRightLeft, Compass, Navigation, Camera, Video, Search, X, Download, Trash2, ChevronDown } from 'lucide-react';
 
 export const parseSqftValue = (val: any): number => {
   if (val === null || val === undefined) return 0;
@@ -446,6 +446,23 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const [advProjDevFilter, setAdvProjDevFilter] = React.useState<string>('');
   const [advProjLocalityFilter, setAdvProjLocalityFilter] = React.useState<string>('');
   const [advProjOtpFilter, setAdvProjOtpFilter] = React.useState<string>('ALL');
+
+  // 🔍 SEARCHABLE MASTER PROJECT COMBOBOX STATES & REF
+  const [isProjDropdownOpen, setIsProjDropdownOpen] = React.useState<boolean>(false);
+  const [projComboboxSearch, setProjComboboxSearch] = React.useState<string>('');
+  const projComboboxRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (projComboboxRef.current && !projComboboxRef.current.contains(event.target as Node)) {
+        setIsProjDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleStartEditProjectDeveloper = React.useCallback((p: any) => {
     if (!p) return;
@@ -2291,8 +2308,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     />
                   </div>
 
-                  {/* 2. SELECT FROM REGISTERED MASTER PROJECTS DROPDOWN WITH ADVANCE SEARCH BUTTON */}
-                  <div>
+                  {/* 2. SEARCHABLE COMBINED DROPDOWN & LIVE SEARCH CONTAINER */}
+                  <div style={{ position: 'relative' }} ref={projComboboxRef}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>
                         Or Select Registered Master Project
@@ -2306,47 +2323,186 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                         ⚡ 🔍 Advance Search
                       </button>
                     </div>
-                    <select 
-                      value={newPropertyForm.project_id || ''} 
-                      onChange={(e) => {
-                        const selectedId = e.target.value;
-                        const allProjs = getAllMasterProjects();
-                        const found = allProjs.find(p => p.id === selectedId || p.code === selectedId);
-                        if (found) {
-                          setNewPropertyForm((prev: any) => ({
-                            ...prev,
-                            project_id: found.id || found.code,
-                            developer: found.developer || prev.developer,
-                            title: found.title || prev.title,
-                            locality: found.locality || prev.locality,
-                            latitude: found.latitude || prev.latitude,
-                            longitude: found.longitude || prev.longitude,
-                            rera_id: found.rera_id || found.reraId || found.rera || '',
-                            hera_no: found.hera_no || found.heraId || found.hera || '',
-                            selected_amenities: found.amenities && found.amenities.length > 0 ? found.amenities : prev.selected_amenities,
-                            building_photos: found.building_photos && found.building_photos.length > 0 ? found.building_photos : prev.building_photos
-                          }));
-                        } else {
-                          setNewPropertyForm((prev: any) => ({ ...prev, project_id: selectedId }));
-                        }
-                      }}
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '800' }}
-                    >
-                      <option value="">-- Select Master Project --</option>
-                      {getAllMasterProjects()
-                        .filter(p => {
-                          if (!projectIdSearchFilter) return true;
-                          const q = projectIdSearchFilter.toLowerCase();
-                          return (p.code || p.id || '').toLowerCase().includes(q) ||
-                                 (p.title || '').toLowerCase().includes(q) ||
-                                 (p.developer || '').toLowerCase().includes(q);
-                        })
-                        .map((proj) => (
-                          <option key={proj.id} value={proj.id}>
-                            🔑 [{proj.code || proj.id}] {proj.title} — Builder: {proj.developer}
-                          </option>
-                        ))}
-                    </select>
+
+                    {/* COMBINED LIVE SEARCH INPUT + DROPDOWN CHEVRON ICON */}
+                    <div style={{ position: 'relative' }}>
+                      <input 
+                        type="text"
+                        value={(() => {
+                          if (projComboboxSearch) return projComboboxSearch;
+                          if (newPropertyForm.project_id) {
+                            const found = getAllMasterProjects().find(p => p.id === newPropertyForm.project_id || p.code === newPropertyForm.project_id);
+                            if (found) return `🔑 [${found.code || found.id}] ${found.title} — Builder: ${found.developer}`;
+                            return newPropertyForm.project_id;
+                          }
+                          return '';
+                        })()}
+                        onFocus={() => setIsProjDropdownOpen(true)}
+                        onChange={(e) => {
+                          setProjComboboxSearch(e.target.value);
+                          setIsProjDropdownOpen(true);
+                        }}
+                        placeholder="Type to search & open dropdown menu..."
+                        style={{ 
+                          width: '100%', 
+                          background: isLight ? '#ffffff' : '#1e293b', 
+                          border: isProjDropdownOpen ? '2px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), 
+                          color: isLight ? '#0f172a' : '#ffffff', 
+                          padding: '10px 38px 10px 34px', 
+                          borderRadius: '8px', 
+                          fontSize: '0.88rem', 
+                          fontWeight: '800' 
+                        }}
+                      />
+
+                      {/* SEARCH ICON */}
+                      <Search size={16} color="#0284c7" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+
+                      {/* DROPDOWN CHEVRON / CLEAR BUTTON */}
+                      <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {(projComboboxSearch || newPropertyForm.project_id) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProjComboboxSearch('');
+                              setIsProjDropdownOpen(false);
+                              setNewPropertyForm((prev: any) => ({ ...prev, project_id: '' }));
+                            }}
+                            style={{ background: 'none', border: 'none', color: isLight ? '#94a3b8' : '#64748b', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                            title="Clear search / selection"
+                          >
+                            <X size={15} />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setIsProjDropdownOpen(prev => !prev)}
+                          style={{ background: 'none', border: 'none', color: '#0284c7', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                          title="Toggle master projects dropdown menu"
+                        >
+                          <ChevronDown size={18} style={{ transform: isProjDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* INTERACTIVE DROPDOWN MENU LIST */}
+                    {isProjDropdownOpen && (() => {
+                      const allProjs = getAllMasterProjects();
+                      const q = projComboboxSearch.toLowerCase().trim();
+
+                      const filteredProjs = allProjs.filter((p: any) => {
+                        if (!q) return true;
+                        return (p.code || p.id || '').toLowerCase().includes(q) ||
+                               (p.title || '').toLowerCase().includes(q) ||
+                               (p.developer || '').toLowerCase().includes(q) ||
+                               (p.locality || '').toLowerCase().includes(q);
+                      });
+
+                      return (
+                        <div 
+                          style={{ 
+                            position: 'absolute', 
+                            top: '100%', 
+                            left: 0, 
+                            right: 0, 
+                            marginTop: '4px', 
+                            background: isLight ? '#ffffff' : '#0f172a', 
+                            border: '2px solid #0284c7', 
+                            borderRadius: '10px', 
+                            maxHeight: '280px', 
+                            overflowY: 'auto', 
+                            zIndex: 9999, 
+                            boxShadow: '0 12px 30px rgba(0,0,0,0.35)',
+                            padding: '6px 0' 
+                          }}
+                        >
+                          <div style={{ padding: '6px 12px', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b', background: isLight ? '#f0f9ff' : 'rgba(2, 132, 199, 0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: '900' }}>
+                              📁 REGISTERED MASTER PROJECTS ({filteredProjs.length})
+                            </span>
+                            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontStyle: 'italic' }}>
+                              Click project to select & link
+                            </span>
+                          </div>
+
+                          {filteredProjs.length === 0 ? (
+                            <div style={{ padding: '14px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                              🔍 No master projects match "{projComboboxSearch}".
+                            </div>
+                          ) : (
+                            filteredProjs.map((proj: any) => {
+                              const isSelected = newPropertyForm.project_id === (proj.id || proj.code);
+                              return (
+                                <div
+                                  key={proj.id || proj.code}
+                                  onClick={() => {
+                                    setNewPropertyForm((prev: any) => ({
+                                      ...prev,
+                                      project_id: proj.id || proj.code,
+                                      developer: proj.developer || prev.developer,
+                                      developer_id: proj.developer_id || prev.developer_id,
+                                      title: proj.title || prev.title,
+                                      locality: proj.locality || prev.locality,
+                                      latitude: proj.latitude || prev.latitude,
+                                      longitude: proj.longitude || prev.longitude,
+                                      rera_id: proj.rera_id || prev.rera_id || '',
+                                      hera_no: proj.hera_no || prev.hera_no || '',
+                                      selected_amenities: proj.amenities && proj.amenities.length > 0 ? proj.amenities : prev.selected_amenities,
+                                      building_photos: proj.building_photos && proj.building_photos.length > 0 ? proj.building_photos : prev.building_photos
+                                    }));
+                                    if (proj.mobile) setDevProjectMobile(proj.mobile);
+                                    if (proj.altMobile && setDevProjectAltMobile) setDevProjectAltMobile(proj.altMobile);
+                                    setProjComboboxSearch('');
+                                    setIsProjDropdownOpen(false);
+                                  }}
+                                  style={{
+                                    padding: '8px 12px',
+                                    cursor: 'pointer',
+                                    background: isSelected ? (isLight ? '#e0f2fe' : 'rgba(2, 132, 199, 0.25)') : 'transparent',
+                                    borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #1e293b',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '8px',
+                                    transition: 'background 0.15s ease'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!isSelected) e.currentTarget.style.background = isLight ? '#f8fafc' : '#1e293b';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!isSelected) e.currentTarget.style.background = 'transparent';
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: '0.72rem', background: 'rgba(2, 132, 199, 0.15)', color: '#0284c7', border: '1px solid #0284c7', padding: '2px 6px', borderRadius: '4px', fontWeight: '900', fontFamily: 'monospace' }}>
+                                      🔑 {proj.code || proj.id}
+                                    </span>
+                                    <strong style={{ fontSize: '0.88rem', color: isLight ? '#0f172a' : '#ffffff' }}>
+                                      🏢 {proj.title}
+                                    </strong>
+                                    <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                                      — Builder: <strong style={{ color: '#fbbf24' }}>{proj.developer}</strong>
+                                    </span>
+                                    {proj.locality && (
+                                      <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                                        📍 {proj.locality}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {isSelected && (
+                                    <span style={{ fontSize: '0.72rem', background: '#22c55e', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontWeight: '900' }}>
+                                      ✓ SELECTED
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* 3. FILTER SEARCH KEYWORD INPUT */}

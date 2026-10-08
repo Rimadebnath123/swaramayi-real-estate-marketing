@@ -950,9 +950,9 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
         const custName = req.customer_name || details.customer_name || 'Customer';
         const mobile = req.mobile || details.mobile || '';
         const custNo = req.customer_number || details.customer_number || req.customer_id || 'N/A';
-        const leadId = req.lead_id || details.lead_number || 'SRM-LD-2026-000101';
-        const sourcingId = req.id || req.sourcing_id || 'SRM-SRC-2026-000101';
-        const matchingId = req.matching_id || details.matching_id || 'SRM-MAT-2026-000422';
+        const leadId = req.lead_id || details.lead_number || 'N/A';
+        const sourcingId = req.id || req.sourcing_id || 'N/A';
+        const matchingId = req.matching_id || details.matching_id || 'N/A';
         const sourcingReason = req.sourcing_reason || req.notes || details.sourcing_reason || 'Property sourcing request initiated.';
 
         return (

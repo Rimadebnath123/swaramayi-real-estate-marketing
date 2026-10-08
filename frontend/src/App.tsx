@@ -4725,18 +4725,19 @@ export default function App() {
     return deduped;
   };
 
-  // Helper to sanitize customer list and filter out demo records
+  // Helper to sanitize customer list and filter out demo and test records
   const sanitizeCustomerRecords = (list: any[]) => {
     if (!Array.isArray(list)) return [];
     return list.filter((c: any) => {
       if (!c) return false;
-      const name = (c.name || c.full_name || '').toString().toLowerCase();
-      const mob = (c.mobile || c.phone || '').toString().replace(/\D/g, '');
+      const name = (c.name || c.full_name || c.customer_name || '').toString().toLowerCase();
+      const mob = (c.mobile || c.phone || '').toString().toLowerCase();
       const num = (c.customer_number || c.id || '').toString().toUpperCase();
 
-      if (name.includes('rohan deshmukh') || num === 'SRM-CUS-2026-000184') return false;
-      if (name.includes('sumanth varma') || num === 'SRM-CUS-2026-000186') return false;
-      if (name.includes('honey sing') || mob.includes('6567788888') || num === 'SRM-CUS-2026-000188') return false;
+      if (name.includes('rohan deshmukh') || num === 'SRM-CUS-2026-000184' || num.includes('000184')) return false;
+      if (name.includes('sumanth varma') || num === 'SRM-CUS-2026-000186' || num.includes('000186')) return false;
+      if (name.includes('honey sing') || mob.includes('6567788888') || num === 'SRM-CUS-2026-000188' || num.includes('000188')) return false;
+      if (name.includes('fgtf') || mob.includes('dfrt') || num.includes('000101') || num.includes('000124')) return false;
       return true;
     });
   };
@@ -4764,13 +4765,14 @@ export default function App() {
     return list.filter((l: any) => {
       if (!l) return false;
       const name = (l.name || l.customer_name || l.full_name || '').toString().toLowerCase();
-      const mob = (l.mobile || l.phone || '').toString().replace(/\D/g, '');
+      const mob = (l.mobile || l.phone || '').toString().toLowerCase();
       const num = (l.customer_number || l.lead_number || l.id || '').toString().toUpperCase();
 
       if (name.includes('rohan deshmukh') || num.includes('000184')) return false;
       if (name.includes('sumanth varma') || num.includes('000186')) return false;
       if (name.includes('avishek das') || mob.includes('9432328947')) return false;
       if (name.includes('honey sing') || mob.includes('6567788888') || num.includes('000188')) return false;
+      if (name.includes('fgtf') || mob.includes('dfrt') || num.includes('000101') || num.includes('000124')) return false;
       return true;
     });
   };
@@ -7239,18 +7241,16 @@ export default function App() {
                 localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(sanitizedProps));
               } catch (e) {}
             }
-            if (Array.isArray(mData.customers) && mData.customers.length > 0) {
+            if (Array.isArray(mData.customers)) {
               const cleanMongo = sanitizeCustomerRecords(mData.customers);
               const cleanDeduped = dedupeCustomerList(cleanMongo);
-              if (cleanDeduped.length > 0) {
-                setCustomers(cleanDeduped);
-                try {
-                  localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
-                  localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
-                } catch (e) {}
-              }
+              setCustomers(cleanDeduped);
+              try {
+                localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
+                localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
+              } catch (e) {}
             }
-            if (Array.isArray(mData.leads) && mData.leads.length > 0) {
+            if (Array.isArray(mData.leads)) {
               const cleanLeads = sanitizeLeadRecords(mData.leads);
               setLeadsList(cleanLeads);
               try {

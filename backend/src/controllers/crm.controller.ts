@@ -451,9 +451,34 @@ export async function getMongoDBSync(req: AuthRequest, res: Response) {
 export async function syncMongoDB(req: AuthRequest, res: Response) {
   const payload = req.body;
   if (payload) {
-    if (Array.isArray(payload.leads)) dbStore.data.leads = payload.leads;
+    const isTestRecord = (rec: any) => {
+      if (!rec) return true;
+      const name = (rec.name || rec.full_name || rec.customer_name || '').toString().toLowerCase();
+      const mob = (rec.mobile || rec.phone || '').toString().toLowerCase();
+      const num = (rec.customer_number || rec.lead_number || rec.id || rec.customer_id || '').toString().toUpperCase();
+      return (
+        name.includes('fgtf') ||
+        mob.includes('dfrt') ||
+        num.includes('000101') ||
+        num.includes('000124') ||
+        name.includes('rohan deshmukh') ||
+        name.includes('sumanth varma') ||
+        name.includes('honey sing') ||
+        num.includes('000184') ||
+        num.includes('000186') ||
+        num.includes('000188')
+      );
+    };
+
+    if (Array.isArray(payload.leads)) {
+      payload.leads = payload.leads.filter((l: any) => !isTestRecord(l));
+      dbStore.data.leads = payload.leads;
+    }
     if (Array.isArray(payload.properties)) dbStore.data.properties = payload.properties;
-    if (Array.isArray(payload.customers)) dbStore.data.customers = payload.customers;
+    if (Array.isArray(payload.customers)) {
+      payload.customers = payload.customers.filter((c: any) => !isTestRecord(c));
+      dbStore.data.customers = payload.customers;
+    }
     if (Array.isArray(payload.agreements)) dbStore.data.agreements = payload.agreements;
     if (Array.isArray(payload.users)) dbStore.data.users = payload.users;
     if (Array.isArray(payload.teams)) dbStore.data.teams = payload.teams;

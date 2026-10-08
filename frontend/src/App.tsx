@@ -12260,6 +12260,7 @@ export default function App() {
               bookings={bookings}
               invoices={invoices}
               agreements={agreements}
+              setAgreements={setAgreements}
               onRecycleItem={handleRecycleItem}
             />
           )}

@@ -75,6 +75,7 @@ interface ProjectManagementViewProps {
   bookings?: any[];
   invoices?: any[];
   agreements?: any[];
+  setAgreements?: React.Dispatch<React.SetStateAction<any[]>>;
   onRecycleItem?: (itemData: any) => void;
 }
 
@@ -115,6 +116,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   bookings = [],
   invoices = [],
   agreements = [],
+  setAgreements,
   propertyUnits = [],
   projectVisitAgreements = [],
   editingProperty,
@@ -245,6 +247,87 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     );
   };
 
+  // Helper to automatically create or update a Project-Wise Developer Agreement when a Developer/Project is added or OTP is verified
+  const createOrUpdateDevAgreement = (
+    devName: string,
+    projectName: string,
+    devContact?: string,
+    localityHub?: string,
+    otpHash?: string,
+    isOtpVerified: boolean = true
+  ) => {
+    if (!devName || !projectName) return;
+    const cleanDev = devName.trim();
+    const cleanProj = projectName.trim();
+    const cleanLoc = localityHub || 'Master Project Hub';
+    const cleanContact = devContact || '+91 98490 88776';
+
+    const newId = `AGR-DEV-${Date.now().toString().slice(-6)}`;
+    const agreementCode = `SRM-AGR-DEV-2026-${String(Math.floor(100000 + Math.random() * 900000))}`;
+    const fullTitle = `Channel Partner Agreement — ${cleanProj} (${cleanDev})`;
+
+    const newAgreement = {
+      id: newId,
+      agreement_code: agreementCode,
+      agreement_type: 'DEVELOPER_PROJECT_TIEUP',
+      category: 'DEVELOPER',
+      title: fullTitle,
+      party_name: cleanDev,
+      project_name: cleanProj,
+      locality_hub: cleanLoc,
+      party_contact: cleanContact,
+      property_details: `${cleanProj} • ${cleanDev} • ${cleanLoc}`,
+      commission_rate: '2.0% Direct Channel Partner Brokerage T&C',
+      protection_period: '90 Days Client Protection Active',
+      signed_status: isOtpVerified ? 'EXECUTED_SIGNED' : 'PENDING_OTP',
+      signature_hash: otpHash || `SHA256-DEV-OTP-VERIFIED-#${Math.floor(100000 + Math.random() * 900000)}`,
+      signed_at: new Date().toLocaleString(),
+      otp_verified: isOtpVerified,
+      created_at: new Date().toISOString()
+    };
+
+    if (setAgreements) {
+      setAgreements((prevAgreements: any[]) => {
+        const currentList = Array.isArray(prevAgreements) ? prevAgreements : (agreements || []);
+        const exists = currentList.some((a: any) =>
+          (a.party_name?.toLowerCase() === cleanDev.toLowerCase() && a.project_name?.toLowerCase() === cleanProj.toLowerCase()) ||
+          a.title?.toLowerCase().includes(`${cleanProj.toLowerCase()} (${cleanDev.toLowerCase()})`)
+        );
+
+        let nextAgreements: any[];
+        if (exists) {
+          nextAgreements = currentList.map((a: any) => {
+            if (
+              (a.party_name?.toLowerCase() === cleanDev.toLowerCase() && a.project_name?.toLowerCase() === cleanProj.toLowerCase()) ||
+              a.title?.toLowerCase().includes(`${cleanProj.toLowerCase()} (${cleanDev.toLowerCase()})`)
+            ) {
+              return {
+                ...a,
+                signed_status: isOtpVerified ? 'EXECUTED_SIGNED' : a.signed_status,
+                signature_hash: otpHash || a.signature_hash,
+                signed_at: isOtpVerified ? new Date().toLocaleString() : a.signed_at,
+                otp_verified: isOtpVerified || a.otp_verified
+              };
+            }
+            return a;
+          });
+        } else {
+          nextAgreements = [newAgreement, ...currentList];
+        }
+
+        try {
+          localStorage.setItem('swaramayi_agreements_vault_v5_clean', JSON.stringify(nextAgreements));
+        } catch (e) {}
+
+        if (syncAllToMongoDB) {
+          syncAllToMongoDB({ agreements: nextAgreements });
+        }
+
+        return nextAgreements;
+      });
+    }
+  };
+
   const handleBulkRecycleProperties = () => {
     if (selectedPropertyIds.length === 0) return;
     if (window.confirm(`Are you sure you want to move ${selectedPropertyIds.length} selected property item(s) to the Recycle Bin?`)) {
@@ -283,6 +366,24 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       } catch (e) {}
     }
   }, [developers]);
+
+  // AUTOMATIC DEVELOPER AGREEMENT SYNC: Ensure every registered/verified developer project has a Project-Wise Developer Agreement
+  React.useEffect(() => {
+    if (!developerMasterList || developerMasterList.length === 0) return;
+    developerMasterList.forEach((dev: any) => {
+      (dev.projects || []).forEach((p: any) => {
+        const isOtpVer = Boolean(
+          p.otp_verified ||
+          p.devProjectOtpVerified ||
+          dev.otp_verified ||
+          (verifiedDevProjectsList || []).some((vp: any) =>
+            (vp.developer?.toLowerCase() === dev.name?.toLowerCase() && vp.project?.toLowerCase() === p.title?.toLowerCase())
+          )
+        );
+        createOrUpdateDevAgreement(dev.name, p.title, dev.mobile, p.locality || 'Locality Hub', undefined, isOtpVer);
+      });
+    });
+  }, [developerMasterList, verifiedDevProjectsList]);
 
   // AUTOMATIC CLEANUP EFFECT: Ensure every project in developerMasterList has a UNIQUE project code
   React.useEffect(() => {
@@ -969,6 +1070,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
     } catch (e) {}
 
+    // Auto-create Project-Wise Developer Channel Partner Agreement
+    createOrUpdateDevAgreement(
+      newPropertyForm.developer,
+      newPropertyForm.title,
+      devProjectMobile,
+      newPropertyForm.locality,
+      undefined,
+      Boolean(devProjectOtpVerified)
+    );
+
     // ALSO IMMEDIATELY SYNC RECORD TO MONGODB ATLAS CLUSTER
     try {
       if (syncAllToMongoDB) {
@@ -1641,6 +1752,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                               hash: `SHA256-DEV-OTP-VERIFIED-#${Math.floor(100000 + Math.random() * 900000)}`
                             };
                             setVerifiedDevProjectsList([newVerifiedObj, ...verifiedDevProjectsList]);
+                            createOrUpdateDevAgreement(
+                              newPropertyForm.developer || 'Builder',
+                              newPropertyForm.title || 'Project',
+                              devProjectMobile,
+                              newPropertyForm.locality,
+                              newVerifiedObj.hash,
+                              true
+                            );
                           }}
                           style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '7px 16px', borderRadius: '6px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer' }}
                         >
@@ -4120,6 +4239,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       projects: newDevProjectTitleInput ? [{ id: `PRJ-${Date.now()}`, title: newDevProjectTitleInput, locality: 'Kondapur Hub' }] : []
                     };
                     setDeveloperMasterList([newDevObj, ...developerMasterList]);
+                    if (newDevProjectTitleInput) {
+                      createOrUpdateDevAgreement(newDevNameInput, newDevProjectTitleInput, newDevMobileInput, 'Kondapur Hub', undefined, true);
+                    }
                     setNewDevNameInput('');
                     setNewDevMobileInput('');
                     setNewDevAltMobileInput('');
@@ -4425,6 +4547,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                         };
                                         if (setVerifiedDevProjectsList) {
                                           setVerifiedDevProjectsList([newVerifiedObj, ...(verifiedDevProjectsList || [])]);
+                                     createOrUpdateDevAgreement(dev.name, p.title, dev.mobile, p.locality || 'Locality Hub', newVerifiedObj.hash, true);
                                         }
                                         if (setDevProjectOtpVerified) {
                                           setDevProjectOtpVerified(true);
@@ -4845,6 +4968,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                   if (setDevProjectOtpVerified) {
                                     setDevProjectOtpVerified(true);
                                   }
+                                  createOrUpdateDevAgreement(viewPropertyModal.developer || 'Builder', viewPropertyModal.title || 'Project', primaryDevMobile, viewPropertyModal.locality || 'Locality Hub', newVerifiedObj.hash, true);
                                   setViewPropertyModal({
                                     ...viewPropertyModal,
                                     otp_verified: true,

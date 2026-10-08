@@ -437,6 +437,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const [newDevNameInput, setNewDevNameInput] = React.useState<string>('');
   const [newDevMobileInput, setNewDevMobileInput] = React.useState<string>('');
   const [newDevAltMobileInput, setNewDevAltMobileInput] = React.useState<string>('');
+  const [newDevEmailInput, setNewDevEmailInput] = React.useState<string>('');
   const [newDevProjectTitleInput, setNewDevProjectTitleInput] = React.useState<string>('');
   const [viewPropertyModal, setViewPropertyModal] = React.useState<any | null>(null);
 

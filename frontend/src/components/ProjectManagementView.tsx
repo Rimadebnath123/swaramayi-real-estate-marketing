@@ -2236,47 +2236,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   
                   {/* 1. DIRECT WRITE / PASTE INPUT FIELD WITH PASTE BUTTON */}
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <label style={{ fontSize: '0.78rem', color: '#0284c7', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        ✍️ Write / Type or Paste Master Project ID *
-                      </label>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            const text = await navigator.clipboard.readText();
-                            if (text && text.trim()) {
-                              const cleanText = text.trim();
-                              const allProjs = getAllMasterProjects();
-                              const found = allProjs.find(p => p.id?.toLowerCase() === cleanText.toLowerCase() || p.code?.toLowerCase() === cleanText.toLowerCase());
-                              if (found) {
-                                 setNewPropertyForm((prev: any) => ({
-                                  ...prev,
-                                  project_id: found.id || found.code,
-                                  developer: found.developer || prev.developer,
-                                  title: found.title || prev.title,
-                                  locality: found.locality || prev.locality,
-                                  latitude: found.latitude || prev.latitude,
-                                  longitude: found.longitude || prev.longitude,
-                                  rera_id: found.rera_id || found.reraId || found.rera || '',
-                                  hera_no: found.hera_no || found.heraId || found.hera || '',
-                                  selected_amenities: found.amenities && found.amenities.length > 0 ? found.amenities : prev.selected_amenities,
-                                  building_photos: found.building_photos && found.building_photos.length > 0 ? found.building_photos : prev.building_photos
-                                }));
-                                alert(`✅ MATCHED & LINKED MASTER PROJECT:\n\n• Project ID: ${found.id || found.code}\n• Title: ${found.title}\n• Developer: ${found.developer}`);
-                              } else {
-                                setNewPropertyForm((prev: any) => ({ ...prev, project_id: cleanText }));
-                              }
-                            }
-                          } catch (err) {
-                            alert('Clipboard paste not allowed by browser permissions. You can paste directly into the text field!');
-                          }
-                        }}
-                        style={{ background: 'rgba(2, 132, 199, 0.15)', color: '#0284c7', border: '1px solid #0284c7', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800', cursor: 'pointer' }}
-                      >
-                        📋 Paste Clipboard
-                      </button>
-                    </div>
+                    <label style={{ fontSize: '0.78rem', color: '#0284c7', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                      ✍️ Write / Type or Paste Master Project ID *
+                    </label>
 
                     <input 
                       type="text"

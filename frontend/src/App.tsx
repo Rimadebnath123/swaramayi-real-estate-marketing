@@ -13343,6 +13343,418 @@ Thank you for choosing Swaramayi Real Estate Marketing!`;
         );
       })()}
 
+      {/* MODAL: SINGLE COST SHEET CONFIRMATION */}
+      {showSingleCostSheetConfirmModal && showSingleCostSheetConfirmModal.open && showSingleCostSheetConfirmModal.property && (() => {
+        const prop = showSingleCostSheetConfirmModal.property;
+        const req = showSingleCostSheetConfirmModal.matchingReq || {};
+        const calc = showSingleCostSheetConfirmModal.calculated || {};
+        const nextId = showSingleCostSheetConfirmModal.nextId;
+
+        const custName = req.customerName || selectedCust?.name || selectedCust?.full_name || 'Prospect Customer';
+        const custMobile = req.mobile || selectedCust?.mobile || 'N/A';
+        const custId = req.customerNumber || selectedCust?.customer_number || 'SRM-CUS-2026-000100';
+
+        const propTitle = prop.title || prop.project || 'Selected Property';
+        const propCode = prop.property_code || prop.id;
+        const devName = prop.developer || prop.developer_name || 'Partner Developer';
+        const locality = prop.locality || 'Locality';
+        const bhk = prop.configuration || prop.bhk || '2BHK';
+        const basePrice = calc.basePriceStr || (prop.base_price ? `₹${Number(prop.base_price).toLocaleString('en-IN')}` : '₹0');
+        const totalEst = calc.totalEstimatedCostStr || '₹0';
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
+            <div style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '2px solid #0284c7', width: '96vw', maxWidth: '640px', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0284c7', paddingBottom: '12px' }}>
+                <div>
+                  <span style={{ background: '#0284c7', color: '#ffffff', padding: '3px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '900', fontFamily: 'monospace' }}>
+                    NEW COST SHEET CODE: {nextId}
+                  </span>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', margin: '6px 0 2px 0' }}>
+                    📄 CREATE INDIVIDUAL COST SHEET
+                  </h3>
+                  <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', margin: 0 }}>
+                    1 Property = 1 Individual Cost Sheet Enforced • Automatic Customer Master Integration
+                  </p>
+                </div>
+                <X size={24} color={isLight ? '#64748b' : '#94a3b8'} style={{ cursor: 'pointer' }} onClick={() => setShowSingleCostSheetConfirmModal(null)} />
+              </div>
+
+              {/* SUMMARY GRID */}
+              <div style={{ background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.82rem' }}>
+                <div style={{ borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '8px' }}>
+                  <span style={{ color: '#0284c7', fontWeight: '900', fontSize: '0.75rem' }}>CUSTOMER IDENTITY</span>
+                  <div style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '0.95rem' }}>{custName}</div>
+                  <div style={{ color: '#22c55e', fontWeight: '800', fontFamily: 'monospace' }}>Mobile: {custMobile} • ID: {custId}</div>
+                </div>
+
+                <div>
+                  <span style={{ color: '#d97706', fontWeight: '900', fontSize: '0.75rem' }}>PROPERTY DETAILS</span>
+                  <div style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '0.95rem' }}>{propTitle}</div>
+                  <div style={{ color: isLight ? '#475569' : '#cbd5e1', fontWeight: '700' }}>{locality} • {devName} ({bhk})</div>
+                  <div style={{ color: '#38bdf8', fontWeight: '800', fontFamily: 'monospace' }}>Property Code: {propCode}</div>
+                </div>
+              </div>
+
+              {/* PRICING HIGHLIGHT */}
+              <div style={{ background: 'rgba(2, 132, 199, 0.1)', border: '1.5px solid #0284c7', borderRadius: '12px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>Asking Base Price</span>
+                  <div style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>{basePrice}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#22c55e', fontWeight: '900' }}>Total Est. Investment</span>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#22c55e', fontFamily: 'monospace' }}>{totalEst}</div>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.75rem', color: '#38bdf8', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid #38bdf8', borderRadius: '8px', padding: '8px 12px', fontWeight: '700' }}>
+                ℹ️ Clicking confirm will create individual Cost Sheet <strong>{nextId}</strong>, save it to the Cost Sheets Vault, and auto-update Customer Master Status to <strong>COST_SHEET_CREATED</strong>.
+              </div>
+
+              {/* ACTIONS */}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '12px' }}>
+                <button onClick={() => setShowSingleCostSheetConfirmModal(null)} style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '800', fontSize: '0.84rem', cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button onClick={executeSingleCostSheetCreation} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '900', fontSize: '0.86rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)' }}>
+                  ✅ CONFIRM & CREATE COST SHEET ({nextId})
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* MODAL: DUPLICATE COST SHEET WARNING */}
+      {showDuplicateCostSheetModal && showDuplicateCostSheetModal.open && showDuplicateCostSheetModal.existingSheet && (() => {
+        const cs = showDuplicateCostSheetModal.existingSheet;
+        const custName = cs.customerSnapshot?.customerName || cs.customerName || 'Customer';
+        const propTitle = cs.propertySnapshot?.propertyTitle || cs.propertyTitle || 'Property';
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
+            <div style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '2px solid #eab308', width: '96vw', maxWidth: '580px', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #eab308', paddingBottom: '12px' }}>
+                <div>
+                  <span style={{ background: '#eab308', color: '#0f172a', padding: '3px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '900' }}>
+                    DUPLICATE DETECTED
+                  </span>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', margin: '6px 0 2px 0' }}>
+                    🔒 ACTIVE COST SHEET ALREADY EXISTS
+                  </h3>
+                </div>
+                <X size={24} color={isLight ? '#64748b' : '#94a3b8'} style={{ cursor: 'pointer' }} onClick={() => setShowDuplicateCostSheetModal(null)} />
+              </div>
+
+              <div style={{ background: 'rgba(234, 179, 8, 0.12)', border: '1.5px solid #eab308', borderRadius: '12px', padding: '14px', fontSize: '0.85rem', color: isLight ? '#0f172a' : '#ffffff', lineHeight: '1.5' }}>
+                <strong>{cs.costSheetId} ({cs.version || 'V01'})</strong> has already been generated for <strong>{custName}</strong> regarding <strong>{propTitle}</strong>.
+                <br /><br />
+                Under the rule <strong>1 Property = 1 Individual Cost Sheet</strong>, you can either view the existing active Cost Sheet or create a revised version (V02).
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '12px' }}>
+                <button onClick={() => setShowDuplicateCostSheetModal(null)} style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}>
+                  Close
+                </button>
+                <button 
+                  onClick={() => {
+                    const sheet = cs;
+                    setShowDuplicateCostSheetModal(null);
+                    handleOpenRevisionModal(sheet);
+                  }} 
+                  style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer' }}
+                >
+                  ✏️ Create Revision (V02)
+                </button>
+                <button 
+                  onClick={() => {
+                    const sheet = cs;
+                    setShowDuplicateCostSheetModal(null);
+                    setShowViewIndividualCostSheetModal({ open: true, costSheet: sheet });
+                  }} 
+                  style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '9px 18px', borderRadius: '9px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer' }}
+                >
+                  👁️ View Active Cost Sheet
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* MODAL: BULK COST SHEETS CONFIRMATION */}
+      {showBulkCostSheetConfirmModal && showBulkCostSheetConfirmModal.open && showBulkCostSheetConfirmModal.properties && (() => {
+        const propsList = showBulkCostSheetConfirmModal.properties;
+        const req = showBulkCostSheetConfirmModal.matchingReq || {};
+        const custName = req.customerName || selectedCust?.name || selectedCust?.full_name || 'Prospect Customer';
+        const custId = req.customerNumber || selectedCust?.customer_number || 'SRM-CUS-2026-000100';
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
+            <div style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '2px solid #f59e0b', width: '96vw', maxWidth: '720px', maxHeight: '90vh', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #f59e0b', paddingBottom: '12px' }}>
+                <div>
+                  <span style={{ background: '#f59e0b', color: '#0f172a', padding: '3px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '900' }}>
+                    BULK GENERATION ({propsList.length} SELECTED)
+                  </span>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', margin: '6px 0 2px 0' }}>
+                    📄 CREATE INDIVIDUAL COST SHEETS FOR SELECTED PROPERTIES
+                  </h3>
+                  <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', margin: 0 }}>
+                    Customer: {custName} ({custId}) • 1 Property = 1 Cost Sheet Enforced
+                  </p>
+                </div>
+                <X size={24} color={isLight ? '#64748b' : '#94a3b8'} style={{ cursor: 'pointer' }} onClick={() => setShowBulkCostSheetConfirmModal(null)} />
+              </div>
+
+              {/* LIST OF PROPERTIES TO CREATE */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+                {propsList.map((p: any, idx: number) => {
+                  const pCode = p.property_code || p.id;
+                  const pTitle = p.title || p.project || 'Property';
+                  const basePrice = p.base_price ? `₹${Number(p.base_price).toLocaleString('en-IN')}` : 'Asking Price';
+                  return (
+                    <div key={idx} style={{ background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
+                      <div>
+                        <span style={{ color: '#38bdf8', fontWeight: '800', fontFamily: 'monospace' }}>{pCode}</span>
+                        <div style={{ fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>{pTitle}</div>
+                        <div style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem' }}>{p.locality} • {p.developer || 'Developer'} ({p.configuration || '2BHK'})</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ color: '#22c55e', fontWeight: '900' }}>{basePrice}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ACTIONS */}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '12px' }}>
+                <button onClick={() => setShowBulkCostSheetConfirmModal(null)} style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '800', fontSize: '0.84rem', cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button onClick={executeBulkCostSheetsCreation} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#0f172a', border: 'none', padding: '10px 22px', borderRadius: '8px', fontWeight: '900', fontSize: '0.86rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)' }}>
+                  🚀 CONFIRM & CREATE {propsList.length} COST SHEETS
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* MODAL: BULK COST SHEETS SUCCESS */}
+      {showBulkCostSheetSuccessModal && showBulkCostSheetSuccessModal.open && showBulkCostSheetSuccessModal.createdSheets && (() => {
+        const sheets = showBulkCostSheetSuccessModal.createdSheets;
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
+            <div style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '2px solid #22c55e', width: '96vw', maxWidth: '680px', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #22c55e', paddingBottom: '12px' }}>
+                <div>
+                  <span style={{ background: '#22c55e', color: '#0f172a', padding: '3px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '900' }}>
+                    SUCCESS
+                  </span>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', margin: '6px 0 2px 0' }}>
+                    🎉 CREATED {sheets.length} INDIVIDUAL COST SHEETS
+                  </h3>
+                  <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', margin: 0 }}>
+                    Saved to Master Vault & updated Customer Status to COST_SHEET_CREATED
+                  </p>
+                </div>
+                <X size={24} color={isLight ? '#64748b' : '#94a3b8'} style={{ cursor: 'pointer' }} onClick={() => setShowBulkCostSheetSuccessModal(null)} />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
+                {sheets.map((cs: any, idx: number) => {
+                  const prop = cs.propertySnapshot || {};
+                  return (
+                    <div key={idx} style={{ background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
+                      <div>
+                        <span style={{ color: '#38bdf8', fontWeight: '900', fontFamily: 'monospace' }}>{cs.costSheetId} ({cs.version || 'V01'})</span>
+                        <div style={{ fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>{prop.propertyTitle || cs.propertyTitle}</div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setShowBulkCostSheetSuccessModal(null);
+                          setShowViewIndividualCostSheetModal({ open: true, costSheet: cs });
+                        }}
+                        style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '4px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}
+                      >
+                        👁️ View
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '12px' }}>
+                <button onClick={() => setShowBulkCostSheetSuccessModal(null)} style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}>
+                  Close
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowBulkCostSheetSuccessModal(null);
+                    setActiveTab('cost_sheet_share');
+                    setActiveCostSheetShareSubTab('individual_cost_sheets');
+                  }} 
+                  style={{ background: '#22c55e', color: '#0f172a', border: 'none', padding: '9px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.84rem', cursor: 'pointer' }}
+                >
+                  📄 Go to Cost Sheet Vault →
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* MODAL: REVISE COST SHEET */}
+      {showRevisionModal && showRevisionModal.open && showRevisionModal.costSheet && (() => {
+        const cs = showRevisionModal.costSheet;
+        const live = calculateRevisionLiveTotals(showRevisionModal);
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
+            <div style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '2px solid #eab308', width: '96vw', maxWidth: '780px', maxHeight: '94vh', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #eab308', paddingBottom: '12px' }}>
+                <div>
+                  <span style={{ background: '#eab308', color: '#0f172a', padding: '3px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '900', fontFamily: 'monospace' }}>
+                    REVISION EDITOR: {cs.costSheetId}
+                  </span>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', margin: '6px 0 2px 0' }}>
+                    ✏️ REVISE / UPDATE INDIVIDUAL COST SHEET
+                  </h3>
+                  <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', margin: 0 }}>
+                    Adjust pricing parameters. Create new version (V02) or update in-place.
+                  </p>
+                </div>
+                <X size={24} color={isLight ? '#64748b' : '#94a3b8'} style={{ cursor: 'pointer' }} onClick={() => setShowRevisionModal(null)} />
+              </div>
+
+              {/* FORM INPUTS GRID */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.82rem' }}>
+                
+                <div>
+                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Base Price (₹):</label>
+                  <input 
+                    type="number" 
+                    value={showRevisionModal.revBasePrice} 
+                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revBasePrice: Number(e.target.value) })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Floor Rise Charge (₹):</label>
+                  <input 
+                    type="number" 
+                    value={showRevisionModal.revFloorRise} 
+                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revFloorRise: Number(e.target.value) })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>PLC Charge (₹):</label>
+                  <input 
+                    type="number" 
+                    value={showRevisionModal.revPlc} 
+                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revPlc: Number(e.target.value) })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Parking Charge (₹):</label>
+                  <input 
+                    type="number" 
+                    value={showRevisionModal.revParking} 
+                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revParking: Number(e.target.value) })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Clubhouse Charge (₹):</label>
+                  <input 
+                    type="number" 
+                    value={showRevisionModal.revClub} 
+                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revClub: Number(e.target.value) })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Maintenance Charge (₹):</label>
+                  <input 
+                    type="number" 
+                    value={showRevisionModal.revMaintenance} 
+                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revMaintenance: Number(e.target.value) })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Infra & Legal Fee (₹):</label>
+                  <input 
+                    type="number" 
+                    value={showRevisionModal.revInfraLegal} 
+                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revInfraLegal: Number(e.target.value) })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Discount Amount (₹):</label>
+                  <input 
+                    type="number" 
+                    value={showRevisionModal.revDiscount} 
+                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revDiscount: Number(e.target.value) })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
+                  />
+                </div>
+
+              </div>
+
+              {/* LIVE RECALCULATED TOTAL */}
+              <div style={{ background: 'rgba(34, 197, 94, 0.12)', border: '1.5px solid #22c55e', borderRadius: '12px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>RECALCULATED SUBTOTAL</span>
+                  <div style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>₹{live.subtotal.toLocaleString('en-IN')}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#22c55e', fontWeight: '900' }}>NEW TOTAL ESTIMATED COST</span>
+                  <div style={{ fontSize: '1.3rem', fontWeight: '900', color: '#22c55e', fontFamily: 'monospace' }}>₹{live.grandTotal.toLocaleString('en-IN')}</div>
+                </div>
+              </div>
+
+              {/* ACTIONS */}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '12px' }}>
+                <button onClick={() => setShowRevisionModal(null)} style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button onClick={() => executeCreateRevision(true)} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer' }}>
+                  💾 Save In-Place (Update Version)
+                </button>
+                <button onClick={() => executeCreateRevision(false)} style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '9px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.84rem', cursor: 'pointer' }}>
+                  🚀 Save as New Version (V02)
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
       {/* MODAL: DEVELOPER CUSTOMER INTRODUCTION REPORT */}
       {showDeveloperIntroductionReportModal && (
         <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: windowWidth <= 640 ? '8px' : '20px' }}>

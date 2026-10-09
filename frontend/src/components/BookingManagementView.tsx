@@ -118,7 +118,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
       p.property_code === propCodeLookup || p.id === propCodeLookup || p.propertyCode === propCodeLookup || (p.title && b.project_name && (p.title.toLowerCase().includes(b.project_name.toLowerCase()) || b.project_name.toLowerCase().includes(p.title.toLowerCase())))
     );
 
-    const custName = b.customer_name || matchedCust?.name || matchedCust?.customer_name || matchedCust?.customerName || 'SUMANTH VARMA';
+    const custName = b.customer_name || matchedCust?.name || matchedCust?.customer_name || matchedCust?.customerName || 'Valued Customer';
     const custNum = b.customer_number || matchedCust?.customer_number || matchedCust?.customerNumber || matchedCust?.id || 'SRM-CUS-2026-000185';
     const custMobile = b.customer_mobile || matchedCust?.mobile || matchedCust?.phone || '+91 98765 43210';
     const custEmail = (b.customer_email && !b.customer_email.includes('customcr') && b.customer_email !== 'customer@gmail.com')

@@ -134,11 +134,11 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
               const plan = (visitPlans && visitPlans.length > 0) ? visitPlans[0] : {
                 visitPlanId: 'SRM-VP-2026-000001',
                 visitScheduleId: 'SRM-VS-2026-000087',
-                customerName: 'SUMANTH VARMA',
+                customerName: 'Valued Customer',
                 customerNumber: 'SRM-CUS-2026-000185',
                 mobile: '+91 98765 43210',
-                email: 'sumanth.varma@gmail.com',
-                assignedExecutive: 'Ramesh Pawar (Field Exec - Kondapur)',
+                email: 'customer@example.com',
+                assignedExecutive: 'Sales Executive',
                 stops: []
               };
               const stop = (plan?.stops && plan.stops.length > 0) ? plan.stops[0] : { 

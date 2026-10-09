@@ -775,7 +775,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                               p.property_code === propCodeLookup || p.id === propCodeLookup || p.propertyCode === propCodeLookup || (p.title && i.property_title && (p.title.toLowerCase().includes(i.property_title.toLowerCase()) || i.property_title.toLowerCase().includes(p.title.toLowerCase())))
                             );
 
-                            const custName = i.customer_name || matchedCust?.name || matchedCust?.customer_name || matchedCust?.customerName || 'SUMANTH VARMA';
+                            const custName = i.customer_name || matchedCust?.name || matchedCust?.customer_name || matchedCust?.customerName || 'Valued Customer';
                             const custNum = i.customer_number || matchedCust?.customer_number || matchedCust?.customerNumber || matchedCust?.id || 'SRM-CUS-2026-000185';
                             const custMobile = i.customer_mobile || matchedCust?.mobile || matchedCust?.phone || '+91 98765 43210';
                             const custEmail = (i.customer_email && !i.customer_email.includes('customcr') && i.customer_email !== 'customer@gmail.com')

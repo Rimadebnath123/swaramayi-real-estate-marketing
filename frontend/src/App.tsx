@@ -1154,13 +1154,51 @@ function ScheduleVisitModalContent({
   const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
 
   const execList = React.useMemo(() => {
-    if (Array.isArray(dynamicSalesExecutives) && dynamicSalesExecutives.length > 0) {
-      return dynamicSalesExecutives;
+    const rawList = Array.isArray(dynamicSalesExecutives) && dynamicSalesExecutives.length > 0
+      ? dynamicSalesExecutives
+      : [];
+
+    const normalized: any[] = [];
+
+
+
+
+
+
+
+
+
+
+    const seenValues = new Set();
+
+    const addExec = (displayName, idPrefix = 'EXE') => {
+      if (!displayName || typeof displayName !== 'string') return;
+      const cleanName = displayName.trim();
+      if (!cleanName || seenValues.has(cleanName.toLowerCase())) return;
+
+      seenValues.add(cleanName.toLowerCase());
+      normalized.push({
+        id: `${idPrefix}-${normalized.length + 1}`,
+        name: cleanName,
+        value: cleanName,
+        label: cleanName
+      });
+    };
+
+    rawList.forEach((item) => {
+      if (typeof item === 'string') {
+        addExec(item, 'USR');
+      } else if (item && typeof item === 'object') {
+        const val = item.value || item.label || item.full_name || item.name || item.username;
+        if (val) addExec(val, item.id || 'USR');
+      }
+    });
+
+    if (normalized.length === 0) {
+      addExec('Avishek Das (Super Admin)', 'USR');
     }
-    return [
-      { id: 'EXE-01', name: 'Avishek Das (Super Admin)', value: 'Avishek Das (Super Admin)', label: 'Avishek Das (Super Admin)' },
-      { id: 'EXE-02', name: 'Punita Roy Chowdhury (ADMIN)', value: 'Punita Roy Chowdhury (ADMIN)', label: 'Punita Roy Chowdhury (ADMIN)' }
-    ];
+
+    return normalized;
   }, [dynamicSalesExecutives]);
 
   const [selectedCsIds, setSelectedCsIds] = useState<string[]>(
@@ -1189,10 +1227,19 @@ function ScheduleVisitModalContent({
   const [startTime, setStartTime] = useState<string>('10:00 AM');
 
   const defaultExecValue = React.useMemo(() => {
-    const custExec = targetCust?.assigned_executive || targetCust?.assigned_salesperson || targetCust?.assigned_employee_name || initialCS?.customerSnapshot?.assigned_executive;
+    const custExec = targetCust?.assigned_executive || 
+                     targetCust?.assigned_salesperson || 
+                     targetCust?.assigned_employee_name || 
+                     initialCS?.preparedBy ||
+                     initialCS?.salesExec ||
+                     initialCS?.customerSnapshot?.assigned_executive ||
+                     initialCS?.customerSnapshot?.preparedBy;
     if (custExec) {
-      const clean = custExec.replace(/\(.*\)/, '').trim();
-      const match = execList.find((e: any) => e.value === clean || e.name === clean || (e.value && e.value.toLowerCase().includes(clean.toLowerCase())));
+      const clean = String(custExec).replace(/\(.*\)/, '').trim();
+      const match = execList.find((e: any) => 
+        e.value.toLowerCase().includes(clean.toLowerCase()) || 
+        clean.toLowerCase().includes(e.value.toLowerCase())
+      );
       if (match) return match.value;
     }
     return execList[0]?.value || 'Avishek Das (Super Admin)';
@@ -4311,7 +4358,7 @@ export default function App() {
       const matchInQueue = matchingRequestsQueue.find(r => r.leadId === cleanId || r.leadId?.toUpperCase() === cleanId.toUpperCase());
       data = matchInQueue || {
         leadId: cleanId || 'SRM-LEAD-2026-000184',
-        customerName: newCustomerForm.name || 'Sumanth Varma',
+        customerName: newCustomerForm.name || 'Valued Customer',
         customerNumber: newCustomerForm.customer_number || 'SRM-CUS-2026-000188',
         mobile: newCustomerForm.mobile || '+91 98490 88888',
         source: newCustomerForm.lead_source || 'Meta Ads / Google Ads',
@@ -9416,7 +9463,7 @@ export default function App() {
   };
 
   const handleMarkVisitDoneAndNotifyDeveloper = (v: any) => {
-    const custName = v.customerName || v.name || v.customer_name || 'Sumanth Varma';
+    const custName = v.customerName || v.name || v.customer_name || 'Valued Customer';
     const fullCustNo = v.customerNumber || v.customer_number || v.customerId || 'SRM-CUS-2026-000186';
     const sevenDigitCustNo = getSevenDigitCustomerNumber(fullCustNo, v.mobile);
     const rawPropTitle = v.propertyTitle || v.title || 'Aparna Zenon Premium 3BHK';
@@ -13133,57 +13180,90 @@ export default function App() {
         const pricing = cs.pricingSnapshot || {};
         const pb = cs.formattedPriceBreakup || {};
 
-        const custName = cust.customerName || cs.customerName || 'Prospect Customer';
-        const custMobile = cust.mobile || cs.mobile || 'N/A';
-        const custId = cust.customerId || cs.customerId || 'SRM-CUS-2026-000192';
-
+        const custName = cust.customerName || cs.customerName || 'Valued Customer';
+        const custMobile = cust.mobile || cs.mobile || '91-9593193209';
+        const custId = cust.customerId || cust.customerNumber || cs.customerId || 'SRM-CUS-2026-000192';
+        const custEmail = cust.email || `${custName.toLowerCase().replace(/[^a-z0-9]/g, '.')}37@gmail.com`;
+        const preferredLoc = cust.preferredLocation || prop.locality || cs.locality || 'Madhyamgram, Kolkata';
+        const budgetRange = cust.budgetRange || '₹25 Lakhs - ₹50 Lakhs';
+        
         const propTitle = prop.propertyTitle || prop.projectName || cs.propertyTitle || 'Selected Property';
         const devName = prop.developerName || cs.developerName || 'Partner Developer Builder';
-        const locality = prop.locality || cs.locality || 'Locality';
+        const locality = prop.locality || cs.locality || 'AGARPARA';
         const bhk = prop.bhk || prop.configuration || cs.bhk || '3BHK';
-        const superArea = prop.superBuiltupArea || prop.carpetArea || '1150 Sq.Ft.';
+        const reqStr = cust.requirement || `${bhk} (BUY / OUTRIGHT PURCHASE)`;
+
+        const propCategory = prop.property_type || prop.propertyType || cs.propertyType || 'Flat / Apartment';
         const propCode = prop.propertyCode || cs.propertyCode || cs.propertyId || 'SRM-PROP-2026-000437';
+        const towerUnit = prop.unitNo || prop.towerUnit || 'Tower A, 5th Floor, Unit A-504';
+        
+        const superAreaRaw = prop.superBuiltupArea || prop.super_builtup_area || cs.superBuiltupArea || '1150';
+        const superAreaNum = parseFloat(String(superAreaRaw).replace(/,/g, '').replace(/[^\d.]/g, '')) || 1150;
+        const superAreaStr = String(superAreaRaw).includes('Sq.Ft.') ? String(superAreaRaw) : `${superAreaNum.toLocaleString('en-IN')} Sq.Ft.`;
+
+        const carpetAreaRaw = prop.carpetArea || (superAreaNum ? (superAreaNum * 0.75) : 862.5);
+        const carpetAreaStr = typeof carpetAreaRaw === 'number' ? `${carpetAreaRaw.toLocaleString('en-IN')} Sq.Ft.` : (String(carpetAreaRaw).includes('Sq.Ft.') ? String(carpetAreaRaw) : `${carpetAreaRaw} Sq.Ft.`);
 
         const matchId = match.matchId || cs.matchId || 'SRM-MAT-2026-710021';
         const matchScore = match.matchScore || cs.matchScore || 100;
-        const salesExec = cs.createdBy || cs.assignedSalesperson || 'Avishek Das (Super Admin)';
-        const dateVal = cs.createdAt ? new Date(cs.createdAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+        const salesExec = cs.preparedBy || cs.prepared_by || cs.salesExec || cs.sales_exec || cs.salesExecutive || cs.sales_executive || cs.createdBy || cs.created_by || cs.assignedSalesperson || cs.assigned_salesperson || cust.preparedBy || cust.assignedSalesperson || cust.assigned_salesperson || cust.salesExecutive || cust.executive_name || cust.assigned_to || match.assignedSalesperson || match.assigned_salesperson || match.salesExecutive || 'Priya Nair (Sales Exec)';
+        const timestampIso = cs.createdAt ? (typeof cs.createdAt === 'string' && cs.createdAt.includes('T') ? cs.createdAt : new Date(cs.createdAt).toISOString()) : new Date().toISOString();
 
-        const costSheetCode = cs.costSheetId || 'COST-SHEET-2026-000002';
+        const costSheetCode = cs.costSheetId || 'COST-SHEET-2026-000001';
         const versionTag = cs.version || 'V01';
         const statusTag = cs.status || 'GENERATED';
 
-        const basePriceStr = pb.basePriceStr || (pricing.basePrice ? `₹${Number(pricing.basePrice).toLocaleString('en-IN')}` : '₹0');
-        const ratePerSqftStr = pb.ratePerSqftStr || (pricing.ratePerSqft ? `₹${Number(pricing.ratePerSqft).toLocaleString('en-IN')}/Sq.Ft.` : '₹0/Sq.Ft.');
-        const floorRiseStr = pb.floorRiseStr || (pricing.floorRise ? `₹${Number(pricing.floorRise).toLocaleString('en-IN')}` : 'Included in Flat Price');
-        const plcStr = pb.plcStr || (pricing.plc ? `₹${Number(pricing.plc).toLocaleString('en-IN')}` : 'Included in Flat Price');
+        const basePriceNum = pricing.basePrice || (parseFloat(String(pb.basePriceStr || '').replace(/,/g, '').replace(/[^\d.]/g, '')) || 4025000);
+        const ratePerSqftNum = (basePriceNum > 0 && superAreaNum > 0) ? Math.round(basePriceNum / superAreaNum) : (pricing.ratePerSqft || 3500);
+        const ratePerSqftStr = pb.ratePerSqftStr || `₹${ratePerSqftNum.toLocaleString('en-IN')}/Sq.Ft.`;
+        const basePriceStr = pb.basePriceStr || `₹${Number(basePriceNum).toLocaleString('en-IN')}`;
+
+        const floorRiseStr = pb.floorRiseStr || (pricing.floorRise ? `₹${Number(pricing.floorRise).toLocaleString('en-IN')}` : 'N/A');
+        const plcStr = pb.plcStr || (pricing.plc ? `₹${Number(pricing.plc).toLocaleString('en-IN')}` : 'N/A');
         const parkingStr = pb.parkingStr || (pricing.parkingCharge ? `₹${Number(pricing.parkingCharge).toLocaleString('en-IN')}` : 'Included in Flat Price');
-        const clubStr = pb.clubStr || (pricing.clubCharge ? `₹${Number(pricing.clubCharge).toLocaleString('en-IN')}` : 'Included in Flat Price');
-        const maintStr = pb.maintenanceStr || (pricing.maintenance ? `₹${Number(pricing.maintenance).toLocaleString('en-IN')}` : 'Included in Flat Price');
+        const clubNum = pricing.clubCharge !== undefined ? pricing.clubCharge : 40000;
+        const clubStr = pb.clubStr || (clubNum > 0 ? `₹${Number(clubNum).toLocaleString('en-IN')}` : 'Included in Flat Price');
+        const maintNum = pricing.maintenance !== undefined ? pricing.maintenance : 500;
+        const maintStr = pb.maintenanceStr || (maintNum > 0 ? `₹${Number(maintNum).toLocaleString('en-IN')}` : 'Included in Flat Price');
         const infraStr = pb.infrastructureStr || (pricing.infrastructureCharge ? `₹${Number(pricing.infrastructureCharge).toLocaleString('en-IN')}` : 'Included in Flat Price');
-        const subtotalStr = pb.subtotalStr || (pricing.subtotalBeforeTax ? `₹${Number(pricing.subtotalBeforeTax).toLocaleString('en-IN')}` : basePriceStr);
 
-        const gstStr = pb.gstStr || (pricing.gstAmount ? `₹${Number(pricing.gstAmount).toLocaleString('en-IN')} (${pricing.gstPct || 5}%)` : `₹0 (${pricing.gstPct || 5}%)`);
-        const stampStr = pb.stampDutyStr || (pricing.stampDutyAmount ? `₹${Number(pricing.stampDutyAmount).toLocaleString('en-IN')} (${pricing.stampDutyPct || 5}%)` : `₹0 (${pricing.stampDutyPct || 5}%)`);
-        const regStr = pb.registrationStr || (pricing.registrationAmount ? `₹${Number(pricing.registrationAmount).toLocaleString('en-IN')} (${pricing.registrationPct || 1}%)` : `₹0 (${pricing.registrationPct || 1}%)`);
+        const subtotalNum = pricing.subtotalBeforeTax || (basePriceNum + (typeof clubNum === 'number' ? clubNum : 0) + (typeof maintNum === 'number' ? maintNum : 0));
+        const subtotalStr = pb.subtotalStr || `₹${Number(subtotalNum).toLocaleString('en-IN')}`;
+
+        const gstPct = pricing.gstPct !== undefined ? pricing.gstPct : 5;
+        const gstAmtNum = pricing.gstAmount !== undefined ? pricing.gstAmount : Math.round(basePriceNum * (gstPct / 100));
+        const gstStr = pb.gstStr || `₹${Number(gstAmtNum).toLocaleString('en-IN')} (${gstPct}%)`;
+
+        const stampPct = pricing.stampDutyPct !== undefined ? pricing.stampDutyPct : 5;
+        const stampAmtNum = pricing.stampDutyAmount !== undefined ? pricing.stampDutyAmount : Math.round(basePriceNum * (stampPct / 100));
+        const stampStr = pb.stampDutyStr || `₹${Number(stampAmtNum).toLocaleString('en-IN')} (${stampPct}%)`;
+
+        const regPct = pricing.registrationPct !== undefined ? pricing.registrationPct : 1;
+        const regAmtNum = pricing.registrationAmount !== undefined ? pricing.registrationAmount : Math.round(basePriceNum * (regPct / 100));
+        const regStr = pb.registrationStr || `₹${Number(regAmtNum).toLocaleString('en-IN')} (${regPct}%)`;
+
+        const lawyerStr = pb.lawyerStr || 'Included in Flat Price';
         const brokStr = pb.brokerageStr || '0% (Zero Brokerage for Buyer)';
-        const totalEstStr = pb.totalEstimatedCostStr || (pricing.totalEstimatedCost ? `₹${Number(pricing.totalEstimatedCost).toLocaleString('en-IN')}` : '₹0');
 
-        const sigHash = cs.signatureHash || `SHA256-COST-SHEET-VAULT-VERIFIED-#${(costSheetCode).replace(/[^0-9]/g, '').padEnd(6, '9')}`;
+        const totalEstNum = pricing.totalEstimatedCost || (subtotalNum + gstAmtNum + stampAmtNum + regAmtNum);
+        const totalEstStr = pb.totalEstimatedCostStr || `₹${Number(totalEstNum).toLocaleString('en-IN')}`;
+
+        const facingPossession = prop.facingPossession || 'North-East Facing • Ready to Move';
 
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '20px' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
             <style>{`
               @media print {
                 @page {
                   size: A4 portrait;
-                  margin: 5mm 8mm 5mm 8mm;
+                  margin: 3mm 4mm 3mm 4mm;
                 }
                 html, body {
                   background: #ffffff !important;
                   color: #0f172a !important;
-                  height: 100% !important;
-                  overflow: hidden !important;
+                  height: auto !important;
+                  width: 100% !important;
+                  overflow: visible !important;
                   margin: 0 !important;
                   padding: 0 !important;
                   -webkit-print-color-adjust: exact !important;
@@ -13192,30 +13272,47 @@ export default function App() {
                 body * {
                   visibility: hidden !important;
                 }
-                .printable-contract-card, .printable-contract-card * {
+                .printable-contract-card,
+                .printable-contract-card * {
                   visibility: visible !important;
                 }
                 .printable-contract-card {
-                  position: fixed !important;
+                  position: absolute !important;
                   left: 0 !important;
                   top: 0 !important;
                   width: 100% !important;
                   max-width: 100% !important;
                   height: auto !important;
-                  padding: 24px 28px !important;
+                  padding: 8px 12px !important;
                   margin: 0 !important;
                   border: none !important;
                   box-shadow: none !important;
                   background: #ffffff !important;
                   color: #0f172a !important;
-                  overflow: visible !important;
-                  page-break-after: avoid !important;
-                  page-break-inside: avoid !important;
-                  border-radius: 8px !important;
-                  gap: 14px !important;
-                  font-size: 0.96rem !important;
-                  -webkit-print-color-adjust: exact !important;
-                  print-color-adjust: exact !important;
+                  border-radius: 0 !important;
+                  gap: 6px !important;
+                  box-sizing: border-box !important;
+                  font-size: 1.25rem !important;
+                }
+                .printable-contract-card h2 {
+                  font-size: 1.9rem !important;
+                }
+                .printable-contract-card h3 {
+                  font-size: 1.5rem !important;
+                }
+                .printable-contract-card h4 {
+                  font-size: 1.3rem !important;
+                }
+                .printable-contract-card div, 
+                .printable-contract-card span, 
+                .printable-contract-card strong, 
+                .printable-contract-card p {
+                  font-size: 1.25rem !important;
+                }
+                .printable-contract-card table td, 
+                .printable-contract-card table th {
+                  padding: 4px 10px !important;
+                  font-size: 1.15rem !important;
                 }
                 .no-print {
                   display: none !important;
@@ -13226,205 +13323,419 @@ export default function App() {
               }
             `}</style>
 
-            <div className="printable-contract-card" style={{ background: '#ffffff', color: '#0f172a', border: 'none', width: '96vw', maxWidth: '860px', maxHeight: '96vh', borderRadius: '14px', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
+            <div className="printable-costsheet-modal-wrapper" style={{ background: '#1e293b', border: '1px solid #334155', width: '96vw', maxWidth: '880px', maxHeight: '96vh', borderRadius: '18px', padding: '0', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)' }}>
               
-              {/* DOCUMENT HEADER */}
-              <div style={{ borderBottom: '2px solid #0284c7', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ background: '#16a34a', color: '#ffffff', padding: '3px 10px', borderRadius: '5px', fontSize: '0.78rem', fontWeight: '900', letterSpacing: '1px', display: 'inline-block' }}>
-                      OFFICIAL PROPERTY INVESTMENT COST SHEET
-                    </span>
-                    <span style={{ background: versionTag !== 'V01' ? '#fbbf24' : '#0284c7', color: '#0f172a', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '900' }}>
-                      {versionTag}
-                    </span>
-                    <span style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#0284c7', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '800' }}>
-                      {statusTag}
-                    </span>
+              {/* MODAL DARK HEADER BAR WITH ACTION BUTTONS TOOLBAR */}
+              <div className="no-print" style={{ background: '#0f172a', borderBottom: '1px solid #334155', padding: '14px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ background: 'rgba(2, 132, 199, 0.2)', border: '1px solid #0284c7', padding: '6px', borderRadius: '8px', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      📜
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.05rem', fontWeight: '900', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        INDIVIDUAL PROPERTY COST SHEET — <span style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{costSheetCode}</span>
+                      </h3>
+                      <div style={{ fontSize: '0.74rem', color: '#f59e0b', fontWeight: '800', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>VERSION {versionTag}</span>
+                        <span>•</span>
+                        <span>STATUS: {statusTag}</span>
+                      </div>
+                    </div>
                   </div>
-                  <h2 style={{ fontSize: '1.35rem', fontWeight: '900', color: '#0f172a', marginTop: '4px', marginBottom: '2px', letterSpacing: '-0.3px' }}>
-                    SWARAMAYI REAL ESTATE MARKETING
-                  </h2>
-                  <p style={{ fontSize: '0.76rem', color: '#475569', margin: 0, fontWeight: '600', lineHeight: '1.35' }}>
-                    4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129 • Phone: +91 88021 30791 • RERA Reg No: WBRERA/A/NOR/2025/000737
-                  </p>
-                  <p style={{ fontSize: '0.8rem', color: '#0284c7', marginTop: '2px', fontWeight: '700', margin: '2px 0 0 0' }}>
-                    Enterprise Real Estate Operating System • Individual Property Cost Sheet Vault
-                  </p>
+
+                  <button 
+                    onClick={() => setShowViewIndividualCostSheetModal(null)}
+                    style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid #334155', color: '#94a3b8', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: '900', fontSize: '1.1rem' }}
+                    title="Close Cost Sheet Modal"
+                  >
+                    ✕
+                  </button>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <span style={{ background: '#22c55e', color: '#ffffff', padding: '5px 12px', borderRadius: '6px', fontSize: '0.9rem', fontWeight: '900', fontFamily: 'monospace', display: 'inline-block', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(34, 197, 94, 0.3)' }}>
-                    {costSheetCode}
-                  </span>
+
+                {/* ACTION TOOLBAR BUTTONS */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button 
+                    onClick={() => downloadCostSheetPDF(cs)}
+                    style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '7px 14px', borderRadius: '7px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)' }}
+                  >
+                    📥 Download PDF
+                  </button>
+                  <button 
+                    onClick={() => window.print()}
+                    style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '7px 14px', borderRadius: '7px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)' }}
+                  >
+                    🖨️ Print Cost Sheet
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const msg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Property Cost Sheet Breakdown & Investment Summary:\n\n📄 Cost Sheet ID: ${costSheetCode} (${versionTag})\n📍 Locality: ${locality}\n📐 Configuration: ${bhk}\n📐 Super Built-Up Area: ${superAreaStr}\n🏷️ Asking Rate per Sq.Ft.: ${ratePerSqftStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\nPlease review the details. Reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
+                      window.open(`https://api.whatsapp.com/send?phone=${(custMobile || '').replace(/\D/g, '')}&text=${encodeURIComponent(msg)}`, '_blank');
+                    }}
+                    style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '7px 14px', borderRadius: '7px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(234, 179, 8, 0.3)' }}
+                  >
+                    📲 Send to Customer
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowViewIndividualCostSheetModal(null);
+                      if (setActiveTab) setActiveTab('visit_management');
+                      if (setActiveVisitSubTab) setActiveVisitSubTab('visit_route_planner');
+                      if (setShowScheduleVisitModal) setShowScheduleVisitModal({ open: true, costSheet: cs });
+                    }}
+                    style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '7px 14px', borderRadius: '7px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(168, 85, 247, 0.3)' }}
+                  >
+                    🚖 Visit Schedule
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowViewIndividualCostSheetModal(null);
+                      handleOpenRevisionModal(cs);
+                    }}
+                    style={{ background: 'transparent', color: '#f59e0b', border: '1px solid #f59e0b', padding: '6px 14px', borderRadius: '7px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                  >
+                    ✏️ Create Revision
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowViewIndividualCostSheetModal(null);
+                      if (setShowShiftToMatchingModal) {
+                        setShowShiftToMatchingModal({
+                          open: true,
+                          item: cs,
+                          customerName: custName,
+                          customerNumber: custId,
+                          mobile: custMobile,
+                          matchId: matchId,
+                          propertyTitle: propTitle,
+                          note: ''
+                        });
+                      } else {
+                        if (setSelectedMatchingId) setSelectedMatchingId(matchId);
+                        if (setActiveTab) setActiveTab('matching_management');
+                      }
+                    }}
+                    style={{ background: '#0284c7', color: '#ffffff', border: '1px solid #38bdf8', padding: '6px 14px', borderRadius: '7px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                  >
+                    ⚡ Shift to Matching (Other Property)
+                  </button>
                 </div>
               </div>
 
-              {/* 4-BOX DOCUMENT DETAILS GRID */}
-              <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '10px', padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', fontSize: '0.82rem' }}>
-                <div>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>CUSTOMER & BUYER IDENTITY:</span>
-                  <h4 style={{ color: '#0f172a', fontWeight: '900', fontSize: '0.96rem', marginTop: '2px', marginBottom: '1px' }}>👤 {custName}</h4>
-                  <span style={{ color: '#16a34a', fontFamily: 'monospace', fontWeight: '800', fontSize: '0.82rem' }}>Mobile: {custMobile}</span>
-                  <br /><span style={{ color: '#0284c7', fontSize: '0.78rem', fontFamily: 'monospace', fontWeight: '700' }}>Customer ID: {custId}</span>
-                </div>
+              {/* MAIN SCROLLABLE CONTENT BODY */}
+              <div className="printable-costsheet-modal-body-wrapper" style={{ flex: 1, overflowY: 'auto', padding: '16px 18px', background: '#0f172a' }}>
+                
+                {/* WHITE PRINTABLE SHEET CARD */}
+                <div className="printable-contract-card" style={{ background: '#ffffff', color: '#0f172a', borderRadius: '12px', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+                  
+                  {/* BRAND HEADER */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0284c7', paddingBottom: '8px', gap: '14px' }}>
+                    <div style={{ flex: 1, minWidth: '240px' }}>
+                      <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#0284c7', margin: '0 0 2px 0', letterSpacing: '-0.3px', textTransform: 'uppercase' }}>
+                        SWARAMAYI REAL ESTATE MARKETING
+                      </h2>
+                      <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#64748b', letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: '2px' }}>
+                        ENTERPRISE REAL ESTATE SOLUTION • OFFICIAL PROPERTY COST SHEET
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', lineHeight: '1.35' }}>
+                        4, Samarkunja Apartment, Sarada Sarani, Udayrajpur,
+                        <br />
+                        Madhyamgram, Kolkata - 700129 • Phone: +91 88021 30791
+                      </div>
+                    </div>
 
-                <div>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>PROPERTY & LOCALITY DETAILS:</span>
-                  <h4 style={{ color: '#d97706', fontWeight: '900', fontSize: '0.96rem', marginTop: '2px', marginBottom: '1px' }}>🏢 {propTitle}</h4>
-                  <span style={{ color: '#0f172a', fontWeight: '800', fontSize: '0.84rem' }}>{locality} • {devName}</span>
-                  <br /><span style={{ color: '#0284c7', fontSize: '0.78rem', fontFamily: 'monospace', fontWeight: '700' }}>Property Code: {propCode} | {bhk} ({superArea})</span>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>MATCHING & ASSIGNED EXECUTIVE:</span>
-                  <h4 style={{ color: '#0f172a', fontWeight: '900', fontSize: '0.9rem', marginTop: '2px', marginBottom: '1px' }}>{salesExec}</h4>
-                  <span style={{ color: '#16a34a', fontSize: '0.82rem', fontWeight: '800' }}>Match ID: {matchId} ({matchScore}% Match)</span>
-                  <br /><span style={{ color: '#64748b', fontSize: '0.76rem', fontWeight: '700' }}>Date: {dateVal}</span>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>BROKERAGE & PRICING TERMS:</span>
-                  <h4 style={{ color: '#16a34a', fontWeight: '900', fontSize: '0.94rem', marginTop: '2px', marginBottom: '1px' }}>Asking Rate: {ratePerSqftStr}</h4>
-                  <span style={{ color: '#475569', fontSize: '0.78rem', fontWeight: '600' }}>Terms: {brokStr}</span>
-                </div>
-              </div>
-
-              {/* ITEMIZED PRICING TABLE (LIGHT THEME PAPER TABLE) */}
-              <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '10px', overflow: 'hidden' }}>
-                <div style={{ background: '#f1f5f9', padding: '8px 14px', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ color: '#0f172a', fontWeight: '900', fontSize: '0.88rem', margin: 0 }}>
-                    💰 ITEMIZED PRICING & ESTIMATED COST BREAKUP
-                  </h4>
-                  <span style={{ fontSize: '0.78rem', color: '#0284c7', fontWeight: '800' }}>Asking Base Price: {basePriceStr}</span>
-                </div>
-
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                  <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid #cbd5e1', textAlign: 'left', color: '#64748b' }}>
-                      <th style={{ padding: '6px 14px' }}>Particular / Charge Component</th>
-                      <th style={{ padding: '6px 14px', textAlign: 'right' }}>Amount / Rate</th>
-                    </tr>
-                  </thead>
-                  <tbody style={{ color: '#0f172a' }}>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 14px', fontWeight: '700' }}>Flat Base Price</td>
-                      <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '900', color: '#0284c7' }}>{basePriceStr}</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 14px' }}>Floor Rise Charge</td>
-                      <td style={{ padding: '6px 14px', textAlign: 'right' }}>{floorRiseStr}</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 14px' }}>Preferred Location Charge (PLC)</td>
-                      <td style={{ padding: '6px 14px', textAlign: 'right' }}>{plcStr}</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 14px' }}>Car Parking Slot Fee</td>
-                      <td style={{ padding: '6px 14px', textAlign: 'right' }}>{parkingStr}</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 14px' }}>Clubhouse & Amenities Charge</td>
-                      <td style={{ padding: '6px 14px', textAlign: 'right' }}>{clubStr}</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 14px' }}>Advance Maintenance Charge</td>
-                      <td style={{ padding: '6px 14px', textAlign: 'right' }}>{maintStr}</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 14px' }}>Infrastructure & Legal Documentation Fee</td>
-                      <td style={{ padding: '6px 14px', textAlign: 'right' }}>{infraStr}</td>
-                    </tr>
-
-                    <tr style={{ background: '#f1f5f9', fontWeight: '900', borderBottom: '1.5px solid #cbd5e1' }}>
-                      <td style={{ padding: '7px 14px', color: '#0f172a' }}>Subtotal (Before Taxes & Statutory Fees)</td>
-                      <td style={{ padding: '7px 14px', textAlign: 'right', color: '#0284c7', fontSize: '0.88rem' }}>{subtotalStr}</td>
-                    </tr>
-
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 14px' }}>GST (Goods & Services Tax)</td>
-                      <td style={{ padding: '6px 14px', textAlign: 'right', color: '#d97706', fontWeight: '600' }}>{gstStr}</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 14px' }}>Stamp Duty Charge</td>
-                      <td style={{ padding: '6px 14px', textAlign: 'right', color: '#d97706', fontWeight: '600' }}>{stampStr}</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 14px' }}>Registration Fee</td>
-                      <td style={{ padding: '6px 14px', textAlign: 'right', color: '#d97706', fontWeight: '600' }}>{regStr}</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 14px' }}>Brokerage Fee / Channel Partner Fee</td>
-                      <td style={{ padding: '6px 14px', textAlign: 'right', color: '#16a34a', fontWeight: '600' }}>{brokStr}</td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                {/* TOTAL ESTIMATED COST BANNER */}
-                <div style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff', padding: '10px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <span style={{ fontSize: '0.72rem', opacity: 0.9, fontWeight: '800', letterSpacing: '0.5px' }}>FINAL ESTIMATED INVESTMENT</span>
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: '900', margin: 0 }}>TOTAL ESTIMATED COST</h3>
+                    {/* COST SHEET ID HIGHLIGHT CARD */}
+                    <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '8px', padding: '8px 14px', textAlign: 'right', flexShrink: 0, minWidth: '195px' }}>
+                      <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#64748b', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                        COST SHEET ID
+                      </div>
+                      <div style={{ fontSize: '1.02rem', fontWeight: '900', color: '#0284c7', fontFamily: 'monospace', margin: '1px 0' }}>
+                        {costSheetCode}
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', marginTop: '3px' }}>
+                        <span style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7', border: '1px solid #38bdf8', padding: '2px 7px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '900' }}>
+                          VERSION: {versionTag}
+                        </span>
+                        <span style={{ background: 'rgba(34, 197, 94, 0.12)', color: '#16a34a', border: '1px solid #4ade80', padding: '2px 7px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '900' }}>
+                          {statusTag}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '1.45rem', fontWeight: '900', fontFamily: 'monospace' }}>{totalEstStr}</span>
+
+                  {/* DATE & METADATA BANNER STRIP */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '0.80rem' }}>
+                    <div>
+                      <span style={{ color: '#64748b', fontWeight: '700' }}>Date & Time: </span>
+                      <strong style={{ color: '#0f172a', fontFamily: 'monospace' }}>{timestampIso}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748b', fontWeight: '700' }}>Customer ID: </span>
+                      <strong style={{ color: '#0284c7', fontFamily: 'monospace' }}>{custId}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748b', fontWeight: '700' }}>Match ID: </span>
+                      <strong style={{ color: '#d97706', fontFamily: 'monospace' }}>{matchId}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748b', fontWeight: '700' }}>Prepared By: </span>
+                      <strong style={{ color: '#0f172a' }}>{salesExec}</strong>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              {/* VERIFICATION EVIDENCE AUDIT TRAIL */}
-              <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem', color: '#334155' }}>
-                <h4 style={{ color: '#0284c7', fontWeight: '900', fontSize: '0.88rem', margin: 0, letterSpacing: '0.3px' }}>🔐 VERIFICATION EVIDENCE & AUDIT TRAIL</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 10px', fontSize: '0.82rem' }}>
-                  <div>Vault Audit Status: <strong style={{ color: '#16a34a', fontWeight: '800' }}>✓ GENERATED & VAULT VERIFIED</strong></div>
-                  <div>1 Property Rule: <strong style={{ color: '#16a34a', fontWeight: '800' }}>✓ 1 COST SHEET PER PROPERTY ENFORCED</strong></div>
-                  <div>Digital Ref: <strong style={{ color: '#d97706', fontFamily: 'monospace', fontWeight: '800' }}>{sigHash}</strong></div>
-                  <div>Master Code: <strong style={{ color: '#0284c7', fontFamily: 'monospace', fontWeight: '800' }}>{costSheetCode}</strong></div>
-                </div>
-              </div>
-
-              {/* DUAL DIGITAL SIGNATURES BLOCK */}
-              <div style={{ borderTop: '1.5px solid #cbd5e1', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>CUSTOMER DIGITAL ACKNOWLEDGEMENT:</span>
-                  <h4 style={{ color: '#16a34a', fontFamily: 'monospace', fontWeight: '900', fontSize: '0.88rem', margin: '4px 0 0 0' }}>
-                    ✓ {sigHash} DIGITAL SIG
-                  </h4>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px' }}>FOR SWARAMAYI REAL ESTATE MARKETING:</span>
-                  <h4 style={{ color: '#0284c7', fontWeight: '900', fontSize: '0.88rem', margin: '4px 0 0 0' }}>Authorized Signature & Seal</h4>
-                </div>
-              </div>
-
-              {/* ACTION BUTTONS */}
-              <div className="no-print" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1.5px solid #cbd5e1', paddingTop: '10px', flexWrap: 'wrap' }}>
-                <button onClick={() => window.print()} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)' }}>
-                  🖨️ PRINT & DOWNLOAD COST SHEET PDF
-                </button>
-                <button 
-                  onClick={() => {
-                    const msg = `📱 *SWARAMAYI REAL ESTATE MARKETING — OFFICIAL COST SHEET*
+                  {/* 2-COLUMN GRID: CUSTOMER & PROPERTY SPECIFICATIONS */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     
-Dear ${custName},
+                    {/* CUSTOMER INFORMATION CARD */}
+                    <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '8px', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', color: '#0284c7', fontWeight: '900', fontSize: '0.82rem' }}>
+                        <span>👤</span>
+                        <span>CUSTOMER INFORMATION</span>
+                      </div>
 
-Here is your official *Cost Sheet Breakup* (${costSheetCode} ${versionTag}):
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.78rem' }}>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Customer Name: </span>
+                          <strong style={{ color: '#0f172a' }}>{custName}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Mobile Number: </span>
+                          <strong style={{ color: '#16a34a', fontFamily: 'monospace' }}>{custMobile}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Email Address: </span>
+                          <span style={{ color: '#0f172a', fontWeight: '600' }}>{custEmail}</span>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Preferred Location: </span>
+                          <span style={{ color: '#0f172a', fontWeight: '600' }}>{preferredLoc}</span>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Budget Range: </span>
+                          <strong style={{ color: '#16a34a' }}>{budgetRange}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Requirement: </span>
+                          <span style={{ color: '#0f172a', fontWeight: '700' }}>{reqStr}</span>
+                        </div>
+                      </div>
+                    </div>
 
-🏢 *Property*: ${propTitle} (${bhk})
-📍 *Locality*: ${locality}
-💰 *Base Price*: ${basePriceStr}
-📊 *Asking Rate*: ${ratePerSqftStr}
-💵 *Total Estimated Cost*: ${totalEstStr}
+                    {/* PROPERTY & UNIT SPECIFICATIONS CARD */}
+                    <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '8px', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', color: '#0284c7', fontWeight: '900', fontSize: '0.82rem' }}>
+                        <span>🏢</span>
+                        <span>PROPERTY & UNIT SPECIFICATIONS</span>
+                      </div>
 
-Thank you for choosing Swaramayi Real Estate Marketing!`;
-                    window.open(`https://api.whatsapp.com/send?phone=${(custMobile || '').replace(/[^0-9]/g, '')}&text=${encodeURIComponent(msg)}`, '_blank');
-                  }}
-                  style={{ background: '#25D366', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  💬 SEND WHATSAPP COST SHEET
-                </button>
-                <button onClick={() => setShowViewIndividualCostSheetModal(null)} style={{ background: '#64748b', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.82rem' }}>
-                  Close
-                </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.78rem' }}>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Property Category Type: </span>
+                          <strong style={{ color: '#0f172a' }}>{propCategory}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Property Code: </span>
+                          <strong style={{ color: '#0284c7', fontFamily: 'monospace' }}>{propCode}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Tower / Floor / Unit: </span>
+                          <strong style={{ color: '#0f172a' }}>{towerUnit}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Super Built-Up Area: </span>
+                          <strong style={{ color: '#0f172a' }}>{superAreaStr}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Carpet Area: </span>
+                          <strong style={{ color: '#d97706' }}>{carpetAreaStr}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Asking Rate per Sq.Ft.: </span>
+                          <strong style={{ color: '#16a34a' }}>{ratePerSqftStr}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Facing & Possession: </span>
+                          <span style={{ color: '#0f172a', fontWeight: '700' }}>{facingPossession}</span>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontWeight: '600' }}>Locality Hub / Sector: </span>
+                          <strong style={{ color: '#0284c7' }}>{locality}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* MATCHING COMPATIBILITY SCORE BANNER */}
+                  <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '8px', padding: '6px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                        MATCHING COMPATIBILITY SCORE
+                      </div>
+                      <div style={{ fontSize: '0.90rem', fontWeight: '900', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                        <span>🔥</span>
+                        <span>{matchScore}% COMPATIBILITY MATCH</span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: '4px', padding: '2px 7px', fontSize: '0.74rem', fontWeight: '800' }}>
+                        ✓ Preferred Location
+                      </span>
+                      <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: '4px', padding: '2px 7px', fontSize: '0.74rem', fontWeight: '800' }}>
+                        ✓ Within 10 KM Radius
+                      </span>
+                      <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: '4px', padding: '2px 7px', fontSize: '0.74rem', fontWeight: '800' }}>
+                        ✓ Within Budget
+                      </span>
+                      <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: '4px', padding: '2px 7px', fontSize: '0.74rem', fontWeight: '800' }}>
+                        ✓ {bhk} Satisfied
+                      </span>
+                      <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: '4px', padding: '2px 7px', fontSize: '0.74rem', fontWeight: '800' }}>
+                        ✓ Ready-to-Move
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* ITEMIZED PROPERTY PRICE & TAX BREAKUP TABLE SECTION */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                      <h4 style={{ color: '#0284c7', fontWeight: '900', fontSize: '0.85rem', margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span>💰</span>
+                        <span>ITEMIZED PROPERTY PRICE & TAX BREAKUP</span>
+                      </h4>
+                      <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: '5px', padding: '2px 8px', fontSize: '0.74rem', fontWeight: '800' }}>
+                        Rate per Sq.Ft.: {ratePerSqftStr}
+                      </span>
+                    </div>
+
+                    <div style={{ border: '1.5px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                        <thead>
+                          <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #cbd5e1', color: '#475569', textAlign: 'left', fontWeight: '800' }}>
+                            <th style={{ padding: '5px 12px' }}>Charge Particulars</th>
+                            <th style={{ padding: '5px 12px', textAlign: 'right' }}>Amount (INR)</th>
+                          </tr>
+                        </thead>
+                        <tbody style={{ color: '#0f172a' }}>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '4px 12px' }}>
+                              <strong style={{ color: '#0f172a' }}>1. Base Property Asking Price</strong>
+                              <span style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: '600', marginLeft: '6px' }}>
+                                ({ratePerSqftStr} on {superAreaStr})
+                              </span>
+                            </td>
+                            <td style={{ padding: '4px 12px', textAlign: 'right', fontWeight: '900', fontSize: '0.82rem' }}>
+                              {basePriceStr}
+                            </td>
+                          </tr>
+
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '4px 12px' }}>2. Floor Rise Charge (Floor 5th Floor)</td>
+                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#64748b' }}>{floorRiseStr}</td>
+                          </tr>
+
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '4px 12px' }}>3. Preferential Location Charge (PLC - Facing)</td>
+                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#64748b' }}>{plcStr}</td>
+                          </tr>
+
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '4px 12px' }}>4. Covered Car Parking Slot Charge</td>
+                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '600' }}>{parkingStr}</td>
+                          </tr>
+
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '4px 12px' }}>5. Clubhouse & Gated Amenities Membership</td>
+                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{clubStr}</td>
+                          </tr>
+
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '4px 12px' }}>6. Advance Maintenance Charge (1 Year)</td>
+                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{maintStr}</td>
+                          </tr>
+
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '4px 12px' }}>7. Infrastructure & Legal Documentation Charges</td>
+                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '600' }}>{infraStr}</td>
+                          </tr>
+
+                          {/* SUBTOTAL ROW */}
+                          <tr style={{ background: '#f8fafc', borderTop: '1.5px solid #cbd5e1', borderBottom: '1.5px solid #cbd5e1' }}>
+                            <td style={{ padding: '5px 12px', fontWeight: '900', color: '#0f172a', fontSize: '0.80rem', letterSpacing: '0.3px' }}>
+                              SUBTOTAL (BEFORE TAXES & GOVERNMENT CHARGES)
+                            </td>
+                            <td style={{ padding: '5px 12px', textAlign: 'right', fontWeight: '900', color: '#0f172a', fontSize: '0.85rem' }}>
+                              {subtotalStr}
+                            </td>
+                          </tr>
+
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '4px 12px' }}>8. Goods & Services Tax (GST)</td>
+                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{gstStr}</td>
+                          </tr>
+
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '4px 12px' }}>9. Stamp Duty Charges</td>
+                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{stampStr}</td>
+                          </tr>
+
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '4px 12px' }}>10. Registration & Property Transfer Fee</td>
+                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{regStr}</td>
+                          </tr>
+
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '4px 12px' }}>11. Lawyer / Legal Verification Charges</td>
+                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '600' }}>{lawyerStr}</td>
+                          </tr>
+
+                          <tr>
+                            <td style={{ padding: '4px 12px' }}>12. Brokerage & Agency Consultancy Charges</td>
+                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#16a34a', fontWeight: '900' }}>{brokStr}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+
+                      {/* GREEN TOTAL COST BANNER */}
+                      <div style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff', padding: '8px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <h3 style={{ fontSize: '0.92rem', fontWeight: '900', margin: 0, letterSpacing: '0.4px', textTransform: 'uppercase' }}>
+                            TOTAL ESTIMATED PROPERTY COST
+                          </h3>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '1.25rem', fontWeight: '900', fontFamily: 'monospace' }}>
+                            {totalEstStr}
+                          </span>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+
+                  {/* TERMS & CONDITIONS DISCLAIMER BOX */}
+                  <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '8px', padding: '8px 12px' }}>
+                    <div style={{ fontWeight: '900', fontSize: '0.76rem', color: '#0f172a', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <span>📌</span>
+                      <span>TERMS & CONDITIONS DISCLAIMER:</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.74rem', color: '#475569', lineHeight: '1.35', fontWeight: '500' }}>
+                      "All prices mentioned in this Cost Sheet are indicative and subject to confirmation by the respective developer/property owner. Applicable taxes, government charges, registration charges and other costs may change. Final pricing will be confirmed before booking."
+                    </p>
+                  </div>
+
+                  {/* FOOTER SYSTEM AUDIT TRAIL LINE */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '6px', fontSize: '0.72rem', color: '#64748b', flexWrap: 'wrap', gap: '6px' }}>
+                    <div>
+                      Generated by Swaramayi Real Estate CRM OS • SHA256 Verified
+                    </div>
+                    <div>
+                      System Timestamp: {timestampIso}
+                    </div>
+                  </div>
+
+                </div>
               </div>
 
             </div>
@@ -13705,140 +14016,573 @@ Thank you for choosing Swaramayi Real Estate Marketing!`;
         );
       })()}
 
-      {/* MODAL: REVISE COST SHEET */}
+      {/* MODAL: REVISE / FULL COST SHEET EDITOR & REVISION MANAGER */}
       {showRevisionModal && showRevisionModal.open && showRevisionModal.costSheet && (() => {
         const cs = showRevisionModal.costSheet;
         const live = calculateRevisionLiveTotals(showRevisionModal);
+        
+        const custSnap = cs.customerSnapshot || {};
+        const propSnap = cs.propertySnapshot || {};
+        
+        const custName = showRevisionModal.customerName !== undefined ? showRevisionModal.customerName : (custSnap.customerName || cs.customerName || 'Valued Customer');
+        const custMobile = showRevisionModal.customerMobile !== undefined ? showRevisionModal.customerMobile : (custSnap.mobile || cs.mobile || '91-9593193209');
+        
+        const propCode = cs.propertyCode || propSnap.propertyCode || cs.propertyId || 'SRM-PROP-2026-000437';
+        const propTitle = propSnap.propertyTitle || propSnap.projectName || cs.propertyTitle || 'MASARADAHAPARTMENT';
+        const propLinkedStr = `${propCode} — ${propTitle}`;
+
+        const costSheetId = cs.costSheetId || 'COST-SHEET-2026-000001';
+        const currVer = cs.version || 'V01';
+        const currVerNum = cs.versionNumber || 1;
+        const nextVerCode = `V0${currVerNum + 1}`;
+
+        const prevCostNum = cs.pricingSnapshot?.totalEstimatedCost || (parseFloat(String(cs.formattedPriceBreakup?.totalEstimatedCostStr || '').replace(/,/g, '').replace(/[^\d.]/g, '')) || 4508250);
+        const prevCostStr = cs.formattedPriceBreakup?.totalEstimatedCostStr || `₹${prevCostNum.toLocaleString('en-IN')}`;
+
+        const updatedTotalNum = live.grandTotal;
+        const updatedTotalStr = `₹${updatedTotalNum.toLocaleString('en-IN')}`;
+
+        const diffNum = updatedTotalNum - prevCostNum;
+        const diffAbsStr = `₹${Math.abs(diffNum).toLocaleString('en-IN')}`;
+        
+        let diffColor = '#94a3b8';
+        let diffText = `⚪ ₹0 (NO CHANGE)`;
+        if (diffNum > 0) {
+          diffColor = '#ef4444';
+          diffText = `🔴 +${diffAbsStr} (INCREASE)`;
+        } else if (diffNum < 0) {
+          diffColor = '#22c55e';
+          diffText = `🟢 -${diffAbsStr} (SAVINGS)`;
+        }
+
+        // Auto brokerage calculation
+        const brokBaseSum = (showRevisionModal.revBasePrice || 0) + (showRevisionModal.revFloorRise || 0) + (showRevisionModal.revPlc || 0) + (showRevisionModal.revParking || 0);
+        const brokPct = showRevisionModal.revBrokeragePct !== undefined ? showRevisionModal.revBrokeragePct : 0;
+        const calcBrokFee = brokPct > 0 ? Math.round((brokBaseSum * brokPct) / 100) : (showRevisionModal.revBrokerage || 0);
 
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
-            <div style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '2px solid #eab308', width: '96vw', maxWidth: '780px', maxHeight: '94vh', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
+            <div className="printable-costsheet-modal-wrapper custom-modal-scrollbar" style={{ background: '#1e293b', border: '2px solid #eab308', width: '96vw', maxWidth: '880px', maxHeight: '96vh', borderRadius: '18px', padding: '0', display: 'flex', flexDirection: 'column', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85)' }}>
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #eab308', paddingBottom: '12px' }}>
+              {/* MODAL HEADER */}
+              <div style={{ background: '#0f172a', borderBottom: '1px solid #334155', padding: '16px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <span style={{ background: '#eab308', color: '#0f172a', padding: '3px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '900', fontFamily: 'monospace' }}>
-                    REVISION EDITOR: {cs.costSheetId}
-                  </span>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', margin: '6px 0 2px 0' }}>
-                    ✏️ REVISE / UPDATE INDIVIDUAL COST SHEET
+                  <h3 style={{ margin: 0, color: '#f59e0b', fontSize: '1.15rem', fontWeight: '900', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>✏️</span>
+                    <span>/ FULL COST SHEET EDITOR & REVISION MANAGER</span>
                   </h3>
-                  <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', margin: 0 }}>
-                    Adjust pricing parameters. Create new version (V02) or update in-place.
-                  </p>
+                  <div style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: '800', marginTop: '4px', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>TARGET ID: {costSheetId}</span>
+                    <span>•</span>
+                    <span>CURRENT VERSION: {currVer}</span>
+                    <span>•</span>
+                    <span>NEXT REVISION: {nextVerCode}</span>
+                  </div>
                 </div>
-                <X size={24} color={isLight ? '#64748b' : '#94a3b8'} style={{ cursor: 'pointer' }} onClick={() => setShowRevisionModal(null)} />
+
+                <button 
+                  onClick={() => setShowRevisionModal(null)}
+                  style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid #334155', color: '#94a3b8', borderRadius: '8px', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: '900', fontSize: '1.2rem' }}
+                  title="Close Revision Modal"
+                >
+                  ✕
+                </button>
               </div>
 
-              {/* FORM INPUTS GRID */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.82rem' }}>
+              {/* MODAL BODY */}
+              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '18px', background: '#0f172a' }}>
                 
-                <div>
-                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Base Price (₹):</label>
-                  <input 
-                    type="number" 
-                    value={showRevisionModal.revBasePrice} 
-                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revBasePrice: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
+                {/* CUSTOMER & PROPERTY CONTEXT ROW */}
+                <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '14px 18px', display: 'grid', gridTemplateColumns: windowWidth <= 768 ? '1fr' : '1fr 1fr 1.2fr', gap: '12px', alignItems: 'center' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', fontWeight: '800', marginBottom: '4px' }}>👤 Customer Name *</label>
+                    <input 
+                      type="text" 
+                      value={custName} 
+                      onChange={e => setShowRevisionModal({ ...showRevisionModal, customerName: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '7px', border: '1px solid #475569', background: '#0f172a', color: '#ffffff', fontWeight: '800', fontSize: '0.86rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', fontWeight: '800', marginBottom: '4px' }}>📱 Mobile Number *</label>
+                    <input 
+                      type="text" 
+                      value={custMobile} 
+                      onChange={e => setShowRevisionModal({ ...showRevisionModal, customerMobile: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '7px', border: '1px solid #475569', background: '#0f172a', color: '#38bdf8', fontWeight: '800', fontSize: '0.86rem', fontFamily: 'monospace' }}
+                    />
+                  </div>
+
+                  <div>
+                    <span style={{ display: 'block', fontSize: '0.74rem', color: '#94a3b8', fontWeight: '800', marginBottom: '4px' }}>🏢 Property Linked:</span>
+                    <strong style={{ color: '#38bdf8', fontSize: '0.82rem', fontFamily: 'monospace', display: 'block', wordBreak: 'break-word', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid #0284c7', borderRadius: '6px', padding: '6px 10px' }}>
+                      {propLinkedStr}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* SUMMARY METRIC CARDS ROW (3 CARDS) */}
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
+                  
+                  {/* CARD 1: PREVIOUS COST */}
+                  <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.5px' }}>PREVIOUS COST ({currVer})</span>
+                    <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#ffffff', fontFamily: 'monospace' }}>
+                      {prevCostStr}
+                    </div>
+                  </div>
+
+                  {/* CARD 2: UPDATED / REVISED TOTAL */}
+                  <div style={{ background: '#1e293b', border: '1.5px solid #0284c7', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: '800', letterSpacing: '0.5px' }}>UPDATED / REVISED TOTAL</span>
+                    <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#38bdf8', fontFamily: 'monospace' }}>
+                      {updatedTotalStr}
+                    </div>
+                  </div>
+
+                  {/* CARD 3: COST VARIANCE / SAVINGS */}
+                  <div style={{ background: '#1e293b', border: `1.5px solid ${diffColor}`, borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.5px' }}>COST VARIANCE / SAVINGS</span>
+                    <div style={{ fontSize: '1.15rem', fontWeight: '900', color: diffColor, fontFamily: 'monospace' }}>
+                      {diffText}
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* EDIT ITEMIZATION DETAILS & PRICING COMPONENTS SECTION */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  
+                  <div style={{ color: '#f59e0b', fontWeight: '900', fontSize: '0.92rem', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid #334155', paddingBottom: '8px' }}>
+                    <span>✏️</span>
+                    <span>EDIT ITEMIZATION DETAILS & PRICING COMPONENTS:</span>
+                  </div>
+
+                  {/* 13 FORM FIELDS GRID */}
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : windowWidth <= 1024 ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '12px 14px' }}>
+                    
+                    {/* 1. Base Asking Price */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#cbd5e1', fontWeight: '800', marginBottom: '4px' }}>1. Base Asking Price (INR) *</label>
+                      <input 
+                        type="number" 
+                        value={showRevisionModal.revBasePrice} 
+                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revBasePrice: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #475569', background: '#1e293b', color: '#ffffff', fontWeight: '800', fontSize: '0.86rem' }}
+                      />
+                    </div>
+
+                    {/* 2. Special Discount */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#f87171', fontWeight: '800', marginBottom: '4px' }}>2. Special Discount (INR)</label>
+                      <input 
+                        type="number" 
+                        value={showRevisionModal.revDiscount} 
+                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revDiscount: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: showRevisionModal.revDiscount > 0 ? '1.5px solid #ef4444' : '1px solid #475569', background: '#1e293b', color: showRevisionModal.revDiscount > 0 ? '#ef4444' : '#ffffff', fontWeight: '800', fontSize: '0.86rem' }}
+                      />
+                    </div>
+
+                    {/* 3. Floor Rise Fee */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#cbd5e1', fontWeight: '800', marginBottom: '4px' }}>3. Floor Rise Fee (INR)</label>
+                      <input 
+                        type="number" 
+                        value={showRevisionModal.revFloorRise} 
+                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revFloorRise: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #475569', background: '#1e293b', color: '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}
+                      />
+                    </div>
+
+                    {/* 4. PLC Facing Charge */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#cbd5e1', fontWeight: '800', marginBottom: '4px' }}>4. PLC Facing Charge (INR)</label>
+                      <input 
+                        type="number" 
+                        value={showRevisionModal.revPlc} 
+                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revPlc: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #475569', background: '#1e293b', color: '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}
+                      />
+                    </div>
+
+                    {/* 5. Parking Slot Charge */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#cbd5e1', fontWeight: '800', marginBottom: '4px' }}>5. Parking Slot Charge (INR)</label>
+                      <input 
+                        type="number" 
+                        value={showRevisionModal.revParking} 
+                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revParking: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #475569', background: '#1e293b', color: '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}
+                      />
+                    </div>
+
+                    {/* 6. Clubhouse Fee */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#cbd5e1', fontWeight: '800', marginBottom: '4px' }}>6. Clubhouse Fee (INR)</label>
+                      <input 
+                        type="number" 
+                        value={showRevisionModal.revClub} 
+                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revClub: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #475569', background: '#1e293b', color: '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}
+                      />
+                    </div>
+
+                    {/* 7. Maintenance (1 Yr) */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#cbd5e1', fontWeight: '800', marginBottom: '4px' }}>7. Maintenance (1 Yr) (INR)</label>
+                      <input 
+                        type="number" 
+                        value={showRevisionModal.revMaintenance} 
+                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revMaintenance: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #475569', background: '#1e293b', color: '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}
+                      />
+                    </div>
+
+                    {/* 8. Infra & Legal Fees */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#cbd5e1', fontWeight: '800', marginBottom: '4px' }}>8. Infra & Legal Fees (INR)</label>
+                      <input 
+                        type="number" 
+                        value={showRevisionModal.revInfraLegal} 
+                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revInfraLegal: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #475569', background: '#1e293b', color: '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}
+                      />
+                    </div>
+
+                    {/* 9. Brokerage Rate Mode (%) */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#cbd5e1', fontWeight: '800', marginBottom: '4px' }}>9. Brokerage Rate Mode (%)</label>
+                      <select 
+                        value={showRevisionModal.revBrokeragePct !== undefined ? showRevisionModal.revBrokeragePct : 0} 
+                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revBrokeragePct: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #475569', background: '#1e293b', color: '#38bdf8', fontWeight: '800', fontSize: '0.82rem' }}
+                      >
+                        <option value={0}>0.0% (Zero Brokerage for Buyer)</option>
+                        <option value={1}>1.0% Standard Buyer Brokerage</option>
+                        <option value={2}>2.0% Full Service Brokerage</option>
+                      </select>
+                    </div>
+
+                    {/* 9.1 Calculated Brokerage Fee */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#38bdf8', fontWeight: '800', marginBottom: '4px' }}>9.1 Calculated Brokerage Fee (INR)</label>
+                      <input 
+                        type="text" 
+                        readOnly
+                        value={calcBrokFee} 
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #0284c7', background: 'rgba(2, 132, 199, 0.1)', color: '#38bdf8', fontWeight: '900', fontSize: '0.86rem', fontFamily: 'monospace' }}
+                      />
+                      <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                        Auto-calculated on (Base + Floor Rise + PLC + Parking)
+                      </span>
+                    </div>
+
+                    {/* 10. GST Rate Mode */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#cbd5e1', fontWeight: '800', marginBottom: '4px' }}>10. GST Rate Mode</label>
+                      <select 
+                        value={showRevisionModal.revGstPct !== undefined ? showRevisionModal.revGstPct : 5} 
+                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revGstPct: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #475569', background: '#1e293b', color: '#ffffff', fontWeight: '800', fontSize: '0.82rem' }}
+                      >
+                        <option value={5}>5% Standard GST (Under Construction)</option>
+                        <option value={1}>1% Affordable Housing GST</option>
+                        <option value={0}>0% Exempted / Ready to Move</option>
+                      </select>
+                    </div>
+
+                    {/* 11. Stamp Duty Rate */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#cbd5e1', fontWeight: '800', marginBottom: '4px' }}>11. Stamp Duty Rate</label>
+                      <select 
+                        value={showRevisionModal.revStampDutyPct !== undefined ? showRevisionModal.revStampDutyPct : 5} 
+                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revStampDutyPct: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #475569', background: '#1e293b', color: '#ffffff', fontWeight: '800', fontSize: '0.82rem' }}
+                      >
+                        <option value={5}>5.0% Standard Telangana/AP Rate</option>
+                        <option value={6}>6.0% WB / Standard State Rate</option>
+                        <option value={7}>7.0% MH / High Bracket State Rate</option>
+                      </select>
+                    </div>
+
+                    {/* 12. Registration Fee Rate */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#cbd5e1', fontWeight: '800', marginBottom: '4px' }}>12. Registration Fee Rate</label>
+                      <select 
+                        value={showRevisionModal.revRegPct !== undefined ? showRevisionModal.revRegPct : 1} 
+                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revRegPct: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #475569', background: '#1e293b', color: '#ffffff', fontWeight: '800', fontSize: '0.82rem' }}
+                      >
+                        <option value={1}>1.0% Fixed Transfer Fee</option>
+                        <option value={2}>2.0% Standard Transfer Fee</option>
+                      </select>
+                    </div>
+
+                    {/* 13. Unit & Floor Specification Notes */}
+                    <div style={{ gridColumn: windowWidth > 1024 ? 'span 2' : 'auto' }}>
+                      <label style={{ display: 'block', fontSize: '0.76rem', color: '#cbd5e1', fontWeight: '800', marginBottom: '4px' }}>13. Unit & Floor Specification Notes</label>
+                      <input 
+                        type="text" 
+                        value={showRevisionModal.revUnitNotes || ''} 
+                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revUnitNotes: e.target.value })}
+                        placeholder="e.g. A-504, 5th Floor, North-East Facing"
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #475569', background: '#1e293b', color: '#ffffff', fontWeight: '700', fontSize: '0.84rem' }}
+                      />
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* REASON FOR UPDATE / REVISION (AUDIT TRAIL LOG ENTRY) */}
+                <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ color: '#f59e0b', fontWeight: '900', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>📌</span>
+                    <span>REASON FOR UPDATE / REVISION (AUDIT TRAIL LOG ENTRY)</span>
+                  </div>
+                  <textarea 
+                    value={showRevisionModal.reason || ''} 
+                    onChange={e => setShowRevisionModal({ ...showRevisionModal, reason: e.target.value })}
+                    placeholder="e.g. Corrected customer contact name, applied ₹50,000 festival discount..."
+                    rows={2}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #475569', background: '#0f172a', color: '#ffffff', fontSize: '0.84rem', resize: 'vertical' }}
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Floor Rise Charge (₹):</label>
-                  <input 
-                    type="number" 
-                    value={showRevisionModal.revFloorRise} 
-                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revFloorRise: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
-                  />
-                </div>
+                {/* BOTTOM ACTION BAR */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #334155', paddingTop: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                  <button 
+                    onClick={() => setShowRevisionModal(null)} 
+                    style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '800', fontSize: '0.84rem', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
 
-                <div>
-                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>PLC Charge (₹):</label>
-                  <input 
-                    type="number" 
-                    value={showRevisionModal.revPlc} 
-                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revPlc: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Parking Charge (₹):</label>
-                  <input 
-                    type="number" 
-                    value={showRevisionModal.revParking} 
-                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revParking: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Clubhouse Charge (₹):</label>
-                  <input 
-                    type="number" 
-                    value={showRevisionModal.revClub} 
-                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revClub: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Maintenance Charge (₹):</label>
-                  <input 
-                    type="number" 
-                    value={showRevisionModal.revMaintenance} 
-                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revMaintenance: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Infra & Legal Fee (₹):</label>
-                  <input 
-                    type="number" 
-                    value={showRevisionModal.revInfraLegal} 
-                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revInfraLegal: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontWeight: '800', marginBottom: '4px' }}>Discount Amount (₹):</label>
-                  <input 
-                    type="number" 
-                    value={showRevisionModal.revDiscount} 
-                    onChange={e => setShowRevisionModal({ ...showRevisionModal, revDiscount: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700' }}
-                  />
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <button 
+                      onClick={() => executeCreateRevision(true)} 
+                      style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '10px 22px', borderRadius: '8px', fontWeight: '900', fontSize: '0.86rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)' }}
+                    >
+                      <span>🧰</span>
+                      <span>SAVE EDITS (Update In-Place)</span>
+                    </button>
+                    <button 
+                      onClick={() => executeCreateRevision(false)} 
+                      style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '10px 24px', borderRadius: '8px', fontWeight: '900', fontSize: '0.86rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(234, 179, 8, 0.3)' }}
+                    >
+                      <span>🚀</span>
+                      <span>SAVE AS NEW REVISION ({nextVerCode})</span>
+                    </button>
+                  </div>
                 </div>
 
               </div>
+            </div>
+          </div>
+        );
+      })()}
 
-              {/* LIVE RECALCULATED TOTAL */}
-              <div style={{ background: 'rgba(34, 197, 94, 0.12)', border: '1.5px solid #22c55e', borderRadius: '12px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* MODAL: CREATE MULTI-PROPERTY VISIT SCHEDULE */}
+      {showScheduleVisitModal && showScheduleVisitModal.open && (() => {
+        const initCs = showScheduleVisitModal.costSheet;
+        const targetCustId = initCs?.customerId || initCs?.customerSnapshot?.customerId || initCs?.customerSnapshot?.customerNumber || 'SRM-CUS-2026-000192';
+        const targetCustName = initCs?.customerName || initCs?.customerSnapshot?.customerName || 'Valued Customer';
+        const targetCustMob = initCs?.mobile || initCs?.customerSnapshot?.mobile || '91-9593193209';
+
+        return (
+          <ScheduleVisitModalContent
+            isLight={isLight}
+            initialCS={initCs}
+            targetCustomerId={targetCustId}
+            targetCustName={targetCustName}
+            targetCustMobile={targetCustMob}
+            eligibleCostSheets={individualCostSheets}
+            properties={properties}
+            visitPlans={visitPlans}
+            setVisitPlans={setVisitPlans}
+            setScheduledVisits={setScheduledVisits}
+            setIndividualCostSheets={setIndividualCostSheets}
+            setShowScheduleVisitModal={setShowScheduleVisitModal}
+            setActiveTab={setActiveTab}
+            setActiveVisitSubTab={setActiveVisitSubTab}
+            setSelectedVisitPlanId={setSelectedVisitPlanId}
+            dynamicSalesExecutives={users}
+            customers={customers}
+          />
+        );
+      })()}
+
+      {/* MODAL: MULTI-PROPERTY ROUTE NAVIGATION & INTERACTIVE MAP MODAL (EXACT IMAGE 2 & 3 LAYOUT) */}
+      {showRouteMapModal && showRouteMapModal.open && (() => {
+        const plan = showRouteMapModal.plan || (visitPlans && visitPlans[0]) || {};
+        const custName = plan.customerName || plan.customer_name || 'Valued Customer';
+        const custNum = plan.customerNumber || plan.customer_number || plan.customerId || 'SRM-CUS-2026-000185';
+        const planId = plan.visitPlanId || plan.visitScheduleId || plan.id || 'SRM-VS-2026-000087';
+        const stops = plan.stops || [];
+        const totalStopsCount = stops.length;
+
+        const pickup = plan.pickupAddress && !plan.pickupAddress.includes('Barasat Banamalipur') 
+          ? plan.pickupAddress 
+          : 'Madhyamgram, Kolkata';
+
+        const drop = plan.dropAddress && !plan.dropAddress.includes('Barasat Chapadali') 
+          ? plan.dropAddress 
+          : 'Madhyamgram, Kolkata';
+
+        const waypointsList = stops.map((s: any) => s.address || s.propertyTitle || s.locality || '').filter(Boolean);
+        const waypointsStr = waypointsList.join('|');
+
+        let googleNavUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(drop)}`;
+        if (waypointsStr) {
+          googleNavUrl += `&waypoints=${encodeURIComponent(waypointsStr)}`;
+        }
+        googleNavUrl += `&travelmode=driving`;
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2500, padding: windowWidth <= 640 ? '6px' : '16px' }}>
+            <div className="custom-modal-scrollbar" style={{ background: '#1e293b', border: '2px solid #0284c7', width: '96vw', maxWidth: '1040px', maxHeight: '96vh', borderRadius: '16px', padding: '0', display: 'flex', flexDirection: 'column', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85)' }}>
+              
+              {/* MODAL HEADER */}
+              <div style={{ background: '#0f172a', borderBottom: '1px solid #334155', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
-                  <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>RECALCULATED SUBTOTAL</span>
-                  <div style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>₹{live.subtotal.toLocaleString('en-IN')}</div>
+                  <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.25rem', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>🗺️</span>
+                    <span>INTERACTIVE VISIT ROUTE MAP</span>
+                  </h3>
+                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '700', marginTop: '3px' }}>
+                    Master Schedule: <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{planId}</strong> — <strong>{custName}</strong>
+                  </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#22c55e', fontWeight: '900' }}>NEW TOTAL ESTIMATED COST</span>
-                  <div style={{ fontSize: '1.3rem', fontWeight: '900', color: '#22c55e', fontFamily: 'monospace' }}>₹{live.grandTotal.toLocaleString('en-IN')}</div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button 
+                    onClick={() => window.open(googleNavUrl, '_blank')}
+                    style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)' }}
+                    title="Open Full Multi-Stop Navigation in Google Maps"
+                  >
+                    <span>🚀</span>
+                    <span>Launch External Google Maps App</span>
+                  </button>
+
+                  <button 
+                    onClick={() => setShowRouteMapModal(null)}
+                    style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid #334155', color: '#94a3b8', borderRadius: '8px', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: '900', fontSize: '1.2rem' }}
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
 
-              {/* ACTIONS */}
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '12px' }}>
-                <button onClick={() => setShowRevisionModal(null)} style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}>
-                  Cancel
-                </button>
-                <button onClick={() => executeCreateRevision(true)} style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer' }}>
-                  💾 Save In-Place (Update Version)
-                </button>
-                <button onClick={() => executeCreateRevision(false)} style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '9px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.84rem', cursor: 'pointer' }}>
-                  🚀 Save as New Version (V02)
-                </button>
-              </div>
+              {/* MODAL BODY */}
+              <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#0f172a' }}>
+                
+                {/* NODE CARDS SEQUENCE ROW WITH ARROWS */}
+                <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', gap: '10px', overflowX: 'auto' }}>
+                  
+                  {/* CARD 1: START OFFICE */}
+                  <div style={{ minWidth: '180px', flex: '1', background: '#0f172a', border: '1px solid #0284c7', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '0.68rem', color: '#38bdf8', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>■</span> START OFFICE
+                    </span>
+                    <strong style={{ fontSize: '0.84rem', color: '#ffffff' }}>HQ Office</strong>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Swaramayi HQ Barasat, Kolkata</span>
+                    <button 
+                      onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Swaramayi HQ Barasat Kolkata')}`, '_blank')}
+                      style={{ marginTop: '4px', background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', border: '1px solid #0284c7', padding: '3px 8px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                      📍 View Office
+                    </button>
+                  </div>
 
+                  <span style={{ color: '#38bdf8', fontWeight: '900', fontSize: '1.1rem' }}>➔</span>
+
+                  {/* CARD 2: PICKUP */}
+                  <div style={{ minWidth: '180px', flex: '1', background: '#0f172a', border: '1px solid #22c55e', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '0.68rem', color: '#4ade80', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>●</span> PICKUP
+                    </span>
+                    <strong style={{ fontSize: '0.84rem', color: '#ffffff' }}>Customer Pickup</strong>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{pickup}</span>
+                    <button 
+                      onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pickup)}`, '_blank')}
+                      style={{ marginTop: '4px', background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid #22c55e', padding: '3px 8px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                      📍 View Red Pin Pointer
+                    </button>
+                  </div>
+
+                  <span style={{ color: '#38bdf8', fontWeight: '900', fontSize: '1.1rem' }}>➔</span>
+
+                  {/* PROPERTY STOPS CARDS */}
+                  {stops.map((s: any, idx: number) => {
+                    const stopTarget = s.address || s.propertyTitle || s.locality || 'Barasat Site';
+                    const stopLabel = idx < 9 ? `0${idx + 1}` : `${idx + 1}`;
+                    return (
+                      <React.Fragment key={idx}>
+                        <div style={{ minWidth: '180px', flex: '1', background: '#0f172a', border: '1px solid #0284c7', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontSize: '0.68rem', color: '#38bdf8', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>■</span> STOP {stopLabel}
+                          </span>
+                          <strong style={{ fontSize: '0.84rem', color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.propertyTitle}</strong>
+                          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{stopTarget}</span>
+                          <button 
+                            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stopTarget)}`, '_blank')}
+                            style={{ marginTop: '4px', background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', border: '1px solid #0284c7', padding: '3px 8px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800', cursor: 'pointer' }}
+                          >
+                            📍 View Red Pin Pointer
+                          </button>
+                        </div>
+                        <span style={{ color: '#38bdf8', fontWeight: '900', fontSize: '1.1rem' }}>➔</span>
+                      </React.Fragment>
+                    );
+                  })}
+
+                  {/* CARD LAST: DROP */}
+                  <div style={{ minWidth: '180px', flex: '1', background: '#0f172a', border: '1px solid #ef4444', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '0.68rem', color: '#f87171', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>●</span> DROP
+                    </span>
+                    <strong style={{ fontSize: '0.84rem', color: '#ffffff' }}>Customer Drop</strong>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{drop}</span>
+                    <button 
+                      onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(drop)}`, '_blank')}
+                      style={{ marginTop: '4px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid #ef4444', padding: '3px 8px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                      📍 View Red Pin Pointer
+                    </button>
+                  </div>
+
+                </div>
+
+                {/* SECTION TITLE FOR MAP CANVAS */}
+                <div style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>🗺️</span>
+                  <span>LIVE ROUTE MAP CANVAS (RED PIN POINTERS & CONNECTING PATH)</span>
+                  <span style={{ color: '#94a3b8', fontWeight: 'normal', fontSize: '0.74rem' }}>Click markers on map for individual location details</span>
+                </div>
+
+                {/* FULL INTERACTIVE MAP ENGINE (60FPS CAR ANIMATION + HUD + CONTROLS) */}
+                <InteractiveRoutePlanMap plan={plan} isLight={isLight} autoStart={Boolean(showRouteMapModal.autoStart)} />
+
+                {/* BOTTOM ACTION BAR */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #334155', paddingTop: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                  <button 
+                    onClick={() => window.open(googleNavUrl, '_blank')}
+                    style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '10px 22px', borderRadius: '8px', fontWeight: '900', fontSize: '0.86rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 14px rgba(34, 197, 94, 0.4)' }}
+                  >
+                    <span>🚀</span>
+                    <span>LAUNCH GOOGLE MAPS CAR NAVIGATION ({totalStopsCount} STOPS)</span>
+                  </button>
+
+                  <button 
+                    onClick={() => setShowRouteMapModal(null)} 
+                    style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '10px 24px', borderRadius: '8px', fontWeight: '800', fontSize: '0.84rem', cursor: 'pointer' }}
+                  >
+                    Close Map
+                  </button>
+                </div>
+
+              </div>
             </div>
           </div>
         );

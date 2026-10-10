@@ -14508,26 +14508,30 @@ export default function App() {
           ? plan.dropAddress 
           : (isSelfDrivingMode ? 'Direct Departure from Project Site' : 'Direct Drop at Location');
 
-        const originNavQuery = hasCustomPickup 
+        const pickupNavTarget = hasCustomPickup 
           ? formatNavTarget(plan.pickupAddress, plan.pickupLat, plan.pickupLng, 'Customer Pickup')
-          : formatNavTarget(officeAddress, plan.officeLat || headOffice?.latitude || '22.694318', plan.officeLng || headOffice?.longitude || '88.400659', officeName);
+          : null;
 
         const lastStopNode = stops[stops.length - 1] || {};
         const destNavQuery = hasCustomDrop 
           ? formatNavTarget(plan.dropAddress, plan.dropLat, plan.dropLng, 'Customer Drop')
           : formatNavTarget(lastStopNode.address, lastStopNode.latitude || '22.722361', lastStopNode.longitude || '88.493403', lastStopNode.propertyTitle || 'Project Site');
 
-        let googleNavUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originNavQuery)}&destination=${encodeURIComponent(destNavQuery)}&travelmode=driving`;
+        // Omitting 'origin' parameter allows Google Maps app on mobile to use Current Device Location and display 'Start' turn-by-turn navigation button
+        const allWaypoints: string[] = [];
+        if (pickupNavTarget) {
+          allWaypoints.push(pickupNavTarget);
+        }
 
-        if (stops.length > 1) {
-          const midStops = stops.slice(0, -1);
-          const midWaypoints = midStops
-            .map((s: any) => formatNavTarget(s.address, s.latitude, s.longitude, s.propertyTitle))
-            .filter(Boolean)
-            .join('|');
-          if (midWaypoints) {
-            googleNavUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originNavQuery)}&destination=${encodeURIComponent(destNavQuery)}&waypoints=${encodeURIComponent(midWaypoints)}&travelmode=driving`;
-          }
+        const projectWaypoints = hasCustomDrop
+          ? stops.map((s: any) => formatNavTarget(s.address, s.latitude, s.longitude, s.propertyTitle)).filter(Boolean)
+          : stops.slice(0, -1).map((s: any) => formatNavTarget(s.address, s.latitude, s.longitude, s.propertyTitle)).filter(Boolean);
+
+        allWaypoints.push(...projectWaypoints);
+
+        let googleNavUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destNavQuery)}&travelmode=driving&dirflg=d`;
+        if (allWaypoints.length > 0) {
+          googleNavUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destNavQuery)}&waypoints=${encodeURIComponent(allWaypoints.join('|'))}&travelmode=driving&dirflg=d`;
         }
 
         return (

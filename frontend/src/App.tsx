@@ -139,7 +139,7 @@ import { MultiSelectFloorSelector } from './components/MultiSelectFloorSelector'
 import { LocationAutocompleteInput } from './components/LocationAutocompleteInput';
 import { loadGoogleMapsApi, geocodeAddress, getGoogleMapsApiKey } from './utils/googleMapsLoader';
 
-function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: { plan: any; isLight?: boolean; autoStart?: boolean }) {
+function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false, branches = [] }: { plan: any; isLight?: boolean; autoStart?: boolean; branches?: any[] }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapWrapperRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<any>(null);
@@ -244,6 +244,10 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: {
     };
 
     // Node 1: Office (Driver/HQ Start Point)
+    const headOffice = (branches && Array.isArray(branches)) ? (branches.find((b: any) => b.id === 'BR-01' || (b.branch_name && b.branch_name.includes('Head Office'))) || branches[0]) : null;
+    const defaultOfficeName = headOffice ? headOffice.branch_name : 'HQ Office Barasat';
+    const defaultOfficeAddress = headOffice ? `${headOffice.address} • Phone: ${headOffice.phone || '+91 88021 30791'} • RERA Reg No: ${headOffice.rera_reg || 'WBRERA/A/NOR/2025/000737'}` : '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129 • Phone: +91 88021 30791 • RERA Reg No: WBRERA/A/NOR/2025/000737';
+
     let offLat = 22.694318;
     let offLng = 88.400659;
     if (plan.officeLat && plan.officeLng && !isHyd(plan.officeLat, plan.officeLng)) {
@@ -254,9 +258,9 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false }: {
     const officeNode = {
       id: 'node-office',
       nodeType: 'OFFICE',
-      title: plan.officeName || 'HQ Office',
+      title: plan.officeName || defaultOfficeName,
       subtitle: 'Office / Driver Starting Location',
-      address: plan.officeAddress || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129 • Phone: +91 88021 30791 • RERA Reg No: WBRERA/A/NOR/2025/000737',
+      address: plan.officeAddress || defaultOfficeAddress,
       lat: offLat,
       lng: offLng,
       icon: '🏢',
@@ -1149,7 +1153,8 @@ function ScheduleVisitModalContent({
   setActiveVisitSubTab,
   setSelectedVisitPlanId,
   dynamicSalesExecutives = [],
-  customers = []
+  customers = [],
+  branches = []
 }: any) {
   const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
 
@@ -1387,6 +1392,8 @@ function ScheduleVisitModalContent({
       customerNumber: targetCustomerId,
       mobile: targetCustMobile,
       matchingId: 'SRM-MAT-2026-000421',
+      officeName: (branches && branches.length > 0 ? (branches.find((b: any) => b.id === 'BR-01' || (b.branch_name && b.branch_name.includes('Head Office'))) || branches[0]) : null)?.branch_name || 'Head Office (Kolkata)',
+      officeAddress: (branches && branches.length > 0 ? (branches.find((b: any) => b.id === 'BR-01' || (b.branch_name && b.branch_name.includes('Head Office'))) || branches[0]) : null)?.address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129',
       assignedExecutive: assignedExec,
       assignedExecutivePhone: '+91 98490 00014',
       visitDate: visitDate,
@@ -14408,6 +14415,7 @@ export default function App() {
             setSelectedVisitPlanId={setSelectedVisitPlanId}
             dynamicSalesExecutives={users}
             customers={customers}
+            branches={branches}
           />
         );
       })()}
@@ -14415,6 +14423,9 @@ export default function App() {
       {/* MODAL: MULTI-PROPERTY ROUTE NAVIGATION & INTERACTIVE MAP MODAL (EXACT IMAGE 2 & 3 LAYOUT) */}
       {showRouteMapModal && showRouteMapModal.open && (() => {
         const plan = showRouteMapModal.plan || (visitPlans && visitPlans[0]) || {};
+        const headOffice = (branches && Array.isArray(branches)) ? (branches.find((b: any) => b.id === 'BR-01' || (b.branch_name && b.branch_name.includes('Head Office'))) || branches[0]) : null;
+        const officeName = plan.officeName || (headOffice ? headOffice.branch_name : 'HQ Office');
+        const officeAddress = plan.officeAddress || (headOffice ? headOffice.address : '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129');
         const custName = plan.customerName || plan.customer_name || 'Valued Customer';
         const custNum = plan.customerNumber || plan.customer_number || plan.customerId || 'SRM-CUS-2026-000185';
         const planId = plan.visitPlanId || plan.visitScheduleId || plan.id || 'SRM-VS-2026-000087';
@@ -14484,10 +14495,10 @@ export default function App() {
                     <span style={{ fontSize: '0.68rem', color: '#38bdf8', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span>■</span> START OFFICE
                     </span>
-                    <strong style={{ fontSize: '0.84rem', color: '#ffffff' }}>HQ Office</strong>
-                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Swaramayi HQ Barasat, Kolkata</span>
+                    <strong style={{ fontSize: '0.84rem', color: '#ffffff' }}>{officeName}</strong>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{officeAddress}</span>
                     <button 
-                      onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Swaramayi HQ Barasat Kolkata')}`, '_blank')}
+                      onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(officeAddress || officeName)}`, '_blank')}
                       style={{ marginTop: '4px', background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', border: '1px solid #0284c7', padding: '3px 8px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800', cursor: 'pointer' }}
                     >
                       📍 View Office
@@ -14562,7 +14573,7 @@ export default function App() {
                 </div>
 
                 {/* FULL INTERACTIVE MAP ENGINE (60FPS CAR ANIMATION + HUD + CONTROLS) */}
-                <InteractiveRoutePlanMap plan={plan} isLight={isLight} autoStart={Boolean(showRouteMapModal.autoStart)} />
+                <InteractiveRoutePlanMap plan={plan} isLight={isLight} autoStart={Boolean(showRouteMapModal.autoStart)} branches={branches} />
 
                 {/* BOTTOM ACTION BAR */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #334155', paddingTop: '14px', flexWrap: 'wrap', gap: '10px' }}>

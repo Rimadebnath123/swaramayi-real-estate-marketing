@@ -28,6 +28,10 @@ export const loadGoogleMapsApi = (): Promise<typeof google.maps> => {
       const scriptId = 'google-maps-js-sdk';
       const el = document.getElementById(scriptId);
       if (el) el.remove();
+      try {
+        const popups = document.querySelectorAll('.pac-container, .gm-err-container, .gm-style-moc');
+        popups.forEach(p => p.remove());
+      } catch (e) {}
       reject(new Error('GOOGLE_MAPS_AUTH_FAILURE'));
     };
 

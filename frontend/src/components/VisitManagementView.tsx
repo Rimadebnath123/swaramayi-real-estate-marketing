@@ -435,6 +435,98 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     return list;
   }, [scheduledVisits, visitPlans, sentToFollowupVisitIds]);
 
+  const effectiveVisitPlans = React.useMemo(() => {
+    const list: any[] = [...(visitPlans || [])];
+
+    (scheduledVisits || []).forEach((sv: any) => {
+      const svId = sv.visitPlanId || sv.visitScheduleId || sv.visitId || sv.id || (sv.costSheetId ? `SRM-VS-${sv.costSheetId}` : null);
+      if (!svId) return;
+
+      const isSent = sentToFollowupVisitIds.some(id => 
+        (svId && (id === svId || String(svId).includes(String(id)) || String(id).includes(String(svId)))) ||
+        (sv.customerNumber && (id === sv.customerNumber || String(sv.customerNumber).includes(String(id)))) ||
+        (sv.mobile && (id === sv.mobile.replace(/\D/g, '')))
+      );
+      if (isSent || sv.status === 'SENT_TO_FOLLOWUP' || sv.visit_status === 'SENT_TO_FOLLOWUP') return;
+
+      const exists = list.some(p => 
+        p.visitPlanId === svId || 
+        p.visitScheduleId === svId || 
+        (p.customerNumber && sv.customerNumber && p.customerNumber === sv.customerNumber && p.visitDate === sv.visitDate) ||
+        (p.mobile && sv.mobile && p.mobile.replace(/\D/g, '') === sv.mobile.replace(/\D/g, '') && p.visitDate === sv.visitDate)
+      );
+
+      if (!exists) {
+        const stops = (Array.isArray(sv.stops) && sv.stops.length > 0)
+          ? sv.stops
+          : [
+              {
+                stopId: `SRM-VSTOP-${svId}-1`,
+                costSheetId: sv.costSheetId || 'N/A',
+                propertyId: sv.propertyId || 'PROP-01',
+                propertyCode: sv.propertyCode || 'N/A',
+                propertyTitle: sv.propertyTitle || 'Property Site',
+                locality: sv.locality || 'Property Location',
+                developer: sv.developer || 'Partner Developer',
+                latitude: sv.latitude || '22.722361° N',
+                longitude: sv.longitude || '88.493403° E',
+                address: sv.address || `${sv.propertyTitle || 'Property Site'}, ${sv.locality || 'Location'}`,
+                timeWindow: `${sv.visitTime || sv.startTime || '10:00 AM'} - 11:30 AM`,
+                scheduledTime: sv.visitTime || sv.startTime || '10:00 AM',
+                durationMinutes: 45,
+                distanceFromPrev: '3.2 KM',
+                etaMinutes: 10,
+                status: sv.status === 'COMPLETED' ? 'VISIT_COMPLETED' : 'PENDING',
+                otpVerified: sv.otpVerified || false,
+                geofenceVerified: sv.geofenceVerified || false
+              }
+            ];
+
+        list.push({
+          visitPlanId: svId,
+          visitScheduleId: svId,
+          customerName: sv.customerName || 'Scheduled Customer',
+          customerNumber: sv.customerNumber || sv.customerId || 'SRM-CUS-N/A',
+          mobile: sv.mobile || sv.customerMobile || 'N/A',
+          matchingId: sv.matchingId || 'SRM-MAT-2026-00001',
+          officeName: sv.officeName || 'Head Office (Kolkata)',
+          officeAddress: sv.officeAddress || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129',
+          assignedExecutive: sv.assignedExecutive || sv.assignedFieldExecutive || sv.salesExecutive || 'Unassigned',
+          assignedExecutivePhone: sv.assignedExecutivePhone || '+91 98490 00014',
+          visitDate: sv.visitDate || new Date().toISOString().split('T')[0],
+          startTime: sv.visitTime || sv.startTime || '10:00 AM',
+          status: sv.status || 'ASSIGNED',
+          transport: sv.transport || '🏎️ Self Driving / Direct Arrival at Site',
+          pickupAddress: sv.pickupAddress || '',
+          pickupLat: sv.pickupLat || '22.720500° N',
+          pickupLng: sv.pickupLng || '88.485000° E',
+          pickupStatus: sv.pickupStatus || 'PENDING',
+          pickupTime: sv.pickupTime || sv.visitTime || '10:00 AM',
+          dropAddress: sv.dropAddress || '',
+          dropLat: sv.dropLat || '22.725000° N',
+          dropLng: sv.dropLng || '88.498000° E',
+          dropStatus: sv.dropStatus || 'PENDING',
+          currentStopIndex: sv.currentStopIndex || 0,
+          autoNavigateNext: true,
+          totalDistanceKm: sv.totalDistanceKm || `${(4.5 * stops.length).toFixed(1)} KM`,
+          totalDurationMinutes: sv.totalDurationMinutes || (45 * stops.length + 30),
+          delayStatus: sv.delayStatus || '🟢 ON SCHEDULE',
+          deviationStatus: sv.deviationStatus || '🟢 ON ROUTE',
+          stops: stops,
+          auditLogs: sv.auditLogs || []
+        });
+      }
+    });
+
+    return list;
+  }, [visitPlans, scheduledVisits, sentToFollowupVisitIds]);
+
+  React.useEffect(() => {
+    if (setVisitPlans && effectiveVisitPlans.length > (visitPlans || []).length) {
+      setVisitPlans(effectiveVisitPlans);
+    }
+  }, [effectiveVisitPlans, visitPlans, setVisitPlans]);
+
   const getPvaMatch = (v: any) => {
     const cleanMob = (v?.mobile || '').replace(/\D/g, '');
     const cleanCustNo = (v?.customerNumber || '').toLowerCase().trim();
@@ -600,12 +692,12 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       {/* 8 SUB-TABS NAVIGATION FOR VISIT MANAGEMENT */}
       <div style={{ display: 'flex', gap: windowWidth <= 640 ? '6px' : '10px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', flexWrap: 'wrap' }}>
         {[
-          { id: 'visit_route_planner', label: `🗺️ Multi-Property Route Planner (${(visitPlans || []).length})`, accent: '#38bdf8', borderAccent: '#0284c7' },
+          { id: 'visit_route_planner', label: `🗺️ Multi-Property Route Planner (${effectiveVisitPlans.length})`, accent: '#38bdf8', borderAccent: '#0284c7' },
           { id: 'visit_scheduler', label: `📅 Single Site Visit Scheduler (${unifiedVisits.length})` },
           { id: 'visit_otp_checkin', label: `🔐 OTP Verification & Check-In (${(projectVisitAgreements || []).length})` },
           { id: 'visit_feedback', label: `⭐ Structured 5-Star Feedback (${(visitFeedbacks || []).length})` },
           { id: 'visit_analytics', label: `📊 Visit Conversion Analytics (${(unifiedVisits || []).filter((v: any) => v.status === 'COMPLETED' || v.status === 'VISIT_DONE' || v.status === 'RATED' || v.visit_status === 'COMPLETED').length || unifiedVisits.length})` },
-          { id: 'visit_owner_tracking', label: `👑 Owner Live Route Tracking (${(visitPlans || []).length})`, accent: '#fbbf24', borderAccent: '#fbbf24' },
+          { id: 'visit_owner_tracking', label: `👑 Owner Live Route Tracking (${effectiveVisitPlans.length})`, accent: '#fbbf24', borderAccent: '#fbbf24' },
           { id: 'advisor_ratings', label: `⭐ Advisor Ratings & Links (${(allRatingLogs || []).length})`, accent: '#f59e0b', borderAccent: '#f59e0b' },
           { id: 'need_to_followup', label: `📌 Need to Followup (${(localFollowupList || []).length})`, accent: '#ef4444', borderAccent: '#ef4444' }
         ].map(tab => (
@@ -634,7 +726,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       {/* SUB-TAB 1: MULTI-PROPERTY ROUTE PLANNER & LIVE EXECUTION */}
       {activeVisitSubTab === 'visit_route_planner' && (() => {
         // Filter visit plans based on search query, status, date, exec
-        const filteredPlans = visitPlans.filter((plan: any) => {
+        const filteredPlans = effectiveVisitPlans.filter((plan: any) => {
           if (!matchesSearchQuery(plan, searchQuery)) return false;
           if (visitFilterStatus !== 'ALL' && plan.status !== visitFilterStatus) return false;
           if (visitFilterDate !== 'ALL' && plan.visitDate !== visitFilterDate) return false;
@@ -672,7 +764,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   📱 Mobile Cockpit
                 </button>
                 <button 
-                  onClick={() => setShowRouteMapModal({ open: true, plan: visitPlans[0] })} 
+                  onClick={() => setShowRouteMapModal({ open: true, plan: effectiveVisitPlans[0] })} 
                   style={{ flex: windowWidth <= 640 ? '1 1 calc(50% - 4px)' : 'auto', justifyContent: 'center', background: '#334155', color: '#38bdf8', border: '1px solid #0284c7', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   🗺️ View Map
@@ -967,15 +1059,18 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                 <div style={{ display: 'flex', flexDirection: windowWidth <= 640 ? 'column' : 'row', alignItems: windowWidth <= 640 ? 'flex-start' : 'center', gap: '10px', width: windowWidth <= 640 ? '100%' : 'auto' }}>
                   <span style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>Active Visit Plan:</span>
                   <select 
-                    value={selectedVisitPlanId} 
+                    value={selectedVisitPlanId || (effectiveVisitPlans[0]?.visitPlanId || effectiveVisitPlans[0]?.visitScheduleId || '')} 
                     onChange={(e) => setSelectedVisitPlanId(e.target.value)} 
                     style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', color: '#38bdf8', fontWeight: '900', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', width: '100%', maxWidth: '100%', boxSizing: 'border-box', textOverflow: 'ellipsis' }}
                   >
-                    {visitPlans.map(plan => (
-                      <option key={plan.visitPlanId} value={plan.visitPlanId}>
-                        {plan.visitPlanId} — {plan.customerName} ({(plan.stops || []).length} Stops) [{plan.visitDate}]
-                      </option>
-                    ))}
+                    {effectiveVisitPlans.map(plan => {
+                      const pId = plan.visitPlanId || plan.visitScheduleId;
+                      return (
+                        <option key={pId} value={pId}>
+                          {pId} — {plan.customerName} ({(plan.stops || []).length} Stops) [{plan.visitDate}]
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 
@@ -989,7 +1084,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
 
               {/* EXECUTIVE MOBILE ROUTE CARD */}
               {(() => {
-                const currentPlan = visitPlans.find(p => p.visitPlanId === selectedVisitPlanId) || visitPlans[0] || {
+                const currentPlan = effectiveVisitPlans.find(p => p.visitPlanId === selectedVisitPlanId || p.visitScheduleId === selectedVisitPlanId) || effectiveVisitPlans[0] || {
                   visitPlanId: 'NO_VISIT_PLANS',
                   customerName: 'No Scheduled Visit Plans Available',
                   customerNumber: 'N/A',
@@ -1313,7 +1408,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
               </thead>
               <tbody>
                 {filteredVisits.map((v: any, idx: number) => {
-                  const matchedPlan = (visitPlans || []).find((p: any) => 
+                  const matchedPlan = effectiveVisitPlans.find((p: any) => 
                     (v.visitId && (p.visitPlanId === v.visitId || p.visitScheduleId === v.visitId)) ||
                     (v.customerNumber && p.customerNumber === v.customerNumber && v.visitDate === p.visitDate) ||
                     (v.mobile && p.mobile === v.mobile && v.visitDate === p.visitDate)
@@ -2165,7 +2260,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                               onClick={() => {
                                 const matchedCust = (customers || []).find(c => (v.customerNumber && (c.customer_number === v.customerNumber || c.custCode === v.customerNumber)) || (v.mobile && c.mobile === v.mobile) || (v.customerName && (c.name === v.customerName || c.custName === v.customerName)));
                                 const matchedProp = (properties || []).find(p => (v.propertyCode && (p.property_code === v.propertyCode || p.propertyCode === v.propertyCode || p.propCode === v.propertyCode)) || (v.propertyTitle && (p.title === v.propertyTitle || p.propTitle === v.propertyTitle)));
-                                const foundPlan = (visitPlans || []).find(p => (v.customerNumber && p.customerNumber === v.customerNumber) || (v.mobile && p.mobile === v.mobile) || (v.visitId && (p.visitPlanId === v.visitId || p.visitScheduleId === v.visitId)));
+                                const foundPlan = effectiveVisitPlans.find(p => (v.customerNumber && p.customerNumber === v.customerNumber) || (v.mobile && p.mobile === v.mobile) || (v.visitId && (p.visitPlanId === v.visitId || p.visitScheduleId === v.visitId)));
                                 const matchedPlan = foundPlan || {
                                   visitPlanId: v.visitId || '',
                                   visitScheduleId: v.visitId || '',
@@ -2914,7 +3009,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
             <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>Real-time GPS route progress, delay detection, and route deviation monitoring</p>
           </div>
           <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', padding: '4px 12px', borderRadius: '20px', fontWeight: '900', fontSize: '0.78rem', border: '1px solid #22c55e' }}>
-            ● LIVE MONITORING ACTIVE ({visitPlans.length} ACTIVE ROUTES)
+            ● LIVE MONITORING ACTIVE ({effectiveVisitPlans.length} ACTIVE ROUTES)
           </span>
         </div>
 
@@ -2933,7 +3028,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
               </tr>
             </thead>
             <tbody>
-              {visitPlans.map((plan: any) => {
+              {effectiveVisitPlans.map((plan: any) => {
                 const completedStops = plan.stops.filter((s: any) => s.status === 'VISIT_COMPLETED').length;
                 const currentStop = plan.stops[plan.currentStopIndex] || plan.stops[0];
                 const nextStop = plan.stops[plan.currentStopIndex + 1] || null;

@@ -192,6 +192,12 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false, bra
         setApiKeyError(true);
         setGoogleMapsReady(false);
         setLeafletReady(true);
+        if (googleMapRef.current) {
+          googleMapRef.current = null;
+        }
+        if (mapContainerRef.current) {
+          mapContainerRef.current.innerHTML = '';
+        }
       }
     };
 
@@ -360,16 +366,16 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false, bra
     );
 
     const resultNodes = [officeNode];
-    if (!isSelfDrivingMode || hasCustomPickup) {
+    if (hasCustomPickup) {
       resultNodes.push(pickupNode);
     }
     resultNodes.push(...projectNodes);
-    if (!isSelfDrivingMode || hasCustomDrop) {
+    if (hasCustomDrop) {
       resultNodes.push(dropNode);
     }
 
     return resultNodes;
-  }, [plan]);
+  }, [plan, branches]);
 
   useEffect(() => {
     setRouteNodes(normalizedNodes);
@@ -377,6 +383,11 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false, bra
       setCurrentLocationName(normalizedNodes[0].title);
       setNextDestinationName(normalizedNodes[1].title);
       setCurrentLegLabel(`${normalizedNodes[0].title} ➔ ${normalizedNodes[1].title}`);
+    } else if (normalizedNodes.length === 1) {
+      setCurrentLocationName(normalizedNodes[0].title);
+      setNextDestinationName(normalizedNodes[0].title);
+      setCurrentLegLabel(`${normalizedNodes[0].title} (Project Site)`);
+      setStatusMessage(`At Destination: ${normalizedNodes[0].title}`);
     }
   }, [normalizedNodes]);
 
@@ -14420,6 +14431,23 @@ export default function App() {
         );
       })()}
 
+      {/* MODAL: COMPLETE VISIT DETAILS MODAL */}
+      {showVisitDetailModal && showVisitDetailModal.open && (
+        <VisitDetailModalContent
+          isLight={isLight}
+          plan={showVisitDetailModal.plan || (visitPlans && visitPlans[0])}
+          onClose={() => setShowVisitDetailModal(null)}
+          setShowIndividualStopModal={setShowIndividualStopModal}
+          setShowRouteMapModal={setShowRouteMapModal}
+          visitPlans={visitPlans}
+          setVisitPlans={setVisitPlans}
+          setActiveTab={setActiveTab}
+          setActiveVisitSubTab={setActiveVisitSubTab}
+          setShowSkipStopModal={setShowSkipStopModal}
+          setShowAddPropertyRouteModal={setShowAddPropertyRouteModal}
+        />
+      )}
+
       {/* MODAL: MULTI-PROPERTY ROUTE NAVIGATION & INTERACTIVE MAP MODAL (EXACT IMAGE 2 & 3 LAYOUT) */}
       {showRouteMapModal && showRouteMapModal.open && (() => {
         const plan = showRouteMapModal.plan || (visitPlans && visitPlans[0]) || {};
@@ -14432,22 +14460,75 @@ export default function App() {
         const stops = plan.stops || [];
         const totalStopsCount = stops.length;
 
-        const pickup = plan.pickupAddress && !plan.pickupAddress.includes('Barasat Banamalipur') 
+        const transportStr = (plan.transport || '').toLowerCase();
+        const isSelfDrivingMode = transportStr.includes('self') || transportStr.includes('direct') || transportStr.includes('driving');
+        const hasCustomPickup = Boolean(
+          plan.pickupAddress &&
+          plan.pickupAddress.trim() &&
+          !plan.pickupAddress.toLowerCase().includes('barasat banamalipur') &&
+          !plan.pickupAddress.toLowerCase().includes('direct arrival') &&
+          !plan.pickupAddress.toLowerCase().includes('direct pickup')
+        );
+        const hasCustomDrop = Boolean(
+          plan.dropAddress &&
+          plan.dropAddress.trim() &&
+          !plan.dropAddress.toLowerCase().includes('barasat chapadali') &&
+          !plan.dropAddress.toLowerCase().includes('direct departure') &&
+          !plan.dropAddress.toLowerCase().includes('direct drop')
+        );
+
+        const formatNavTarget = (addrStr: string, latVal?: any, lngVal?: any, defaultTitle?: string) => {
+          const latNum = parseFloat(String(latVal || '').replace(/[^0-9.-]/g, ''));
+          const lngNum = parseFloat(String(lngVal || '').replace(/[^0-9.-]/g, ''));
+          const isHyd = !isNaN(latNum) && !isNaN(lngNum) && latNum > 17.0 && latNum < 17.8 && lngNum > 78.0 && lngNum < 78.8;
+
+          if (!isNaN(latNum) && !isNaN(lngNum) && !isHyd) {
+            return `${latNum.toFixed(6)},${lngNum.toFixed(6)}`;
+          }
+
+          let clean = (addrStr || defaultTitle || '')
+            .replace(/Kondapur\s*\/\s*/gi, '')
+            .replace(/Kondapur/gi, '')
+            .replace(/Hyderabad/gi, '')
+            .replace(/Telangana/gi, '')
+            .trim();
+
+          if (!clean || clean === ',') clean = defaultTitle || 'Madhyamgram, Kolkata';
+          if (!clean.toLowerCase().includes('kolkata') && !clean.toLowerCase().includes('madhyamgram') && !clean.toLowerCase().includes('barasat')) {
+            clean += ', Madhyamgram, Kolkata';
+          }
+          return clean;
+        };
+
+        const pickup = hasCustomPickup 
           ? plan.pickupAddress 
-          : 'Madhyamgram, Kolkata';
+          : (isSelfDrivingMode ? 'Direct Arrival at Project Site (Self Driving)' : 'Direct Pickup at Location');
 
-        const drop = plan.dropAddress && !plan.dropAddress.includes('Barasat Chapadali') 
+        const drop = hasCustomDrop 
           ? plan.dropAddress 
-          : 'Madhyamgram, Kolkata';
+          : (isSelfDrivingMode ? 'Direct Departure from Project Site' : 'Direct Drop at Location');
 
-        const waypointsList = stops.map((s: any) => s.address || s.propertyTitle || s.locality || '').filter(Boolean);
-        const waypointsStr = waypointsList.join('|');
+        const originNavQuery = hasCustomPickup 
+          ? formatNavTarget(plan.pickupAddress, plan.pickupLat, plan.pickupLng, 'Customer Pickup')
+          : formatNavTarget(officeAddress, plan.officeLat || headOffice?.latitude || '22.694318', plan.officeLng || headOffice?.longitude || '88.400659', officeName);
 
-        let googleNavUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(drop)}`;
-        if (waypointsStr) {
-          googleNavUrl += `&waypoints=${encodeURIComponent(waypointsStr)}`;
+        const lastStopNode = stops[stops.length - 1] || {};
+        const destNavQuery = hasCustomDrop 
+          ? formatNavTarget(plan.dropAddress, plan.dropLat, plan.dropLng, 'Customer Drop')
+          : formatNavTarget(lastStopNode.address, lastStopNode.latitude || '22.722361', lastStopNode.longitude || '88.493403', lastStopNode.propertyTitle || 'Project Site');
+
+        let googleNavUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originNavQuery)}&destination=${encodeURIComponent(destNavQuery)}&travelmode=driving`;
+
+        if (stops.length > 1) {
+          const midStops = stops.slice(0, -1);
+          const midWaypoints = midStops
+            .map((s: any) => formatNavTarget(s.address, s.latitude, s.longitude, s.propertyTitle))
+            .filter(Boolean)
+            .join('|');
+          if (midWaypoints) {
+            googleNavUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originNavQuery)}&destination=${encodeURIComponent(destNavQuery)}&waypoints=${encodeURIComponent(midWaypoints)}&travelmode=driving`;
+          }
         }
-        googleNavUrl += `&travelmode=driving`;
 
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2500, padding: windowWidth <= 640 ? '6px' : '16px' }}>
@@ -14504,7 +14585,6 @@ export default function App() {
                       📍 View Office
                     </button>
                   </div>
-
                   <span style={{ color: '#38bdf8', fontWeight: '900', fontSize: '1.1rem' }}>➔</span>
 
                   {/* CARD 2: PICKUP */}
@@ -14512,14 +14592,16 @@ export default function App() {
                     <span style={{ fontSize: '0.68rem', color: '#4ade80', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span>●</span> PICKUP
                     </span>
-                    <strong style={{ fontSize: '0.84rem', color: '#ffffff' }}>Customer Pickup</strong>
+                    <strong style={{ fontSize: '0.84rem', color: '#ffffff' }}>{hasCustomPickup ? 'Customer Pickup' : 'Direct Arrival at Site'}</strong>
                     <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{pickup}</span>
-                    <button 
-                      onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pickup)}`, '_blank')}
-                      style={{ marginTop: '4px', background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid #22c55e', padding: '3px 8px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800', cursor: 'pointer' }}
-                    >
-                      📍 View Red Pin Pointer
-                    </button>
+                    {hasCustomPickup && (
+                      <button 
+                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pickup)}`, '_blank')}
+                        style={{ marginTop: '4px', background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid #22c55e', padding: '3px 8px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800', cursor: 'pointer' }}
+                      >
+                        📍 View Red Pin Pointer
+                      </button>
+                    )}
                   </div>
 
                   <span style={{ color: '#38bdf8', fontWeight: '900', fontSize: '1.1rem' }}>➔</span>
@@ -14553,14 +14635,16 @@ export default function App() {
                     <span style={{ fontSize: '0.68rem', color: '#f87171', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span>●</span> DROP
                     </span>
-                    <strong style={{ fontSize: '0.84rem', color: '#ffffff' }}>Customer Drop</strong>
+                    <strong style={{ fontSize: '0.84rem', color: '#ffffff' }}>{hasCustomDrop ? 'Customer Drop' : 'Direct Departure'}</strong>
                     <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{drop}</span>
-                    <button 
-                      onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(drop)}`, '_blank')}
-                      style={{ marginTop: '4px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid #ef4444', padding: '3px 8px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800', cursor: 'pointer' }}
-                    >
-                      📍 View Red Pin Pointer
-                    </button>
+                    {hasCustomDrop && (
+                      <button 
+                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(drop)}`, '_blank')}
+                        style={{ marginTop: '4px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid #ef4444', padding: '3px 8px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800', cursor: 'pointer' }}
+                      >
+                        📍 View Red Pin Pointer
+                      </button>
+                    )}
                   </div>
 
                 </div>

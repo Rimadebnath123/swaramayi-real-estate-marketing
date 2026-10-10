@@ -25,18 +25,9 @@ export const ALL_FLOOR_UNIT_OPTIONS = [
   '9th Floor',
   '10th Floor',
   '11th Floor',
-  '12th Floor',
-  '13th Floor',
-  '14th Floor',
-  '15th Floor',
-  '16th Floor',
-  '17th Floor',
-  '18th Floor',
-  '19th Floor',
-  '20th Floor',
-  '21st - 30th Floor (High Rise)',
+  '12th Floor+',
   'Top Floor / Penthouse',
-  'Any Floor Acceptable'
+  'Any Floor'
 ];
 
 export const MultiSelectFloorSelector: React.FC<MultiSelectFloorSelectorProps> = ({
@@ -66,6 +57,10 @@ export const MultiSelectFloorSelector: React.FC<MultiSelectFloorSelectorProps> =
     .split(',')
     .map(s => s.trim())
     .filter(Boolean);
+
+  const floorOptions = isExclude
+    ? ALL_FLOOR_UNIT_OPTIONS.map(opt => opt === 'Any Floor' ? 'No Exclusions' : opt)
+    : ALL_FLOOR_UNIT_OPTIONS;
 
   const toggleOption = (opt: string) => {
     let next: string[];
@@ -101,7 +96,7 @@ export const MultiSelectFloorSelector: React.FC<MultiSelectFloorSelectorProps> =
           {displayLabel}
         </label>
         <span style={{ fontSize: '0.68rem', color: accentColor, fontWeight: '800' }}>
-          {selectedList.length > 0 ? `✓ ${selectedList.length} Selected (Multi-Select)` : 'Multi-Select Options'}
+          ✓ {selectedList.length} Selected (Multi-Select)
         </span>
       </div>
 
@@ -109,8 +104,8 @@ export const MultiSelectFloorSelector: React.FC<MultiSelectFloorSelectorProps> =
       <div 
         onClick={() => setIsOpen(!isOpen)}
         style={{ 
-          background: isLight ? '#f8fafc' : '#0f172a', 
-          border: isOpen ? `2px solid ${accentColor}` : (isExclude ? '1.5px solid #ef4444' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155')), 
+          background: isLight ? '#ffffff' : '#0b1329', 
+          border: isOpen ? `2px solid ${accentColor}` : (isExclude ? '1.5px solid #ef4444' : (isLight ? '1px solid #cbd5e1' : '1px solid #1e293b')), 
           borderRadius: '8px', 
           padding: '8px 10px', 
           minHeight: '42px', 
@@ -156,22 +151,22 @@ export const MultiSelectFloorSelector: React.FC<MultiSelectFloorSelectorProps> =
 
       {/* DROPDOWN SELECTION GRID */}
       {isOpen && (
-        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1.5px solid ${accentColor}`, borderRadius: '10px', padding: '12px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 12px 28px rgba(0,0,0,0.35)', zIndex: 999, maxHeight: '260px', overflowY: 'auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '6px' }}>
+        <div style={{ background: isLight ? '#ffffff' : '#0b1329', border: `1.5px solid ${accentColor}`, borderRadius: '10px', padding: '12px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 12px 28px rgba(0,0,0,0.35)', zIndex: 999, maxHeight: '280px', overflowY: 'auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b', paddingBottom: '6px' }}>
             <span style={{ fontSize: '0.73rem', color: accentColor, fontWeight: '900' }}>
               ✓ SELECT ONE OR MULTIPLE {isExclude ? 'EXCLUDED' : 'PREFERRED'} FLOOR NUMBERS (MULTI-SELECT)
             </span>
             <button 
               type="button" 
               onClick={() => setIsOpen(false)} 
-              style={{ background: accentColor, color: '#ffffff', border: 'none', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800', cursor: 'pointer' }}
+              style={{ background: accentColor, color: '#ffffff', border: 'none', padding: '3px 10px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer' }}
             >
               Done ✕
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '6px' }}>
-            {ALL_FLOOR_UNIT_OPTIONS.map((opt) => {
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            {floorOptions.map((opt) => {
               const isSelected = selectedList.includes(opt);
               return (
                 <div
@@ -179,8 +174,8 @@ export const MultiSelectFloorSelector: React.FC<MultiSelectFloorSelectorProps> =
                   onClick={() => toggleOption(opt)}
                   style={{
                     background: isSelected ? (isExclude ? 'rgba(239, 68, 68, 0.18)' : 'rgba(2, 132, 199, 0.18)') : (isLight ? '#f8fafc' : '#0f172a'),
-                    border: isSelected ? `1.5px solid ${accentColor}` : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
-                    color: isSelected ? accentLightText : (isLight ? '#0f172a' : '#ffffff'),
+                    border: isSelected ? `1.5px solid ${accentColor}` : (isLight ? '1px solid #cbd5e1' : '1px solid #1e293b'),
+                    color: isSelected ? accentLightText : (isLight ? '#0f172a' : '#cbd5e1'),
                     padding: '6px 8px',
                     borderRadius: '6px',
                     fontSize: '0.75rem',
@@ -196,7 +191,7 @@ export const MultiSelectFloorSelector: React.FC<MultiSelectFloorSelectorProps> =
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => {}} // Click handled by parent div
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', accentColor }}
                   />
                   <span>{opt}</span>
                 </div>
@@ -205,14 +200,14 @@ export const MultiSelectFloorSelector: React.FC<MultiSelectFloorSelectorProps> =
           </div>
 
           {/* CUSTOM WRITE-IN FLOOR ENTRY */}
-          <div style={{ borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '8px', display: 'flex', gap: '6px' }}>
+          <div style={{ borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b', paddingTop: '8px', display: 'flex', gap: '6px' }}>
             <input 
               type="text" 
               value={customInput}
               onChange={(e) => setCustomInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleAddCustom(e); }}
               placeholder={isExclude ? "Or type custom excluded floor (e.g. No Ground Floor)..." : "Or type custom floor (e.g. 24th Floor, Duplex)..."}
-              style={{ flex: 1, background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '6px 8px', borderRadius: '4px', fontSize: '0.78rem' }}
+              style={{ flex: 1, background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b', color: isLight ? '#0f172a' : '#ffffff', padding: '6px 8px', borderRadius: '4px', fontSize: '0.78rem' }}
             />
             <button
               type="button"

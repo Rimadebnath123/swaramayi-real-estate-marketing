@@ -5353,10 +5353,12 @@ export default function App() {
     
     // Auto-calculate Brokerage Fee on (Base Price + Floor Rise + PLC + Parking)
     const baseSumForBrok = basePriceNum + floorRiseNum + plcNum + parkingNum;
-    const computedBrokerage = (brokeragePct > 0 && baseSumForBrok > 0) ? Math.round(baseSumForBrok * (brokeragePct / 100)) : brokerageNum;
+    const computedBrokerage = brokeragePct === 0 ? 0 : ((brokeragePct > 0 && baseSumForBrok > 0) ? Math.round(baseSumForBrok * (brokeragePct / 100)) : brokerageNum);
 
     // Subtotal Before Taxes & Government Charges (Rows 1 to 7 sum)
-    const subtotalBeforeTax = basePriceNum + floorRiseNum + plcNum + parkingNum + clubNum + maintenanceNum + infraNum;
+    const discountAmount = parsePriceToNumeric(prop.discount_amount || prop.discount || prop.discountAmount || matchingReq?.discount || customer?.discount || selectedCust?.discount || 0);
+    const grossSubtotal = basePriceNum + floorRiseNum + plcNum + parkingNum + clubNum + maintenanceNum + infraNum;
+    const subtotalBeforeTax = Math.max(0, grossSubtotal - discountAmount);
 
     const gstPct = parsePct(prop.gst_pct, basePriceNum > 0 && basePriceNum < 4500000 ? 1 : 5);
     const gstAmount = basePriceNum > 0 ? Math.round(basePriceNum * (gstPct / 100)) : 0;
@@ -5416,6 +5418,7 @@ export default function App() {
       clubNum,
       maintenanceNum,
       infraNum,
+      discountAmount,
       brokerageNum: computedBrokerage,
       subtotalBeforeTax,
       gstPct,
@@ -5434,6 +5437,7 @@ export default function App() {
       clubStr: formatChargeStr(clubNum, prop.clubhouse_charge || prop.club_charge || prop.clubhouse_fee),
       maintenanceStr: formatChargeStr(maintenanceNum, prop.advance_maintenance_charge || prop.maintenance || prop.maintenance_annual),
       infrastructureStr: formatChargeStr(infraNum, prop.legal_doc_charge || prop.infrastructureCharge || prop.infra_legal_fees || prop.infrastructure_charge || prop.legal_charge),
+      discountStr: discountAmount > 0 ? formatIndianRupees(discountAmount) : 'N/A',
       brokerageStr: formatBrokerageStr(computedBrokerage, brokeragePct, prop.brokerage_charge || prop.brokerage || prop.brokerage_fee),
       subtotalStr: subtotalBeforeTax > 0 ? formatIndianRupees(subtotalBeforeTax) : '',
       gstStr: gstAmount > 0 ? `${formatIndianRupees(gstAmount)} (${gstPct}%)` : `₹0 (${gstPct}%)`,
@@ -5487,10 +5491,10 @@ export default function App() {
       ? parsePriceToNumeric(matchedProp.infra_legal_fees || matchedProp.infrastructure_charge)
       : (pBreakup.infrastructureStr && pBreakup.infrastructureStr !== 'N/A' && pBreakup.infrastructureStr !== '₹0' ? parsePriceToNumeric(pBreakup.infrastructureStr) : 0);
 
-    const brokeragePct = ps.brokeragePct !== undefined ? ps.brokeragePct : (matchedProp?.brokerage_pct || 0);
-    const brokerage = (matchedProp && (matchedProp.brokerage_charge !== undefined || matchedProp.brokerage !== undefined))
+    const brokeragePct = ps.brokeragePct !== undefined ? ps.brokeragePct : (matchedProp?.brokerage_pct !== undefined ? parsePct(matchedProp.brokerage_pct, 0) : 0);
+    const brokerage = brokeragePct === 0 ? 0 : ((matchedProp && (matchedProp.brokerage_charge !== undefined || matchedProp.brokerage !== undefined))
       ? parsePriceToNumeric(matchedProp.brokerage_charge || matchedProp.brokerage)
-      : (ps.brokerageCharge || (pBreakup.brokerageStr && pBreakup.brokerageStr !== 'N/A' && !pBreakup.brokerageStr.includes('Zero') ? parsePriceToNumeric(pBreakup.brokerageStr) : 0));
+      : (ps.brokerageCharge || (pBreakup.brokerageStr && pBreakup.brokerageStr !== 'N/A' && !pBreakup.brokerageStr.includes('Zero') ? parsePriceToNumeric(pBreakup.brokerageStr) : 0)));
 
     const discountAmount = ps.discountAmount !== undefined && ps.discountAmount > 0
       ? ps.discountAmount
@@ -5786,7 +5790,7 @@ export default function App() {
         legalCharge: calculated.infraNum,
         documentationCharge: 5000,
         otherCharges: 0,
-        discountAmount: 0,
+        discountAmount: calculated.discountAmount || 0,
         subtotalBeforeTax: calculated.subtotalBeforeTax,
         gstPct: calculated.gstPct,
         gstAmount: calculated.gstAmount,
@@ -5809,7 +5813,7 @@ export default function App() {
         subtotalStr: calculated.subtotalStr,
         legalStr: calculated.infrastructureStr,
         otherStr: 'N/A',
-        discountStr: 'N/A',
+        discountStr: calculated.discountStr || 'N/A',
         gstStr: calculated.gstStr,
         stampDutyStr: calculated.stampDutyStr,
         registrationStr: calculated.registrationStr,
@@ -6078,8 +6082,8 @@ export default function App() {
     const disc = form.revDiscount || 0;
 
     const brokBaseSum = base + floor + plc + park;
-    const brokPct = form.revBrokeragePct !== undefined ? form.revBrokeragePct : 0;
-    const brok = (brokPct && brokPct > 0) ? Math.round((brokBaseSum * brokPct) / 100) : (form.revBrokerage || 0);
+    const brokPct = form.revBrokeragePct !== undefined ? Number(form.revBrokeragePct) : 0;
+    const brok = brokPct === 0 ? 0 : (brokPct > 0 ? Math.round((brokBaseSum * brokPct) / 100) : (form.revBrokerage || 0));
 
     const subtotal = Math.max(0, (base + floor + plc + park + club + maint + infra) - disc);
     const gstPct = form.revGstPct !== undefined ? form.revGstPct : 5;
@@ -6107,8 +6111,8 @@ export default function App() {
     const oldTotalStr = costSheet.formattedPriceBreakup?.totalEstimatedCostStr || formatIndianRupees(costSheet.pricingSnapshot?.totalEstimatedCost || 0);
 
     const brokBaseSum = form.revBasePrice + form.revFloorRise + form.revPlc + form.revParking;
-    const brokPct = form.revBrokeragePct !== undefined ? form.revBrokeragePct : 0;
-    const finalBrokNum = (brokPct > 0) ? Math.round((brokBaseSum * brokPct) / 100) : (form.revBrokerage || 0);
+    const brokPct = form.revBrokeragePct !== undefined ? Number(form.revBrokeragePct) : 0;
+    const finalBrokNum = brokPct === 0 ? 0 : (brokPct > 0 ? Math.round((brokBaseSum * brokPct) / 100) : (form.revBrokerage || 0));
 
     // Detect changed fields for audit trail
     const changedFields: string[] = [];
@@ -13259,6 +13263,8 @@ export default function App() {
         const maintNum = pricing.maintenance !== undefined ? pricing.maintenance : 500;
         const maintStr = pb.maintenanceStr || (maintNum > 0 ? `₹${Number(maintNum).toLocaleString('en-IN')}` : 'Included in Flat Price');
         const infraStr = pb.infrastructureStr || (pricing.infrastructureCharge ? `₹${Number(pricing.infrastructureCharge).toLocaleString('en-IN')}` : 'Included in Flat Price');
+        const discNum = pricing.discountAmount !== undefined && pricing.discountAmount > 0 ? pricing.discountAmount : parsePriceToNumeric(cs.discountAmount || prop.discount_amount || prop.discount || 0);
+        const discountStr = pb.discountStr && pb.discountStr !== 'N/A' ? pb.discountStr : (discNum > 0 ? formatIndianRupees(discNum) : 'N/A');
 
         const subtotalNum = pricing.subtotalBeforeTax || (basePriceNum + (typeof clubNum === 'number' ? clubNum : 0) + (typeof maintNum === 'number' ? maintNum : 0));
         const subtotalStr = pb.subtotalStr || `₹${Number(subtotalNum).toLocaleString('en-IN')}`;
@@ -13693,6 +13699,17 @@ export default function App() {
                             <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '600' }}>{infraStr}</td>
                           </tr>
 
+                          {discNum > 0 && (
+                            <tr style={{ borderBottom: '1px solid #f1f5f9', background: 'rgba(239, 68, 68, 0.05)' }}>
+                              <td style={{ padding: '4px 12px', color: '#ef4444', fontWeight: '800' }}>
+                                7.1 Special Promotional Discount / Festival Rebate
+                              </td>
+                              <td style={{ padding: '4px 12px', textAlign: 'right', color: '#ef4444', fontWeight: '900' }}>
+                                -{discountStr.startsWith('₹') ? discountStr : (discountStr.startsWith('-₹') ? discountStr.substring(1) : formatIndianRupees(discNum))}
+                              </td>
+                            </tr>
+                          )}
+
                           {/* SUBTOTAL ROW */}
                           <tr style={{ background: '#f8fafc', borderTop: '1.5px solid #cbd5e1', borderBottom: '1.5px solid #cbd5e1' }}>
                             <td style={{ padding: '5px 12px', fontWeight: '900', color: '#0f172a', fontSize: '0.80rem', letterSpacing: '0.3px' }}>
@@ -14090,8 +14107,8 @@ export default function App() {
 
         // Auto brokerage calculation
         const brokBaseSum = (showRevisionModal.revBasePrice || 0) + (showRevisionModal.revFloorRise || 0) + (showRevisionModal.revPlc || 0) + (showRevisionModal.revParking || 0);
-        const brokPct = showRevisionModal.revBrokeragePct !== undefined ? showRevisionModal.revBrokeragePct : 0;
-        const calcBrokFee = brokPct > 0 ? Math.round((brokBaseSum * brokPct) / 100) : (showRevisionModal.revBrokerage || 0);
+        const brokPct = showRevisionModal.revBrokeragePct !== undefined ? Number(showRevisionModal.revBrokeragePct) : 0;
+        const calcBrokFee = brokPct === 0 ? 0 : (brokPct > 0 ? Math.round((brokBaseSum * brokPct) / 100) : (showRevisionModal.revBrokerage || 0));
 
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
@@ -14288,7 +14305,12 @@ export default function App() {
                       <label style={{ display: 'block', fontSize: '0.76rem', color: '#cbd5e1', fontWeight: '800', marginBottom: '4px' }}>9. Brokerage Rate Mode (%)</label>
                       <select 
                         value={showRevisionModal.revBrokeragePct !== undefined ? showRevisionModal.revBrokeragePct : 0} 
-                        onChange={e => setShowRevisionModal({ ...showRevisionModal, revBrokeragePct: Number(e.target.value) })}
+                        onChange={e => {
+                          const pct = Number(e.target.value);
+                          const brokBase = (showRevisionModal.revBasePrice || 0) + (showRevisionModal.revFloorRise || 0) + (showRevisionModal.revPlc || 0) + (showRevisionModal.revParking || 0);
+                          const newBrok = pct === 0 ? 0 : Math.round((brokBase * pct) / 100);
+                          setShowRevisionModal({ ...showRevisionModal, revBrokeragePct: pct, revBrokerage: newBrok });
+                        }}
                         style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid #475569', background: '#1e293b', color: '#38bdf8', fontWeight: '800', fontSize: '0.82rem' }}
                       >
                         <option value={0}>0.0% (Zero Brokerage for Buyer)</option>
@@ -17731,6 +17753,1753 @@ export default function App() {
                 OK (Go to Matching Engine)
               </button>
             </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CREATE NEW LEAD & CUSTOMER INTAKE QUALIFICATION WIZARD */}
+      {(showLeadModal || showAddCustomerModal) && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100000, padding: windowWidth <= 640 ? '10px' : '20px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', border: '2px solid #0284c7', width: '96vw', maxWidth: '840px', maxHeight: '92vh', borderRadius: '18px', padding: '0', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85)' }}>
+            
+            {/* FIXED TOP CONTAINER: MODAL HEADER & STEPPER BAR */}
+            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', display: 'flex', flexDirection: 'column', flexShrink: 0, zIndex: 10 }}>
+              
+              {/* MODAL HEADER */}
+              <div style={{ padding: windowWidth <= 640 ? '12px 16px' : '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>🚀</span>
+                    <span>9-STEP ENTERPRISE LEAD INTAKE & QUALIFICATION WIZARD</span>
+                  </h3>
+                  <div style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', marginTop: '2px' }}>
+                    Central Qualification Gate • Structured Customer Requirement Capture • Matching Handoff System
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ background: '#0284c7', color: '#ffffff', padding: '4px 12px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '900', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                    STEP {leadIntakeStep} OF 9
+                  </span>
+                  <X size={22} color={isLight ? '#64748b' : '#94a3b8'} style={{ cursor: 'pointer' }} onClick={() => { setShowLeadModal(false); setShowAddCustomerModal(false); }} />
+                </div>
+              </div>
+
+              {/* STEP PROGRESS NAVIGATION BAR (STEPS 1 TO 9) */}
+              <div style={{ padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: '8px', background: isLight ? '#f1f5f9' : '#0f172a' }}>
+                {/* SEGMENTED PROGRESS INDICATOR BAR */}
+                <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                    <div
+                      key={num}
+                      style={{
+                        flex: 1,
+                        height: '4px',
+                        borderRadius: '2px',
+                        background: num <= leadIntakeStep ? '#0284c7' : (isLight ? '#cbd5e1' : '#334155'),
+                        transition: 'all 0.2s ease-in-out'
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* 9 STEP BUTTONS IN 2 ROWS */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
+                    {[
+                      { step: 1, label: '1. Lead Source' },
+                      { step: 2, label: '2. Identity & Contact' },
+                      { step: 3, label: '3. Purpose & Type' },
+                      { step: 4, label: '4. BHK & Condition' },
+                      { step: 5, label: '5. Location & Radius' }
+                    ].map(st => (
+                      <button
+                        key={st.step}
+                        type="button"
+                        onClick={() => setLeadIntakeStep(st.step)}
+                        style={{
+                          padding: '6px 4px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: '800',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          background: leadIntakeStep === st.step ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'),
+                          color: leadIntakeStep === st.step ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'),
+                          border: leadIntakeStep === st.step ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                          boxShadow: leadIntakeStep === st.step ? '0 2px 8px rgba(2, 132, 199, 0.4)' : 'none'
+                        }}
+                      >
+                        {st.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                    {[
+                      { step: 6, label: '6. Budget & Area' },
+                      { step: 7, label: '7. Parking & Amenities' },
+                      { step: 8, label: '8. Loan & Possession' },
+                      { step: 9, label: '9. Review & Send to Match' }
+                    ].map(st => (
+                      <button
+                        key={st.step}
+                        type="button"
+                        onClick={() => setLeadIntakeStep(st.step)}
+                        style={{
+                          padding: '6px 4px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: '800',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          background: leadIntakeStep === st.step ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'),
+                          color: leadIntakeStep === st.step ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'),
+                          border: leadIntakeStep === st.step ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                          boxShadow: leadIntakeStep === st.step ? '0 2px 8px rgba(2, 132, 199, 0.4)' : 'none'
+                        }}
+                      >
+                        {st.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* MODAL FORM BODY (SCROLLABLE) */}
+            <form onSubmit={handleCreateCustomerSubmit} style={{ padding: windowWidth <= 640 ? '14px 16px' : '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', flex: 1 }}>
+
+              {/* STEP 1: LEAD SOURCE ATTRIBUTION & MARKETING DETAILS */}
+              {leadIntakeStep === 1 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <h4 style={{ color: '#38bdf8', fontWeight: '900', fontSize: '0.92rem', margin: 0, paddingBottom: '4px' }}>
+                    Step 1: Lead Source Attribution & Marketing Details
+                  </h4>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', marginBottom: '4px' }}>Lead Source *</label>
+                      <select
+                        required
+                        value={newCustomerForm.lead_source || newLeadForm.lead_source || 'Meta / Facebook / Instagram'}
+                        onChange={e => {
+                          setNewCustomerForm({ ...newCustomerForm, lead_source: e.target.value });
+                          setNewLeadForm({ ...newLeadForm, lead_source: e.target.value });
+                        }}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', fontSize: '0.86rem' }}
+                      >
+                        <option value="Meta / Facebook / Instagram">Meta / Facebook / Instagram</option>
+                        <option value="Google Search Ads">Google Search Ads</option>
+                        <option value="Direct Intake / Inbound Call">Direct Intake / Inbound Call</option>
+                        <option value="99acres">99acres</option>
+                        <option value="MagicBricks">MagicBricks</option>
+                        <option value="Housing.com">Housing.com</option>
+                        <option value="Customer / Partner Referral">Customer / Partner Referral</option>
+                        <option value="Walk-in Visitor">Walk-in Visitor</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', marginBottom: '4px' }}>Project Posting ID</label>
+                      <input
+                        type="text"
+                        value={newCustomerForm.campaign_id || newCustomerForm.posting_id || ''}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, campaign_id: e.target.value, posting_id: e.target.value })}
+                        placeholder="e.g. PRJ-POST-2026-8802"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', marginBottom: '4px' }}>Searched Property Code</label>
+                      <input
+                        type="text"
+                        value={newCustomerForm.searched_property_code || newLeadForm.searched_property_code || ''}
+                        onChange={e => {
+                          setNewCustomerForm({ ...newCustomerForm, searched_property_code: e.target.value });
+                          setNewLeadForm({ ...newLeadForm, searched_property_code: e.target.value });
+                        }}
+                        placeholder="e.g. SRM-PROP-2026-000426"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: '#38bdf8', fontWeight: '800', fontSize: '0.86rem', fontFamily: 'monospace' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', marginBottom: '4px' }}>Referrer Name & Contact (If Applicable)</label>
+                    <input
+                      type="text"
+                      value={newCustomerForm.referrer || ''}
+                      onChange={e => setNewCustomerForm({ ...newCustomerForm, referrer: e.target.value })}
+                      placeholder="e.g. Dr. Rajesh Sharma (+91 98480 12345)"
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: CUSTOMER IDENTITY, CONTACT & ENGAGEMENT STATUS */}
+              {leadIntakeStep === 2 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h4 style={{ color: '#38bdf8', fontWeight: '900', fontSize: '0.92rem', margin: 0, paddingBottom: '2px' }}>
+                    Step 2: Customer Identity, Contact & Engagement Status
+                  </h4>
+
+                  {/* DISPOSITION SELECTION BOX */}
+                  <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>
+                      <span>📞</span>
+                      <span>Initial Customer Engagement & Call Disposition Status *</span>
+                    </label>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr 1fr' : 'repeat(5, 1fr)', gap: '8px' }}>
+                      {[
+                        { id: 'CONNECTED_INTERESTED', label: '📞 Connected & Interested', color: '#10b981', bg: '#064e3b' },
+                        { id: 'NOT_INTERESTED', label: '❌ NOT INTERESTED', color: '#ef4444', bg: '#7f1d1d' },
+                        { id: 'NO_RESPONSE', label: '📵 NO RESPONSE / UNANSWERED', color: '#f59e0b', bg: '#78350f' },
+                        { id: 'CALL_BACK_LATER', label: '⏳ Call Back Later / Busy', color: '#f97316', bg: '#7c2d12' },
+                        { id: 'PENDING_CALL', label: '📞 Pending Call', color: '#0284c7', bg: '#0c4a6e' }
+                      ].map(disp => {
+                        const isSelected = (newLeadForm.call_disposition || 'CONNECTED_INTERESTED') === disp.id;
+                        return (
+                          <button
+                            key={disp.id}
+                            type="button"
+                            onClick={() => setNewLeadForm({ ...newLeadForm, call_disposition: disp.id })}
+                            style={{
+                              padding: '10px 8px',
+                              borderRadius: '8px',
+                              border: isSelected ? `2px solid ${disp.color}` : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                              background: isSelected ? disp.bg : (isLight ? '#ffffff' : '#1e293b'),
+                              color: isSelected ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'),
+                              fontWeight: isSelected ? '900' : '700',
+                              fontSize: '0.72rem',
+                              cursor: 'pointer',
+                              textAlign: 'center',
+                              boxShadow: isSelected ? `0 0 12px ${disp.color}80` : 'none',
+                              transition: 'all 0.15s ease-in-out'
+                            }}
+                          >
+                            {disp.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* DYNAMIC DISPOSITION STATUS BANNER */}
+                    <div style={{
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      fontSize: '0.78rem',
+                      fontWeight: '800',
+                      lineHeight: '1.4',
+                      background: (newLeadForm.call_disposition || 'CONNECTED_INTERESTED') === 'CONNECTED_INTERESTED' ? '#064e3b' :
+                        (newLeadForm.call_disposition === 'NOT_INTERESTED' ? '#451a1a' :
+                        (newLeadForm.call_disposition === 'NO_RESPONSE' ? '#78350f' :
+                        (newLeadForm.call_disposition === 'CALL_BACK_LATER' ? '#7c2d12' : '#0c4a6e'))),
+                      border: `1px solid ${(newLeadForm.call_disposition || 'CONNECTED_INTERESTED') === 'CONNECTED_INTERESTED' ? '#10b981' : (newLeadForm.call_disposition === 'NOT_INTERESTED' ? '#ef4444' : (newLeadForm.call_disposition === 'NO_RESPONSE' ? '#f59e0b' : (newLeadForm.call_disposition === 'CALL_BACK_LATER' ? '#f97316' : '#0284c7')))}`,
+                      color: (newLeadForm.call_disposition || 'CONNECTED_INTERESTED') === 'CONNECTED_INTERESTED' ? '#ecfdf5' :
+                        (newLeadForm.call_disposition === 'NOT_INTERESTED' ? '#fef2f2' :
+                        (newLeadForm.call_disposition === 'NO_RESPONSE' ? '#fffbeb' :
+                        (newLeadForm.call_disposition === 'CALL_BACK_LATER' ? '#fff7ed' : '#f0f9ff'))),
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      {(newLeadForm.call_disposition || 'CONNECTED_INTERESTED') === 'CONNECTED_INTERESTED' && '⚠️ CONNECTED & INTERESTED SELECTED: Full requirement profiling (Steps 3–9) is UNLOCKED & ACTIVE. Click "Next Step (Step 3: Purpose & Type) →" below to capture property requirements step-by-step!'}
+                      {newLeadForm.call_disposition === 'NOT_INTERESTED' && '🚫 NOT INTERESTED SELECTED: Requirements profiling (Steps 3–9) is NOT APPLICABLE. Click "Save Lead & Exit" below to record this customer directly into the Not Interested Vault for future follow-up.'}
+                      {newLeadForm.call_disposition === 'NO_RESPONSE' && '⚠️ 📵 NO RESPONSE / UNANSWERED SELECTED: Requirements profiling (Steps 3–9) is NOT APPLICABLE. Click "Save Lead & Exit" below to record this customer into the No Response Queue for automated retry callbacks.'}
+                      {newLeadForm.call_disposition === 'CALL_BACK_LATER' && '⏳ CALL BACK LATER SELECTED: Customer requested callback. Set scheduled follow-up date & time below and click "Save Lead & Exit".'}
+                      {newLeadForm.call_disposition === 'PENDING_CALL' && '📞 PENDING CALL SELECTED: Call status pending. Queue follow-up date & time below.'}
+                    </div>
+                  </div>
+
+                  {/* SYSTEM CUSTOMER CODE HEADER BOX */}
+                  <div style={{ background: isLight ? '#f0f9ff' : '#0c4a6e', border: '1px solid #0284c7', borderRadius: '10px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '0.66rem', fontWeight: '800', color: isLight ? '#0369a1' : '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>SYSTEM CUSTOMER CODE (AUTO-GENERATED UNIQUE ID)</span>
+                      <div style={{ fontSize: '0.98rem', fontWeight: '900', color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>
+                        {newCustomerForm.customer_number || 'SRM-CUS-2026-000196'}
+                      </div>
+                    </div>
+                    <span style={{ background: '#047857', color: '#ffffff', padding: '4px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '900' }}>
+                      ✓ 100% AUTO-GENERATED & UNIQUE
+                    </span>
+                  </div>
+
+                  {/* SCHEDULED FOLLOW-UP & CALL ALERT REMINDER BOX (SHOWN WHEN FOLLOW-UP DISPOSITION IS SELECTED) */}
+                  {newLeadForm.call_disposition && (newLeadForm.call_disposition === 'NO_RESPONSE' || newLeadForm.call_disposition === 'CALL_BACK_LATER' || newLeadForm.call_disposition === 'PENDING_CALL') && (
+                    <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: '900', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          🔔 SCHEDULED FOLLOW-UP & CALL ALERT REMINDER *
+                        </span>
+                        <span style={{ background: '#0284c7', color: '#ffffff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '900' }}>
+                          AUTO-ALERT ENFORCED
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', marginBottom: '4px' }}>📅 Next Follow-Up Date *</label>
+                          <input
+                            type="date"
+                            value={followupDate}
+                            onChange={e => setFollowupDate(e.target.value)}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', fontSize: '0.84rem' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', marginBottom: '4px' }}>⏰ Next Follow-Up Time *</label>
+                          <input
+                            type="time"
+                            value={followupTime}
+                            onChange={e => setFollowupTime(e.target.value)}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', fontSize: '0.84rem' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', marginBottom: '4px' }}>Call Purpose / Action Plan Remarks</label>
+                        <input
+                          type="text"
+                          value={followupRemarks}
+                          onChange={e => setFollowupRemarks(e.target.value)}
+                          placeholder="e.g. 1st Call Unanswered, retry callback scheduled"
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.84rem' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CUSTOMER IDENTITY & CONTACT GRID (3 COLUMNS ON DESKTOP) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', marginBottom: '4px' }}>Customer Full Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newCustomerForm.name || ''}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, name: e.target.value })}
+                        placeholder="e.g. Sumanth Varma"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', fontSize: '0.86rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', marginBottom: '4px' }}>Primary Mobile Phone *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newCustomerForm.mobile || ''}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, mobile: e.target.value, phone: e.target.value })}
+                        placeholder="+91 98490 88888"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: '#38bdf8', fontWeight: '800', fontSize: '0.86rem', fontFamily: 'monospace' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', marginBottom: '4px' }}>Alternative Phone Number (Secondary Contact)</label>
+                      <input
+                        type="text"
+                        value={newCustomerForm.alternate_mobile || newCustomerForm.phone_alt || ''}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, alternate_mobile: e.target.value, phone_alt: e.target.value })}
+                        placeholder="e.g. +91 70442 93951"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.86rem', fontFamily: 'monospace' }}
+                      />
+                    </div>
+
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <label style={{ fontSize: '0.76rem', fontWeight: '800' }}>WhatsApp Number</label>
+                        <button
+                          type="button"
+                          onClick={() => setNewCustomerForm({ ...newCustomerForm, whatsapp: newCustomerForm.mobile || '' })}
+                          style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.7rem', fontWeight: '800', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                        >
+                          Same as Mobile
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={newCustomerForm.whatsapp || ''}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, whatsapp: e.target.value })}
+                        placeholder="+91 98490 88888"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: '#22c55e', fontWeight: '800', fontSize: '0.86rem', fontFamily: 'monospace' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', marginBottom: '4px' }}>Email Address</label>
+                      <input
+                        type="email"
+                        value={newCustomerForm.email || ''}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, email: e.target.value })}
+                        placeholder="e.g. sumanth@gmail.com"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', marginBottom: '4px' }}>Preferred Language</label>
+                      <select
+                        value={newCustomerForm.language || 'Bengali'}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, language: e.target.value })}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', fontSize: '0.86rem' }}
+                      >
+                        <option value="Bengali">Bengali</option>
+                        <option value="English">English</option>
+                        <option value="Hindi">Hindi</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', marginBottom: '4px' }}>City</label>
+                      <input
+                        type="text"
+                        value={newCustomerForm.city || 'Kolkata'}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, city: e.target.value })}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', marginBottom: '4px' }}>Current Residential Locality</label>
+                      <input
+                        type="text"
+                        value={newCustomerForm.locality || ''}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, locality: e.target.value, address: e.target.value })}
+                        placeholder="e.g. Madhyamgram, Kolkata"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', marginBottom: '4px' }}>PIN Code</label>
+                      <input
+                        type="text"
+                        value={newCustomerForm.pin_code || newCustomerForm.pincode || ''}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, pin_code: e.target.value, pincode: e.target.value })}
+                        placeholder="e.g. 700129"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.86rem', fontFamily: 'monospace' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: INVESTMENT PURPOSE & PROPERTY CATEGORY */}
+              {leadIntakeStep === 3 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ color: isLight ? '#0284c7' : '#38bdf8', fontWeight: '900', fontSize: '0.92rem', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '6px' }}>
+                    Step 3: Property Purchase Purpose & Category Type
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
+                      Property Transaction Purpose *
+                    </label>
+                    <select
+                      value={newCustomerForm.investment_purpose || 'BUY / OUTRIGHT PURCHASE'}
+                      onChange={e => setNewCustomerForm({ ...newCustomerForm, investment_purpose: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                        background: isLight ? '#ffffff' : '#0f172a',
+                        color: isLight ? '#0f172a' : '#22c55e',
+                        fontWeight: '900',
+                        fontSize: '0.88rem'
+                      }}
+                    >
+                      <option value="BUY / OUTRIGHT PURCHASE">🏠 BUY / OUTRIGHT PURCHASE</option>
+                      <option value="RESIDENTIAL RENT / LEASE">🔑 RESIDENTIAL RENT / LEASE</option>
+                      <option value="COMMERCIAL LEASE / RENT">🏢 COMMERCIAL LEASE / RENT</option>
+                      <option value="INVESTMENT (Capital Appreciation)">📈 INVESTMENT (Capital Appreciation)</option>
+                      <option value="RENTAL YIELD INVESTOR">💰 RENTAL YIELD INVESTOR</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
+                      Property Category Type (Multi-Select Allowed – Click Checkboxes to Select Multiple) *
+                    </label>
+
+                    {(() => {
+                      const currentSelected: string[] = Array.isArray(newCustomerForm.selected_property_types)
+                        ? newCustomerForm.selected_property_types
+                        : (newCustomerForm.property_type ? newCustomerForm.property_type.split(', ').filter(Boolean) : []);
+
+                      return (
+                        <>
+                          <div style={{
+                            background: isLight ? '#ffffff' : '#0b1329',
+                            border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b',
+                            borderRadius: '10px',
+                            maxHeight: '220px',
+                            overflowY: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column'
+                          }}>
+                            {[
+                              { label: 'Flat / Apartment (New / Builder)', icon: '🏢' },
+                              { label: 'Flat / Apartment (Resale)', icon: '🏢' },
+                              { label: 'Flat / Apartment (For Rent)', icon: '🔑' },
+                              { label: 'Gated Villa (New / Builder)', icon: '🏰' },
+                              { label: 'Gated Villa (Resale)', icon: '🏰' },
+                              { label: 'Independent House / Bungalow', icon: '🏡' },
+                              { label: 'Residential Plot / Land', icon: '📐' },
+                              { label: 'Commercial Shop / Showroom', icon: '🏢' },
+                              { label: 'Commercial Office Space', icon: '🏢' },
+                              { label: 'Industrial Land / Warehouse', icon: '🏭' },
+                            ].map((item, idx, arr) => {
+                              const isChecked = currentSelected.includes(item.label);
+
+                              return (
+                                <div
+                                  key={item.label}
+                                  onClick={() => {
+                                    const updated = isChecked
+                                      ? currentSelected.filter((t: string) => t !== item.label)
+                                      : [...currentSelected, item.label];
+                                    setNewCustomerForm({
+                                      ...newCustomerForm,
+                                      selected_property_types: updated,
+                                      property_type: updated.join(', ')
+                                    });
+                                  }}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    padding: '10px 14px',
+                                    borderBottom: idx === arr.length - 1 ? 'none' : (isLight ? '1px solid #f1f5f9' : '1px solid #1e293b'),
+                                    background: isChecked ? (isLight ? '#f0f9ff' : 'rgba(2, 132, 199, 0.12)') : 'transparent',
+                                    cursor: 'pointer',
+                                    transition: 'background 0.15s ease'
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => {}}
+                                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0284c7' }}
+                                  />
+                                  <span style={{ fontSize: '0.86rem', fontWeight: isChecked ? '800' : '600', color: isChecked ? (isLight ? '#0369a1' : '#38bdf8') : (isLight ? '#1e293b' : '#cbd5e1') }}>
+                                    {item.icon} {item.label}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div style={{ marginTop: '8px', fontSize: '0.78rem', fontWeight: '800', color: '#22c55e' }}>
+                            ✓ Selected Categories: {currentSelected.length > 0 ? currentSelected.join(', ') : 'None Selected'}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: BHK CONFIGURATION, CONDITION & FLOOR PREFERENCE */}
+              {leadIntakeStep === 4 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ color: isLight ? '#0284c7' : '#38bdf8', fontWeight: '900', fontSize: '0.92rem', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '6px' }}>
+                    Step 4: Required BHK Configuration, Condition & Floor Preference
+                  </div>
+
+                  {/* TOP ROW: BHK & CONDITION */}
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '14px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
+                        BHK Configuration *
+                      </label>
+                      <select
+                        value={newCustomerForm.configuration || '2 BHK'}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, configuration: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                          background: isLight ? '#ffffff' : '#0f172a',
+                          color: isLight ? '#0f172a' : '#ffffff',
+                          fontWeight: '900',
+                          fontSize: '0.88rem'
+                        }}
+                      >
+                        <option value="1 BHK">1 BHK</option>
+                        <option value="2 BHK">2 BHK</option>
+                        <option value="3 BHK">3 BHK</option>
+                        <option value="4 BHK">4 BHK</option>
+                        <option value="4+ BHK / Duplex">4+ BHK / Duplex</option>
+                        <option value="Studio Apartment">Studio Apartment</option>
+                        <option value="Commercial">Commercial</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
+                        Property Condition *
+                      </label>
+                      <select
+                        value={newCustomerForm.property_condition || 'Ready to Move'}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, property_condition: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                          background: isLight ? '#ffffff' : '#0f172a',
+                          color: '#22c55e',
+                          fontWeight: '900',
+                          fontSize: '0.88rem'
+                        }}
+                      >
+                        <option value="Ready to Move">Ready to Move</option>
+                        <option value="Under Construction">Under Construction</option>
+                        <option value="New Launch / Soft Launch">New Launch / Soft Launch</option>
+                        <option value="Resale Property">Resale Property</option>
+                        <option value="Any Condition">Any Condition</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* BOTTOM ROW: FLOOR NUMBER PREFERENCE & AVOIDED FLOORS */}
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '14px' }}>
+                    <MultiSelectFloorSelector
+                      isLight={isLight}
+                      value={Array.isArray(newCustomerForm.preferred_floors) ? newCustomerForm.preferred_floors.join(', ') : (newCustomerForm.preferred_floors || '')}
+                      onChange={(val) => {
+                        const updated = val ? val.split(', ').map(s => s.trim()).filter(Boolean) : [];
+                        setNewCustomerForm({ ...newCustomerForm, preferred_floors: updated });
+                      }}
+                      label="🏢 Floor Number (Unit Floor) *"
+                      placeholder="Click to select Floor Numbers (Multi-Select Supported)..."
+                    />
+
+                    <MultiSelectFloorSelector
+                      isLight={isLight}
+                      isExclude={true}
+                      value={Array.isArray(newCustomerForm.avoided_floors) ? newCustomerForm.avoided_floors.join(', ') : (newCustomerForm.avoided_floors || '')}
+                      onChange={(val) => {
+                        const updated = val ? val.split(', ').map(s => s.trim()).filter(Boolean) : [];
+                        setNewCustomerForm({ ...newCustomerForm, avoided_floors: updated });
+                      }}
+                      label="🚫 Non-Preferred / Avoided Floors (Unit Floor Exclude) *"
+                      placeholder="Click to select Excluded Floors (Multi-Select Supported)..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 5: LOCATION REQUIREMENTS, SECONDARY LOCALITIES & MAP RADIUS */}
+              {leadIntakeStep === 5 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ color: isLight ? '#0284c7' : '#38bdf8', fontWeight: '900', fontSize: '0.92rem', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '6px' }}>
+                    Step 5: Location Requirements, Secondary Localities & Map Radius
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '14px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
+                        Primary Preferred Locality *
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomerForm.preferredArea || ''}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, preferredArea: e.target.value })}
+                        placeholder="e.g. Kondapur / Gachibowli or Madhyamgram"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                          background: isLight ? '#ffffff' : '#0f172a',
+                          color: isLight ? '#0f172a' : '#ffffff',
+                          fontWeight: '700',
+                          fontSize: '0.88rem'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
+                        Secondary Preferred Localities
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomerForm.secondary_areas || ''}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, secondary_areas: e.target.value })}
+                        placeholder="e.g. Hitec City, Barasat, Sodepur"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                          background: isLight ? '#ffffff' : '#0f172a',
+                          color: isLight ? '#0f172a' : '#ffffff',
+                          fontWeight: '700',
+                          fontSize: '0.88rem'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
+                        Maximum Map Radius Distance (KM)
+                      </label>
+                      <select
+                        value={newCustomerForm.radius_km || 2}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, radius_km: Number(e.target.value) })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                          background: isLight ? '#ffffff' : '#0f172a',
+                          color: isLight ? '#0f172a' : '#ffffff',
+                          fontWeight: '800',
+                          fontSize: '0.88rem'
+                        }}
+                      >
+                        <option value={1}>Within 1 KM Radius</option>
+                        <option value={2}>Within 2 KM Radius</option>
+                        <option value={5}>Within 5 KM Radius</option>
+                        <option value={10}>Within 10 KM Radius</option>
+                        <option value={15}>Within 15+ KM Radius</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
+                        Vastu Facing Preference
+                      </label>
+                      <select
+                        value={newCustomerForm.facing || 'East Facing (Poorva)'}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, facing: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                          background: isLight ? '#ffffff' : '#0f172a',
+                          color: isLight ? '#0f172a' : '#ffffff',
+                          fontWeight: '800',
+                          fontSize: '0.88rem'
+                        }}
+                      >
+                        <option value="East Facing (Poorva)">East Facing (Poorva)</option>
+                        <option value="North-East Facing (Ishan)">North-East Facing (Ishan)</option>
+                        <option value="North Facing (Uttara)">North Facing (Uttara)</option>
+                        <option value="South-East Facing (Agneya)">South-East Facing (Agneya)</option>
+                        <option value="West Facing (Pashchima)">West Facing (Pashchima)</option>
+                        <option value="South Facing (Dakshina)">South Facing (Dakshina)</option>
+                        <option value="Open / Any Facing">Open / Any Facing</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 6: FINANCIAL BUDGET & AREA DIMENSIONS PROFILING */}
+              {leadIntakeStep === 6 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* SECTION HEADER BAR */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '8px' }}>
+                    <div>
+                      <div style={{ color: isLight ? '#0284c7' : '#38bdf8', fontWeight: '900', fontSize: '0.94rem' }}>
+                        Step 6: Financial Budget & Area Dimensions Profiling
+                      </div>
+                      <div style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.74rem', marginTop: '2px' }}>
+                        Define target investment range, flexibility stretch %, and minimum/maximum area limits
+                      </div>
+                    </div>
+                    <span style={{
+                      background: isLight ? '#e0f2fe' : 'rgba(2, 132, 199, 0.15)',
+                      color: isLight ? '#0369a1' : '#38bdf8',
+                      border: '1px solid #0284c7',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      fontSize: '0.68rem',
+                      fontWeight: '900',
+                      letterSpacing: '0.5px'
+                    }}>
+                      FINANCIAL & SPATIAL PROFILE
+                    </span>
+                  </div>
+
+                  {/* SECTION 1: INVESTMENT BUDGET RANGE & FLEXIBILITY LIMIT */}
+                  <div style={{
+                    background: isLight ? '#f8fafc' : '#0b1329',
+                    border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b',
+                    borderRadius: '10px',
+                    padding: '14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    {/* CARD HEADER */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '900', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        💰 INVESTMENT BUDGET RANGE & FLEXIBILITY LIMIT
+                      </span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#4ade80' }}>
+                        Current: ₹{newCustomerForm.budget_min || '0'} to ₹{newCustomerForm.budget_max || '0'} {newCustomerForm.budget_unit || 'Lakhs'} ({newCustomerForm.budget_flexibility || 'Strict Fixed'})
+                      </span>
+                    </div>
+
+                    {/* QUICK BUDGET PRESET BUTTONS */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {[
+                        { label: '⚡ Under ₹50 L', min: '20', max: '50', unit: 'Lakhs' },
+                        { label: '⚡ ₹50 L – ₹1 Cr', min: '50', max: '100', unit: 'Lakhs' },
+                        { label: '⚡ ₹1.20 Cr – ₹1.80 Cr', min: '1.20', max: '1.80', unit: 'Crore (Cr)' },
+                        { label: '⚡ ₹1.80 Cr – ₹3 Cr', min: '1.80', max: '3.00', unit: 'Crore (Cr)' },
+                        { label: '⚡ Above ₹3 Cr', min: '3.00', max: '10.00', unit: 'Crore (Cr)' },
+                      ].map(preset => {
+                        const isSelected = newCustomerForm.budget_min === preset.min && newCustomerForm.budget_max === preset.max;
+                        return (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => setNewCustomerForm({
+                              ...newCustomerForm,
+                              budget_min: preset.min,
+                              budget_max: preset.max,
+                              budget_unit: preset.unit
+                            })}
+                            style={{
+                              background: isSelected ? (isLight ? '#e0f2fe' : 'rgba(2, 132, 199, 0.25)') : (isLight ? '#ffffff' : '#0f172a'),
+                              color: isSelected ? (isLight ? '#0369a1' : '#38bdf8') : (isLight ? '#475569' : '#94a3b8'),
+                              border: isSelected ? '1.5px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              fontSize: '0.74rem',
+                              fontWeight: '800',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* BUDGET INPUTS GRID */}
+                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1.2fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '4px' }}>
+                          Minimum Budget Limit *
+                        </label>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="text"
+                            value={newCustomerForm.budget_min || ''}
+                            onChange={e => setNewCustomerForm({ ...newCustomerForm, budget_min: e.target.value })}
+                            placeholder="e.g. 1.20 or 50"
+                            style={{
+                              flex: 1,
+                              padding: '8px 12px',
+                              borderRadius: '6px',
+                              border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                              background: isLight ? '#ffffff' : '#0f172a',
+                              color: '#22c55e',
+                              fontWeight: '900',
+                              fontSize: '0.86rem'
+                            }}
+                          />
+                          <select
+                            value={newCustomerForm.budget_unit || 'Crore (Cr)'}
+                            onChange={e => setNewCustomerForm({ ...newCustomerForm, budget_unit: e.target.value })}
+                            style={{
+                              width: '110px',
+                              padding: '8px 8px',
+                              borderRadius: '6px',
+                              border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                              background: isLight ? '#ffffff' : '#0f172a',
+                              color: '#38bdf8',
+                              fontWeight: '800',
+                              fontSize: '0.78rem'
+                            }}
+                          >
+                            <option value="Crore (Cr)">Crore (Cr)</option>
+                            <option value="Lakhs (L)">Lakhs (L)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '4px' }}>
+                          Maximum Budget Limit *
+                        </label>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="text"
+                            value={newCustomerForm.budget_max || ''}
+                            onChange={e => setNewCustomerForm({ ...newCustomerForm, budget_max: e.target.value })}
+                            placeholder="e.g. 1.80 or 75"
+                            style={{
+                              flex: 1,
+                              padding: '8px 12px',
+                              borderRadius: '6px',
+                              border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                              background: isLight ? '#ffffff' : '#0f172a',
+                              color: '#22c55e',
+                              fontWeight: '900',
+                              fontSize: '0.86rem'
+                            }}
+                          />
+                          <select
+                            value={newCustomerForm.budget_unit || 'Crore (Cr)'}
+                            onChange={e => setNewCustomerForm({ ...newCustomerForm, budget_unit: e.target.value })}
+                            style={{
+                              width: '110px',
+                              padding: '8px 8px',
+                              borderRadius: '6px',
+                              border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                              background: isLight ? '#ffffff' : '#0f172a',
+                              color: '#38bdf8',
+                              fontWeight: '800',
+                              fontSize: '0.78rem'
+                            }}
+                          >
+                            <option value="Crore (Cr)">Crore (Cr)</option>
+                            <option value="Lakhs (L)">Lakhs (L)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '4px' }}>
+                          Budget Flexibility Stretch
+                        </label>
+                        <select
+                          value={newCustomerForm.budget_flexibility || '🔒 Strict Fixed (0% Stretch)'}
+                          onChange={e => setNewCustomerForm({ ...newCustomerForm, budget_flexibility: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '9px 12px',
+                            borderRadius: '6px',
+                            border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                            background: isLight ? '#ffffff' : '#0f172a',
+                            color: '#fbbf24',
+                            fontWeight: '800',
+                            fontSize: '0.84rem'
+                          }}
+                        >
+                          <option value="🔒 Strict Fixed (0% Stretch)">🔒 Strict Fixed (0% Stretch)</option>
+                          <option value="⚡ Flexible (± 5% Stretch)">⚡ Flexible (± 5% Stretch)</option>
+                          <option value="📈 Stretchable (± 10% Stretch)">📈 Stretchable (± 10% Stretch)</option>
+                          <option value="🚀 Highly Flexible (± 15%+ Stretch)">🚀 Highly Flexible (± 15%+ Stretch)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 2: CARPET / BUILT-UP AREA DIMENSIONS & MEASUREMENT UNIT */}
+                  <div style={{
+                    background: isLight ? '#f8fafc' : '#0b1329',
+                    border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b',
+                    borderRadius: '10px',
+                    padding: '14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    {/* CARD HEADER */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '900', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        📐 CARPET / BUILT-UP AREA DIMENSIONS & MEASUREMENT UNIT
+                      </span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38bdf8' }}>
+                        Current: {newCustomerForm.carpet_area_min || '0'} to {newCustomerForm.carpet_area_max || '0'} {newCustomerForm.area_unit?.split(' ')[0] || 'Sq.Ft.'}
+                      </span>
+                    </div>
+
+                    {/* QUICK AREA PRESET BUTTONS */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {[
+                        { label: '📐 500 – 1,000 Sq.Ft.', min: '500', max: '1000' },
+                        { label: '📐 1,000 – 1,500 Sq.Ft.', min: '1000', max: '1500' },
+                        { label: '📐 1,400 – 2,200 Sq.Ft.', min: '1400', max: '2200' },
+                        { label: '📐 2,200 – 3,500 Sq.Ft.', min: '2200', max: '3500' },
+                        { label: '📐 3,500+ Sq.Ft.', min: '3500', max: '6000' },
+                      ].map(preset => {
+                        const isSelected = newCustomerForm.carpet_area_min === preset.min && newCustomerForm.carpet_area_max === preset.max;
+                        return (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => setNewCustomerForm({
+                              ...newCustomerForm,
+                              carpet_area_min: preset.min,
+                              carpet_area_max: preset.max
+                            })}
+                            style={{
+                              background: isSelected ? (isLight ? '#e0f2fe' : 'rgba(2, 132, 199, 0.25)') : (isLight ? '#ffffff' : '#0f172a'),
+                              color: isSelected ? (isLight ? '#0369a1' : '#38bdf8') : (isLight ? '#475569' : '#94a3b8'),
+                              border: isSelected ? '1.5px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              fontSize: '0.74rem',
+                              fontWeight: '800',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* AREA INPUTS GRID */}
+                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1.2fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '4px' }}>
+                          Min Area Dimension *
+                        </label>
+                        <input
+                          type="text"
+                          value={newCustomerForm.carpet_area_min || ''}
+                          onChange={e => setNewCustomerForm({ ...newCustomerForm, carpet_area_min: e.target.value })}
+                          placeholder="e.g. 1,400"
+                          style={{
+                            width: '100%',
+                            padding: '9px 12px',
+                            borderRadius: '6px',
+                            border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                            background: isLight ? '#ffffff' : '#0f172a',
+                            color: isLight ? '#0f172a' : '#ffffff',
+                            fontWeight: '800',
+                            fontSize: '0.86rem'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '4px' }}>
+                          Max Area Dimension *
+                        </label>
+                        <input
+                          type="text"
+                          value={newCustomerForm.carpet_area_max || ''}
+                          onChange={e => setNewCustomerForm({ ...newCustomerForm, carpet_area_max: e.target.value })}
+                          placeholder="e.g. 2,200"
+                          style={{
+                            width: '100%',
+                            padding: '9px 12px',
+                            borderRadius: '6px',
+                            border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                            background: isLight ? '#ffffff' : '#0f172a',
+                            color: isLight ? '#0f172a' : '#ffffff',
+                            fontWeight: '800',
+                            fontSize: '0.86rem'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '4px' }}>
+                          Area Measurement Unit *
+                        </label>
+                        <select
+                          value={newCustomerForm.area_unit || 'Sq.Ft. (Square Feet)'}
+                          onChange={e => setNewCustomerForm({ ...newCustomerForm, area_unit: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '9px 12px',
+                            borderRadius: '6px',
+                            border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                            background: isLight ? '#ffffff' : '#0f172a',
+                            color: '#38bdf8',
+                            fontWeight: '800',
+                            fontSize: '0.84rem'
+                          }}
+                        >
+                          <option value="Sq.Ft. (Square Feet)">Sq.Ft. (Square Feet)</option>
+                          <option value="Sq.M. (Square Meters)">Sq.M. (Square Meters)</option>
+                          <option value="Katha (West Bengal)">Katha (West Bengal Standard)</option>
+                          <option value="Bigha">Bigha</option>
+                          <option value="Acre">Acre</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TARGET PROFILING SUMMARY BANNER */}
+                  <div style={{
+                    background: isLight ? '#dcfce7' : 'rgba(6, 78, 59, 0.3)',
+                    border: '1px solid #059669',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: '0.8rem',
+                    fontWeight: '800',
+                    color: isLight ? '#15803d' : '#34d399'
+                  }}>
+                    <span>
+                      📊 TARGET PROFILING: Budget = ₹{newCustomerForm.budget_min || '0'} – ₹{newCustomerForm.budget_max || '0'} {newCustomerForm.budget_unit || 'Cr'} ({newCustomerForm.budget_flexibility || '± 10% Flexible'}) • Area = {newCustomerForm.carpet_area_min || '0'} – {newCustomerForm.carpet_area_max || '0'} {newCustomerForm.area_unit?.split(' ')[0] || 'Sq.Ft.'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 7: PARKING REQUIREMENTS & GATED AMENITIES MULTI-SELECT */}
+              {leadIntakeStep === 7 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ color: isLight ? '#0284c7' : '#38bdf8', fontWeight: '900', fontSize: '0.92rem', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '6px' }}>
+                    Step 7: Parking Requirements & Gated Amenities Multi-Select
+                  </div>
+
+                  {/* PARKING TYPE SELECTION */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
+                      Parking Type Required *
+                    </label>
+                    <select
+                      value={newCustomerForm.parking || 'Required'}
+                      onChange={e => setNewCustomerForm({ ...newCustomerForm, parking: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                        background: isLight ? '#ffffff' : '#0f172a',
+                        color: isLight ? '#0f172a' : '#ffffff',
+                        fontWeight: '800',
+                        fontSize: '0.88rem'
+                      }}
+                    >
+                      <option value="Required">Required</option>
+                      <option value="Not Required">Not Required</option>
+                    </select>
+                  </div>
+
+                  {/* GATED AMENITIES MULTI-SELECT GRID */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <label style={{ fontSize: '0.78rem', fontWeight: '900', color: isLight ? '#0284c7' : '#38bdf8' }}>
+                        Required Gated Amenities & Infrastructure Features ({
+                          (Array.isArray(newCustomerForm.amenities) ? newCustomerForm.amenities : (newCustomerForm.amenities ? newCustomerForm.amenities.split(', ').filter(Boolean) : [])).length
+                        } Selected)
+                      </label>
+
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const allAmenities = [
+                              '24/7 Power Backup', 'Water Supply (24 Hours)', '24/7 Security Guard', 'CCTV Cameras',
+                              'High-Speed Elevators', 'Backup Power Generator', 'Fire Safety System', 'Fitness Gymnasium',
+                              'Swimming Pool', 'Luxury Clubhouse', "Children's Play Area", 'Multi-Sports Courts',
+                              'Jogging / Walking Track', 'Landscaped Gardens', 'Waste Management & STP', 'EV Charging Stations'
+                            ];
+                            setNewCustomerForm({
+                              ...newCustomerForm,
+                              amenities: allAmenities,
+                              amenities_summary: allAmenities.join(', ')
+                            });
+                          }}
+                          style={{
+                            background: '#0284c7',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            fontSize: '0.72rem',
+                            fontWeight: '800',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Select All (16)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewCustomerForm({
+                              ...newCustomerForm,
+                              amenities: [],
+                              amenities_summary: ''
+                            });
+                          }}
+                          style={{
+                            background: isLight ? '#cbd5e1' : '#334155',
+                            color: isLight ? '#0f172a' : '#ffffff',
+                            border: 'none',
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            fontSize: '0.72rem',
+                            fontWeight: '800',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 4-COLUMN AMENITIES GRID */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: windowWidth <= 640 ? '1fr 1fr' : 'repeat(4, 1fr)',
+                      gap: '8px'
+                    }}>
+                      {[
+                        { label: '24/7 Power Backup', icon: '⚡' },
+                        { label: 'Water Supply (24 Hours)', icon: '🚰' },
+                        { label: '24/7 Security Guard', icon: '🛡️' },
+                        { label: 'CCTV Cameras', icon: '📹' },
+                        { label: 'High-Speed Elevators', icon: '🛗' },
+                        { label: 'Backup Power Generator', icon: '⚡' },
+                        { label: 'Fire Safety System', icon: '🧯' },
+                        { label: 'Fitness Gymnasium', icon: '🏋️' },
+                        { label: 'Swimming Pool', icon: '🏊' },
+                        { label: 'Luxury Clubhouse', icon: '🏛️' },
+                        { label: "Children's Play Area", icon: '🛝' },
+                        { label: 'Multi-Sports Courts', icon: '🎾' },
+                        { label: 'Jogging / Walking Track', icon: '🏃' },
+                        { label: 'Landscaped Gardens', icon: '🌳' },
+                        { label: 'Waste Management & STP', icon: '♻️' },
+                        { label: 'EV Charging Stations', icon: '🔌' },
+                      ].map(item => {
+                        const selectedList = Array.isArray(newCustomerForm.amenities)
+                          ? newCustomerForm.amenities
+                          : (newCustomerForm.amenities ? newCustomerForm.amenities.split(', ').filter(Boolean) : []);
+                        const isChecked = selectedList.includes(item.label);
+
+                        return (
+                          <div
+                            key={item.label}
+                            onClick={() => {
+                              const updated = isChecked
+                                ? selectedList.filter((a: string) => a !== item.label)
+                                : [...selectedList, item.label];
+                              setNewCustomerForm({
+                                ...newCustomerForm,
+                                amenities: updated,
+                                amenities_summary: updated.join(', ')
+                              });
+                            }}
+                            style={{
+                              background: isChecked
+                                ? (isLight ? '#f0f9ff' : 'rgba(2, 132, 199, 0.2)')
+                                : (isLight ? '#f8fafc' : '#1e293b'),
+                              border: isChecked
+                                ? '1.5px solid #0284c7'
+                                : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                              borderRadius: '6px',
+                              padding: '8px 10px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {}}
+                              style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0284c7' }}
+                            />
+                            <span style={{
+                              fontSize: '0.75rem',
+                              fontWeight: isChecked ? '800' : '600',
+                              color: isChecked ? (isLight ? '#0369a1' : '#38bdf8') : (isLight ? '#475569' : '#cbd5e1'),
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}>
+                              {item.icon} {item.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* AMENITIES SUMMARY / ADDITIONAL CUSTOM REQUIREMENTS */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '4px' }}>
+                      Selected Amenities Summary / Additional Custom Requirements
+                    </label>
+                    <input
+                      type="text"
+                      value={newCustomerForm.amenities_summary || ''}
+                      onChange={e => setNewCustomerForm({ ...newCustomerForm, amenities_summary: e.target.value })}
+                      placeholder="e.g. Swimming Pool, Clubhouse, EV Charging Stations..."
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '6px',
+                        border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                        background: isLight ? '#ffffff' : '#0f172a',
+                        color: isLight ? '#0f172a' : '#ffffff',
+                        fontWeight: '700',
+                        fontSize: '0.84rem'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 8: HOME LOAN READINESS, POSSESSION TIMELINE & BROKERAGE TERMS */}
+              {leadIntakeStep === 8 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ color: isLight ? '#0284c7' : '#38bdf8', fontWeight: '900', fontSize: '0.92rem', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '6px' }}>
+                    Step 8: Home Loan Readiness, Possession Timeline & Channel Partner Brokerage Terms
+                  </div>
+
+                  {/* TOP ROW: LOAN REQUIRED, PRE-APPROVAL STATUS, EXPECTED DECISION TIMELINE */}
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
+                        Bank Loan Required *
+                      </label>
+                      <select
+                        value={newCustomerForm.loan_required || 'Yes'}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, loan_required: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                          background: isLight ? '#ffffff' : '#0f172a',
+                          color: isLight ? '#0f172a' : '#ffffff',
+                          fontWeight: '800',
+                          fontSize: '0.88rem'
+                        }}
+                      >
+                        <option value="Yes">Yes</option>
+                        <option value="No">No (Self Funded Outright)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
+                        Loan Pre-Approval Status
+                      </label>
+                      <select
+                        value={newCustomerForm.loan_status || '🟢 Pre-Approved'}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, loan_status: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                          background: isLight ? '#ffffff' : '#0f172a',
+                          color: isLight ? '#0f172a' : '#ffffff',
+                          fontWeight: '800',
+                          fontSize: '0.88rem'
+                        }}
+                      >
+                        <option value="🟢 Pre-Approved">🟢 Pre-Approved</option>
+                        <option value="🟡 In Process / Applied">🟡 In Process / Applied</option>
+                        <option value="⚪ Not Applied Yet">⚪ Not Applied Yet</option>
+                        <option value="🔴 Loan Ineligible / Rejected">🔴 Loan Ineligible / Rejected</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
+                        Expected Decision Timeline
+                      </label>
+                      <select
+                        value={newCustomerForm.possession_status || '🔥 Immediate (< 30 Days)'}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, possession_status: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                          background: isLight ? '#ffffff' : '#0f172a',
+                          color: '#fbbf24',
+                          fontWeight: '900',
+                          fontSize: '0.88rem'
+                        }}
+                      >
+                        <option value="🔥 Immediate (< 30 Days)">🔥 Immediate (&lt; 30 Days)</option>
+                        <option value="⚡ 1-3 Months">⚡ 1-3 Months</option>
+                        <option value="⏳ 3-6 Months">⏳ 3-6 Months</option>
+                        <option value="🗓️ 6+ Months / Long Term">🗓️ 6+ Months / Long Term</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* BROKERAGE CHARGE & BILLING TERMS CARD */}
+                  <div style={{
+                    background: isLight ? '#f0fdf4' : '#0b1329',
+                    border: '1.5px solid #10b981',
+                    borderRadius: '10px',
+                    padding: '14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    {/* CARD HEADER */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: '900', color: '#22c55e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        💰 Agreed Channel Partner Brokerage Charge & Billing Terms *
+                      </span>
+                      <span style={{
+                        background: isLight ? '#dcfce7' : 'rgba(6, 78, 59, 0.4)',
+                        border: '1px solid #10b981',
+                        color: isLight ? '#15803d' : '#34d399',
+                        padding: '3px 10px',
+                        borderRadius: '6px',
+                        fontSize: '0.7rem',
+                        fontWeight: '900'
+                      }}>
+                        ✓ Auto-Calculates in Billing, Cost Sheet & Agreements
+                      </span>
+                    </div>
+
+                    {/* INPUTS GRID */}
+                    <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '4px' }}>
+                          Agreed Brokerage Rate (%) *
+                        </label>
+                        <select
+                          value={newCustomerForm.brokerage_rate || '2.0% (Standard Channel Partner Brokerage)'}
+                          onChange={e => setNewCustomerForm({ ...newCustomerForm, brokerage_rate: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '10px 14px',
+                            borderRadius: '8px',
+                            border: '1.5px solid #10b981',
+                            background: isLight ? '#ffffff' : '#0f172a',
+                            color: '#22c55e',
+                            fontWeight: '900',
+                            fontSize: '0.88rem'
+                          }}
+                        >
+                          <option value="0.0% (Zero Brokerage for Buyer)">0.0% (Zero Brokerage for Buyer)</option>
+                          <option value="1.0% (Discounted Brokerage)">1.0% (Discounted Brokerage)</option>
+                          <option value="2.0% (Standard Channel Partner Brokerage)">2.0% (Standard Channel Partner Brokerage)</option>
+                          <option value="3.0% (Premium Service Brokerage)">3.0% (Premium Service Brokerage)</option>
+                          <option value="4.0%+ (Commercial / Exclusive Mandate)">4.0%+ (Commercial / Exclusive Mandate)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '4px' }}>
+                          Payer & Billing Channel *
+                        </label>
+                        <select
+                          value={newCustomerForm.billing_channel || '👨‍💼 Billed to Customer Buyer (B2C Consultancy Fee)'}
+                          onChange={e => setNewCustomerForm({ ...newCustomerForm, billing_channel: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '10px 14px',
+                            borderRadius: '8px',
+                            border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                            background: isLight ? '#ffffff' : '#0f172a',
+                            color: isLight ? '#0f172a' : '#ffffff',
+                            fontWeight: '800',
+                            fontSize: '0.88rem'
+                          }}
+                        >
+                          <option value="👨‍💼 Billed to Customer Buyer (B2C Consultancy Fee)">👨‍💼 Billed to Customer Buyer (B2C Consultancy Fee)</option>
+                          <option value="🏗️ Billed to Builder / Developer (B2B Commission)">🏗️ Billed to Builder / Developer (B2B Commission)</option>
+                          <option value="🤝 Split Brokerage (50% Buyer / 50% Builder)">🤝 Split Brokerage (50% Buyer / 50% Builder)</option>
+                          <option value="🚫 Zero Fee / Direct Transaction">🚫 Zero Fee / Direct Transaction</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 9: REQUIREMENT COMPLETENESS AUDIT & MATCHING HANDOFF */}
+              {leadIntakeStep === 9 && (() => {
+                const auditItems = [
+                  { key: 'name', label: 'Customer Name', value: newCustomerForm.name, step: 2 },
+                  { key: 'mobile', label: 'Mobile Phone', value: newCustomerForm.mobile || newCustomerForm.phone, step: 2 },
+                  { key: 'lead_source', label: 'Lead Source', value: newCustomerForm.lead_source || newLeadForm.lead_source || 'Meta Ads', step: 1 },
+                  { key: 'investment_purpose', label: 'Transaction Purpose', value: newCustomerForm.investment_purpose || 'BUY / OUTRIGHT PURCHASE', step: 3 },
+                  { key: 'property_type', label: 'Property Type', value: newCustomerForm.property_type, step: 3 },
+                  { key: 'configuration', label: 'BHK Config', value: newCustomerForm.configuration || '2BHK', step: 4 },
+                  { key: 'preferredArea', label: 'Preferred Locality', value: newCustomerForm.preferredArea, step: 5 },
+                  { key: 'budget_min', label: 'Budget Limit', value: newCustomerForm.budget_min || newCustomerForm.budget_max, step: 6 },
+                  { key: 'possession_status', label: 'Possession Status', value: newCustomerForm.possession_status || 'Ready to Move', step: 8 },
+                  { key: 'facing', label: 'Vastu Facing', value: newCustomerForm.facing || 'East Facing', step: 5 },
+                  { key: 'parking', label: 'Parking Facility', value: newCustomerForm.parking || 'Covered Slot', step: 7 },
+                  { key: 'assigned_exec', label: 'Assigned Executive', value: newCustomerForm.assigned_employee_name || newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)', step: 9 }
+                ];
+
+                const filledItems = auditItems.filter(item => Boolean(item.value && String(item.value).trim()));
+                const missingItems = auditItems.filter(item => !Boolean(item.value && String(item.value).trim()));
+                const scorePercent = Math.round((filledItems.length / auditItems.length) * 100);
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                    {/* 1. REQUIREMENT COMPLETENESS AUDIT SCORE CARD */}
+                    <div style={{
+                      background: isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.08)',
+                      border: '1.5px solid #ef4444',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div>
+                        <span style={{ fontSize: '0.72rem', fontWeight: '900', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          REQUIREMENT COMPLETENESS AUDIT SCORE
+                        </span>
+                        <div style={{ fontSize: '2rem', fontWeight: '900', color: scorePercent >= 80 ? '#22c55e' : scorePercent >= 50 ? '#ffffff' : '#ef4444', lineHeight: 1.1, marginTop: '2px' }}>
+                          {scorePercent}% COMPLETE
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
+                          Partial qualification profile. Fill missing BHK, Location, or Budget details for higher match accuracy.
+                        </div>
+                      </div>
+
+                      <span style={{
+                        background: scorePercent >= 80 ? '#22c55e' : '#ef4444',
+                        color: '#ffffff',
+                        fontWeight: '900',
+                        fontSize: '0.78rem',
+                        padding: '6px 14px',
+                        borderRadius: '20px',
+                        letterSpacing: '0.5px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                      }}>
+                        {scorePercent >= 80 ? 'HIGH ACCURACY INTAKE' : 'BASIC INTAKE'}
+                      </span>
+                    </div>
+
+                    {/* 2. REQUIREMENT COMPLETENESS AUDIT BREAKDOWN */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: '900', color: isLight ? '#0284c7' : '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          📊 REQUIREMENT COMPLETENESS AUDIT BREAKDOWN
+                        </span>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <span style={{ background: isLight ? '#dcfce7' : '#064e3b', color: isLight ? '#15803d' : '#34d399', padding: '3px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '900' }}>
+                            ✓ {filledItems.length} Filled
+                          </span>
+                          <span style={{ background: isLight ? '#fee2e2' : '#7f1d1d', color: isLight ? '#b91c1c' : '#f87171', padding: '3px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '900' }}>
+                            ⚠️ {missingItems.length} Needs Filling
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 2-COLUMN AUDIT ITEMS GRID */}
+                      <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '10px' }}>
+                        {auditItems.map(item => {
+                          const isFilled = Boolean(item.value && String(item.value).trim());
+
+                          return (
+                            <div
+                              key={item.key}
+                              style={{
+                                background: isFilled ? (isLight ? '#f8fafc' : '#0f172a') : (isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.08)'),
+                                border: isFilled ? (isLight ? '1px solid #cbd5e1' : '1px solid #1e293b') : '1.5px solid #0284c7',
+                                borderRadius: '8px',
+                                padding: '10px 12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '4px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.72rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8' }}>
+                                  {item.label}
+                                </span>
+                                <span style={{ fontSize: '0.68rem', fontWeight: '900', color: isFilled ? '#22c55e' : '#ef4444' }}>
+                                  {isFilled ? '✓ Filled' : '⚠️ Missing'}
+                                </span>
+                              </div>
+
+                              {isFilled ? (
+                                <div style={{ fontSize: '0.86rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {String(item.value)}
+                                </div>
+                              ) : (
+                                <div>
+                                  <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#fbbf24' }}>
+                                    Pending (Step {item.step})
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setLeadIntakeStep(item.step)}
+                                    style={{
+                                      width: '100%',
+                                      marginTop: '6px',
+                                      background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      padding: '6px 10px',
+                                      borderRadius: '6px',
+                                      fontSize: '0.74rem',
+                                      fontWeight: '900',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '4px',
+                                      boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)'
+                                    }}
+                                  >
+                                    ✍️ Go to Step {item.step} to Fill
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 3. CUSTOMER SNAPSHOT BAR */}
+                    <div style={{
+                      background: isLight ? '#f1f5f9' : '#0b1329',
+                      border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b',
+                      borderRadius: '10px',
+                      padding: '12px 14px',
+                      display: 'grid',
+                      gridTemplateColumns: windowWidth <= 640 ? '1fr 1fr' : 'repeat(6, 1fr)',
+                      gap: '8px',
+                      fontSize: '0.72rem'
+                    }}>
+                      <div>
+                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Customer Name:</span>
+                        <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.82rem' }}>{newCustomerForm.name || 'Sumanth Varma'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Mobile Phone:</span>
+                        <strong style={{ color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.82rem' }}>{newCustomerForm.mobile || '+91 98490 88888'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Assigned Exec:</span>
+                        <strong style={{ color: '#38bdf8', fontSize: '0.82rem' }}>{newCustomerForm.assigned_employee_name || 'Priya Nair (Sales Exec)'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Budget Range:</span>
+                        <strong style={{ color: '#22c55e', fontSize: '0.82rem' }}>{newCustomerForm.budget_min ? `₹${newCustomerForm.budget_min} - ₹${newCustomerForm.budget_max} ${newCustomerForm.budget_unit || 'Lakhs'}` : '-'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Preferred Area:</span>
+                        <strong style={{ color: '#fbbf24', fontSize: '0.82rem' }}>{newCustomerForm.preferredArea || '(2BHK)'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Agreed Brokerage:</span>
+                        <strong style={{ color: '#22c55e', fontSize: '0.82rem' }}>💰 {newCustomerForm.brokerage_rate || '2.0% (CUSTOMER)'}</strong>
+                      </div>
+                    </div>
+
+                    {/* 4. ASSIGN SALES EXECUTIVE / CRM BOX */}
+                    <div style={{
+                      background: isLight ? '#f0f9ff' : '#0b1329',
+                      border: '1.5px solid #0284c7',
+                      borderRadius: '10px',
+                      padding: '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}>
+                      <label style={{ fontSize: '0.78rem', fontWeight: '900', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        👤 ASSIGN SALES EXECUTIVE / CLIENT RELATIONSHIP MANAGER *
+                      </label>
+                      <select
+                        value={newCustomerForm.assigned_employee_id || 'Avishek Das'}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, assigned_employee_id: e.target.value, assigned_employee_name: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: '1px solid #0284c7',
+                          background: isLight ? '#ffffff' : '#0f172a',
+                          color: '#38bdf8',
+                          fontWeight: '900',
+                          fontSize: '0.88rem'
+                        }}
+                      >
+                        {dynamicSalesExecutives.map((exec: any) => (
+                          <option key={exec.id || exec.name} value={exec.name}>
+                            👤 {exec.name} — {exec.designation || 'Managing Director & Founder (Head Office (Kolkata))'}
+                          </option>
+                        ))}
+                      </select>
+                      <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                        📌 Assign the designated Sales Executive / CRM for property matching hand-off and client relationship management.
+                      </div>
+                    </div>
+
+                  </div>
+                );
+              })()}
+
+              {/* MODAL FOOTER ACTION BAR */}
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '14px', marginTop: '10px', flexWrap: 'nowrap', width: '100%' }}>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setShowLeadModal(false); setShowAddCustomerModal(false); }}
+                    style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                  >
+                    ✕ Cancel
+                  </button>
+
+                  {leadIntakeStep > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setLeadIntakeStep(leadIntakeStep - 1)}
+                      style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                    >
+                      ← Previous Step
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={handleSaveQualificationDraft}
+                    style={{ background: isLight ? '#f59e0b' : '#d97706', color: '#0f172a', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                  >
+                    💾 Save Draft (Step {leadIntakeStep})
+                  </button>
+
+                  {leadIntakeStep === 2 && newLeadForm.call_disposition && newLeadForm.call_disposition !== 'CONNECTED_INTERESTED' ? (
+                    <button
+                      type="button"
+                      onClick={() => handleSaveBypassedLead(newLeadForm.call_disposition)}
+                      style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)' }}
+                    >
+                      💾 Save Lead & Exit (Bypass Steps 3-9)
+                    </button>
+                  ) : leadIntakeStep < 9 ? (
+                    <button
+                      type="button"
+                      onClick={() => setLeadIntakeStep(leadIntakeStep + 1)}
+                      style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)' }}
+                    >
+                      Next Step →
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.84rem', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: '0 4px 14px rgba(34, 197, 94, 0.4)' }}
+                    >
+                      🚀 GENERATE MATCHING ID & SEND TO MATCHING MANAGEMENT
+                    </button>
+                  )}
+                </div>
+              </div>
+
+            </form>
 
           </div>
         </div>

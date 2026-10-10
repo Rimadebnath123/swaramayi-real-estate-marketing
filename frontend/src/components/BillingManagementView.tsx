@@ -907,6 +907,34 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                                 if (setInvoices) {
                                   setInvoices(remainingInvoices);
                                 }
+                                if (setBookings && bookings && bookings.length > 0) {
+                                  const targetBkgCode = i.booking_code;
+                                  const targetCustNum = i.customer_number;
+                                  const hasOtherInv = remainingInvoices.some((inv: any) => 
+                                    (targetBkgCode && inv.booking_code === targetBkgCode) || 
+                                    (targetCustNum && inv.customer_number === targetCustNum)
+                                  );
+                                  if (!hasOtherInv) {
+                                    const updatedBookingsList = bookings.map((b: any) => {
+                                      if ((targetBkgCode && b.booking_code === targetBkgCode) || (targetCustNum && b.customer_number === targetCustNum)) {
+                                        return {
+                                          ...b,
+                                          approval_status: 'APPROVED_LOCKED',
+                                          status: 'APPROVED_LOCKED',
+                                          registered: false,
+                                          invoiced: false,
+                                          developer_invoice_number: undefined,
+                                          customer_invoice_number: undefined
+                                        };
+                                      }
+                                      return b;
+                                    });
+                                    setBookings(updatedBookingsList);
+                                    try {
+                                      localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(updatedBookingsList));
+                                    } catch (err) {}
+                                  }
+                                }
                                 try {
                                   localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(remainingInvoices));
                                 } catch (err) {}

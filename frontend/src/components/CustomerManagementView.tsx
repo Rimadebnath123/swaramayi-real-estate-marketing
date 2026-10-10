@@ -504,13 +504,18 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
 
       if (custNum && rNum) {
         if (rNum.toLowerCase() === custNum.toLowerCase()) return true;
-        if (cleanCustNum && rCleanNum && cleanCustNum.length >= 6 && rCleanNum.length >= 6 && rCleanNum === cleanCustNum) return true;
+        if (cleanCustNum && rCleanNum && cleanCustNum.length >= 3 && rCleanNum.length >= 3) {
+          if (cleanCustNum === rCleanNum || cleanCustNum.endsWith(rCleanNum) || rCleanNum.endsWith(cleanCustNum)) return true;
+        }
       }
       if (cleanMobile && rMob) {
-        if (cleanMobile.length >= 10 && rMob.length >= 10 && rMob === cleanMobile) return true;
+        if (cleanMobile.length >= 10 && rMob.length >= 10) {
+          if (rMob === cleanMobile || rMob.slice(-10) === cleanMobile.slice(-10)) return true;
+        }
       }
       if (cleanCustName && rName) {
         if (rName === cleanCustName) return true;
+        if (cleanCustName.length >= 4 && rName.length >= 4 && (rName.includes(cleanCustName) || cleanCustName.includes(rName))) return true;
       }
       return false;
     };
@@ -1351,14 +1356,18 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                 const str = idVal.toString().trim().toLowerCase();
                 if (str === cNum) return true;
                 const cleanStr = str.replace(/\D/g, '');
-                if (cCleanNum && cleanStr && cCleanNum.length >= 6 && cleanStr.length >= 6 && cCleanNum === cleanStr) return true;
+                if (cCleanNum && cleanStr && cCleanNum.length >= 3 && cleanStr.length >= 3) {
+                  if (cCleanNum === cleanStr || cCleanNum.endsWith(cleanStr) || cleanStr.endsWith(cCleanNum)) return true;
+                }
                 return false;
               };
 
               const matchPhone = (phoneVal: any) => {
                 if (!phoneVal || !cMob) return false;
                 const str = phoneVal.toString().replace(/\D/g, '');
-                if (cMob.length >= 10 && str.length >= 10 && cMob === str) return true;
+                if (cMob.length >= 10 && str.length >= 10) {
+                  if (cMob === str || cMob.slice(-10) === str.slice(-10)) return true;
+                }
                 return false;
               };
 
@@ -1366,12 +1375,17 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                 if (!nameVal || !cName) return false;
                 const str = nameVal.toString().trim().toLowerCase();
                 if (str === cName) return true;
+                const cleanCName = cName.replace(/[^a-z]/g, '');
+                const cleanStr = str.replace(/[^a-z]/g, '');
+                if (cleanCName.length >= 4 && cleanStr.length >= 4) {
+                  if (cleanCName.includes(cleanStr) || cleanStr.includes(cleanCName)) return true;
+                }
                 return false;
               };
 
               const isCustMatch = (obj: any) => {
                 if (!obj) return false;
-                if (matchId(obj.customerNumber || obj.customerId || obj.customer_number || obj.customer_id || obj.custCode)) return true;
+                if (matchId(obj.customerNumber || obj.customerId || obj.customer_number || obj.customer_id || obj.custCode || obj.id)) return true;
                 if (matchPhone(obj.mobile || obj.customerMobile || obj.customer_mobile || obj.phone || obj.party_contact || obj.client_mobile)) return true;
                 if (matchName(obj.customerName || obj.customer_name || obj.name || obj.party_name || obj.client_name || obj.custName)) return true;
                 return false;
@@ -1388,10 +1402,17 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                 return false;
               });
 
+              const csId = matchingCostSheet ? (matchingCostSheet.costSheetId || matchingCostSheet.id) : null;
+
               // 3. VISIT STAGE
-              const directPva = (projectVisitAgreements || []).find(isCustMatch);
+              const directPva = (projectVisitAgreements || []).find((pva: any) => {
+                if (isCustMatch(pva)) return true;
+                if (csId && (pva.costSheetId === csId || pva.cost_sheet_id === csId)) return true;
+                return false;
+              });
+
               const pvaFromAgreements = (agreements || []).find((a: any) => 
-                isCustMatch(a) && (
+                (isCustMatch(a) || (csId && (a.costSheetId === csId || a.cost_sheet_id === csId))) && (
                   (a.agreement_code && a.agreement_code.toString().startsWith('SRM-PVA')) || 
                   a.agreement_type === 'CUSTOMER_SITE_VISIT' || 
                   a.pvaData
@@ -1412,11 +1433,19 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                   customerNumber: p.customerNumber,
                   mobile: p.mobile,
                   customerName: p.customerName,
+                  costSheetId: p.costSheetId,
+                  stops: p.stops,
                   status: p.status,
                   otpVerified: p.status === 'OTP_VERIFIED' || p.status === 'VISIT_DONE' || p.status === 'COMPLETED' || (p.stops && p.stops.some((s: any) => s.otpVerified || s.status === 'VISIT_COMPLETED'))
                 }))
               ];
-              const directVisit = allVisits.find(isCustMatch);
+
+              const directVisit = allVisits.find((v: any) => {
+                if (isCustMatch(v)) return true;
+                if (csId && (v.costSheetId === csId || (v.stops && v.stops.some((s: any) => s.costSheetId === csId)))) return true;
+                return false;
+              });
+
               const visitFromPva = (matchingPva && matchingPva.visitScheduleId) ? {
                 visitId: matchingPva.visitScheduleId,
                 status: matchingPva.status || 'OTP_VERIFIED',
@@ -1426,16 +1455,36 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
               const matchingVisit = directVisit || visitFromPva;
 
               // 4. BOOKING STAGE
-              const directBooking = (bookings || []).find(isCustMatch);
-              const matchingInvoice = (invoices || []).find(isCustMatch);
-              const bookingFromInvoice = !directBooking && matchingInvoice && matchingInvoice.booking_code ? {
-                booking_code: matchingInvoice.booking_code,
+              const directBooking = (bookings || []).find((b: any) => {
+                if (isCustMatch(b)) return true;
+                if (csId && (b.costSheetId === csId || b.cost_sheet_id === csId)) return true;
+                return false;
+              });
+
+              const bCode = directBooking ? (directBooking.booking_code || directBooking.id) : null;
+
+              const directInvoice = (invoices || []).find((inv: any) => {
+                if (isCustMatch(inv)) return true;
+                if (csId && (inv.cost_sheet_id === csId || inv.costSheetId === csId)) return true;
+                if (bCode && (inv.booking_code === bCode || inv.booking_id === bCode)) return true;
+                return false;
+              });
+
+              const bookingFromInvoice = !directBooking && directInvoice && directInvoice.booking_code ? {
+                booking_code: directInvoice.booking_code,
                 status: 'CONFIRMED_BILLED'
               } : null;
+
               const matchingBooking = directBooking || bookingFromInvoice;
+              const matchingInvoice = directInvoice;
 
               // 5. AGREEMENT STAGE
-              const matchingAgreement = (agreements || []).find(isCustMatch) || (matchingPva ? {
+              const matchingAgreement = (agreements || []).find((a: any) => {
+                if (isCustMatch(a)) return true;
+                if (csId && (a.costSheetId === csId || a.cost_sheet_id === csId)) return true;
+                if (bCode && (a.booking_code === bCode || a.booking_id === bCode)) return true;
+                return false;
+              }) || (matchingPva ? {
                 agreement_code: matchingPva.projectVisitAgreementId || matchingPva.id,
                 type: 'PVA'
               } : null);

@@ -4742,8 +4742,37 @@ export default function App() {
     { id: 'SES-01', user: 'Avishek Das (Super Admin)', role: 'SUPER_ADMIN', ip: '127.0.0.1 (Localhost)', device: 'Chrome / Windows 11', login_time: '27 Aug 09:00 AM', status: 'ACTIVE' }
   ]);
 
+  const INITIAL_MASTER_PROPERTY_STOCK: any[] = [];
+
+  const isDemoProperty = (p: any) => {
+    if (!p) return true;
+    const code = (p.property_code || p.id || '').toString().toUpperCase();
+    const title = (p.title || p.property_title || p.project_name || '').toString().toLowerCase();
+
+    if (code === 'PROP-01' || code === 'PROP-02' || code === 'PROP-03' || code === 'PROP-04' || code === 'PROP-05' || code === 'PROP-EMPTY') return true;
+    if (code === 'SRM-PROP-2026-000426' || code === 'SRM-PROP-2026-000427' || code === 'SRM-PROP-2026-000428' || code === 'SRM-PROP-2026-000429' || code === 'SRM-PROP-2026-000430') return true;
+    if (title.includes('highgenictower2') || title.includes('dhriti green vista') || title.includes('swaramayi altitude towers') || title.includes('samarkunja heights') || title.includes('banamalipur grand plaza')) return true;
+    return false;
+  };
+
+  const sanitizePropertyRecords = (list: any[]) => {
+    if (!Array.isArray(list)) return [];
+    return list.filter(p => !isDemoProperty(p));
+  };
+
   // 4. BULK PROPERTIES MASTER STOCK (Direct MongoDB Source)
-  const [properties, setProperties] = useState<any[]>([]);
+  const [properties, setProperties] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('swaramayi_properties_v5_clean');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return sanitizePropertyRecords(parsed);
+        }
+      }
+    } catch (e) {}
+    return [];
+  });
 
   const [rawSelectedProperty, setSelectedProperty] = useState<any>(null);
   const selectedProperty = rawSelectedProperty || properties[0] || {
@@ -7181,8 +7210,9 @@ export default function App() {
         extractAllIdentifiers(r).forEach(id => recycledSet.add(id));
       });
 
-      const activeProps = (overrideData?.properties || properties).filter(
-        (p: any) => !isItemInRecycledSet(p, recycledSet)
+      const currentProps = (overrideData?.properties || properties);
+      const activeProps = sanitizePropertyRecords(
+        currentProps.filter((p: any) => !isItemInRecycledSet(p, recycledSet))
       );
 
       const activeDevs = (overrideData?.developers || devList)
@@ -7260,9 +7290,9 @@ export default function App() {
               })));
             }
             if (Array.isArray(mData.properties)) {
-              const sanitizedProps = mData.properties
-                .filter((p: any) => !isItemInRecycledSet(p, recycledSet))
-                .map((p: any) => {
+              const sanitizedProps = sanitizePropertyRecords(
+                mData.properties.filter((p: any) => !isItemInRecycledSet(p, recycledSet))
+              ).map((p: any) => {
                   let updated = { ...p };
                   const titleVal = p.title || p.property_title || p.project_name || p.property_name || p.name || '';
                   const devVal = p.developer || p.developer_name || p.builder_name || p.developer_company || '';

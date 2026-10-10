@@ -383,12 +383,25 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
     return list;
   }, [bookings, projectVisitAgreements, recycledItems]);
 
-  const registeredDoneBookings = (allCombinedBookings || []).filter((b: any) => 
-    b.approval_status === 'REGISTER_DONE' || 
-    b.status === 'REGISTER_DONE' || 
-    b.registered === true ||
-    (invoices && invoices.some((inv: any) => inv.booking_code === b.booking_code || (b.customer_number && inv.customer_number === b.customer_number)))
-  );
+  const registeredDoneBookings = (allCombinedBookings || []).filter((b: any) => {
+    const hasActiveInvoice = invoices && Array.isArray(invoices) && invoices.some((inv: any) => 
+      (b.booking_code && inv.booking_code === b.booking_code) || 
+      (b.id && inv.booking_id === b.id) ||
+      (b.customer_number && inv.customer_number === b.customer_number)
+    );
+    if (hasActiveInvoice) return true;
+
+    // If invoices list exists in app state: a booking is registered ONLY if it has an active billing invoice
+    if (invoices && Array.isArray(invoices)) {
+      return false;
+    }
+
+    return (
+      b.approval_status === 'REGISTER_DONE' || 
+      b.status === 'REGISTER_DONE' || 
+      b.registered === true
+    );
+  });
 
   const pendingApprovalBookings = (allCombinedBookings || []).filter((b: any) => 
     b.approval_status === 'APPROVED_LOCKED' && b.approval_status !== 'REGISTER_DONE' && !b.registered && !registeredDoneBookings.some((rb: any) => rb.booking_code === b.booking_code)

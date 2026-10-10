@@ -9205,6 +9205,10 @@ export default function App() {
 
   const handleCreateCustomerSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (leadIntakeStep < 9) {
+      setLeadIntakeStep(prev => Math.min(9, prev + 1));
+      return;
+    }
     const newCustNumber = newCustomerForm.customer_number || generateNextCustomerCode();
     const custName = newCustomerForm.name || 'New Customer Master';
     const newC = {

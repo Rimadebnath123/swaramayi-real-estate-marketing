@@ -13189,6 +13189,21 @@ export default function App() {
         />
       )}
 
+      {showPvaVerificationModal && showPvaVerificationModal.open && (
+        <PvaVerificationModalContent
+          isLight={isLight}
+          plan={showPvaVerificationModal.plan}
+          stop={showPvaVerificationModal.stop}
+          onClose={() => setShowPvaVerificationModal(null)}
+          projectVisitAgreements={projectVisitAgreements}
+          setProjectVisitAgreements={setProjectVisitAgreements}
+          setAgreements={setAgreements}
+          setVisitPlans={setVisitPlans}
+          setScheduledVisits={setScheduledVisits}
+          setShowPvaDocumentModal={setShowPvaDocumentModal}
+        />
+      )}
+
       {/* MODAL: VIEW INDIVIDUAL COST SHEET DETAILS */}
       {showViewIndividualCostSheetModal && showViewIndividualCostSheetModal.open && showViewIndividualCostSheetModal.costSheet && (() => {
         const cs = showViewIndividualCostSheetModal.costSheet;

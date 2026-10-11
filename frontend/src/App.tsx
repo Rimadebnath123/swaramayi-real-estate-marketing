@@ -9203,8 +9203,8 @@ export default function App() {
     setNewUserForm({ username: '', full_name: '', email: '', password: '', mobile: '', role: customRoles[0]?.key || 'SUPER_ADMIN', branch_name: 'Kolkata Branch', department: 'Sales Operations', team_name: 'Kolkata Expansion Team', manager_name: 'Avishek Das (Super Admin)', permissions: { perm_view: true, perm_create: true, perm_edit: true, perm_delete: false, perm_export: true, perm_approve: false, perm_price_change: false, perm_brokerage: false } });
   };
 
-  const handleCreateCustomerSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateCustomerSubmit = (e?: React.FormEvent) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (leadIntakeStep < 9) {
       setLeadIntakeStep(prev => Math.min(9, prev + 1));
       return;
@@ -17902,7 +17902,7 @@ export default function App() {
             </div>
 
             {/* MODAL FORM BODY (SCROLLABLE) */}
-            <form onSubmit={handleCreateCustomerSubmit} style={{ padding: windowWidth <= 640 ? '14px 16px' : '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', flex: 1 }}>
+            <form onSubmit={e => { e.preventDefault(); }} style={{ padding: windowWidth <= 640 ? '14px 16px' : '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', flex: 1 }}>
 
               {/* STEP 1: LEAD SOURCE ATTRIBUTION & MARKETING DETAILS */}
               {leadIntakeStep === 1 && (
@@ -19516,6 +19516,7 @@ export default function App() {
                     </button>
                   ) : leadIntakeStep < 9 ? (
                     <button
+                      key="btn-step-next"
                       type="button"
                       onClick={() => setLeadIntakeStep(leadIntakeStep + 1)}
                       style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)' }}
@@ -19524,7 +19525,9 @@ export default function App() {
                     </button>
                   ) : (
                     <button
-                      type="submit"
+                      key="btn-step-submit"
+                      type="button"
+                      onClick={handleCreateCustomerSubmit}
                       style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.84rem', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: '0 4px 14px rgba(34, 197, 94, 0.4)' }}
                     >
                       🚀 GENERATE MATCHING ID & SEND TO MATCHING MANAGEMENT

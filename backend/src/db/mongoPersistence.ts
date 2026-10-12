@@ -92,7 +92,9 @@ async function syncCollection(model: mongoose.Model<any>, records: any[]) {
     // Upsert remaining active records
     const ops = records.map(rec => {
       let filter: any;
-      if (model.modelName === 'Customer' && rec.customer_number) {
+      if (model.modelName === 'CostSheet' && (rec.costSheetId || rec.id)) {
+        filter = { costSheetId: String(rec.costSheetId || rec.id) };
+      } else if (model.modelName === 'Customer' && rec.customer_number) {
         filter = { customer_number: String(rec.customer_number) };
       } else if (model.modelName === 'Lead' && rec.lead_number) {
         filter = { lead_number: String(rec.lead_number) };
@@ -113,10 +115,15 @@ async function syncCollection(model: mongoose.Model<any>, records: any[]) {
           : (rec.name ? { name: rec.name } : rec)));
       }
       
+      const toSet = { ...rec };
+      if (model.modelName === 'CostSheet' && !toSet.id && toSet.costSheetId) {
+        toSet.id = String(toSet.costSheetId);
+      }
+
       return {
         updateOne: {
           filter,
-          update: { $set: rec },
+          update: { $set: toSet },
           upsert: true
         }
       };

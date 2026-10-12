@@ -4017,9 +4017,9 @@ export default function App() {
         if (match) allNums.push(parseInt(match[0], 10));
       }
     });
-    const maxVal = allNums.length > 0 ? Math.max(...allNums) : 425;
+    const maxVal = allNums.length > 0 ? Math.max(...allNums) : 0;
     const nextVal = maxVal + 1 + offset;
-    return `SRM-PROP-2026-000${nextVal}`;
+    return `SRM-PROP-2026-${String(nextVal).padStart(6, '0')}`;
   };
 
   const parseCSVLine = (text: string): string[] => {
@@ -4746,12 +4746,9 @@ export default function App() {
 
   const isDemoProperty = (p: any) => {
     if (!p) return true;
+    if (p.is_dummy === true || p.is_demo === true || p.is_test === true) return true;
     const code = (p.property_code || p.id || '').toString().toUpperCase();
-    const title = (p.title || p.property_title || p.project_name || '').toString().toLowerCase();
-
     if (code === 'PROP-01' || code === 'PROP-02' || code === 'PROP-03' || code === 'PROP-04' || code === 'PROP-05' || code === 'PROP-EMPTY') return true;
-    if (code === 'SRM-PROP-2026-000426' || code === 'SRM-PROP-2026-000427' || code === 'SRM-PROP-2026-000428' || code === 'SRM-PROP-2026-000429' || code === 'SRM-PROP-2026-000430') return true;
-    if (title.includes('highgenictower2') || title.includes('dhriti green vista') || title.includes('swaramayi altitude towers') || title.includes('samarkunja heights') || title.includes('banamalipur grand plaza')) return true;
     return false;
   };
 
@@ -5726,6 +5723,7 @@ export default function App() {
     const possVal = prop?.possession_status || matchingReq?.possessionStatus || 'Ready to Move';
 
     return {
+      id: costSheetId,
       costSheetId: costSheetId,
       version: `V0${versionNum}`,
       versionNumber: versionNum,
@@ -5903,7 +5901,16 @@ export default function App() {
 
     const newCostSheet = createCostSheetObject(prop, matchingReq, calculated, nextId, 1);
 
-    setIndividualCostSheets(prev => [newCostSheet, ...prev]);
+    setIndividualCostSheets(prev => {
+      const updated = [newCostSheet, ...prev];
+      try {
+        localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updated));
+      } catch (e) {}
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({ cost_sheets: updated });
+      }
+      return updated;
+    });
 
     // Automatically register/update customer in Customer Management (Customer Master Vault)
     const custName = matchingReq?.customerName || selectedCust?.name || selectedCust?.full_name || 'Customer';
@@ -6022,7 +6029,16 @@ export default function App() {
     // Save newly created sheets
     const newOnly = createdSheets.filter(cs => !individualCostSheets.some(existing => existing.costSheetId === cs.costSheetId));
     if (newOnly.length > 0) {
-      setIndividualCostSheets(prev => [...newOnly, ...prev]);
+      setIndividualCostSheets(prev => {
+        const updated = [...newOnly, ...prev];
+        try {
+          localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updated));
+        } catch (e) {}
+        if (syncAllToMongoDB) {
+          syncAllToMongoDB({ cost_sheets: updated });
+        }
+        return updated;
+      });
     }
 
     // Automatically register/update customer in Customer Management (Customer Master Vault)
@@ -9252,7 +9268,7 @@ export default function App() {
     alert(`👤 Customer Master ${newCustNumber} created & synced successfully to Database!`);
   };
 
-  const handleCreatePropertySubmit = (e: React.FormEvent) => {
+  const handleCreatePropertySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingProperty && editingProperty.id) {
       const updatedProps = properties.map(p => p.id === editingProperty.id ? {
@@ -9321,7 +9337,7 @@ export default function App() {
       try {
         localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(updatedProps));
       } catch (e) {}
-      syncAllToMongoDB({ properties: updatedProps });
+      await syncAllToMongoDB({ properties: updatedProps });
 
       setShowAddPropertyModal(false);
       setShowPropertyModal(false);
@@ -9332,7 +9348,7 @@ export default function App() {
       return;
     }
 
-    const newPropCode = generateNextPropertyCode();
+    const newPropCode = newPropertyForm.property_code || generateNextPropertyCode();
     const newP = {
       ...newPropertyForm,
       id: `PROP-${Date.now()}`,
@@ -9398,7 +9414,23 @@ export default function App() {
     try {
       localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(updatedProps));
     } catch (e) {}
-    syncAllToMongoDB({ properties: updatedProps });
+
+    // Ensure newly created property is removed from any stale recycle set
+    try {
+      const savedRec = localStorage.getItem('swaramayi_recycled_items');
+      if (savedRec) {
+        const parsedRec = JSON.parse(savedRec);
+        if (Array.isArray(parsedRec)) {
+          const cleanedRec = parsedRec.filter((r: any) => {
+            const rIds = extractAllIdentifiers(r);
+            return !rIds.has(newPropCode) && !rIds.has(newPropCode.toLowerCase()) && !rIds.has(newPropCode.toUpperCase());
+          });
+          localStorage.setItem('swaramayi_recycled_items', JSON.stringify(cleanedRec));
+        }
+      }
+    } catch (e) {}
+
+    await syncAllToMongoDB({ properties: updatedProps });
 
     setShowAddPropertyModal(false);
     setShowPropertyModal(false);
@@ -12538,6 +12570,7 @@ export default function App() {
               setIndividualCostSheetsStatusFilter={setIndividualCostSheetsStatusFilter}
               matchesSearchQuery={matchesSearchQuery}
               searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
               setShowViewIndividualCostSheetModal={setShowViewIndividualCostSheetModal}
               handleOpenRevisionModal={handleOpenRevisionModal}
               downloadCostSheetPDF={downloadCostSheetPDF}

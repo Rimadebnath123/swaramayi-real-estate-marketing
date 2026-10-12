@@ -21,6 +21,7 @@ interface CostSheetSharingViewProps {
   setIndividualCostSheetsStatusFilter: (val: string) => void;
   matchesSearchQuery: (item: any, query: string) => boolean;
   searchQuery: string;
+  setSearchQuery?: (val: string) => void;
   setShowViewIndividualCostSheetModal: (val: any) => void;
   handleOpenRevisionModal: (item: any) => void;
   downloadCostSheetPDF: (item: any) => void;
@@ -62,6 +63,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
   setIndividualCostSheetsStatusFilter,
   matchesSearchQuery,
   searchQuery,
+  setSearchQuery,
   setShowViewIndividualCostSheetModal,
   handleOpenRevisionModal,
   downloadCostSheetPDF,
@@ -155,6 +157,108 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
     return (individualCostSheets || []).filter(c => c.status !== 'CONVERTED_TO_VISIT' && c.status !== 'SENT_TO_FOLLOWUP');
   }, [individualCostSheets, individualCostSheetsStatusFilter]);
 
+  // Customer Filter State ('ALL' or a customer identifier key)
+  const [selectedCustomerFilter, setSelectedCustomerFilter] = React.useState<string>('ALL');
+
+  // Selected Cost Sheets IDs for deletion & bulk actions
+  const [selectedCostSheetIds, setSelectedCostSheetIds] = React.useState<string[]>([]);
+
+  // Unique list of customers extracted from all individualCostSheets
+  const costSheetCustomers = React.useMemo(() => {
+    const map = new Map<string, { key: string; name: string; mobile: string; customerId: string; count: number }>();
+    (individualCostSheets || []).forEach((item: any) => {
+      const custId = item.customerId || item.customerSnapshot?.customerNumber || item.customerSnapshot?.customerId || '';
+      const custMob = item.customerSnapshot?.mobile || item.mobile || '';
+      const cleanMob = custMob ? custMob.replace(/\D/g, '') : '';
+      const name = item.customerSnapshot?.customerName || item.customerName || 'Customer';
+      const key = custId || cleanMob || name;
+      if (!key) return;
+      if (!map.has(key)) {
+        map.set(key, { key, name, mobile: custMob, customerId: custId, count: 1 });
+      } else {
+        map.get(key)!.count += 1;
+      }
+    });
+    return Array.from(map.values());
+  }, [individualCostSheets]);
+
+  const selectedCustomerObj = React.useMemo(() => {
+    if (selectedCustomerFilter === 'ALL') return null;
+    return costSheetCustomers.find(c => c.key === selectedCustomerFilter) || null;
+  }, [selectedCustomerFilter, costSheetCustomers]);
+
+  // Master filtered list of cost sheets respecting customer filter, status filter, and search
+  const filteredCostSheets = React.useMemo(() => {
+    return displayedCostSheets.filter((item: any) => {
+      // 1. Customer Filter
+      if (selectedCustomerFilter !== 'ALL') {
+        const custId = item.customerId || item.customerSnapshot?.customerNumber || item.customerSnapshot?.customerId || '';
+        const custMob = item.customerSnapshot?.mobile || item.mobile || '';
+        const cleanMob = custMob ? custMob.replace(/\D/g, '') : '';
+        const name = item.customerSnapshot?.customerName || item.customerName || '';
+        const key = custId || cleanMob || name;
+        if (key !== selectedCustomerFilter) return false;
+      }
+
+      // 2. Search Filter: prioritize individualCostSheetsSearch; if empty and searchQuery exists, check searchQuery
+      const localQuery = (individualCostSheetsSearch || '').trim();
+      if (localQuery) {
+        return matchesSearchQuery(item, localQuery);
+      }
+      const globalQuery = (searchQuery || '').trim();
+      if (globalQuery) {
+        return matchesSearchQuery(item, globalQuery);
+      }
+
+      return true;
+    });
+  }, [displayedCostSheets, selectedCustomerFilter, individualCostSheetsSearch, searchQuery, matchesSearchQuery]);
+
+  // Bulk Delete Selected Cost Sheets
+  const handleDeleteSelectedCostSheets = () => {
+    if (selectedCostSheetIds.length === 0) return;
+    const count = selectedCostSheetIds.length;
+    if (!window.confirm(`⚠️ CONFIRM BULK DELETION:\n\nAre you sure you want to delete ${count} selected Cost Sheet(s)?\n\nThey will be moved to the Recycle Bin and removed from MongoDB database.`)) {
+      return;
+    }
+
+    const itemsToDelete = (individualCostSheets || []).filter((c: any) => 
+      selectedCostSheetIds.includes(c.costSheetId) || (c.id && selectedCostSheetIds.includes(c.id))
+    );
+
+    if (onRecycleItem) {
+      itemsToDelete.forEach((item: any) => {
+        onRecycleItem({
+          id: item.id || item.costSheetId || `CS-${Date.now()}`,
+          title: `Cost Sheet - ${item.customerSnapshot?.customerName || item.customerName || 'Customer'} (${item.costSheetId})`,
+          category: 'Cost Sheet',
+          originalLocation: 'Cost Sheet Sharing Engine',
+          details: `Project: ${item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || item.propertyTitle || 'N/A'}, Total: ${item.formattedPriceBreakup?.totalEstimatedCostStr || 'N/A'}`,
+          originalData: item
+        });
+      });
+    }
+
+    const remaining = (individualCostSheets || []).filter((c: any) => 
+      !selectedCostSheetIds.includes(c.costSheetId) && (!c.id || !selectedCostSheetIds.includes(c.id))
+    );
+
+    if (setIndividualCostSheets) {
+      setIndividualCostSheets(remaining);
+    }
+    setSelectedCostSheetIds([]);
+
+    try {
+      localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(remaining));
+    } catch (e) {}
+
+    if (syncAllToMongoDB) {
+      syncAllToMongoDB({ cost_sheets: remaining });
+    }
+
+    alert(`🗑️ ${count} Cost Sheet(s) successfully deleted and moved to Recycle Bin.`);
+  };
+
   const sendCostSheetWhatsApp = (item: any) => {
     if (!item) {
       alert('⚠️ Cost sheet data is missing.');
@@ -215,7 +319,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
       setIndividualCostSheets((prev: any[]) => {
         const updated = prev.map(c => c.costSheetId === item.costSheetId ? { ...c, status: 'SENT_TO_CUSTOMER' } : c);
         try {
-          localStorage.setItem('swaramayi_indiv_cost_sheets_v5_clean', JSON.stringify(updated));
+          localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updated));
         } catch (e) {}
         if (syncAllToMongoDB) {
           syncAllToMongoDB({ cost_sheets: updated });
@@ -248,9 +352,9 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
       {localCostSheetSubTab === 'active_cost_sheets' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
 
-          {/* SEARCH & STATUS FILTER STRIP */}
+          {/* SEARCH & STATUS / CUSTOMER FILTER STRIP */}
           <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '6px 12px' }}>
+            <div style={{ flex: 1, minWidth: '240px', display: 'flex', alignItems: 'center', gap: '8px', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '6px 12px' }}>
               <Search size={15} color="#38bdf8" />
               <input 
                 type="text" 
@@ -259,8 +363,38 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                 placeholder="Search Cost Sheet ID (e.g. COST-SHEET-2026-000001), Customer Name, Match ID, or Property..." 
                 style={{ background: 'transparent', border: 'none', color: isLight ? '#0f172a' : '#ffffff', outline: 'none', fontSize: '0.85rem', width: '100%', fontWeight: '800' }} 
               />
+              {individualCostSheetsSearch && (
+                <button
+                  onClick={() => setIndividualCostSheetsSearch('')}
+                  style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+                  title="Clear local search"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
+            {/* Filter by Customer */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>Filter Customer:</span>
+              <select 
+                value={selectedCustomerFilter} 
+                onChange={(e) => {
+                  setSelectedCustomerFilter(e.target.value);
+                  setSelectedCostSheetIds([]);
+                }} 
+                style={{ background: isLight ? '#f8fafc' : '#0f172a', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '6px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '800', maxWidth: '240px' }}
+              >
+                <option value="ALL">👥 All Customers ({costSheetCustomers.length})</option>
+                {costSheetCustomers.map((c) => (
+                  <option key={c.key} value={c.key}>
+                    👤 {c.name} ({c.count} Cost Sheet{c.count > 1 ? 's' : ''})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter Status */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>Filter Status:</span>
               <select 
@@ -279,13 +413,115 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                 <option value="CANCELLED">❌ CANCELLED</option>
               </select>
             </div>
+
+            {/* Global Search clear pill if active */}
+            {searchQuery && !individualCostSheetsSearch && (
+              <button
+                onClick={() => {
+                  if (setSearchQuery) setSearchQuery('');
+                }}
+                style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#f87171', borderRadius: '6px', padding: '6px 12px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                title="Clear navbar search filter to show all cost sheets"
+              >
+                <X size={14} /> Clear Navbar Filter: "{searchQuery}"
+              </button>
+            )}
           </div>
+
+          {/* ACTIVE CUSTOMER DETAILS BANNER (RESPECT OF CUSTOMER) */}
+          {selectedCustomerFilter !== 'ALL' && selectedCustomerObj && (
+            <div style={{ background: isLight ? '#f0f9ff' : 'rgba(56, 189, 248, 0.1)', border: '1px solid #0284c7', borderRadius: '10px', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.2rem' }}>👤</span>
+                <div>
+                  <span style={{ color: '#38bdf8', fontWeight: '800', fontSize: '0.85rem' }}>Customer: </span>
+                  <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.92rem' }}>{selectedCustomerObj.name}</strong>
+                  {selectedCustomerObj.mobile && (
+                    <span style={{ color: '#4ade80', fontSize: '0.82rem', marginLeft: '8px', fontFamily: 'monospace' }}>({selectedCustomerObj.mobile})</span>
+                  )}
+                  {selectedCustomerObj.customerId && (
+                    <span style={{ color: '#94a3b8', fontSize: '0.78rem', marginLeft: '6px', fontFamily: 'monospace' }}>[{selectedCustomerObj.customerId}]</span>
+                  )}
+                  <span style={{ background: '#0284c7', color: '#ffffff', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '900', marginLeft: '10px' }}>
+                    {selectedCustomerObj.count} Cost Sheet{selectedCustomerObj.count > 1 ? 's' : ''} on Record
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setSelectedCustomerFilter('ALL');
+                  setSelectedCostSheetIds([]);
+                }} 
+                style={{ background: 'transparent', border: '1px solid #0284c7', color: '#38bdf8', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.78rem' }}
+              >
+                Show All Customers
+              </button>
+            </div>
+          )}
+
+          {/* BULK ACTION BAR WHEN COST SHEETS ARE SELECTED */}
+          {selectedCostSheetIds.length > 0 && (
+            <div style={{
+              background: isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid #ef4444',
+              borderRadius: '10px',
+              padding: '12px 18px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '10px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.1rem' }}>☑️</span>
+                <span style={{ fontWeight: '800', color: isLight ? '#991b1b' : '#fca5a5' }}>
+                  <strong>{selectedCostSheetIds.length}</strong> Cost Sheet{selectedCostSheetIds.length > 1 ? 's' : ''} Selected
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  onClick={() => setSelectedCostSheetIds([])}
+                  style={{
+                    background: 'transparent',
+                    border: isLight ? '1px solid #cbd5e1' : '1px solid #475569',
+                    color: isLight ? '#475569' : '#cbd5e1',
+                    padding: '6px 14px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: '700',
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  Deselect All
+                </button>
+                <button
+                  onClick={handleDeleteSelectedCostSheets}
+                  style={{
+                    background: '#ef4444',
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '8px 18px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: '900',
+                    fontSize: '0.82rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)'
+                  }}
+                >
+                  <Trash2 size={14} /> Delete Selected ({selectedCostSheetIds.length})
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* MASTER INDIVIDUAL COST SHEETS TABLE */}
           <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>
-                📄 Master Individual Cost Sheets Vault ({displayedCostSheets.length} Records)
+                📄 Master Individual Cost Sheets Vault ({filteredCostSheets.length}{filteredCostSheets.length !== displayedCostSheets.length ? ` of ${displayedCostSheets.length}` : ''} Records)
               </h3>
               <span style={{ fontSize: '0.75rem', color: '#4ade80', background: 'rgba(34, 197, 94, 0.15)', padding: '4px 10px', borderRadius: '20px', fontWeight: '800' }}>
                 ● ONE PROPERTY = ONE COST SHEET ENFORCED
@@ -300,11 +536,44 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                   Select properties in Matched Properties workspace and click "Create Cost Sheet ID" or "Create Cost Sheets for All Selected".
                 </p>
               </div>
+            ) : filteredCostSheets.length === 0 ? (
+              <div style={{ padding: '36px 20px', textAlign: 'center', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px', border: '1px dashed #eab308' }}>
+                <Search size={32} color="#eab308" style={{ margin: '0 auto 10px auto' }} />
+                <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '1.05rem' }}>🔍 NO MATCHING COST SHEETS</h4>
+                <p style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.82rem', marginTop: '4px' }}>
+                  No cost sheets match your current customer filter or search query.
+                </p>
+                <button
+                  onClick={() => {
+                    setSelectedCustomerFilter('ALL');
+                    setIndividualCostSheetsSearch('');
+                    if (setSearchQuery) setSearchQuery('');
+                  }}
+                  style={{ marginTop: '12px', background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  Reset All Filters
+                </button>
+              </div>
             ) : (
               <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                   <thead>
                     <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                      <th style={{ padding: '12px', width: '42px', textAlign: 'center' }}>
+                        <input 
+                          type="checkbox"
+                          checked={filteredCostSheets.length > 0 && selectedCostSheetIds.length === filteredCostSheets.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedCostSheetIds(filteredCostSheets.map((c: any) => c.costSheetId));
+                            } else {
+                              setSelectedCostSheetIds([]);
+                            }
+                          }}
+                          style={{ cursor: 'pointer', transform: 'scale(1.15)' }}
+                          title="Select All Displayed Cost Sheets"
+                        />
+                      </th>
                       <th style={{ padding: '12px' }}>Cost Sheet ID & Version</th>
                       <th style={{ padding: '12px' }}>Customer Identity</th>
                       <th style={{ padding: '12px' }}>Match ID & Score</th>
@@ -316,65 +585,76 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {displayedCostSheets
-                      .filter((item: any) => {
-                        return matchesSearchQuery(item, searchQuery || individualCostSheetsSearch);
-                      })
-                      .map((item: any, i: number) => {
-                        const itemPropCode = item.propertyCode || item.propertySnapshot?.propertyCode;
-                        const itemCustId = item.customerId || item.customerSnapshot?.customerNumber || item.customerSnapshot?.customerId;
-                        const itemCustMob = item.customerSnapshot?.mobile || item.mobile;
-                        const cleanMob = itemCustMob ? itemCustMob.replace(/\D/g, '') : '';
+                    {filteredCostSheets.map((item: any, i: number) => {
+                      const itemPropCode = item.propertyCode || item.propertySnapshot?.propertyCode;
+                      const itemCustId = item.customerId || item.customerSnapshot?.customerNumber || item.customerSnapshot?.customerId;
+                      const itemCustMob = item.customerSnapshot?.mobile || item.mobile;
+                      const cleanMob = itemCustMob ? itemCustMob.replace(/\D/g, '') : '';
 
-                        const matchedProp = (properties || []).find((p: any) => 
-                          (p.property_code && itemPropCode && p.property_code === itemPropCode) ||
-                          (p.id && itemPropCode && p.id === itemPropCode) ||
-                          (p.property_code && item.propertyId && p.property_code === item.propertyId) ||
-                          (p.id && item.propertyId && p.id === item.propertyId)
-                        );
+                      const matchedProp = (properties || []).find((p: any) => 
+                        (p.property_code && itemPropCode && p.property_code === itemPropCode) ||
+                        (p.id && itemPropCode && p.id === itemPropCode) ||
+                        (p.property_code && item.propertyId && p.property_code === item.propertyId) ||
+                        (p.id && item.propertyId && p.id === item.propertyId)
+                      );
 
-                        const matchedCust = (customers || []).find((c: any) => 
-                          (c.customer_number && itemCustId && c.customer_number === itemCustId) ||
-                          (c.id && itemCustId && c.id === itemCustId) ||
-                          (cleanMob && cleanMob.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMob)
-                        );
+                      const matchedCust = (customers || []).find((c: any) => 
+                        (c.customer_number && itemCustId && c.customer_number === itemCustId) ||
+                        (c.id && itemCustId && c.id === itemCustId) ||
+                        (cleanMob && cleanMob.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMob)
+                      );
 
-                        const custName = item.customerSnapshot?.customerName || item.customerName || matchedCust?.full_name || matchedCust?.name || 'Prospect Customer';
-                        const custMobile = item.customerSnapshot?.mobile || item.mobile || matchedCust?.mobile || 'N/A';
-                        const custNum = item.customerId || item.customerSnapshot?.customerNumber || matchedCust?.customer_number || '';
+                      const custName = item.customerSnapshot?.customerName || item.customerName || matchedCust?.full_name || matchedCust?.name || 'Prospect Customer';
+                      const custMobile = item.customerSnapshot?.mobile || item.mobile || matchedCust?.mobile || 'N/A';
+                      const custNum = item.customerId || item.customerSnapshot?.customerNumber || matchedCust?.customer_number || '';
 
-                        const matchId = item.matchId || item.matchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
-                        const matchScore = item.matchSnapshot?.matchScore || item.matchScore || (matchedCust?.quality_score) || 88;
+                      const matchId = item.matchId || item.matchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
+                      const matchScore = item.matchSnapshot?.matchScore || item.matchScore || (matchedCust?.quality_score) || 88;
 
-                        const propCodeStr = itemPropCode || matchedProp?.property_code || 'SRM-PROP-2026-000426';
-                        const rawPropTitle = item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name;
-                        const propTitleStr = rawPropTitle && !rawPropTitle.startsWith('1 Properties') 
-                          ? rawPropTitle 
-                          : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'BARASAT ECO RESIDENCY');
+                      const propCodeStr = itemPropCode || matchedProp?.property_code || 'SRM-PROP-2026-000426';
+                      const rawPropTitle = item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name;
+                      const propTitleStr = rawPropTitle && !rawPropTitle.startsWith('1 Properties') 
+                        ? rawPropTitle 
+                        : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'BARASAT ECO RESIDENCY');
 
-                        const devNameStr = item.propertySnapshot?.developerName || matchedProp?.developer || matchedProp?.developer_name || matchedProp?.builder_name || 'Swaramayi Partner Developer';
-                        const localityStr = item.propertySnapshot?.locality || matchedProp?.locality || 'Barasat / Banamalipur';
-                        const bhkStr = item.propertySnapshot?.bhk || item.propertySnapshot?.configuration || matchedProp?.configuration || matchedProp?.bhk || '3BHK';
-                        const propTypeStr = item.propertySnapshot?.property_type || item.propertySnapshot?.propertyType || item.propertyType || matchedProp?.property_type || 'Flat / Apartment';
+                      const devNameStr = item.propertySnapshot?.developerName || matchedProp?.developer || matchedProp?.developer_name || matchedProp?.developer_name || matchedProp?.builder_name || 'Swaramayi Partner Developer';
+                      const localityStr = item.propertySnapshot?.locality || matchedProp?.locality || 'Barasat / Banamalipur';
+                      const bhkStr = item.propertySnapshot?.bhk || item.propertySnapshot?.configuration || matchedProp?.configuration || matchedProp?.bhk || '3BHK';
+                      const propTypeStr = item.propertySnapshot?.property_type || item.propertySnapshot?.propertyType || item.propertyType || matchedProp?.property_type || 'Flat / Apartment';
 
-                        const basePriceNum = item.pricingSnapshot?.basePrice || item.base_price || matchedProp?.base_price || 5114880;
-                        const basePriceStr = item.formattedPriceBreakup?.basePriceStr || (basePriceNum ? `₹${Number(basePriceNum).toLocaleString('en-IN')}` : '₹51,14,880');
-                        const totalEstNum = item.pricingSnapshot?.totalEstimatedCost || item.final_estimated_price || matchedProp?.final_estimated_price || 5677517;
-                        const totalEstStr = item.formattedPriceBreakup?.totalEstimatedCostStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : '₹56,77,517');
+                      const basePriceNum = item.pricingSnapshot?.basePrice || item.base_price || matchedProp?.base_price || 5114880;
+                      const basePriceStr = item.formattedPriceBreakup?.basePriceStr || (basePriceNum ? `₹${Number(basePriceNum).toLocaleString('en-IN')}` : '₹51,14,880');
+                      const totalEstNum = item.pricingSnapshot?.totalEstimatedCost || item.final_estimated_price || matchedProp?.final_estimated_price || 5677517;
+                      const totalEstStr = item.formattedPriceBreakup?.totalEstimatedCostStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : '₹56,77,517');
 
-                        const statusStr = item.status || 'GENERATED';
-                        const createdAtStr = item.createdAt || item.created_at || 'Just Now';
-                        const createdByStr = (() => {
-                          const cb = item.createdBy || item.created_by;
-                          if (cb) return cb;
-                          const as = item.customerSnapshot?.assignedSalesperson;
-                          if (as) return as;
-                          return 'Avishek Das (Super Admin)';
-                        })();
+                      const statusStr = item.status || 'GENERATED';
+                      const createdAtStr = item.createdAt || item.created_at || 'Just Now';
+                      const createdByStr = (() => {
+                        const cb = item.createdBy || item.created_by;
+                        if (cb) return cb;
+                        const as = item.customerSnapshot?.assignedSalesperson;
+                        if (as) return as;
+                        return 'Avishek Das (Super Admin)';
+                      })();
 
-                        return (
-                          <tr key={i} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
-                            <td style={{ padding: '12px' }}>
+                      return (
+                        <tr key={i} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: selectedCostSheetIds.includes(item.costSheetId) ? (isLight ? 'rgba(56, 189, 248, 0.08)' : 'rgba(56, 189, 248, 0.12)') : undefined }}>
+                          <td style={{ padding: '12px', textAlign: 'center', width: '42px' }}>
+                            <input 
+                              type="checkbox"
+                              checked={selectedCostSheetIds.includes(item.costSheetId)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedCostSheetIds(prev => [...prev, item.costSheetId]);
+                                } else {
+                                  setSelectedCostSheetIds(prev => prev.filter(id => id !== item.costSheetId));
+                                }
+                              }}
+                              style={{ cursor: 'pointer', transform: 'scale(1.15)' }}
+                              title={`Select Cost Sheet ${item.costSheetId}`}
+                            />
+                          </td>
+                          <td style={{ padding: '12px' }}>
                               <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.88rem' }}>{item.costSheetId}</span>
                               <br />
                               <span style={{ background: item.versionNumber > 1 ? '#fbbf24' : '#0284c7', color: '#0f172a', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '900', marginTop: '2px', display: 'inline-block' }}>
@@ -592,7 +872,8 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                                         setIndividualCostSheets(updatedCostSheets);
                                       }
                                       try {
-                                        localStorage.setItem('swaramayi_indiv_cost_sheets_v5_clean', JSON.stringify(updatedCostSheets));
+                                        setSelectedCostSheetIds(prev => prev.filter(id => id !== item.costSheetId && id !== item.id));
+                                        localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updatedCostSheets));
                                       } catch (e) {}
 
                                       if (syncAllToMongoDB) {
@@ -784,7 +1065,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                                       }
 
                                       try {
-                                        localStorage.setItem('swaramayi_indiv_cost_sheets_v5_clean', JSON.stringify(updatedCS));
+                                        localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updatedCS));
                                       } catch (e) {}
                                       if (syncAllToMongoDB) {
                                         syncAllToMongoDB({ cost_sheets: updatedCS });
@@ -999,7 +1280,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                           : c
                       );
                       try {
-                        localStorage.setItem('swaramayi_indiv_cost_sheets_v5_clean', JSON.stringify(updatedCS));
+                        localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updatedCS));
                       } catch (e) {}
                       if (syncAllToMongoDB) {
                         syncAllToMongoDB({ cost_sheets: updatedCS });

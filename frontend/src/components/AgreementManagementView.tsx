@@ -54,6 +54,58 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
 }) => {
   const isSuperAdmin = !currentRole || currentRole.toUpperCase().includes('SUPER') || currentRole.toUpperCase().includes('OWNER');
 
+  // Deduplicated Customer Agreements (combines agreements vault + PVA records without duplicates)
+  const customerAgreements = React.useMemo(() => {
+    const map = new Map<string, any>();
+
+    // 1. Add from agreements vault (customer site visit agreements)
+    (agreements || []).forEach((a: any) => {
+      if (a.category === 'CUSTOMER' || a.agreement_type === 'CUSTOMER_SITE_VISIT' || (a.agreement_code && a.agreement_code.includes('PVA'))) {
+        const key = a.agreement_code || a.id;
+        if (key && !map.has(key)) {
+          map.set(key, a);
+        }
+      }
+    });
+
+    // 2. Add from projectVisitAgreements if not already present
+    (projectVisitAgreements || []).forEach((pva: any) => {
+      const key = pva.projectVisitAgreementId || pva.id;
+      if (key && !map.has(key)) {
+        map.set(key, {
+          id: key,
+          agreement_code: key,
+          agreement_type: 'CUSTOMER_SITE_VISIT',
+          category: 'CUSTOMER',
+          title: `Customer Site Visit Agreement — ${pva.projectTitle || 'Site Visit'}`,
+          party_name: pva.customerName,
+          party_contact: pva.customerMobile,
+          property_details: `${pva.projectTitle || 'Site Visit'}`,
+          signed_status: 'EXECUTED_SIGNED',
+          signature_hash: `OTP VERIFIED #${pva.otpHashRef?.slice(-6) || '849201'} DIGITAL SIG`,
+          signed_at: `${pva.visitDate} ${pva.otpVerifiedAt || '10:20 AM'}`,
+          pvaData: pva
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [agreements, projectVisitAgreements]);
+
+  // Developer Tie-Up Agreements
+  const developerAgreements = React.useMemo(() => {
+    const map = new Map<string, any>();
+    (agreements || []).forEach((a: any) => {
+      if (a.category === 'DEVELOPER' || a.agreement_type === 'DEVELOPER_PROJECT_TIEUP') {
+        const key = a.agreement_code || a.id;
+        if (key && !map.has(key)) {
+          map.set(key, a);
+        }
+      }
+    });
+    return Array.from(map.values());
+  }, [agreements]);
+
   const handleStoreInBooking = (a: any) => {
     const pva = a.pvaData || a;
     const custName = a.party_name || pva.customerName || 'Customer';
@@ -187,7 +239,7 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
             boxShadow: agreementCategory === 'customer' ? '0 4px 12px rgba(2, 132, 199, 0.25)' : 'none'
           }}
         >
-          <UserCheck size={16} /> Agreement With Customer ({agreements.filter(a => a.category === 'CUSTOMER' || a.agreement_type === 'CUSTOMER_SITE_VISIT').length + projectVisitAgreements.length})
+          <UserCheck size={16} /> Agreement With Customer ({customerAgreements.length})
         </button>
 
         <button 
@@ -209,7 +261,7 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
             boxShadow: agreementCategory === 'developer' ? '0 4px 12px rgba(22, 163, 74, 0.25)' : 'none'
           }}
         >
-          <Building size={16} /> Agreement with Project wise Developer ({agreements.filter(a => a.category === 'DEVELOPER' || a.agreement_type === 'DEVELOPER_PROJECT_TIEUP').length})
+          <Building size={16} /> Agreement with Project wise Developer ({developerAgreements.length})
         </button>
       </div>
 
@@ -219,7 +271,7 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
           <AlertTriangle size={windowWidth <= 640 ? 22 : 28} color="#f59e0b" style={{ flexShrink: 0 }} />
           <div>
             <h4 style={{ color: '#fbbf24', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.85rem' : '0.95rem', margin: 0 }}>
-              ⚠️ EXISTING COMPANY INTRODUCTION RECORDS DETECTED ({projectVisitAgreements.length} ACTIVE PVA CONTRACTS)
+              ⚠️ EXISTING COMPANY INTRODUCTION RECORDS DETECTED ({customerAgreements.length} ACTIVE PVA CONTRACTS)
             </h4>
             <p style={{ color: isLight ? '#0f172a' : '#cbd5e1', fontSize: windowWidth <= 640 ? '0.72rem' : '0.8rem', margin: '4px 0 0 0' }}>
               Automatic Anti-Bypass Check: All buyer bookings & contracts are cross-referenced with Project Visit Agreements (SRM-PVA-XXXXXX) to protect company brokerage rights.
@@ -248,29 +300,9 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
             </thead>
             <tbody>
               {(() => {
-                let combinedAgreements: any[] = [];
-
-                if (agreementCategory === 'customer') {
-                  combinedAgreements = [
-                    ...agreements.filter(a => a.category === 'CUSTOMER' || a.agreement_type === 'CUSTOMER_SITE_VISIT'),
-                    ...projectVisitAgreements.filter(pva => !agreements.some(a => a.agreement_code === pva.projectVisitAgreementId)).map(pva => ({
-                      id: pva.projectVisitAgreementId,
-                      agreement_code: pva.projectVisitAgreementId,
-                      agreement_type: 'CUSTOMER_SITE_VISIT',
-                      category: 'CUSTOMER',
-                      title: `Customer Site Visit Agreement — ${pva.projectTitle || 'Site Visit'}`,
-                      party_name: pva.customerName,
-                      party_contact: pva.customerMobile,
-                      property_details: `${pva.projectTitle || 'Site Visit'}`,
-                      signed_status: 'EXECUTED_SIGNED',
-                      signature_hash: `OTP VERIFIED #${pva.otpHashRef?.slice(-6) || '849201'} DIGITAL SIG`,
-                      signed_at: `${pva.visitDate} ${pva.otpVerifiedAt || '10:20 AM'}`,
-                      pvaData: pva
-                    }))
-                  ];
-                } else {
-                  combinedAgreements = agreements.filter(a => a.category === 'DEVELOPER' || a.agreement_type === 'DEVELOPER_PROJECT_TIEUP');
-                }
+                const combinedAgreements = agreementCategory === 'customer' 
+                  ? customerAgreements 
+                  : developerAgreements;
 
                 const filtered = combinedAgreements.filter(a => matchesSearchQuery(a, searchQuery));
 
@@ -364,11 +396,16 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
                                       originalData: a
                                     });
                                   }
-                                  if (a.pvaData && setProjectVisitAgreements) {
-                                    setProjectVisitAgreements((prev: any[]) => (prev || []).filter((pva: any) => (pva.projectVisitAgreementId || pva.id) !== a.id));
+                                  if (setProjectVisitAgreements) {
+                                    setProjectVisitAgreements((prev: any[]) => (prev || []).filter((pva: any) => (pva.projectVisitAgreementId || pva.id) !== a.id && (pva.projectVisitAgreementId || pva.id) !== a.agreement_code));
                                   }
                                   if (setAgreements) {
                                     setAgreements((prev: any[]) => (prev || []).filter((ag: any) => ag.id !== a.id && ag.agreement_code !== a.agreement_code));
+                                  }
+                                  if (syncAllToMongoDB) {
+                                    const updatedAgs = (agreements || []).filter((ag: any) => ag.id !== a.id && ag.agreement_code !== a.agreement_code);
+                                    const updatedPvas = (projectVisitAgreements || []).filter((pva: any) => (pva.projectVisitAgreementId || pva.id) !== a.id && (pva.projectVisitAgreementId || pva.id) !== a.agreement_code);
+                                    syncAllToMongoDB({ agreements: updatedAgs, project_visit_agreements: updatedPvas });
                                   }
                                   alert(`🗑️ Agreement record ${a.agreement_code || a.id} moved to Recycle Bin.`);
                                 }

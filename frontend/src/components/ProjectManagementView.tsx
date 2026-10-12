@@ -94,11 +94,12 @@ export const computeTotalBaseWithOtherCharges = (form: any): string => {
 
   const floorRise = parseNum(form.floor_rise_charge || form.floorRiseCharge || form.floorRise);
   const plc = parseNum(form.plc_charge || form.plcCharge || form.plc);
+  const parking = parseNum(form.parking_price || form.car_parking_charge || form.covered_parking_rate || form.parkingCharge);
   const club = parseNum(form.amenity_charges || form.amenityCharges || form.clubhouse_charge || form.clubhouseCharge);
   const maintenance = parseNum(form.advance_maintenance_charge || form.advanceMaintenanceCharge);
   const infraLegal = parseNum(form.legal_doc_charge || form.legalDocCharge || form.infrastructure_charge);
 
-  const total = basePrice + floorRise + plc + club + maintenance + infraLegal;
+  const total = basePrice + floorRise + plc + parking + club + maintenance + infraLegal;
   return total > 0 ? `₹${Math.round(total).toLocaleString('en-IN')}` : (form.final_price ? String(form.final_price) : '₹0');
 };
 
@@ -483,7 +484,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             total_ev_parking_capacity: proj.total_ev_parking_capacity !== undefined ? proj.total_ev_parking_capacity : 0,
             ev_parking_rate: proj.ev_parking_rate || '',
             total_open_parking_capacity: proj.total_open_parking_capacity !== undefined ? proj.total_open_parking_capacity : 0,
-            open_parking_rate: proj.open_parking_rate || ''
+            open_parking_rate: proj.open_parking_rate || '',
+            key_custody: proj.key_custody || proj.keys_custody || '',
+            keys_custody: proj.key_custody || proj.keys_custody || '',
+            architectural_description: proj.architectural_description || proj.description || '',
+            description: proj.architectural_description || proj.description || ''
           });
         }
       });
@@ -521,7 +526,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           total_ev_parking_capacity: prop.total_ev_parking_capacity !== undefined ? prop.total_ev_parking_capacity : 0,
           ev_parking_rate: prop.ev_parking_rate || '0',
           total_open_parking_capacity: prop.total_open_parking_capacity !== undefined ? prop.total_open_parking_capacity : 0,
-          open_parking_rate: prop.open_parking_rate || '0'
+          open_parking_rate: prop.open_parking_rate || '0',
+          key_custody: prop.key_custody || prop.keys_custody || '',
+          keys_custody: prop.key_custody || prop.keys_custody || '',
+          architectural_description: prop.architectural_description || prop.description || '',
+          description: prop.architectural_description || prop.description || ''
         });
       }
     });
@@ -743,7 +752,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   // AUTOMATED SEQUENTIAL INDIVIDUAL PROPERTY CODE GENERATOR FOR EVERY ADDITION (SRM-PROP-2026-000428, SRM-PROP-2026-000429...)
   const generateDynamicPropertyCode = React.useCallback((offset = 0) => {
     const year = new Date().getFullYear();
-    let maxNum = 427;
+    let maxNum = 0;
 
     (properties || []).forEach((p: any) => {
       const pCode = p.property_code || p.id || '';
@@ -1196,7 +1205,19 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       developer_id: foundProj.devId || prev.developer_id || '',
       developer_alt_mobile: foundProj.devAltMobile || prev.developer_alt_mobile || '',
       latitude: gps.lat,
-      longitude: gps.lng
+      longitude: gps.lng,
+      total_covered_parking_capacity: foundProj.total_covered_parking_capacity !== undefined ? foundProj.total_covered_parking_capacity : (prev.total_covered_parking_capacity || 0),
+      covered_parking_rate: foundProj.covered_parking_rate || prev.covered_parking_rate || '',
+      total_ev_parking_capacity: foundProj.total_ev_parking_capacity !== undefined ? foundProj.total_ev_parking_capacity : (prev.total_ev_parking_capacity || 0),
+      ev_parking_rate: foundProj.ev_parking_rate || prev.ev_parking_rate || '',
+      total_open_parking_capacity: foundProj.total_open_parking_capacity !== undefined ? foundProj.total_open_parking_capacity : (prev.total_open_parking_capacity || 0),
+      open_parking_rate: foundProj.open_parking_rate || prev.open_parking_rate || '',
+      parking_price: foundProj.covered_parking_rate || prev.parking_price || '',
+      car_parking_charge: foundProj.covered_parking_rate || prev.car_parking_charge || '',
+      key_custody: foundProj.key_custody || prev.key_custody || '',
+      keys_custody: foundProj.key_custody || prev.keys_custody || '',
+      architectural_description: foundProj.architectural_description || prev.architectural_description || '',
+      description: foundProj.architectural_description || prev.description || ''
     }));
   };
 
@@ -2379,7 +2400,19 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             rera_id: found.rera_id || found.reraId || found.rera || '',
                             hera_no: found.hera_no || found.heraId || found.hera || '',
                             selected_amenities: found.amenities && found.amenities.length > 0 ? found.amenities : prev.selected_amenities,
-                            building_photos: found.building_photos && found.building_photos.length > 0 ? found.building_photos : prev.building_photos
+                            building_photos: found.building_photos && found.building_photos.length > 0 ? found.building_photos : prev.building_photos,
+                            total_covered_parking_capacity: found.total_covered_parking_capacity !== undefined ? found.total_covered_parking_capacity : (prev.total_covered_parking_capacity || 0),
+                            covered_parking_rate: found.covered_parking_rate || prev.covered_parking_rate || '',
+                            total_ev_parking_capacity: found.total_ev_parking_capacity !== undefined ? found.total_ev_parking_capacity : (prev.total_ev_parking_capacity || 0),
+                            ev_parking_rate: found.ev_parking_rate || prev.ev_parking_rate || '',
+                            total_open_parking_capacity: found.total_open_parking_capacity !== undefined ? found.total_open_parking_capacity : (prev.total_open_parking_capacity || 0),
+                            open_parking_rate: found.open_parking_rate || prev.open_parking_rate || '',
+                            parking_price: found.covered_parking_rate || prev.parking_price || '',
+                            car_parking_charge: found.covered_parking_rate || prev.car_parking_charge || '',
+                            key_custody: found.key_custody || prev.key_custody || '',
+                            keys_custody: found.key_custody || prev.keys_custody || '',
+                            architectural_description: found.architectural_description || prev.architectural_description || '',
+                            description: found.architectural_description || prev.description || ''
                           }));
                         } else {
                           setNewPropertyForm((prev: any) => ({ ...prev, project_id: val }));
@@ -2531,7 +2564,19 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                       rera_id: proj.rera_id || prev.rera_id || '',
                                       hera_no: proj.hera_no || prev.hera_no || '',
                                       selected_amenities: proj.amenities && proj.amenities.length > 0 ? proj.amenities : prev.selected_amenities,
-                                      building_photos: proj.building_photos && proj.building_photos.length > 0 ? proj.building_photos : prev.building_photos
+                                      building_photos: proj.building_photos && proj.building_photos.length > 0 ? proj.building_photos : prev.building_photos,
+                                      total_covered_parking_capacity: proj.total_covered_parking_capacity !== undefined ? proj.total_covered_parking_capacity : (prev.total_covered_parking_capacity || 0),
+                                      covered_parking_rate: proj.covered_parking_rate || prev.covered_parking_rate || '',
+                                      total_ev_parking_capacity: proj.total_ev_parking_capacity !== undefined ? proj.total_ev_parking_capacity : (prev.total_ev_parking_capacity || 0),
+                                      ev_parking_rate: proj.ev_parking_rate || prev.ev_parking_rate || '',
+                                      total_open_parking_capacity: proj.total_open_parking_capacity !== undefined ? proj.total_open_parking_capacity : (prev.total_open_parking_capacity || 0),
+                                      open_parking_rate: proj.open_parking_rate || prev.open_parking_rate || '',
+                                      parking_price: proj.covered_parking_rate || prev.parking_price || '',
+                                      car_parking_charge: proj.covered_parking_rate || prev.car_parking_charge || '',
+                                      key_custody: proj.key_custody || prev.key_custody || '',
+                                      keys_custody: proj.key_custody || prev.keys_custody || '',
+                                      architectural_description: proj.architectural_description || prev.architectural_description || '',
+                                      description: proj.architectural_description || prev.description || ''
                                     }));
                                     if (proj.mobile) setDevProjectMobile(proj.mobile);
                                     if (proj.altMobile && setDevProjectAltMobile) setDevProjectAltMobile(proj.altMobile);
@@ -2638,6 +2683,151 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   </div>
                 </div>
               </div>
+              {/* 🚗 PROJECT PARKING STOCK CAPACITY & DEFAULT RATES MANAGEMENT SYSTEM */}
+              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #eab308', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <h4 style={{ fontSize: '1rem', fontWeight: '900', color: '#eab308', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      🚗 Project Parking Stock Capacity & Default Rates Management System
+                    </h4>
+                    <p style={{ fontSize: '0.76rem', color: isLight ? '#64748b' : '#94a3b8', margin: '2px 0 0 0' }}>
+                      Configure total project parking slot inventory limits (Covered, EV Fast Charging, Open Surface) and builder default rates.
+                    </p>
+                  </div>
+
+                  <span style={{ fontSize: '0.74rem', background: 'rgba(234, 179, 8, 0.18)', color: '#eab308', border: '1px solid #eab308', padding: '3px 10px', borderRadius: '20px', fontWeight: '900' }}>
+                    {newPropertyForm.project_id ? `PROJ PARKING VAULT ACTIVE • ${newPropertyForm.project_id}` : 'PROJ PARKING VAULT ACTIVE'}
+                  </span>
+                </div>
+
+                {/* PARKING CARDS GRID */}
+                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(3, 1fr)', gap: '14px' }}>
+                  
+                  {/* 1. COVERED PARKING STOCK */}
+                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: '900', color: '#0284c7', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        🚘 Covered Basement / Stilt Parking
+                      </span>
+                      <span style={{ fontSize: '0.68rem', background: 'rgba(2, 132, 199, 0.15)', color: '#0284c7', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
+                        Basement / Podium
+                      </span>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
+                        Total Allocated Slot Capacity
+                      </label>
+                      <input 
+                        type="number"
+                        value={newPropertyForm.total_covered_parking_capacity !== undefined && newPropertyForm.total_covered_parking_capacity !== null ? newPropertyForm.total_covered_parking_capacity : 0}
+                        onChange={(e) => setNewPropertyForm({ ...newPropertyForm, total_covered_parking_capacity: parseInt(e.target.value, 10) || 0 })}
+                        placeholder="e.g. 24"
+                        style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #0284c7', color: '#0284c7', fontWeight: '900', padding: '8px 12px', borderRadius: '6px', fontSize: '0.92rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
+                        Builder Default Rate (INR)
+                      </label>
+                      <input 
+                        type="text"
+                        value={newPropertyForm.covered_parking_rate || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setNewPropertyForm({ 
+                            ...newPropertyForm, 
+                            covered_parking_rate: val,
+                            parking_price: val,
+                            car_parking_charge: val 
+                          });
+                        }}
+                        placeholder="e.g. 300000"
+                        style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #cbd5e1', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.88rem' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 2. EV FAST CHARGING PARKING STOCK */}
+                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #eab308', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: '900', color: '#eab308', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        ⚡ EV Fast Charging Station Slots
+                      </span>
+                      <span style={{ fontSize: '0.68rem', background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
+                        EV Ready
+                      </span>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
+                        Total EV Fast Charger Slots
+                      </label>
+                      <input 
+                        type="number"
+                        value={newPropertyForm.total_ev_parking_capacity !== undefined && newPropertyForm.total_ev_parking_capacity !== null ? newPropertyForm.total_ev_parking_capacity : 0}
+                        onChange={(e) => setNewPropertyForm({ ...newPropertyForm, total_ev_parking_capacity: parseInt(e.target.value, 10) || 0 })}
+                        placeholder="e.g. 6"
+                        style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #eab308', color: '#eab308', fontWeight: '900', padding: '8px 12px', borderRadius: '6px', fontSize: '0.92rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
+                        EV Slot Default Rate (INR)
+                      </label>
+                      <input 
+                        type="text"
+                        value={newPropertyForm.ev_parking_rate || ''}
+                        onChange={(e) => setNewPropertyForm({ ...newPropertyForm, ev_parking_rate: e.target.value })}
+                        placeholder="e.g. 450000"
+                        style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #cbd5e1', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.88rem' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 3. OPEN SURFACE PARKING STOCK */}
+                  <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #22c55e', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: '900', color: '#22c55e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        🅿️ Open Surface Ground Parking
+                      </span>
+                      <span style={{ fontSize: '0.68rem', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
+                        Ground Level
+                      </span>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
+                        Total Open Surface Slot Capacity
+                      </label>
+                      <input 
+                        type="number"
+                        value={newPropertyForm.total_open_parking_capacity !== undefined && newPropertyForm.total_open_parking_capacity !== null ? newPropertyForm.total_open_parking_capacity : 0}
+                        onChange={(e) => setNewPropertyForm({ ...newPropertyForm, total_open_parking_capacity: parseInt(e.target.value, 10) || 0 })}
+                        placeholder="e.g. 12"
+                        style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #22c55e', color: '#22c55e', fontWeight: '900', padding: '8px 12px', borderRadius: '6px', fontSize: '0.92rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
+                        Open Slot Default Rate (INR)
+                      </label>
+                      <input 
+                        type="text"
+                        value={newPropertyForm.open_parking_rate || ''}
+                        onChange={(e) => setNewPropertyForm({ ...newPropertyForm, open_parking_rate: e.target.value })}
+                        placeholder="e.g. 150000"
+                        style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #cbd5e1', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.88rem' }}
+                      />
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
               {/* SECTIONS 2, 3 & 5: SINGLE STANDALONE PROPERTY SPECIFICATIONS (ONLY VISIBLE IN SINGLE PROPERTY MODE) */}
               {propertyAddMode === 'single' && (
                 <>
@@ -3392,8 +3582,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </label>
                     <input 
                       type="text" 
-                      value={newPropertyForm.parking_price !== undefined ? newPropertyForm.parking_price : ''} 
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, parking_price: e.target.value, car_parking_charge: e.target.value })} 
+                      value={newPropertyForm.parking_price !== undefined && newPropertyForm.parking_price !== '' ? newPropertyForm.parking_price : (newPropertyForm.covered_parking_rate || '')}
+                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, parking_price: e.target.value, car_parking_charge: e.target.value, covered_parking_rate: e.target.value })}
                       placeholder="e.g. 350000 (0 if N/A)"
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
                     />
@@ -3448,7 +3638,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                 {/* TOTAL BASE PRICE WITH OTHER CHARGES */}
                 <div style={{ background: isLight ? '#f0fdf4' : 'rgba(34, 197, 94, 0.12)', border: '2px solid #22c55e', borderRadius: '10px', padding: '14px' }}>
                   <label style={{ fontSize: '0.84rem', color: '#16a34a', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                    💰 Total Base price with Others Charges (INR) [Base Property Asking Price + Floor Rise + PLC + Clubhouse + Maint + Legal] *
+                    💰 Total Base price with Others Charges (INR) [Base Property Asking Price + Floor Rise + PLC + Parking + Clubhouse + Maint + Legal] *
                   </label>
                   <input 
                     type="text" 
@@ -3457,7 +3647,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: '1.5px solid #22c55e', color: '#22c55e', fontWeight: '900', padding: '12px 14px', borderRadius: '8px', fontSize: '1.08rem' }} 
                   />
                   <span style={{ fontSize: '0.72rem', color: isLight ? '#475569' : '#94a3b8', marginTop: '4px', display: 'block', fontWeight: '700' }}>
-                    💡 Auto-calculated sum = Base Property Asking Price [Super Built-up × Rate] + Floor Rise Charge + Preferential Location Charge (PLC) + Clubhouse & Gated Amenities Membership + Advance Maintenance Charge (1 Year) + Infrastructure & Legal Documentation Charges (Before GST Tax).
+                    💡 Auto-calculated sum = Base Property Asking Price [Super Built-up × Rate] + Floor Rise Charge + Preferential Location Charge (PLC) + Covered Car Parking Slot Charge + Clubhouse & Gated Amenities Membership + Advance Maintenance Charge (1 Year) + Infrastructure & Legal Documentation Charges (Before GST Tax).
                   </span>
                 </div>
 
@@ -3783,6 +3973,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     };
 
                     const isSelected = selectedPropertyIds.includes(p.id);
+                    const badgeStyle = getStatusBadgeStyle(normalizedStatus);
 
                     return (
                       <div key={p.id} style={{ background: isSelected ? (isLight ? 'rgba(56, 189, 248, 0.12)' : 'rgba(56, 189, 248, 0.18)') : (isLight ? '#f8fafc' : '#0f172a'), border: isSelected ? '1.5px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -5169,13 +5360,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   {/* TOTAL BASE PRICE WITH OTHER CHARGES BANNER */}
                   <div style={{ background: isLight ? '#f0fdf4' : 'rgba(34, 197, 94, 0.12)', border: '1.5px solid #22c55e', borderRadius: '10px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <span style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      💰 Total Base price with Others Charges (INR) [Base Flat + Floor Rise + PLC + Clubhouse + Maint + Legal]
+                      💰 Total Base price with Others Charges (INR) [Base Flat + Floor Rise + PLC + Parking + Clubhouse + Maint + Legal]
                     </span>
                     <strong style={{ fontSize: '1.2rem', color: '#22c55e', fontWeight: '900' }}>
                       {computeTotalBaseWithOtherCharges(viewPropertyModal)}
                     </strong>
                     <span style={{ fontSize: '0.72rem', color: isLight ? '#475569' : '#94a3b8', fontWeight: '700' }}>
-                      Calculated sum of Base Property Asking Price + Floor Rise + PLC + Clubhouse + Advance Maintenance (1 Year) + Legal Charges (Excludes Car Parking Slot Charge).
+                      Calculated sum of Base Property Asking Price + Floor Rise + PLC + Covered Car Parking Slot Charge + Clubhouse + Advance Maintenance (1 Year) + Legal Charges.
                     </span>
                   </div>
 
@@ -5991,7 +6182,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     {/* TOTAL BASE PRICE WITH OTHER CHARGES */}
                     <div style={{ gridColumn: windowWidth <= 640 ? 'span 1' : 'span 3', background: isLight ? '#f0fdf4' : 'rgba(34, 197, 94, 0.12)', border: '1.5px solid #22c55e', borderRadius: '8px', padding: '10px 12px' }}>
                       <label style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: '900', display: 'block', marginBottom: '4px' }}>
-                        💰 Total Base price with Others Charges (INR) [Base Property Asking Price + Floor Rise + PLC + Clubhouse + Maint + Legal] *
+                        💰 Total Base price with Others Charges (INR) [Base Property Asking Price + Floor Rise + PLC + Parking + Clubhouse + Maint + Legal] *
                       </label>
                       <input 
                         type="text" 
@@ -6445,7 +6636,19 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                 rera_id: p.rera_id || prev.rera_id || '',
                                 hera_no: p.hera_no || prev.hera_no || '',
                                 selected_amenities: p.amenities && p.amenities.length > 0 ? p.amenities : prev.selected_amenities,
-                                building_photos: p.building_photos && p.building_photos.length > 0 ? p.building_photos : prev.building_photos
+                                building_photos: p.building_photos && p.building_photos.length > 0 ? p.building_photos : prev.building_photos,
+                                total_covered_parking_capacity: p.total_covered_parking_capacity !== undefined ? p.total_covered_parking_capacity : (prev.total_covered_parking_capacity || 0),
+                                covered_parking_rate: p.covered_parking_rate || prev.covered_parking_rate || '',
+                                total_ev_parking_capacity: p.total_ev_parking_capacity !== undefined ? p.total_ev_parking_capacity : (prev.total_ev_parking_capacity || 0),
+                                ev_parking_rate: p.ev_parking_rate || prev.ev_parking_rate || '',
+                                total_open_parking_capacity: p.total_open_parking_capacity !== undefined ? p.total_open_parking_capacity : (prev.total_open_parking_capacity || 0),
+                                open_parking_rate: p.open_parking_rate || prev.open_parking_rate || '',
+                                parking_price: p.covered_parking_rate || prev.parking_price || '',
+                                car_parking_charge: p.covered_parking_rate || prev.car_parking_charge || '',
+                                key_custody: p.key_custody || prev.key_custody || '',
+                                keys_custody: p.key_custody || prev.keys_custody || '',
+                                architectural_description: p.architectural_description || prev.architectural_description || '',
+                                description: p.architectural_description || prev.description || ''
                               }));
                               if (p.mobile) setDevProjectMobile(p.mobile);
                               if (p.altMobile && setDevProjectAltMobile) setDevProjectAltMobile(p.altMobile);

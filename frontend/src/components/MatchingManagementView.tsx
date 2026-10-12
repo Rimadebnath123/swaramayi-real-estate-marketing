@@ -1628,21 +1628,6 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                   final_price: '₹51,14,880',
                   base_price: '₹48,00,000',
                   area_sqft: '1450 SqFt'
-                },
-                {
-                  id: 'PROP-KONDAPUR-002',
-                  property_code: 'SRM-PROP-2026-000427',
-                  title: 'Aparna Zenon Luxury 3BHK Flat',
-                  locality: 'Kondapur / Gachibowli',
-                  project: 'Aparna Zenon',
-                  developer: 'Aparna Constructions',
-                  configuration: '3BHK',
-                  type: 'Flat / Apartment (New / Builder)',
-                  facing: 'North-East Facing',
-                  possession_status: 'Under Construction',
-                  final_price: '₹84,00,000',
-                  base_price: '₹78,00,000',
-                  area_sqft: '1680 SqFt'
                 }
               ];
 
@@ -2163,13 +2148,20 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
         <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '16px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>📋 Customer Requirements vs Stock Inventory Availability Matrix</h3>
           <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? 'repeat(1, 1fr)' : windowWidth <= 768 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px' }}>
-            {['Kondapur', 'Gachibowli', 'Financial District', 'Hitec City'].map((loc, i) => (
-              <div key={i} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '16px', borderRadius: '12px' }}>
-                <h4 style={{ color: '#38bdf8', fontWeight: '800' }}>📍 {loc} Sector</h4>
-                <p style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>Matching Inventory: 12 Units Available</p>
-                <span style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: '800', marginTop: '8px', display: 'block' }}>🟢 95% High Demand Alignment</span>
-              </div>
-            ))}
+            {(() => {
+              const activeLocs = Array.from(new Set((properties || []).map((p: any) => p.locality || p.location).filter(Boolean))).slice(0, 4);
+              const displayLocs = activeLocs.length > 0 ? activeLocs : ['Prime City Sector', 'North Zone Hub', 'East Zone Hub', 'Central Commercial Hub'];
+              return displayLocs.map((loc: any, i: number) => {
+                const count = (properties || []).filter((p: any) => (p.locality || p.location) === loc).length;
+                return (
+                  <div key={i} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '16px', borderRadius: '12px' }}>
+                    <h4 style={{ color: '#38bdf8', fontWeight: '800' }}>📍 {loc}</h4>
+                    <p style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>Matching Inventory: {count > 0 ? count : 1} Units Available</p>
+                    <span style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: '800', marginTop: '8px', display: 'block' }}>🟢 High Demand Alignment</span>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
       )}

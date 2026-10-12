@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Globe, ExternalLink, Home, Search, Building2, MapPin, 
   ShieldCheck, Sparkles, Terminal
@@ -7,11 +7,29 @@ import {
 interface WebsitePortalViewProps {
   isLight: boolean;
   windowWidth: number;
+  properties?: any[];
 }
 
-export const WebsitePortalView: React.FC<WebsitePortalViewProps> = ({ isLight, windowWidth }) => {
+export const WebsitePortalView: React.FC<WebsitePortalViewProps> = ({ isLight, windowWidth, properties = [] }) => {
   const [viewMode, setViewMode] = useState<'preview' | 'iframe' | 'setup'>('preview');
   const [iframeKey, setIframeKey] = useState<number>(Date.now());
+  const [liveProperties, setLiveProperties] = useState<any[]>(() => {
+    if (Array.isArray(properties) && properties.length > 0) return properties;
+    try {
+      const saved = localStorage.getItem('swaramayi_properties_v5_clean');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
+
+  useEffect(() => {
+    if (Array.isArray(properties) && properties.length > 0) {
+      setLiveProperties(properties);
+    }
+  }, [properties]);
 
   const websiteUrl = 'https://swaramayi-website.vercel.app/';
 
@@ -204,28 +222,98 @@ export const WebsitePortalView: React.FC<WebsitePortalViewProps> = ({ isLight, w
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(3, 1fr)', gap: '20px' }}>
-              {[
-                { title: 'Aparna Zenon 3BHK Premium Residence', loc: 'New Town Action Area II, Kolkata', price: '₹95,00,000', specs: '3 BHK • 1,540 SqFt • Ready to Move' },
-                { title: 'My Home Bhooja Sky Villa', loc: 'Rajarhat Main Road, Kolkata', price: '₹1,85,00,000', specs: '4 BHK • 2,450 SqFt • Under Construction' },
-                { title: 'Dhriti Commercial Tower Office Space', loc: 'Salt Lake Sector V, Kolkata', price: '₹1,20,00,000', specs: 'Commercial • 1,800 SqFt • Bare Shell' }
-              ].map((item, idx) => (
-                <div key={idx} style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', overflow: 'hidden', boxShadow: isLight ? '0 4px 14px rgba(0,0,0,0.05)' : 'none' }}>
-                  <div style={{ height: '140px', background: 'linear-gradient(135deg, #0284c7 0%, #0f172a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontWeight: '900', fontSize: '1.1rem' }}>
-                    🏢 {item.title.split(' ')[0]} {item.title.split(' ')[1]}
+              {liveProperties.length === 0 ? (
+                <div style={{ 
+                  gridColumn: '1 / -1', 
+                  padding: '48px 20px', 
+                  textAlign: 'center', 
+                  background: isLight ? '#f8fafc' : '#1e293b', 
+                  borderRadius: '12px', 
+                  border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px'
+                }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(2, 132, 199, 0.1)', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Building2 size={24} />
                   </div>
-                  <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <h4 style={{ fontSize: '0.95rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>{item.title}</h4>
-                    <span style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <MapPin size={13} /> {item.loc}
-                    </span>
-                    <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>{item.specs}</span>
-                    <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '10px' }}>
-                      <strong style={{ fontSize: '1.1rem', color: '#22c55e', fontWeight: '900' }}>{item.price}</strong>
-                      <button style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}>View Details</button>
-                    </div>
-                  </div>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
+                    Live Property Catalog
+                  </h4>
+                  <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', margin: 0, maxWidth: '440px', lineHeight: '1.45' }}>
+                    Properties listed in the Master Inventory will dynamically showcase here with verified apartment descriptions, specs, and direct pricing.
+                  </p>
                 </div>
-              ))}
+              ) : (
+                liveProperties.slice(0, 6).map((item: any, idx: number) => {
+                  const displayTitle = (
+                    item.configuration 
+                      ? `${item.configuration} ${item.property_type || item.type || 'Residence'}`
+                      : (item.property_type || item.type || 'Residential Property')
+                  ).trim();
+
+                  const apartmentDescription = (
+                    item.description || 
+                    item.architectural_description || 
+                    item.property_description || 
+                    item.notes || 
+                    item.amenities_summary || 
+                    `${displayTitle} featuring well-ventilated living spaces, high quality construction, verified legal titles, and prime road connectivity.`
+                  );
+
+                  const displayLoc = (
+                    item.locality 
+                      ? `${item.locality}${item.city ? ', ' + item.city : ''}` 
+                      : (item.location_address || item.address || item.city || 'Kolkata')
+                  );
+
+                  const displaySpecs = (
+                    `${item.configuration || '2/3 BHK'} • ${item.carpet_area_sqft || item.built_up_area_sqft || item.area || '1,200'} SqFt • ${item.possession_date || item.availability_status || item.property_status || 'Ready to Move'}`
+                  );
+
+                  const displayPrice = (
+                    item.final_price || 
+                    item.price || 
+                    (item.base_price ? `₹${Number(item.base_price).toLocaleString('en-IN')}` : 'Price on Request')
+                  );
+
+                  return (
+                    <div key={item.id || item.property_code || idx} style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', overflow: 'hidden', boxShadow: isLight ? '0 4px 14px rgba(0,0,0,0.05)' : 'none', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ height: '140px', background: 'linear-gradient(135deg, #0284c7 0%, #0f172a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontWeight: '900', fontSize: '1.05rem', gap: '8px' }}>
+                        <Building2 size={32} color="#38bdf8" />
+                        <span>{displayTitle}</span>
+                      </div>
+                      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                        <h4 style={{ fontSize: '0.95rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
+                          {displayTitle}
+                        </h4>
+                        <p style={{ 
+                          fontSize: '0.78rem', 
+                          color: isLight ? '#64748b' : '#94a3b8', 
+                          margin: '2px 0 4px 0', 
+                          lineHeight: '1.45',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
+                          {apartmentDescription}
+                        </p>
+                        <span style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <MapPin size={13} /> {displayLoc}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>{displaySpecs}</span>
+                        <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+                          <strong style={{ fontSize: '1.1rem', color: '#22c55e', fontWeight: '900' }}>{displayPrice}</strong>
+                          <button style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}>View Details</button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 

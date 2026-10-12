@@ -1150,7 +1150,6 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   if (t.includes('dhriti') || t.includes('colony') || t.includes('dakbangla')) return { lat: '22.715420', lng: '88.479150' };
                   if (t.includes('shibalay') || t.includes('chapadali')) return { lat: '22.722361', lng: '88.493403' };
                   if (t.includes('greenwood') || t.includes('vip road') || t.includes('airport')) return { lat: '22.645200', lng: '88.438500' };
-                  if (t.includes('aparna') || t.includes('zenon') || t.includes('kondapur')) return { lat: '22.722361', lng: '88.493403' };
 
                   const baseLat = 22.722361;
                   const baseLng = 88.493403;

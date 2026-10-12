@@ -177,7 +177,7 @@ export async function sendPropertyRecommendations(req: AuthRequest, res: Respons
   logAudit(req.user?.id || null, 'SEND_RECOMMENDATION', 'MATCHING', `Sent recommendation ${recCode} (${property_codes.join(', ')}) to ${customer.customer_number} via ${channel}`, req.ip);
 
   const customerViewUrl = `http://localhost:3000/view-properties/${viewToken}`;
-  const whatsappPayload = `Hello ${customer.full_name},\n\nGreetings from Swaramayi Real Estate!\nBased on your requirement for ${customer.configuration || '3BHK'} in ${customer.preferred_location || 'Kondapur'}, we have shortlisted ${property_codes.length} premium properties for you:\n\n🔗 View Full Property Specs & Floor Plans:\n${customerViewUrl}\n\nPlease reply or click the link to schedule a verified site visit!`;
+  const whatsappPayload = `Hello ${customer.full_name},\n\nGreetings from Swaramayi Real Estate!\nBased on your requirement for ${customer.configuration || '3BHK'} in ${customer.preferred_location || 'your preferred location'}, we have shortlisted ${property_codes.length} premium properties for you:\n\n🔗 View Full Property Specs & Floor Plans:\n${customerViewUrl}\n\nPlease reply or click the link to schedule a verified site visit!`;
 
   return res.status(201).json({
     status: 'SUCCESS',
@@ -257,10 +257,10 @@ export async function scheduleSiteVisit(req: AuthRequest, res: Response) {
     id: uuidv4(),
     site_visit_code: svCode, // SRM-SV-2026-000501
     customer_number: customer?.customer_number || customer_number,
-    customer_name: customer?.full_name || 'Rohan Deshmukh',
+    customer_name: req.body.customer_name || customer?.full_name || (customer as any)?.name || (customer as any)?.customer_name || 'Customer',
     property_code: property?.property_code || property_code,
-    property_title: property?.property_title || 'Aparna Zenon',
-    sales_executive: req.user?.username || 'Avishek Das (Super Admin)',
+    property_title: req.body.property_title || property?.property_title || property_code || 'Property',
+    sales_executive: req.user?.username || 'Super Admin',
     scheduled_date: scheduled_date || new Date().toISOString().split('T')[0],
     scheduled_time: scheduled_time || '11:00 AM',
     otp_code: otpCode,
@@ -291,6 +291,8 @@ export async function confirmUnitBooking(req: AuthRequest, res: Response) {
   }
 
   loadData();
+  const customer = dbStore.data.customers.find(c => c.customer_number === customer_number);
+  const property = dbStore.data.properties.find(p => p.property_code === property_code);
   const bkgCode = generateID('SRM-BKG');
   const brkCode = generateID('SRM-BRK');
 
@@ -304,13 +306,13 @@ export async function confirmUnitBooking(req: AuthRequest, res: Response) {
     id: uuidv4(),
     booking_code: bkgCode, // SRM-BKG-2026-000201
     customer_number,
-    customer_name: 'Rohan Deshmukh',
+    customer_name: req.body.customer_name || customer?.full_name || (customer as any)?.name || (customer as any)?.customer_name || 'Customer',
     property_code,
     unit_number: unit_number || 'A-504',
     agreement_value: numAgreementVal,
     token_amount_paid: Number(token_amount_paid) || 200000,
     payment_mode: 'UPI / NEFT',
-    sales_executive: req.user?.username || 'Avishek Das (Super Admin)',
+    sales_executive: req.user?.username || 'Super Admin',
     booking_date: new Date().toISOString().split('T')[0],
     status: 'CONFIRMED'
   };
@@ -319,7 +321,7 @@ export async function confirmUnitBooking(req: AuthRequest, res: Response) {
     id: uuidv4(),
     brokerage_code: brkCode, // SRM-BRK-2026-000101
     booking_code: bkgCode,
-    developer_name: 'Aparna Constructions',
+    developer_name: req.body.developer_name || property?.developer_name || 'Developer Partner',
     commission_percentage: developerCommissionPct,
     total_commission_amount: totalCommission,
     agent_payout_amount: agentPayout,

@@ -1593,7 +1593,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       }));
                       if (matchDev && matchDev.mobile && !devProjectMobile) setDevProjectMobile(matchDev.mobile);
                     }} 
-                    placeholder="e.g. My Home Constructions / Dhriti Builders / Aparna" 
+                    placeholder="e.g. Developer / Builder Name" 
                     style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '700' }} 
                     required 
                   />
@@ -1614,7 +1614,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                         longitude: gps ? gps.lng : prev.longitude
                       }));
                     }} 
-                    placeholder="e.g. My Home Bhooja / Dhriti Apartments / Aparna Zenon" 
+                    placeholder="e.g. Project / Society Name" 
                     style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '700' }} 
                     required 
                   />
@@ -1666,7 +1666,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     type="text" 
                     value={newPropertyForm.locality} 
                     onChange={(e) => setNewPropertyForm({ ...newPropertyForm, locality: e.target.value })} 
-                    placeholder="e.g. Kondapur Hub / HITEC City Sector / BARASAT" 
+                    placeholder="e.g. Locality Hub / Sector / Area" 
                     style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
                     required 
                   />
@@ -4236,11 +4236,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       name: newDevNameInput,
                       mobile: newDevAltMobileInput ? `${newDevMobileInput} / ${newDevAltMobileInput}` : newDevMobileInput,
                       email: newDevEmailInput || '',
-                      projects: newDevProjectTitleInput ? [{ id: `PRJ-${Date.now()}`, title: newDevProjectTitleInput, locality: 'Kondapur Hub' }] : []
+                      projects: newDevProjectTitleInput ? [{ id: `PRJ-${Date.now()}`, title: newDevProjectTitleInput, locality: 'Locality Hub' }] : []
                     };
                     setDeveloperMasterList([newDevObj, ...developerMasterList]);
                     if (newDevProjectTitleInput) {
-                      createOrUpdateDevAgreement(newDevNameInput, newDevProjectTitleInput, newDevMobileInput, 'Kondapur Hub', undefined, true);
+                      createOrUpdateDevAgreement(newDevNameInput, newDevProjectTitleInput, newDevMobileInput, 'Locality Hub', undefined, true);
                     }
                     setNewDevNameInput('');
                     setNewDevMobileInput('');

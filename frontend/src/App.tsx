@@ -3521,14 +3521,14 @@ export default function App() {
   // New Cost Sheet Share Form State
   const [newShareForm, setNewShareForm] = useState({
     parentType: 'COST_SHEET_ID',
-    parentId: 'SRM-CS-2026-000145',
-    customerName: 'Rohan Deshmukh',
-    customerNumber: 'SRM-CUS-2026-000184',
-    mobile: '+91 98490 11223',
-    propertyTitle: 'Aparna Zenon Premium 3BHK Residence',
-    finalPrice: '₹84 Lakhs',
+    parentId: '',
+    customerName: '',
+    customerNumber: '',
+    mobile: '',
+    propertyTitle: '',
+    finalPrice: '',
     channel: 'WhatsApp & Email Gateway',
-    notes: 'Sharing updated cost sheet with special discount pricing.'
+    notes: 'Sharing updated cost sheet with verified pricing details.'
   });
 
 
@@ -3878,7 +3878,7 @@ export default function App() {
     configuration: '3BHK',
     facing: 'East Facing',
     possessionCondition: 'Ready to Move',
-    preferredArea: 'Kondapur / Gachibowli',
+    preferredArea: '',
     searchRadius: 'Within 5 KM',
     budget_min: '₹70 Lakhs',
     budget_max: '₹95 Lakhs',
@@ -3886,7 +3886,7 @@ export default function App() {
     maxAreaSqft: '2200 SqFt',
     purchaseTimeline: 'Immediate (Within 30 Days)',
     floor_pref: '10th Floor or Higher',
-    dislike_reason: 'Over Budget by ₹15L & East Facing Preferred',
+    dislike_reason: '',
     remarks: ''
   });
 
@@ -3900,53 +3900,53 @@ export default function App() {
     email: '',
     dob: '',
     address: '',
-    city: 'Hyderabad',
-    pincode: '500084',
+    city: '',
+    pincode: '',
     language: 'English',
-    lead_source: 'Meta Ads',
-    campaign_id: 'PRJ-POST-2026-8802',
-    utm_source: 'SRM-PROP-2026-000426',
+    lead_source: 'Direct',
+    campaign_id: '',
+    utm_source: '',
     referral_name: '',
     otp_status: 'VERIFIED',
-    otp_code: '849201',
+    otp_code: '',
     investment_purpose: 'Self Use',
     property_type: '',
     configuration: '3BHK',
     condition: 'Ready to Move',
-    budget_min: '₹1.20 Crore',
-    budget_max: '₹1.80 Crore',
-    budget: '₹1.20 Crore - ₹1.80 Crore',
-    budget_flexibility: 'Strict Fixed (0% Stretch)',
-    preferredArea: 'Kondapur / Gachibowli',
-    secondary_areas: 'Hitec City, Financial District',
-    radius_km: 2,
+    budget_min: '',
+    budget_max: '',
+    budget: '',
+    budget_flexibility: 'Normal',
+    preferredArea: '',
+    secondary_areas: '',
+    radius_km: 5,
     facing: 'East Facing',
     floor_pref: '',
     non_preferred_floor: '',
-    carpet_area_min: '1,400',
-    carpet_area_max: '2,200',
+    carpet_area_min: '',
+    carpet_area_max: '',
     area_unit: 'Sq.Ft.',
     parking: 'Required',
-    amenities: 'Swimming Pool, Gym, Clubhouse, Power Backup, Gated Community',
+    amenities: '',
     possession_status: 'Ready to Move',
     purchase_timeline: 'Immediate (< 30 Days)',
-    loan_required: 'Yes',
-    loan_amount: '₹80 Lakhs',
-    loan_status: 'Pre-Approved',
+    loan_required: 'No',
+    loan_amount: '',
+    loan_status: 'N/A',
     decision_timeline: 'Within 30 Days',
     brokerage_rate: '2.0%',
     brokerage_payer: 'CUSTOMER',
-    preferred_projects: 'My Home, Rajapushpa, Aparna',
-    family_requirements: 'East Facing, High Floor, Pool View',
-    sub_source: 'Kondapur 3BHK Campaign',
+    preferred_projects: '',
+    family_requirements: '',
+    sub_source: '',
     referral_source: '',
-    assigned_employee_id: 'Avishek Das',
-    assigned_employee_name: 'Avishek Das',
-    team_leader_id: 'USR-06',
+    assigned_employee_id: '',
+    assigned_employee_name: '',
+    team_leader_id: '',
     priority: 'HOT',
-    score: 88,
-    completeness_score: 94,
-    notes: 'Customer looking for immediate registration in Kondapur locality.'
+    score: 80,
+    completeness_score: 80,
+    notes: ''
   });
 
   const generateNextCustomerCode = () => {
@@ -4819,19 +4819,16 @@ export default function App() {
     return deduped;
   };
 
-  // Helper to sanitize customer list and filter out demo and test records
+  // Helper to dynamically sanitize customer list and filter out corrupted or explicitly flagged test records
   const sanitizeCustomerRecords = (list: any[]) => {
     if (!Array.isArray(list)) return [];
     return list.filter((c: any) => {
-      if (!c) return false;
-      const name = (c.name || c.full_name || c.customer_name || '').toString().toLowerCase();
-      const mob = (c.mobile || c.phone || '').toString().toLowerCase();
-      const num = (c.customer_number || c.id || '').toString().toUpperCase();
-
-      if (name.includes('rohan deshmukh') || num === 'SRM-CUS-2026-000184' || num.includes('000184')) return false;
-      if (name.includes('sumanth varma') || num === 'SRM-CUS-2026-000186' || num.includes('000186')) return false;
-      if (name.includes('honey sing') || mob.includes('6567788888') || num === 'SRM-CUS-2026-000188' || num.includes('000188')) return false;
-      if (name.includes('fgtf') || mob.includes('dfrt') || num.includes('000101') || num.includes('000124')) return false;
+      if (!c || typeof c !== 'object') return false;
+      if (c.is_test === true || c.is_demo === true || c.is_dummy === true || c.test_record === true) return false;
+      const name = (c.name || c.full_name || c.customer_name || '').toString().trim();
+      const mob = (c.mobile || c.phone || '').toString().trim();
+      const num = (c.customer_number || c.id || '').toString().trim();
+      if (!name && !mob && !num) return false;
       return true;
     });
   };
@@ -4853,20 +4850,16 @@ export default function App() {
   const [rawSelectedCust, setSelectedCust] = useState<any>(null);
   const selectedCust = rawSelectedCust || customers[0] || null;
 
-  // Helper to sanitize lead list and filter out demo and auto-generated lead records
+  // Helper to dynamically sanitize lead list and filter out corrupted or explicitly flagged test records
   const sanitizeLeadRecords = (list: any[]) => {
     if (!Array.isArray(list)) return [];
     return list.filter((l: any) => {
-      if (!l) return false;
-      const name = (l.name || l.customer_name || l.full_name || '').toString().toLowerCase();
-      const mob = (l.mobile || l.phone || '').toString().toLowerCase();
-      const num = (l.customer_number || l.lead_number || l.id || '').toString().toUpperCase();
-
-      if (name.includes('rohan deshmukh') || num.includes('000184')) return false;
-      if (name.includes('sumanth varma') || num.includes('000186')) return false;
-      if (name.includes('avishek das') || mob.includes('9432328947')) return false;
-      if (name.includes('honey sing') || mob.includes('6567788888') || num.includes('000188')) return false;
-      if (name.includes('fgtf') || mob.includes('dfrt') || num.includes('000101') || num.includes('000124')) return false;
+      if (!l || typeof l !== 'object') return false;
+      if (l.is_test === true || l.is_demo === true || l.is_dummy === true || l.test_record === true) return false;
+      const name = (l.name || l.customer_name || l.full_name || '').toString().trim();
+      const mob = (l.mobile || l.phone || '').toString().trim();
+      const num = (l.customer_number || l.lead_number || l.id || '').toString().trim();
+      if (!name && !mob && !num) return false;
       return true;
     });
   };
@@ -5130,14 +5123,14 @@ export default function App() {
     alternate_mobile: '',
     whatsapp_number: '',
     email: '',
-    source: 'Facebook',
-    campaign: 'Summer Campaign 2026',
-    preferred_location: 'Kondapur',
-    preferred_project: 'Aparna Zenon',
+    source: 'Direct',
+    campaign: '',
+    preferred_location: '',
+    preferred_project: '',
     property_type: 'Flat / Apartment',
     bhk: '3BHK',
-    budget_min: '7000000',
-    budget_max: '8500000',
+    budget_min: '',
+    budget_max: '',
     purpose: 'Self Use',
     possession_preference: 'Immediate (< 30 Days)',
     loan_required: true,
@@ -5747,8 +5740,8 @@ export default function App() {
         propertyId: prop.id || propCode,
         propertyCode: propCode,
         propertyTitle: prop.title || 'Selected Property',
-        projectName: prop.project || prop.title || 'Aparna Zenon',
-        developerName: prop.developer || 'Aparna Constructions',
+        projectName: prop.project || prop.title || 'Selected Project',
+        developerName: prop.developer || 'Channel Partner Developer',
         propertyType: prop.property_type || prop.type || 'Flat / Apartment',
         property_type: prop.property_type || prop.type || 'Flat / Apartment',
         propertyStatus: prop.status || 'AVAILABLE',
@@ -7019,7 +7012,7 @@ export default function App() {
       email: lead.email || '',
       source: lead.source || 'Facebook',
       call_disposition: lead.call_disposition || lead.lead_status || 'CONNECTED_INTERESTED',
-      preferred_location: lead.preferred_location || 'Kondapur',
+      preferred_location: lead.preferred_location || '',
       property_type: (lead.property_type && lead.property_type !== 'N/A' && lead.property_type !== 'Flat / Apartment') ? lead.property_type : '',
       bhk: lead.bhk || '',
       budget_max: lead.budget_max || 0
@@ -7080,12 +7073,7 @@ export default function App() {
     } catch (e) {
       console.error('Error loading verified dev projects:', e);
     }
-    return [
-      { developer: 'Aparna Constructions', project: 'Aparna Zenon', mobile: '+91 98490 99887', verifiedAt: '20 Aug 2026 02:00 PM', hash: 'SHA256-DEV-OTP-VERIFIED-#948120' },
-      { developer: 'Prestige Estates', project: 'Prestige High Fields', mobile: '+91 98490 11223', verifiedAt: '21 Aug 2026 04:30 PM', hash: 'SHA256-DEV-OTP-VERIFIED-#882104' },
-      { developer: 'My Home Constructions', project: 'My Home Bhooja', mobile: '+91 98490 88776', verifiedAt: '22 Aug 2026 09:15 AM', hash: 'SHA256-DEV-OTP-VERIFIED-#771209' },
-      { developer: 'Dhriti Builders', project: 'Dhriti Apartments', mobile: '+91 98490 44556', verifiedAt: '24 Aug 2026 03:45 PM', hash: 'SHA256-DEV-OTP-VERIFIED-#663210' }
-    ];
+    return [];
   });
 
   useEffect(() => {
@@ -7456,7 +7444,7 @@ export default function App() {
     }
   }, [users, properties, customers, leadsList, bookings, invoices, agreements, developers, matchingRequestsQueue]);
   const [rawSelectedAgreement, setSelectedAgreement] = useState<any>(null);
-  const selectedAgreement = rawSelectedAgreement || agreements[0] || { id: 'AGR-01', agreement_code: 'SRM-AGR-CUS-2026-000301', agreement_type: 'CUSTOMER_SITE_VISIT', title: 'Customer Site Visit Agreement', party_name: 'Rohan Deshmukh', party_contact: '+91 98490 12345', property_details: 'SRM-PROP-2026-000421 (Aparna Zenon 3BHK)', signed_status: 'EXECUTED_SIGNED', signature_hash: 'OTP-VERIFIED-#482901-DIGITAL-SIG', signed_at: '16 Aug 2026 11:35 AM' };
+  const selectedAgreement = rawSelectedAgreement || agreements[0] || { id: 'AGR-01', agreement_code: 'SRM-AGR-CUS-2026-000301', agreement_type: 'CUSTOMER_SITE_VISIT', title: 'Customer Site Visit Agreement', party_name: 'Customer', party_contact: '-', property_details: '-', signed_status: 'EXECUTED_SIGNED', signature_hash: 'DIGITAL-VERIFIED', signed_at: '16 Aug 2026 11:35 AM' };
 
   // DYNAMIC UNIVERSAL SEARCH ENGINE MATCHES ACROSS ALL CRM DATA VAULTS
   const universalSearchResults = useMemo(() => {
@@ -8201,7 +8189,7 @@ export default function App() {
     leader_name: 'Avishek Das (Super Admin)',
     monthly_target: '15 Property Units'
   });
-  const [propForm, setPropForm] = useState({ title: '', base_price: '', developer: 'Aparna Constructions', configuration: '3BHK' });
+  const [propForm, setPropForm] = useState({ title: '', base_price: '', developer: '', configuration: '3BHK' });
   const [custForm, setCustForm] = useState({ name: '', mobile: '', budget_min: '7000000', budget_max: '8500000' });
 
   const maskPhone = (phone: string) => {
@@ -9354,7 +9342,7 @@ export default function App() {
       developer_id: newPropertyForm.developer_id || 'SRM-DEV-2026-000105',
       developer_mobile: devProjectMobile || newPropertyForm.developer_mobile || '9883395102',
       developer_alt_mobile: devProjectAltMobile || newPropertyForm.developer_alt_mobile || '7044293951',
-      locality: newPropertyForm.locality || 'Kondapur / Madhyamgram',
+      locality: newPropertyForm.locality || '',
       full_address: newPropertyForm.full_address || newPropertyForm.locality || 'Chapadali Bus Terminus Hub, Jessore Road, Barasat, North 24 Parganas, West Bengal - 700124, India',
       configuration: newPropertyForm.configuration || '3BHK',
       carpet_area: newPropertyForm.carpet_area || '898.1 Sq.Ft.',
@@ -9424,7 +9412,7 @@ export default function App() {
     const custName = newLeadForm.customer_name || newCustomerForm.name || 'Ingested Lead Customer';
     const mob = newLeadForm.mobile || newCustomerForm.mobile || '+91 98490 99999';
     const em = newLeadForm.email || newCustomerForm.email || 'lead@swaramayi.com';
-    const loc = newLeadForm.preferred_location || newCustomerForm.preferredArea || 'Kondapur / Hitec City';
+    const loc = newLeadForm.preferred_location || newCustomerForm.preferredArea || '';
     const bhkConf = newLeadForm.bhk || newCustomerForm.configuration || '3BHK';
     const bud = newCustomerForm.budget || `${newLeadForm.budget_min || '70L'} - ${newLeadForm.budget_max || '85L'}`;
     const prio = (newLeadForm.priority || newCustomerForm.priority || 'HOT') as any;
@@ -9464,7 +9452,7 @@ export default function App() {
       source: newLeadForm.source || 'Meta Ads',
       campaign: newLeadForm.campaign || 'Direct Lead Ingestion',
       preferred_location: loc,
-      preferred_project: newLeadForm.preferred_project || 'Aparna Zenon',
+      preferred_project: newLeadForm.preferred_project || '',
       property_type: newLeadForm.property_type || 'Flat / Apartment',
       bhk: bhkConf,
       budget_min: newLeadForm.budget_min || 7000000,
@@ -9522,10 +9510,10 @@ export default function App() {
     const custName = v.customerName || v.name || v.customer_name || 'Valued Customer';
     const fullCustNo = v.customerNumber || v.customer_number || v.customerId || 'SRM-CUS-2026-000186';
     const sevenDigitCustNo = getSevenDigitCustomerNumber(fullCustNo, v.mobile);
-    const rawPropTitle = v.propertyTitle || v.title || 'Aparna Zenon Premium 3BHK';
+    const rawPropTitle = v.propertyTitle || v.title || 'Visited Property';
     const propTitle = rawPropTitle.split(/\s*\(\+/)[0].trim();
-    const devName = v.developer || v.developerName || v.developer_name || 'Aparna Constructions';
-    const execName = v.assignedExecutive || v.salesPersonName || v.sales_executive || 'Ramesh Pawar (Field Exec)';
+    const devName = v.developer || v.developerName || v.developer_name || 'Channel Partner Developer';
+    const execName = v.assignedExecutive || v.salesPersonName || v.sales_executive || 'Field Executive';
     const devPhone = v.developerMobile || v.developer_whatsapp || v.developer_phone || '+91 98490 55443';
     const visitIdStr = v.visitId || v.id || v.visitPlanId || 'SRM-VS-2026-000087';
     const nowStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' at ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -9605,7 +9593,7 @@ export default function App() {
   };
 
   const filteredProperties = properties.filter(p => selectedLocality === 'ALL' || p.locality.toLowerCase().replace(/\s+/g, '') === selectedLocality.toLowerCase().replace(/\s+/g, ''));
-  const localitiesList = ['ALL', 'Kondapur', 'Financial District', 'Madinaguda', 'Hitec City', 'Nanakramguda', 'Gachibowli', 'Kokapet', 'Kukatpally'];
+  const localitiesList = ['ALL', ...Array.from(new Set(properties.map((p: any) => p.locality).filter(Boolean)))];
 
   const filteredCustomersForMatching = customers.filter(c => {
     const query = custSearchQuery.trim().toLowerCase();
@@ -9946,13 +9934,13 @@ export default function App() {
 
   if (isPublicPayRoute) {
     const urlParams = new URLSearchParams(window.location.search);
-    const targetInvNo = urlParams.get('inv') || urlParams.get('pay_inv') || 'SRM-INV-CUS-2026-000406';
-    const matchedInv = invoices.find(i => i.invoice_number === targetInvNo) || {
+    const targetInvNo = urlParams.get('inv') || urlParams.get('pay_inv') || (invoices[0]?.invoice_number || 'SRM-INV-CUS-2026-000001');
+    const matchedInv = invoices.find(i => i.invoice_number === targetInvNo) || invoices[0] || {
       invoice_number: targetInvNo,
-      customer_name: 'Rohan Deshmukh',
-      property_title: 'Aparna Zenon Premium 3BHK Residence',
-      total_invoice_amount: 198240,
-      created_date: '2026-08-29'
+      customer_name: 'Customer',
+      property_title: 'Property Invoice',
+      total_invoice_amount: 0,
+      created_date: new Date().toISOString().split('T')[0]
     };
 
     return (
@@ -11910,18 +11898,18 @@ export default function App() {
                 })()}
 
                 {(() => {
-                  const teamAlphaCusts = customers.filter(c => !c.branch || c.branch?.includes('Head Office') || c.branch?.includes('Kondapur'));
+                  const teamAlphaCusts = customers.filter(c => !c.branch || c.branch?.includes('Head Office') || c.branch?.includes('Alpha'));
                   const teamAlphaLeads = teamAlphaCusts.length;
                   const teamAlphaVisits = scheduledVisits.length;
                   const teamAlphaBkgs = bookings.length;
                   const teamAlphaBrkVal = bookings.reduce((sum, b) => sum + parsePriceToNumeric(b.brokerage_amount || b.commission_amount || 0), 0);
                   const teamAlphaBrk = `₹${(teamAlphaBrkVal / 100000).toFixed(2)}L`;
 
-                  const teamBravoCusts = customers.filter(c => c.branch && (c.branch.includes('Gachibowli') || c.branch.includes('Bravo')));
+                  const teamBravoCusts = customers.filter(c => c.branch && (c.branch.includes('Bravo') || c.branch.includes('Regional')));
                   const teamBravoLeads = teamBravoCusts.length;
                   const teamBravoVisits = siteVisits.length;
-                  const teamBravoBkgs = bookings.filter(b => b.branch?.includes('Gachibowli')).length;
-                  const teamBravoBrkVal = bookings.filter(b => b.branch?.includes('Gachibowli')).reduce((sum, b) => sum + parsePriceToNumeric(b.brokerage_amount || 0), 0);
+                  const teamBravoBkgs = bookings.filter(b => b.branch && (b.branch.includes('Bravo') || b.branch.includes('Regional'))).length;
+                  const teamBravoBrkVal = bookings.filter(b => b.branch && (b.branch.includes('Bravo') || b.branch.includes('Regional'))).reduce((sum, b) => sum + parsePriceToNumeric(b.brokerage_amount || 0), 0);
                   const teamBravoBrk = `₹${(teamBravoBrkVal / 100000).toFixed(2)}L`;
 
                   return (
@@ -11930,7 +11918,7 @@ export default function App() {
                         <Layers size={18} color="#38bdf8" /> TEAM COMPARISON
                       </h3>
                       <div style={{ background: isLight ? '#f8fafc' : '#0f172a', padding: '12px', borderRadius: '8px' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: '800' }}>TEAM ALPHA (KONDAPUR)</span>
+                        <span style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: '800' }}>TEAM ALPHA</span>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginTop: '4px' }}>
                           <span>Leads: {teamAlphaLeads} | Visits: {teamAlphaVisits}</span>
                           <strong style={{ color: '#4ade80' }}>{teamAlphaBkgs} Bookings ({teamAlphaBrk})</strong>
@@ -12917,7 +12905,7 @@ export default function App() {
                     type="text" 
                     value={newDevAgreementForm.locality_hub} 
                     onChange={(e) => setNewDevAgreementForm({ ...newDevAgreementForm, locality_hub: e.target.value })}
-                    placeholder="e.g. Kondapur Hub / HITEC City Sector"
+                    placeholder="e.g. Locality Hub / Sector"
                     style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800' }}
                     required 
                   />
@@ -13014,7 +13002,7 @@ export default function App() {
           : `Protection Expiry: ${selectedAgreement.protection_expiry || '2027-10-02'}`;
 
         const gpsText = isDev
-          ? 'GPS / Locality Radius: ✓ HYDERABAD KONDAPUR HUB VERIFIED'
+          ? `GPS / Locality Radius: ✓ ${(selectedAgreement.locality_hub || selectedAgreement.locality || 'LOCALITY HUB').toUpperCase()} VERIFIED`
           : 'GPS Status: ✓ GEOFENCE VERIFIED (14m (Within 100m Allowed Radius))';
         const otpStatusText = isDev ? 'Developer OTP: ✓ VERIFIED' : 'Customer OTP: ✓ VERIFIED';
         const masterSchedText = isDev ? `Corporate Audit Code: ${agreementCode}` : `Master Schedule: ${selectedAgreement.visit_schedule_id || 'SRM-VS-2026-000087'}`;
@@ -14785,12 +14773,20 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { dev: 'Aparna Constructions', introduced: 145, verified: 112, booked: 24, pending: 38, alerts: 0, color: '#4ade80' },
-                    { dev: 'Prestige Estates', introduced: 98, verified: 82, booked: 18, pending: 22, alerts: 1, color: '#fbbf24' },
-                    { dev: 'My Home Group', introduced: 110, verified: 94, booked: 21, pending: 29, alerts: 0, color: '#38bdf8' },
-                    { dev: 'Sumadhura Infracon', introduced: 64, verified: 50, booked: 9, pending: 12, alerts: 0, color: '#a855f7' }
-                  ].map((d, idx) => (
+                  {(() => {
+                    const devList = (developerMasterList && developerMasterList.length > 0)
+                      ? developerMasterList.map((d: any) => ({
+                          dev: d.name || 'Partner Builder',
+                          introduced: (properties || []).filter((p: any) => p.developer === d.name).length || 1,
+                          verified: 1,
+                          booked: 0,
+                          pending: 1,
+                          alerts: 0
+                        }))
+                      : [
+                          { dev: 'Swaramayi Partner Developer', introduced: (properties || []).length || 1, verified: 1, booked: 0, pending: 1, alerts: 0 }
+                        ];
+                    return devList.map((d: any, idx: number) => (
                     <tr key={idx} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
                       <td style={{ padding: '10px' }}>
                         <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.9rem' }}>{d.dev}</strong>
@@ -14805,7 +14801,8 @@ export default function App() {
                         </span>
                       </td>
                     </tr>
-                  ))}
+                  ));
+                })()}
                 </tbody>
               </table>
             </div>
@@ -14915,7 +14912,7 @@ export default function App() {
                     isMulti={true}
                     value={updateReqForm.preferredArea || ''}
                     onChange={(val) => setUpdateReqForm({ ...updateReqForm, preferredArea: val })}
-                    placeholder="e.g. Kondapur, Gachibowli, Madhapur"
+                    placeholder="e.g. Preferred Locality / Sector"
                     required={true}
                   />
                 </div>
@@ -15775,13 +15772,13 @@ export default function App() {
                 place_of_supply: createInvoiceForm.place_of_supply,
                 customer_gstin_pan: createInvoiceForm.customer_gstin_pan,
                 developer_name: createInvoiceForm.developer_name,
-                developer_gstin: createInvoiceForm.developer_gstin || '36AAACA1234F1Z5',
-                developer_contact_person: createInvoiceForm.developer_contact_person || 'Mr. S. K. Reddy (VP Sales)',
-                developer_mobile: createInvoiceForm.developer_mobile || '+91 98490 99887',
-                developer_email: createInvoiceForm.developer_email || 'billing@aparnaconstructions.com',
-                developer_address: createInvoiceForm.developer_address || 'Aparna Infra Towers, Road No 12, Banjara Hills, Hyderabad - 500034',
-                developer_rera_id: createInvoiceForm.developer_rera_id || 'P02400001234',
-                developer_place_of_supply: createInvoiceForm.developer_place_of_supply || '36 - Telangana',
+                developer_gstin: createInvoiceForm.developer_gstin || '',
+                developer_contact_person: createInvoiceForm.developer_contact_person || '',
+                developer_mobile: createInvoiceForm.developer_mobile || '',
+                developer_email: createInvoiceForm.developer_email || '',
+                developer_address: createInvoiceForm.developer_address || '',
+                developer_rera_id: createInvoiceForm.developer_rera_id || '',
+                developer_place_of_supply: createInvoiceForm.developer_place_of_supply || '19 - West Bengal',
                 property_title: createInvoiceForm.property_title,
                 particulars: createInvoiceForm.particulars,
                 flat_price: '₹' + Number(createInvoiceForm.flat_price || 8000000).toLocaleString('en-IN'),
@@ -15910,10 +15907,10 @@ export default function App() {
                           ...createInvoiceForm,
                           property_code: prop.property_code,
                           property_title: prop.title || `${prop.property_code} Residence`,
-                          developer_name: prop.developer || prop.builder || 'Aparna Constructions',
-                          developer_gstin: prop.developer_gstin || '36AAACA1234F1Z5',
-                          property_locality: prop.locality || 'Kondapur, Hyderabad',
-                          property_configuration: prop.configuration || '3 BHK Luxury Apartment',
+                          developer_name: prop.developer || prop.builder || '',
+                          developer_gstin: prop.developer_gstin || '',
+                          property_locality: prop.locality || '',
+                          property_configuration: prop.configuration || '',
                           flat_price: String(computedFlatPrice),
                           parking_price: String(computedParkPrice),
                           agreement_value: String(computedAgreementVal),
@@ -15961,10 +15958,10 @@ export default function App() {
                             ...createInvoiceForm,
                             property_code: val,
                             property_title: matched.title || `${val} Residence`,
-                            developer_name: matched.developer || matched.builder || 'Aparna Constructions',
-                            developer_gstin: matched.developer_gstin || '36AAACA1234F1Z5',
-                            property_locality: matched.locality || 'Kondapur, Hyderabad',
-                            property_configuration: matched.configuration || '3 BHK Luxury Apartment',
+                            developer_name: matched.developer || matched.builder || '',
+                            developer_gstin: matched.developer_gstin || '',
+                            property_locality: matched.locality || '',
+                            property_configuration: matched.configuration || '',
                             flat_price: String(fPrice),
                             parking_price: String(pPrice),
                             agreement_value: String(compAgree),
@@ -15995,7 +15992,7 @@ export default function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                   <div>
                     <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Locality / Sector</label>
-                    <input type="text" value={createInvoiceForm.property_locality || 'Kondapur, Hyderabad'} onChange={(e) => setCreateInvoiceForm({ ...createInvoiceForm, property_locality: e.target.value })} placeholder="Kondapur, Hyderabad" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} />
+                    <input type="text" value={createInvoiceForm.property_locality || ''} onChange={(e) => setCreateInvoiceForm({ ...createInvoiceForm, property_locality: e.target.value })} placeholder="Locality / Sector" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} />
                   </div>
 
                   <div>
@@ -16144,24 +16141,18 @@ export default function App() {
                       onChange={(e) => {
                         const val = e.target.value;
                         if (!val) return;
-                        const devList: Record<string, any> = {
-                          'Aparna Constructions': { gstin: '36AAACA1234F1Z5', contact: 'Mr. S. K. Reddy (VP Sales)', mobile: '+91 98490 99887', email: 'billing@aparnaconstructions.com', address: 'Aparna Infra Towers, Road No 12, Banjara Hills, Hyderabad - 500034', rera: 'P02400001234', pos: '36 - Telangana' },
-                          'My Home Group': { gstin: '36AABCM5678G1Z9', contact: 'Mr. V. Ramakrishna (GM Accounts)', mobile: '+91 91210 55443', email: 'accounts@myhomegroup.in', address: 'My Home Hub, Hitech City Main Rd, Madhapur, Hyderabad - 500081', rera: 'P02400002156', pos: '36 - Telangana' },
-                          'Prestige Group': { gstin: '36AAACP9876H1Z2', contact: 'Ms. Ananya Sharma (Finance Lead)', mobile: '+91 98800 11223', email: 'billing.hyd@prestigeconstructions.com', address: 'Prestige Falcon Towers, Financial District, Nanakramguda, Hyderabad - 500032', rera: 'P02400003980', pos: '36 - Telangana' },
-                          'Sumadhura Infracon': { gstin: '36AABCS4321J1Z4', contact: 'Mr. K. Mahesh (Channel Partner Mgr)', mobile: '+91 90001 88776', email: 'cp.billing@sumadhura.com', address: 'Sumadhura Horizon, Mindspace Circle, Hitech City, Hyderabad - 500081', rera: 'P02400004512', pos: '36 - Telangana' }
-                        };
-                        const devInfo = devList[val];
-                        if (devInfo) {
+                        const matchDev = (developerMasterList || []).find((d: any) => d.name === val);
+                        if (matchDev) {
                           setCreateInvoiceForm({
                             ...createInvoiceForm,
                             developer_name: val,
-                            developer_gstin: devInfo.gstin,
-                            developer_contact_person: devInfo.contact,
-                            developer_mobile: devInfo.mobile,
-                            developer_email: devInfo.email,
-                            developer_address: devInfo.address,
-                            developer_rera_id: devInfo.rera,
-                            developer_place_of_supply: devInfo.pos
+                            developer_gstin: matchDev.gstin || '',
+                            developer_contact_person: matchDev.contact || matchDev.contact_person || '',
+                            developer_mobile: matchDev.mobile || '',
+                            developer_email: matchDev.email || '',
+                            developer_address: matchDev.address || '',
+                            developer_rera_id: matchDev.rera || '',
+                            developer_place_of_supply: matchDev.place_of_supply || '19 - West Bengal'
                           });
                         } else {
                           setCreateInvoiceForm({ ...createInvoiceForm, developer_name: val });
@@ -16170,10 +16161,9 @@ export default function App() {
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', color: '#4ade80', padding: '7px 10px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '800' }}
                     >
                       <option value="">-- Select Developer / Builder Entity --</option>
-                      <option value="Aparna Constructions">🏢 Aparna Constructions & Estates Pvt Ltd</option>
-                      <option value="My Home Group">🏢 My Home Group (My Home Constructions)</option>
-                      <option value="Prestige Group">🏢 Prestige Estates Projects Ltd</option>
-                      <option value="Sumadhura Infracon">🏢 Sumadhura Infracon Pvt Ltd</option>
+                      {(developerMasterList || []).map((d: any, idx: number) => (
+                        <option key={idx} value={d.name}>🏢 {d.name}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -17096,7 +17086,7 @@ export default function App() {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Locality / City:</span>
-                    <span>{showPrintInvoiceModal.invoice.property_locality || 'Kondapur, Hyderabad'}</span>
+                    <span>{showPrintInvoiceModal.invoice.property_locality || '-'}</span>
                   </div>
 
                   <div style={{ borderTop: `1px solid ${activeT.cardBorder}`, paddingTop: '4px', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -17257,23 +17247,25 @@ export default function App() {
             </div>
 
             <div style={{ background: 'rgba(56, 189, 248, 0.1)', border: '1px solid #0284c7', padding: '12px 16px', borderRadius: '10px', fontSize: '0.82rem', color: isLight ? '#0f172a' : '#ffffff' }}>
-              🎯 <strong>AI Property Matcher Result:</strong> Found 3 top alternative inventory matches in {showAlternativePropertyModal.customer.prefArea || 'Kondapur / Gachibowli'} matching revised budget criteria!
+              🎯 <strong>AI Property Matcher Result:</strong> Found {properties && properties.length > 0 ? Math.min(3, properties.length) : 0} alternative inventory matches {showAlternativePropertyModal.customer.prefArea ? `in ${showAlternativePropertyModal.customer.prefArea}` : ''} matching criteria!
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {[
-                { title: 'Aparna Zenon 3BHK Residence', dev: 'Aparna Constructions', price: '₹84 Lakhs (Within Budget)', locality: 'Kondapur', facing: 'East Facing', match: '96% Match' },
-                { title: 'My Home Jewel 2BHK Flat', dev: 'My Home Group', price: '₹68 Lakhs (Under Budget)', locality: 'Madinaguda', facing: 'North Facing', match: '91% Match' },
-                { title: 'Sumadhura Acropolis 3BHK', dev: 'Sumadhura Infracon', price: '₹78 Lakhs (Special Offer)', locality: 'Nanakramguda', facing: 'East Facing', match: '88% Match' }
-              ].map((alt, idx) => (
+              {(properties && properties.length > 0 ? properties.slice(0, 3) : []).map((alt: any, idx: number) => {
+                const matchPct = 95 - idx * 4;
+                const altTitle = alt.title || alt.project_name || alt.name || `Available Property ${idx + 1}`;
+                const altLocality = alt.locality || alt.location || showAlternativePropertyModal.customer.prefArea || '-';
+                const altDev = alt.developer || alt.builder || 'Verified Partner';
+                const altPrice = alt.final_price || alt.price || alt.price_range || 'Price on Request';
+                return (
                 <div key={idx} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '900' }}>
-                      🔥 {alt.match}
+                      🔥 {matchPct}% Match
                     </span>
-                    <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '1rem', marginTop: '4px' }}>🏢 {alt.title}</h4>
-                    <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8' }}>📍 {alt.locality} • {alt.dev} • {alt.facing}</p>
-                    <strong style={{ color: '#4ade80', fontSize: '0.88rem' }}>{alt.price}</strong>
+                    <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '1rem', marginTop: '4px' }}>🏢 {altTitle}</h4>
+                    <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8' }}>📍 {altLocality} • {altDev} • {alt.facing || 'East Facing'}</p>
+                    <strong style={{ color: '#4ade80', fontSize: '0.88rem' }}>{altPrice}</strong>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -17297,7 +17289,8 @@ export default function App() {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -17474,7 +17467,7 @@ export default function App() {
                       isMulti={true}
                       value={updateReqForm.preferredArea || ''}
                       onChange={(val) => setUpdateReqForm({ ...updateReqForm, preferredArea: val })}
-                      placeholder="e.g. Kondapur, Gachibowli, Madhapur, Hitec City"
+                      placeholder="e.g. Enter preferred localities / areas"
                       required={true}
                     />
                   </div>
@@ -18118,7 +18111,7 @@ export default function App() {
                         required
                         value={newCustomerForm.name || ''}
                         onChange={e => setNewCustomerForm({ ...newCustomerForm, name: e.target.value })}
-                        placeholder="e.g. Sumanth Varma"
+                        placeholder="e.g. Full Name"
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', fontSize: '0.86rem' }}
                       />
                     </div>
@@ -18448,7 +18441,7 @@ export default function App() {
                         type="text"
                         value={newCustomerForm.preferredArea || ''}
                         onChange={e => setNewCustomerForm({ ...newCustomerForm, preferredArea: e.target.value })}
-                        placeholder="e.g. Kondapur / Gachibowli or Madhyamgram"
+                        placeholder="e.g. Enter preferred locality or sector"
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -19409,11 +19402,11 @@ export default function App() {
                     }}>
                       <div>
                         <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Customer Name:</span>
-                        <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.82rem' }}>{newCustomerForm.name || 'Sumanth Varma'}</strong>
+                        <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.82rem' }}>{newCustomerForm.name || '-'}</strong>
                       </div>
                       <div>
                         <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Mobile Phone:</span>
-                        <strong style={{ color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.82rem' }}>{newCustomerForm.mobile || '+91 98490 88888'}</strong>
+                        <strong style={{ color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.82rem' }}>{newCustomerForm.mobile || '-'}</strong>
                       </div>
                       <div>
                         <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Assigned Exec:</span>
@@ -19587,7 +19580,7 @@ const PublicInvoiceCheckoutView: React.FC<{ invoice: any; onSettlePayment: (invN
               Invoice: {invoice.invoice_number}
             </span>
             <span style={{ background: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(4px)', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
-              Customer: {invoice.customer_name || invoice.developer_name || 'Rohan Deshmukh'}
+              Customer: {invoice.customer_name || invoice.developer_name || 'Customer'}
             </span>
           </div>
         </div>

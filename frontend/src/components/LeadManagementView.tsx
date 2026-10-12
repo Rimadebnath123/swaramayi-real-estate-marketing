@@ -323,7 +323,7 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                           </td>
 
                           <td style={{ padding: '12px' }}>
-                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{lead.preferred_location || 'Kondapur'}</strong>
+                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{lead.preferred_location || '-'}</strong>
                             <br />
                             {(['NO_RESPONSE', 'CALL_BACK_LATER', 'PENDING_CALL', 'NOT_INTERESTED'].includes(lead.call_disposition) || !lead.bhk || (lead.last_completed_step && lead.last_completed_step < 3)) ? (
                               <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic', fontWeight: '700' }}>⏳ Pending (Step {lead.last_completed_step || 2})</span>

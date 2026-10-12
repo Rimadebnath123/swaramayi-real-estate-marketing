@@ -1556,10 +1556,10 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                           ...editInvoiceForm,
                           property_code: prop.property_code,
                           property_title: prop.title || `${prop.property_code} Residence`,
-                          developer_name: prop.developer || prop.builder || 'Aparna Constructions',
-                          developer_gstin: prop.developer_gstin || '36AAACA1234F1Z5',
-                          property_locality: prop.locality || 'Kondapur, Hyderabad',
-                          property_configuration: prop.configuration || '3 BHK Luxury Apartment',
+                          developer_name: prop.developer || prop.builder || '',
+                          developer_gstin: prop.developer_gstin || '',
+                          property_locality: prop.locality || prop.location || '',
+                          property_configuration: prop.configuration || prop.type || '',
                           flat_price: String(computedFlatPrice),
                           parking_price: String(computedParkPrice),
                           agreement_value: String(computedAgreementVal),
@@ -1607,10 +1607,10 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                             ...editInvoiceForm,
                             property_code: val,
                             property_title: matched.title || `${val} Residence`,
-                            developer_name: matched.developer || matched.builder || 'Aparna Constructions',
-                            developer_gstin: matched.developer_gstin || '36AAACA1234F1Z5',
-                            property_locality: matched.locality || 'Kondapur, Hyderabad',
-                            property_configuration: matched.configuration || '3 BHK Luxury Apartment',
+                            developer_name: matched.developer || matched.builder || '',
+                            developer_gstin: matched.developer_gstin || '',
+                            property_locality: matched.locality || matched.location || '',
+                            property_configuration: matched.configuration || matched.type || '',
                             flat_price: String(fPrice),
                             parking_price: String(pPrice),
                             agreement_value: String(compAgree),
@@ -1641,17 +1641,17 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                   <div>
                     <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Locality / Sector</label>
-                    <input type="text" value={editInvoiceForm.property_locality || 'Kondapur, Hyderabad'} onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, property_locality: e.target.value })} placeholder="Kondapur, Hyderabad" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} />
+                    <input type="text" value={editInvoiceForm.property_locality || ''} onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, property_locality: e.target.value })} placeholder="e.g. Locality / Sector" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} />
                   </div>
 
                   <div>
                     <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>BHK & Unit Configuration</label>
-                    <input type="text" value={editInvoiceForm.property_configuration || '3 BHK Luxury Apartment'} onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, property_configuration: e.target.value })} placeholder="3 BHK Luxury Apartment" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} />
+                    <input type="text" value={editInvoiceForm.property_configuration || ''} onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, property_configuration: e.target.value })} placeholder="e.g. 2 BHK / 3 BHK Apartment" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} />
                   </div>
 
                   <div>
                     <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Developer GSTIN</label>
-                    <input type="text" value={editInvoiceForm.developer_gstin || ''} onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, developer_gstin: e.target.value })} placeholder="36AAACA1234F1Z5" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} />
+                    <input type="text" value={editInvoiceForm.developer_gstin || ''} onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, developer_gstin: e.target.value })} placeholder="e.g. 19AAAAA0000A1Z5" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} />
                   </div>
                 </div>
               </div>

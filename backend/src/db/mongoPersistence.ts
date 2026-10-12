@@ -211,48 +211,66 @@ export async function loadDataFromMongoDB() {
 
     console.log(`📥 Loaded existing data from MongoDB Atlas: ${mongoUsers.length} users, ${mongoTeams.length} teams, ${mongoBranches.length} branches, ${mongoProperties.length} properties, ${mongoCustomers.length} customers, ${mongoDevelopers.length} developers, ${mongoRatingInvites.length} rating invites`);
 
-    // Helper to identify test / dummy records (fgtf, dfrt, SRM-LD-2026-000101, SRM-CUS-2026-000124)
+    // Dynamic validator to identify corrupted or explicitly flagged test records without hardcoded names
     const isTestRecord = (rec: any) => {
-      if (!rec) return true;
-      const name = (rec.name || rec.full_name || rec.customer_name || '').toString().toLowerCase();
-      const mob = (rec.mobile || rec.phone || '').toString().toLowerCase();
-      const num = (rec.customer_number || rec.lead_number || rec.id || rec.customer_id || '').toString().toUpperCase();
-      return (
-        name.includes('fgtf') ||
-        mob.includes('dfrt') ||
-        num.includes('000101') ||
-        num.includes('000124') ||
-        name.includes('rohan deshmukh') ||
-        name.includes('sumanth varma') ||
-        name.includes('honey sing') ||
-        num.includes('000184') ||
-        num.includes('000186') ||
-        num.includes('000188')
-      );
+      if (!rec || typeof rec !== 'object') return true;
+      // Dynamically flag records explicitly marked as test or demo
+      if (rec.is_test === true || rec.is_demo === true || rec.is_dummy === true || rec.test_record === true) {
+        return true;
+      }
+      const name = (rec.name || rec.full_name || rec.customer_name || '').toString().trim();
+      const mob = (rec.mobile || rec.phone || '').toString().trim();
+      const num = (rec.customer_number || rec.lead_number || rec.id || rec.customer_id || '').toString().trim();
+      // Corrupt or blank records lacking any name, phone, or identification
+      if (!name && !mob && !num) return true;
+      return false;
     };
 
     const sanitizedCustomers = mongoCustomers.filter(c => !isTestRecord(c));
     const sanitizedLeads = mongoLeads.filter(l => !isTestRecord(l));
 
-    // Asynchronously delete purged test records from MongoDB Atlas database
+    // Dynamically delete corrupted/flagged test customer records by their database identifiers
     if (mongoCustomers.length > sanitizedCustomers.length) {
-      CustomerModel.deleteMany({
-        $or: [
-          { full_name: /fgtf|rohan deshmukh|sumanth varma|honey sing/i },
-          { mobile: /dfrt|6567788888/i },
-          { customer_number: /000101|000124|000184|000186|000188/i }
-        ]
-      }).catch(() => {});
+      const purgeCustIds: any[] = [];
+      const purgeCustCustomIds: string[] = [];
+      mongoCustomers.forEach((c: any) => {
+        if (isTestRecord(c)) {
+          if (c._id) purgeCustIds.push(c._id);
+          if (c.id) purgeCustCustomIds.push(String(c.id));
+          if (c.customer_number) purgeCustCustomIds.push(String(c.customer_number));
+        }
+      });
+      const conditions: any[] = [];
+      if (purgeCustIds.length > 0) conditions.push({ _id: { $in: purgeCustIds } });
+      if (purgeCustCustomIds.length > 0) {
+        conditions.push({ id: { $in: purgeCustCustomIds } });
+        conditions.push({ customer_number: { $in: purgeCustCustomIds } });
+      }
+      if (conditions.length > 0) {
+        CustomerModel.deleteMany({ $or: conditions }).catch(() => {});
+      }
     }
 
+    // Dynamically delete corrupted/flagged test lead records by their database identifiers
     if (mongoLeads.length > sanitizedLeads.length) {
-      LeadModel.deleteMany({
-        $or: [
-          { customer_name: /fgtf|rohan deshmukh|sumanth varma|honey sing/i },
-          { mobile: /dfrt|6567788888/i },
-          { lead_number: /000101|000124|000184|000186|000188/i }
-        ]
-      }).catch(() => {});
+      const purgeLeadIds: any[] = [];
+      const purgeLeadCustomIds: string[] = [];
+      mongoLeads.forEach((l: any) => {
+        if (isTestRecord(l)) {
+          if (l._id) purgeLeadIds.push(l._id);
+          if (l.id) purgeLeadCustomIds.push(String(l.id));
+          if (l.lead_number) purgeLeadCustomIds.push(String(l.lead_number));
+        }
+      });
+      const conditions: any[] = [];
+      if (purgeLeadIds.length > 0) conditions.push({ _id: { $in: purgeLeadIds } });
+      if (purgeLeadCustomIds.length > 0) {
+        conditions.push({ id: { $in: purgeLeadCustomIds } });
+        conditions.push({ lead_number: { $in: purgeLeadCustomIds } });
+      }
+      if (conditions.length > 0) {
+        LeadModel.deleteMany({ $or: conditions }).catch(() => {});
+      }
     }
 
     return {

@@ -70,8 +70,8 @@ export async function createTeam(req: AuthRequest, res: Response) {
   const newTeam = {
     id: `TEAM-${Date.now()}`,
     team_name,
-    branch_id: 'BR-HYD-KON',
-    branch_name: branch_name || 'Kondapur Branch',
+    branch_id: 'BR-MAIN',
+    branch_name: branch_name || 'Main Branch',
     team_lead_name: team_lead_name || 'Rahul Sharma',
     members_count: 1
   };
@@ -110,7 +110,7 @@ export async function createUser(req: AuthRequest, res: Response) {
     email,
     mobile: mobile || '+91 98490 00000',
     role: role || 'SALES_EXEC',
-    branch_name: branch_name || 'Kondapur Branch',
+    branch_name: branch_name || 'Main Branch',
     department: department || 'Sales',
     team_name: team_name || 'Sales Team Alpha',
     manager_name: manager_name || 'Rahul Sharma',

@@ -203,7 +203,7 @@ export async function createCustomer(req: AuthRequest, res: Response) {
     lead_number: leadNumber, // SRM-LEAD-2026-001245
     customer_id: newCustId,
     source: lead_source || 'Meta Ads',
-    property_requirement: `${configuration || '3BHK'} in ${preferred_location || 'Kondapur'}`,
+    property_requirement: `${configuration || '3BHK'} in ${preferred_location || 'Selected Area'}`,
     budget: budget_max || 0,
     assigned_employee_id: assigned_employee_id || req.user?.id || null,
     lead_status: 'New',
@@ -452,22 +452,15 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
   const payload = req.body;
   if (payload) {
     const isTestRecord = (rec: any) => {
-      if (!rec) return true;
-      const name = (rec.name || rec.full_name || rec.customer_name || '').toString().toLowerCase();
-      const mob = (rec.mobile || rec.phone || '').toString().toLowerCase();
-      const num = (rec.customer_number || rec.lead_number || rec.id || rec.customer_id || '').toString().toUpperCase();
-      return (
-        name.includes('fgtf') ||
-        mob.includes('dfrt') ||
-        num.includes('000101') ||
-        num.includes('000124') ||
-        name.includes('rohan deshmukh') ||
-        name.includes('sumanth varma') ||
-        name.includes('honey sing') ||
-        num.includes('000184') ||
-        num.includes('000186') ||
-        num.includes('000188')
-      );
+      if (!rec || typeof rec !== 'object') return true;
+      if (rec.is_test === true || rec.is_demo === true || rec.is_dummy === true || rec.test_record === true) {
+        return true;
+      }
+      const name = (rec.name || rec.full_name || rec.customer_name || '').toString().trim();
+      const mob = (rec.mobile || rec.phone || '').toString().trim();
+      const num = (rec.customer_number || rec.lead_number || rec.id || rec.customer_id || '').toString().trim();
+      if (!name && !mob && !num) return true;
+      return false;
     };
 
     if (Array.isArray(payload.leads)) {

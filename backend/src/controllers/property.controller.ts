@@ -64,8 +64,8 @@ export async function createProperty(req: AuthRequest, res: Response) {
     property_title,
     property_type: property_type || 'Apartment',
     transaction_type: transaction_type || 'Sale',
-    developer_name: developer_name || 'Aparna Constructions',
-    project_name: project_name || 'Aparna Zenon',
+    developer_name: developer_name || '',
+    project_name: project_name || '',
     tower_name: tower_name || 'Tower A',
     floor: Number(floor) || 1,
     unit_number: unit_number || 'A-101',
@@ -107,7 +107,7 @@ export async function createProperty(req: AuthRequest, res: Response) {
     id: uuidv4(),
     unit_code: unitCode, // SRM-UNIT-2026-000001
     property_id: newProperty.id,
-    project_name: newProperty.project_name || 'Aparna Zenon',
+    project_name: newProperty.project_name || '',
     tower_block: newProperty.tower_name || 'Tower A',
     floor: newProperty.floor || 1,
     unit_number: newProperty.unit_number || 'A-101',
@@ -194,7 +194,7 @@ export async function shareProperty(req: AuthRequest, res: Response) {
   const share = {
     id: uuidv4(),
     property_id: property.property_code,
-    customer_id: customer_id || 'SRM-CUS-2026-000184',
+    customer_id: customer_id || '',
     employee_id: req.user?.id || 'USR-01',
     employee_name: req.user?.username || 'Avishek Das',
     channel: channel || 'WhatsApp',

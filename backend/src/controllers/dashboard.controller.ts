@@ -134,28 +134,19 @@ export async function getCustomerRequirementsIntelligence(req: AuthRequest, res:
     noMatch: 4
   };
 
-  const waitingCustomers = [
-    {
-      customer_id: 'CUST-04',
-      customer_name: 'Sunita Rao',
-      customer_number: 'SRM-CUS-2026-000187',
-      requirement: '3BHK Flat in Kondapur, ₹80–95L',
-      matched_properties_count: 5,
-      status: 'Not Yet Sent',
-      assigned_exec: 'Amit Patel',
-      priority: 'WARM'
-    },
-    {
-      customer_id: 'CUST-05',
-      customer_name: 'Vikram Chatterji',
-      customer_number: 'SRM-CUS-2026-000188',
-      requirement: '4BHK Villa in Rajarhat, ₹1.5–2.0 Cr',
-      matched_properties_count: 3,
+  const waitingCustomers = (data.customers || [])
+    .filter((c: any) => c.status === 'REQUIREMENT_CAPTURED' || c.status === 'NEW' || !c.status)
+    .slice(0, 5)
+    .map((c: any) => ({
+      customer_id: c.id,
+      customer_name: c.full_name || 'Valued Customer',
+      customer_number: c.customer_number || '',
+      requirement: `${c.configuration || 'Property'} in ${c.preferred_location || 'Selected Area'}`,
+      matched_properties_count: 2,
       status: 'Pending Verification',
-      assigned_exec: 'Avishek Das',
-      priority: 'HOT'
-    }
-  ];
+      assigned_exec: c.assigned_employee_name || 'Sales Desk',
+      priority: c.priority || 'WARM'
+    }));
 
   return res.json({
     status: 'SUCCESS',
@@ -244,7 +235,7 @@ export async function getFollowUpControlCenter(req: AuthRequest, res: Response) 
       customer_id: c.id,
       customer_number: c.customer_number,
       customer_name: c.full_name,
-      requirement: `${c.configuration || '3BHK'} in ${c.preferred_location || 'Kondapur'}`,
+      requirement: `${c.configuration || '3BHK'} in ${c.preferred_location || 'Selected Area'}`,
       budget: `₹${((c.budget_max || 8500000) / 100000).toFixed(1)}L`,
       lead_score: c.lead_score || 90,
       assigned_exec: c.assigned_employee_name || 'Avishek Das',
@@ -352,8 +343,8 @@ export async function getTeamPerformanceAnalytics(req: AuthRequest, res: Respons
   ];
 
   const teamComparison = {
-    teamA: { name: 'Sales Team Alpha (Kondapur)', leads: 85, site_visits: 18, bookings: 4, brokerage: 640000, avgDealValue: 8500000 },
-    teamB: { name: 'Sales Team Bravo (Gachibowli)', leads: 65, site_visits: 12, bookings: 2, brokerage: 330000, avgDealValue: 6200000 }
+    teamA: { name: 'Sales Team Alpha', leads: 85, site_visits: 18, bookings: 4, brokerage: 640000, avgDealValue: 8500000 },
+    teamB: { name: 'Sales Team Bravo', leads: 65, site_visits: 12, bookings: 2, brokerage: 330000, avgDealValue: 6200000 }
   };
 
   return res.json({

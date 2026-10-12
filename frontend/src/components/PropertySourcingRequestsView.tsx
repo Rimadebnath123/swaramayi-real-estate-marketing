@@ -76,8 +76,8 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
     customer_name: '',
     mobile: '',
     email: '',
-    preferred_locality: 'Kondapur',
-    secondary_areas: 'Gachibowli, Hitec City',
+    preferred_locality: '',
+    secondary_areas: '',
     property_type: 'Flat / Apartment',
     configuration: '3BHK',
     budget_min: '₹70 Lakhs',
@@ -145,8 +145,8 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
       customer_name: '',
       mobile: '',
       email: '',
-      preferred_locality: 'Kondapur',
-      secondary_areas: 'Gachibowli, Hitec City',
+      preferred_locality: '',
+      secondary_areas: '',
       property_type: 'Flat / Apartment',
       configuration: '3BHK',
       budget_min: '₹70 Lakhs',
@@ -828,7 +828,7 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
                     isMulti={true}
                     value={newRequestForm.secondary_areas || ''}
                     onChange={(val) => setNewRequestForm({ ...newRequestForm, secondary_areas: val })}
-                    placeholder="e.g. Barasat, New Town, Hitec City"
+                    placeholder="e.g. Primary Sector, Secondary Sector"
                   />
                 </div>
               </div>

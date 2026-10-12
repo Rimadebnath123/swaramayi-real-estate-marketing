@@ -39,7 +39,6 @@ const DEFAULT_LOCALITIES = [
   'Nimta, Birati',
 
   // Telangana / Hyderabad & IT Corridor
-  'Kondapur, Hyderabad',
   'Gachibowli, Hyderabad',
   'Hitec City, Hyderabad',
   'Madhapur, Hyderabad',

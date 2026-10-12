@@ -380,7 +380,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
           mobile: l.mobile,
           email: l.email || 'lead@swaramayi.com',
           budget: l.budget || ((l.budget_min || l.budget_max) ? `${l.budget_min || ''} - ${l.budget_max || ''}`.trim() : '50 Lakhs - 60 Lakhs'),
-          preferredArea: l.preferred_location || 'Kondapur',
+          preferredArea: l.preferred_location || l.location || '',
           configuration: l.bhk || '3BHK',
           priority: l.priority || 'HOT',
           score: l.quality_score || 88,
@@ -897,7 +897,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
       ],
       '5. PROPERTY MASTER ID': [
         { label: 'Property Master Code', value: item.id },
-        { label: 'Property Title', value: `Swaramayi ${location.split('/')[0] || 'Kondapur'} Premium Flat` },
+        { label: 'Property Title', value: `Swaramayi ${location.split('/')[0] || 'Prime'} Premium Flat` },
         { label: 'Project & Developer', value: 'Swaramayi Heights (Swaramayi Developers)' },
         { label: 'Tower / Floor / Unit', value: 'Tower A, Floor 12, Unit 1204' },
         { label: 'Carpet Area', value: '1,850 Sq.Ft.' },
@@ -1289,12 +1289,11 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                   style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
                 >
                   <option value="ALL">ALL Locality Hubs</option>
-                  <option value="Kondapur">Kondapur / Gachibowli</option>
-                  <option value="Financial District">Financial District</option>
-                  <option value="Hitec City">HITEC City Sector</option>
-                  <option value="Madhyamgram">Madhyamgram Sector</option>
-                  <option value="Madinaguda">Madinaguda Sector</option>
-                  <option value="Nanakramguda">Nanakramguda Sector</option>
+                  {Array.from(new Set(
+                    (customers || []).map((c: any) => c.preferredArea || c.preferred_location || c.location || '').filter(Boolean)
+                  )).map((loc: any, idx) => (
+                    <option key={idx} value={loc}>{loc}</option>
+                  ))}
                 </select>
               </div>
               <div>

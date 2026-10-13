@@ -43,6 +43,18 @@ interface CostSheetSharingViewProps {
   setShowUpdateRequirementModal?: (val: any) => void;
 }
 
+const formatDisplayDateTime = (raw: any): string => {
+  if (!raw || raw === 'Just Now') return raw || 'Just Now';
+  if (typeof raw === 'string' && !raw.includes('T') && !raw.endsWith('Z') && (raw.includes('AM') || raw.includes('PM'))) {
+    return raw;
+  }
+  const d = new Date(raw);
+  if (!isNaN(d.getTime())) {
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  }
+  return String(raw);
+};
+
 export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
   currentRole,
   isLight,
@@ -213,6 +225,41 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
       return true;
     });
   }, [displayedCostSheets, selectedCustomerFilter, individualCostSheetsSearch, searchQuery, matchesSearchQuery]);
+
+  // Group cost sheets by customer when customer has more than 1 cost sheet (display like Visit Scheduler)
+  const groupedCostSheets = React.useMemo(() => {
+    const groups: Array<{
+      groupKey: string;
+      customerKey: string;
+      items: any[];
+    }> = [];
+
+    const map = new Map<string, typeof groups[0]>();
+
+    filteredCostSheets.forEach((item: any) => {
+      const itemCustId = item.customerId || item.customerSnapshot?.customerNumber || item.customerSnapshot?.customerId || '';
+      const itemCustMob = item.customerSnapshot?.mobile || item.mobile || '';
+      const cleanMob = itemCustMob ? itemCustMob.replace(/\D/g, '') : '';
+      const name = item.customerSnapshot?.customerName || item.customerName || '';
+      const matchId = item.matchId || item.matchingId || '';
+
+      const customerKey = itemCustId || (cleanMob.length >= 7 ? cleanMob : '') || matchId || name || item.costSheetId;
+
+      if (!map.has(customerKey)) {
+        const newGroup = {
+          groupKey: customerKey,
+          customerKey,
+          items: [item]
+        };
+        map.set(customerKey, newGroup);
+        groups.push(newGroup);
+      } else {
+        map.get(customerKey)!.items.push(item);
+      }
+    });
+
+    return groups;
+  }, [filteredCostSheets]);
 
   // Bulk Delete Selected Cost Sheets
   const handleDeleteSelectedCostSheets = () => {
@@ -585,76 +632,80 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredCostSheets.map((item: any, i: number) => {
-                      const itemPropCode = item.propertyCode || item.propertySnapshot?.propertyCode;
-                      const itemCustId = item.customerId || item.customerSnapshot?.customerNumber || item.customerSnapshot?.customerId;
-                      const itemCustMob = item.customerSnapshot?.mobile || item.mobile;
-                      const cleanMob = itemCustMob ? itemCustMob.replace(/\D/g, '') : '';
+                    {groupedCostSheets.map((group: any, gIdx: number) => {
+                      // CASE 1: Single Cost Sheet (Standard Single Row View)
+                      if (group.items.length <= 1) {
+                        const item = group.items[0];
+                        const i = gIdx;
+                        const itemPropCode = item.propertyCode || item.propertySnapshot?.propertyCode;
+                        const itemCustId = item.customerId || item.customerSnapshot?.customerNumber || item.customerSnapshot?.customerId;
+                        const itemCustMob = item.customerSnapshot?.mobile || item.mobile;
+                        const cleanMob = itemCustMob ? itemCustMob.replace(/\D/g, '') : '';
 
-                      const matchedProp = (properties || []).find((p: any) => 
-                        (p.property_code && itemPropCode && p.property_code === itemPropCode) ||
-                        (p.id && itemPropCode && p.id === itemPropCode) ||
-                        (p.property_code && item.propertyId && p.property_code === item.propertyId) ||
-                        (p.id && item.propertyId && p.id === item.propertyId)
-                      );
+                        const matchedProp = (properties || []).find((p: any) => 
+                          (p.property_code && itemPropCode && p.property_code === itemPropCode) ||
+                          (p.id && itemPropCode && p.id === itemPropCode) ||
+                          (p.property_code && item.propertyId && p.property_code === item.propertyId) ||
+                          (p.id && item.propertyId && p.id === item.propertyId)
+                        );
 
-                      const matchedCust = (customers || []).find((c: any) => 
-                        (c.customer_number && itemCustId && c.customer_number === itemCustId) ||
-                        (c.id && itemCustId && c.id === itemCustId) ||
-                        (cleanMob && cleanMob.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMob)
-                      );
+                        const matchedCust = (customers || []).find((c: any) => 
+                          (c.customer_number && itemCustId && c.customer_number === itemCustId) ||
+                          (c.id && itemCustId && c.id === itemCustId) ||
+                          (cleanMob && cleanMob.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMob)
+                        );
 
-                      const custName = item.customerSnapshot?.customerName || item.customerName || matchedCust?.full_name || matchedCust?.name || 'Prospect Customer';
-                      const custMobile = item.customerSnapshot?.mobile || item.mobile || matchedCust?.mobile || 'N/A';
-                      const custNum = item.customerId || item.customerSnapshot?.customerNumber || matchedCust?.customer_number || '';
+                        const custName = item.customerSnapshot?.customerName || item.customerName || matchedCust?.full_name || matchedCust?.name || 'Prospect Customer';
+                        const custMobile = item.customerSnapshot?.mobile || item.mobile || matchedCust?.mobile || 'N/A';
+                        const custNum = item.customerId || item.customerSnapshot?.customerNumber || matchedCust?.customer_number || '';
 
-                      const matchId = item.matchId || item.matchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
-                      const matchScore = item.matchSnapshot?.matchScore || item.matchScore || (matchedCust?.quality_score) || 88;
+                        const matchId = item.matchId || item.matchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
+                        const matchScore = item.matchSnapshot?.matchScore || item.matchScore || (matchedCust?.quality_score) || 88;
 
-                      const propCodeStr = itemPropCode || matchedProp?.property_code || 'SRM-PROP-2026-000426';
-                      const rawPropTitle = item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name;
-                      const propTitleStr = rawPropTitle && !rawPropTitle.startsWith('1 Properties') 
-                        ? rawPropTitle 
-                        : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'BARASAT ECO RESIDENCY');
+                        const propCodeStr = itemPropCode || matchedProp?.property_code || 'SRM-PROP-2026-000426';
+                        const rawPropTitle = item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name;
+                        const propTitleStr = rawPropTitle && !rawPropTitle.startsWith('1 Properties') 
+                          ? rawPropTitle 
+                          : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'BARASAT ECO RESIDENCY');
 
-                      const devNameStr = item.propertySnapshot?.developerName || matchedProp?.developer || matchedProp?.developer_name || matchedProp?.developer_name || matchedProp?.builder_name || 'Swaramayi Partner Developer';
-                      const localityStr = item.propertySnapshot?.locality || matchedProp?.locality || 'Barasat / Banamalipur';
-                      const bhkStr = item.propertySnapshot?.bhk || item.propertySnapshot?.configuration || matchedProp?.configuration || matchedProp?.bhk || '3BHK';
-                      const propTypeStr = item.propertySnapshot?.property_type || item.propertySnapshot?.propertyType || item.propertyType || matchedProp?.property_type || 'Flat / Apartment';
+                        const devNameStr = item.propertySnapshot?.developerName || matchedProp?.developer || matchedProp?.developer_name || matchedProp?.developer_name || matchedProp?.builder_name || 'Swaramayi Partner Developer';
+                        const localityStr = item.propertySnapshot?.locality || matchedProp?.locality || 'Barasat / Banamalipur';
+                        const bhkStr = item.propertySnapshot?.bhk || item.propertySnapshot?.configuration || matchedProp?.configuration || matchedProp?.bhk || '3BHK';
+                        const propTypeStr = item.propertySnapshot?.property_type || item.propertySnapshot?.propertyType || item.propertyType || matchedProp?.property_type || 'Flat / Apartment';
 
-                      const basePriceNum = item.pricingSnapshot?.basePrice || item.base_price || matchedProp?.base_price || 5114880;
-                      const basePriceStr = item.formattedPriceBreakup?.basePriceStr || (basePriceNum ? `₹${Number(basePriceNum).toLocaleString('en-IN')}` : '₹51,14,880');
-                      const totalEstNum = item.pricingSnapshot?.totalEstimatedCost || item.final_estimated_price || matchedProp?.final_estimated_price || 5677517;
-                      const totalEstStr = item.formattedPriceBreakup?.totalEstimatedCostStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : '₹56,77,517');
+                        const basePriceNum = item.pricingSnapshot?.basePrice || item.base_price || matchedProp?.base_price || 5114880;
+                        const basePriceStr = item.formattedPriceBreakup?.basePriceStr || (basePriceNum ? `₹${Number(basePriceNum).toLocaleString('en-IN')}` : '₹51,14,880');
+                        const totalEstNum = item.pricingSnapshot?.totalEstimatedCost || item.final_estimated_price || matchedProp?.final_estimated_price || 5677517;
+                        const totalEstStr = item.formattedPriceBreakup?.totalEstimatedCostStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : '₹56,77,517');
 
-                      const statusStr = item.status || 'GENERATED';
-                      const createdAtStr = item.createdAt || item.created_at || 'Just Now';
-                      const createdByStr = (() => {
-                        const cb = item.createdBy || item.created_by;
-                        if (cb) return cb;
-                        const as = item.customerSnapshot?.assignedSalesperson;
-                        if (as) return as;
-                        return 'Avishek Das (Super Admin)';
-                      })();
+                        const statusStr = item.status || 'GENERATED';
+                        const createdAtStr = formatDisplayDateTime(item.createdAt || item.created_at || 'Just Now');
+                        const createdByStr = (() => {
+                          const cb = item.createdBy || item.created_by;
+                          if (cb) return cb;
+                          const as = item.customerSnapshot?.assignedSalesperson;
+                          if (as) return as;
+                          return 'Avishek Das (Super Admin)';
+                        })();
 
-                      return (
-                        <tr key={i} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: selectedCostSheetIds.includes(item.costSheetId) ? (isLight ? 'rgba(56, 189, 248, 0.08)' : 'rgba(56, 189, 248, 0.12)') : undefined }}>
-                          <td style={{ padding: '12px', textAlign: 'center', width: '42px' }}>
-                            <input 
-                              type="checkbox"
-                              checked={selectedCostSheetIds.includes(item.costSheetId)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedCostSheetIds(prev => [...prev, item.costSheetId]);
-                                } else {
-                                  setSelectedCostSheetIds(prev => prev.filter(id => id !== item.costSheetId));
-                                }
-                              }}
-                              style={{ cursor: 'pointer', transform: 'scale(1.15)' }}
-                              title={`Select Cost Sheet ${item.costSheetId}`}
-                            />
-                          </td>
-                          <td style={{ padding: '12px' }}>
+                        return (
+                          <tr key={item.costSheetId || i} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: selectedCostSheetIds.includes(item.costSheetId) ? (isLight ? 'rgba(56, 189, 248, 0.08)' : 'rgba(56, 189, 248, 0.12)') : undefined }}>
+                            <td style={{ padding: '12px', textAlign: 'center', width: '42px' }}>
+                              <input 
+                                type="checkbox"
+                                checked={selectedCostSheetIds.includes(item.costSheetId)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedCostSheetIds(prev => [...prev, item.costSheetId]);
+                                  } else {
+                                    setSelectedCostSheetIds(prev => prev.filter(id => id !== item.costSheetId));
+                                  }
+                                }}
+                                style={{ cursor: 'pointer', transform: 'scale(1.15)' }}
+                                title={`Select Cost Sheet ${item.costSheetId}`}
+                              />
+                            </td>
+                            <td style={{ padding: '12px' }}>
                               <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.88rem' }}>{item.costSheetId}</span>
                               <br />
                               <span style={{ background: item.versionNumber > 1 ? '#fbbf24' : '#0284c7', color: '#0f172a', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '900', marginTop: '2px', display: 'inline-block' }}>
@@ -719,177 +770,585 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                               <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.78rem' }}>{createdAtStr}</span>
                               <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>By: {createdByStr}</span>
                             </td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                              <button 
-                                onClick={() => setShowViewIndividualCostSheetModal({ open: true, costSheet: item })} 
-                                style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px' }}
-                              >
-                                <Eye size={12} /> View
-                              </button>
-                              <button 
-                                onClick={() => handleOpenRevisionModal(item)} 
-                                style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px' }}
-                                title="Edit Customer Details or Pricing & Create Revisions"
-                              >
-                                ✏️ Edit
-                              </button>
-                              <button 
-                                onClick={() => sendCostSheetWhatsApp(item)} 
-                                style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem' }}
-                                title="Send Cost Sheet directly to customer WhatsApp"
-                              >
-                                📲 Send
-                              </button>
-                              <button 
-                                onClick={() => downloadCostSheetPDF(item)} 
-                                style={{ background: '#334155', color: '#38bdf8', border: '1px solid #38bdf8', padding: '4px 6px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem' }}
-                              >
-                                📥 PDF
-                              </button>
+                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                              <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                <button 
+                                  onClick={() => setShowViewIndividualCostSheetModal({ open: true, costSheet: item })} 
+                                  style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px' }}
+                                >
+                                  <Eye size={12} /> View
+                                </button>
+                                <button 
+                                  onClick={() => handleOpenRevisionModal(item)} 
+                                  style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px' }}
+                                  title="Edit Customer Details or Pricing & Create Revisions"
+                                >
+                                  ✏️ Edit
+                                </button>
+                                <button 
+                                  onClick={() => sendCostSheetWhatsApp(item)} 
+                                  style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem' }}
+                                  title="Send Cost Sheet directly to customer WhatsApp"
+                                >
+                                  📲 Send
+                                </button>
+                                <button 
+                                  onClick={() => downloadCostSheetPDF(item)} 
+                                  style={{ background: '#334155', color: '#38bdf8', border: '1px solid #38bdf8', padding: '4px 6px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem' }}
+                                >
+                                  📥 PDF
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    if (setActiveTab) setActiveTab('visit_management');
+                                    if (setActiveVisitSubTab) setActiveVisitSubTab('visit_route_planner');
+                                    setShowScheduleVisitModal({ open: true, costSheet: item });
+                                  }} 
+                                  style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px' }}
+                                  title="Schedule Site Visit for this Cost Sheet customer & property"
+                                >
+                                  🚘 Visit Schedule
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    setShowSendToFollowupModal({
+                                      costSheet: item,
+                                      customerName: custName,
+                                      customerNumber: custNum,
+                                      mobile: custMobile,
+                                      propertyTitle: propTitleStr
+                                    });
+                                    setSendFollowupForm({
+                                      followupDate: new Date().toISOString().split('T')[0],
+                                      followupTime: '17:00',
+                                      priority: 'HIGH',
+                                      remarks: `Follow up with ${custName} regarding cost sheet ${item.costSheetId} for ${propTitleStr}.`
+                                    });
+                                  }} 
+                                  style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}
+                                  title="Send Cost Sheet to Need to Followup management list with remarks, date & time"
+                                >
+                                  📌 Send to Followup
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    if (setShowShiftToMatchingModal) {
+                                      setShowShiftToMatchingModal({
+                                        open: true,
+                                        item: item,
+                                        customerName: custName,
+                                        customerNumber: custNum,
+                                        mobile: custMobile,
+                                        matchId: matchId,
+                                        propertyTitle: propTitleStr,
+                                        note: ''
+                                      });
+                                    } else {
+                                      if (setSelectedMatchingId) setSelectedMatchingId(matchId);
+                                      if (setActiveTab) setActiveTab('matching_management');
+                                    }
+                                  }} 
+                                  style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: '1px solid #38bdf8', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}
+                                  title="Shift to Matching Management for this customer under the same Matching ID to select & match other properties with a note"
+                                >
+                                  ⚡ Shift to Matching
+                                </button>
+                                {setShowUpdateRequirementModal && (
+                                  <button 
+                                    onClick={() => {
+                                      if (setUpdateReqForm) {
+                                        setUpdateReqForm({
+                                          budget_min: '₹50 Lakhs',
+                                          budget_max: '₹1.5 Crores',
+                                          preferredArea: propTitleStr || 'Barasat, Kolkata',
+                                          configuration: '3BHK',
+                                          dislike_reason: 'Over Budget',
+                                          remarks: ''
+                                        });
+                                      }
+                                      setShowUpdateRequirementModal({ 
+                                        open: true, 
+                                        customer: { 
+                                          custName, 
+                                          custCode: custNum, 
+                                          mobile: custMobile, 
+                                          propertyCode: propCodeStr
+                                        } 
+                                      });
+                                    }} 
+                                    style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}
+                                    title="Update buyer preferences & requirements on-the-spot"
+                                  >
+                                    ✏️ Update Requirement
+                                  </button>
+                                )}
+                                {isSuperAdmin && (
+                                  <button 
+                                    onClick={() => {
+                                      if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Cost Sheet record ${item.costSheetId} for ${custName}? It will be moved to Recycle Bin.`)) {
+                                        if (onRecycleItem) {
+                                          onRecycleItem({
+                                            id: item.id || item.costSheetId || `CS-${Date.now()}`,
+                                            title: `Cost Sheet - ${custName} (${item.costSheetId})`,
+                                            category: 'Cost Sheet',
+                                            originalLocation: 'Cost Sheet Sharing Engine',
+                                            details: `Project: ${item.propertySnapshot?.title || 'N/A'}, Total: ${item.grandTotalFormatted || 'N/A'}`,
+                                            originalData: item
+                                          });
+                                        }
+                                        const updatedCostSheets = (individualCostSheets || []).filter((c: any) => 
+                                          c.costSheetId !== item.costSheetId && 
+                                          (!item.id || c.id !== item.id) &&
+                                          (!item.costSheetId || c.costSheetId !== item.costSheetId)
+                                        );
+                                        if (setIndividualCostSheets) {
+                                          setIndividualCostSheets(updatedCostSheets);
+                                        }
+                                        try {
+                                          setSelectedCostSheetIds(prev => prev.filter(id => id !== item.costSheetId && id !== item.id));
+                                          localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updatedCostSheets));
+                                        } catch (e) {}
+
+                                        if (syncAllToMongoDB) {
+                                          syncAllToMongoDB({
+                                            cost_sheets: updatedCostSheets
+                                          });
+                                        }
+                                        alert(`🗑️ Cost Sheet ${item.costSheetId} moved to Recycle Bin.`);
+                                      }
+                                    }} 
+                                    style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px' }}
+                                    title="Move this cost sheet record to Recycle Bin"
+                                  >
+                                    🗑️ Delete
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      // CASE 2: MULTI-PROPERTY / MULTI-COST SHEET (when cost sheets > 1) -> EXACT VISIT SCHEDULER STYLE!
+                      const firstItem = group.items[0];
+                      const itemCustId = firstItem.customerId || firstItem.customerSnapshot?.customerNumber || firstItem.customerSnapshot?.customerId;
+                      const itemCustMob = firstItem.customerSnapshot?.mobile || firstItem.mobile;
+                      const cleanMob = itemCustMob ? itemCustMob.replace(/\D/g, '') : '';
+
+                      const matchedCust = (customers || []).find((c: any) => 
+                        (c.customer_number && itemCustId && c.customer_number === itemCustId) ||
+                        (c.id && itemCustId && c.id === itemCustId) ||
+                        (cleanMob && cleanMob.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMob)
+                      );
+
+                      const custName = firstItem.customerSnapshot?.customerName || firstItem.customerName || matchedCust?.full_name || matchedCust?.name || 'Prospect Customer';
+                      const custMobile = firstItem.customerSnapshot?.mobile || firstItem.mobile || matchedCust?.mobile || 'N/A';
+                      const custNum = firstItem.customerId || firstItem.customerSnapshot?.customerNumber || matchedCust?.customer_number || '';
+
+                      const matchId = firstItem.matchId || firstItem.matchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
+                      const matchScore = firstItem.matchSnapshot?.matchScore || firstItem.matchScore || (matchedCust?.quality_score) || 88;
+
+                      const groupSheetIds = group.items.map((it: any) => it.costSheetId);
+                      const isAllGroupSelected = groupSheetIds.length > 0 && groupSheetIds.every(id => selectedCostSheetIds.includes(id));
+                      const isAnyGroupSelected = groupSheetIds.some(id => selectedCostSheetIds.includes(id));
+
+                      const combinedBaseNum = group.items.reduce((acc: number, it: any) => {
+                        const b = it.pricingSnapshot?.basePrice || it.base_price || 0;
+                        return acc + Number(b || 0);
+                      }, 0);
+
+                      const combinedTotalEstNum = group.items.reduce((acc: number, it: any) => {
+                        const t = it.pricingSnapshot?.totalEstimatedCost || it.final_estimated_price || 0;
+                        return acc + Number(t || 0);
+                      }, 0);
+
+                      const createdAtStr = formatDisplayDateTime(firstItem.createdAt || firstItem.created_at || 'Just Now');
+                      const createdByStr = (() => {
+                        const cb = firstItem.createdBy || firstItem.created_by;
+                        if (cb) return cb;
+                        const as = firstItem.customerSnapshot?.assignedSalesperson;
+                        if (as) return as;
+                        return 'Avishek Das (Super Admin)';
+                      })();
+
+                      const usedProps = getCustomerUsedPropertyCodes(
+                        custNum,
+                        custName,
+                        custMobile,
+                        individualCostSheets
+                      );
+
+                      return (
+                        <tr key={`group-${group.groupKey || gIdx}`} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: isAnyGroupSelected ? (isLight ? 'rgba(56, 189, 248, 0.08)' : 'rgba(56, 189, 248, 0.12)') : undefined }}>
+                          {/* 1. Checkbox */}
+                          <td style={{ padding: '12px', textAlign: 'center', width: '42px', verticalAlign: 'top' }}>
+                            <input 
+                              type="checkbox"
+                              checked={isAllGroupSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedCostSheetIds(prev => Array.from(new Set([...prev, ...groupSheetIds])));
+                                } else {
+                                  setSelectedCostSheetIds(prev => prev.filter(id => !groupSheetIds.includes(id)));
+                                }
+                              }}
+                              style={{ cursor: 'pointer', transform: 'scale(1.15)' }}
+                              title={`Select all ${group.items.length} Cost Sheets for ${custName}`}
+                            />
+                          </td>
+
+                          {/* 2. Cost Sheet ID & Version */}
+                          <td style={{ padding: '12px', verticalAlign: 'top' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{
+                                background: 'rgba(168, 85, 247, 0.2)',
+                                color: '#c084fc',
+                                border: '1px solid #a855f7',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '0.68rem',
+                                fontWeight: '900',
+                                width: 'fit-content'
+                              }}>
+                                📑 MULTI-COST SHEET ({group.items.length})
+                              </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '2px' }}>
+                                {group.items.map((it: any, sIdx: number) => (
+                                  <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                    <span style={{ background: '#eab308', color: '#0f172a', padding: '1px 5px', borderRadius: '3px', fontSize: '0.65rem', fontWeight: '900' }}>
+                                      0{sIdx + 1}
+                                    </span>
+                                    <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.78rem' }}>
+                                      {it.costSheetId}
+                                    </span>
+                                    <span style={{ background: it.versionNumber > 1 ? '#fbbf24' : '#0284c7', color: '#0f172a', padding: '1px 5px', borderRadius: '3px', fontSize: '0.65rem', fontWeight: '900' }}>
+                                      {it.version || 'V01'}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* 3. Customer Identity */}
+                          <td style={{ padding: '12px', verticalAlign: 'top' }}>
+                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.88rem' }}>{custName}</strong>
+                            <br /><span style={{ fontSize: '0.75rem', color: '#4ade80', fontFamily: 'monospace' }}>{custMobile}</span>
+                            <br /><span style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'monospace' }}>{custNum}</span>
+                            {usedProps.length > 0 && (
+                              <div style={{ marginTop: '4px', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid #0284c7', borderRadius: '4px', padding: '2px 6px', fontSize: '0.68rem' }}>
+                                <span style={{ color: '#38bdf8', fontWeight: '800' }}>🏢 Customer Property Codes ({usedProps.length}):</span>
+                                <div style={{ color: '#fbbf24', fontWeight: '900', fontFamily: 'monospace', display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '2px' }}>
+                                  {usedProps.map(p => (
+                                    <span key={p.propertyCode} style={{ background: '#0f172a', border: '1px solid #eab308', padding: '1px 4px', borderRadius: '3px' }}>
+                                      {p.propertyCode}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </td>
+
+                          {/* 4. Match ID & Score */}
+                          <td style={{ padding: '12px', verticalAlign: 'top' }}>
+                            <span style={{ fontFamily: 'monospace', color: '#fbbf24', fontWeight: '800' }}>{matchId}</span>
+                            <br />
+                            <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800' }}>
+                              🔥 {matchScore}% Match
+                            </span>
+                          </td>
+
+                          {/* 5. Property Code & Title (Exact Visit Scheduler Style with MULTI-PROPERTY SCHEDULE) */}
+                          <td style={{ padding: '10px', minWidth: '300px', verticalAlign: 'top' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <span style={{ background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid #a855f7', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '900', width: 'fit-content' }}>
+                                🚘 MULTI-PROPERTY SCHEDULE ({group.items.length} STOPS)
+                              </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {group.items.map((it: any, sIdx: number) => {
+                                  const stopNum = sIdx + 1;
+                                  const csId = it.costSheetId;
+                                  const itPropCode = it.propertyCode || it.propertySnapshot?.propertyCode;
+                                  const matchedP = (properties || []).find((p: any) => 
+                                    (p.property_code && itPropCode && p.property_code === itPropCode) ||
+                                    (p.id && itPropCode && p.id === itPropCode) ||
+                                    (p.property_code && it.propertyId && p.property_code === it.propertyId) ||
+                                    (p.id && it.propertyId && p.id === it.propertyId)
+                                  );
+                                  const pCode = itPropCode || matchedP?.property_code || 'SRM-PROP-2026-000426';
+                                  const rawTitle = it.propertySnapshot?.propertyTitle || it.propertySnapshot?.projectName || matchedP?.title || matchedP?.property_title || matchedP?.project_name;
+                                  const pTitle = rawTitle && !rawTitle.startsWith('1 Properties') 
+                                    ? rawTitle 
+                                    : (matchedP?.title || matchedP?.property_title || matchedP?.project_name || 'Property Site');
+                                  const loc = it.propertySnapshot?.locality || matchedP?.locality || 'Locality Hub';
+                                  const dev = it.propertySnapshot?.developerName || matchedP?.developer || matchedP?.developer_name || matchedP?.builder_name;
+                                  const bhk = it.propertySnapshot?.bhk || it.propertySnapshot?.configuration || matchedP?.configuration || matchedP?.bhk || '2BHK';
+                                  const pType = it.propertySnapshot?.property_type || it.propertySnapshot?.propertyType || it.propertyType || matchedP?.property_type || 'Flat / Apartment';
+
+                                  return (
+                                    <div key={sIdx} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '8px', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                        <span style={{ background: '#eab308', color: '#0f172a', padding: '1px 6px', borderRadius: '3px', fontSize: '0.68rem', fontWeight: '900' }}>
+                                          STOP 0{stopNum}
+                                        </span>
+                                        {csId && (
+                                          <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontSize: '0.72rem', fontWeight: '900' }}>
+                                            {csId}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.84rem' }}>
+                                        🏢 {pTitle}
+                                      </strong>
+                                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                        <span style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid #0284c7', color: '#38bdf8', fontSize: '0.7rem', fontWeight: '800', padding: '1px 5px', borderRadius: '3px', fontFamily: 'monospace' }}>
+                                          Code: {pCode}
+                                        </span>
+                                        <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                                          📍 {loc} {dev ? `• ${dev}` : ''} {bhk ? `(${bhk})` : ''}
+                                        </span>
+                                        <span style={{ fontSize: '0.66rem', color: '#a855f7', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid #a855f7', padding: '1px 5px', borderRadius: '3px', fontWeight: '800' }}>
+                                          {pType}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* 6. Base Price vs Total Est. Cost */}
+                          <td style={{ padding: '12px', verticalAlign: 'top' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              {group.items.map((it: any, sIdx: number) => {
+                                const bPriceNum = it.pricingSnapshot?.basePrice || it.base_price || 0;
+                                const bPriceStr = it.formattedPriceBreakup?.basePriceStr || (bPriceNum ? `₹${Number(bPriceNum).toLocaleString('en-IN')}` : 'N/A');
+                                const tEstNum = it.pricingSnapshot?.totalEstimatedCost || it.final_estimated_price || 0;
+                                const tEstStr = it.formattedPriceBreakup?.totalEstimatedCostStr || (tEstNum ? `₹${Number(tEstNum).toLocaleString('en-IN')}` : 'N/A');
+
+                                return (
+                                  <div key={sIdx} style={{ background: isLight ? '#f1f5f9' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b', borderRadius: '6px', padding: '4px 8px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }}>
+                                      <span style={{ fontSize: '0.68rem', color: '#fbbf24', fontWeight: '900' }}>STOP 0{sIdx + 1}:</span>
+                                      <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>Base: <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{bPriceStr}</strong></span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                                      <span style={{ fontSize: '0.68rem', color: '#4ade80', fontWeight: '800' }}>Total Est:</span>
+                                      <strong style={{ color: '#4ade80', fontWeight: '900', fontSize: '0.82rem' }}>{tEstStr}</strong>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              <div style={{ borderTop: isLight ? '1.5px solid #cbd5e1' : '1.5px solid #0284c7', paddingTop: '4px', marginTop: '2px' }}>
+                                <span style={{ fontSize: '0.68rem', color: '#38bdf8', fontWeight: '800' }}>COMBINED TOTAL:</span>
+                                <br />
+                                <strong style={{ color: '#4ade80', fontWeight: '900', fontSize: '0.94rem' }}>
+                                  ₹{Number(combinedTotalEstNum).toLocaleString('en-IN')}
+                                </strong>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* 7. Status */}
+                          <td style={{ padding: '12px', textAlign: 'center', verticalAlign: 'top' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                              {group.items.map((it: any, sIdx: number) => {
+                                const st = it.status || 'GENERATED';
+                                return (
+                                  <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                    <span style={{ background: '#eab308', color: '#0f172a', padding: '1px 4px', borderRadius: '3px', fontSize: '0.62rem', fontWeight: '900' }}>
+                                      0{sIdx + 1}
+                                    </span>
+                                    <span style={{
+                                      background: st === 'GENERATED' ? 'rgba(56, 189, 248, 0.2)' : st === 'SENT_TO_CUSTOMER' ? 'rgba(34, 197, 94, 0.2)' : st === 'REVISED' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(168, 85, 247, 0.2)',
+                                      color: st === 'GENERATED' ? '#38bdf8' : st === 'SENT_TO_CUSTOMER' ? '#4ade80' : st === 'REVISED' ? '#fbbf24' : '#a855f7',
+                                      padding: '2px 7px',
+                                      borderRadius: '12px',
+                                      fontSize: '0.68rem',
+                                      fontWeight: '900'
+                                    }}>
+                                      {st}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </td>
+
+                          {/* 8. Created Date & By */}
+                          <td style={{ padding: '12px', verticalAlign: 'top' }}>
+                            <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.78rem' }}>{createdAtStr}</span>
+                            <br /><span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>By: {createdByStr}</span>
+                          </td>
+
+                          {/* 9. Actions (Exact Visit Scheduler Style with Multi-Stop Support) */}
+                          <td style={{ padding: '12px', textAlign: 'center', verticalAlign: 'top' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
                               <button 
                                 onClick={() => {
                                   if (setActiveTab) setActiveTab('visit_management');
                                   if (setActiveVisitSubTab) setActiveVisitSubTab('visit_route_planner');
-                                  setShowScheduleVisitModal({ open: true, costSheet: item });
+                                  setShowScheduleVisitModal({ open: true, costSheet: group.items[0] });
                                 }} 
-                                style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px' }}
-                                title="Schedule Site Visit for this Cost Sheet customer & property"
+                                style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', fontWeight: '900', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '3px', width: '100%', justifyContent: 'center', boxShadow: '0 2px 6px rgba(168, 85, 247, 0.3)' }}
+                                title="Schedule Multi-Property Site Visit for this customer & properties"
                               >
-                                🚘 Visit Schedule
+                                🚘 Visit Schedule ({group.items.length} Stops)
                               </button>
-                              <button 
-                                onClick={() => {
-                                  const custName = item.customerSnapshot?.customerName || item.customerName || 'Customer';
-                                  const custId = item.customerId || item.customerSnapshot?.customerNumber || '';
-                                  const mob = item.customerSnapshot?.mobile || item.mobile || '';
-                                  const propTitle = item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || 'Property';
 
-                                  setShowSendToFollowupModal({
-                                    costSheet: item,
-                                    customerName: custName,
-                                    customerNumber: custId,
-                                    mobile: mob,
-                                    propertyTitle: propTitle
-                                  });
-                                  setSendFollowupForm({
-                                    followupDate: new Date().toISOString().split('T')[0],
-                                    followupTime: '17:00',
-                                    priority: 'HIGH',
-                                    remarks: `Follow up with ${custName} regarding cost sheet ${item.costSheetId} for ${propTitle}.`
-                                  });
-                                }} 
-                                style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}
-                                title="Send Cost Sheet to Need to Followup management list with remarks, date & time"
-                              >
-                                📌 Send to Followup
-                              </button>
-                              <button 
-                                onClick={() => {
-                                  const custName = item.customerSnapshot?.customerName || item.customerName || 'Customer';
-                                  const custId = item.customerId || item.customerSnapshot?.customerNumber || '';
-                                  const mob = item.customerSnapshot?.mobile || item.mobile || '';
-                                  const cleanMob = mob.replace(/\D/g, '');
-                                  const matchId = item.matchId || item.matchingId || item.parentMatchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
-                                  const propTitle = item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || 'Property';
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%', borderTop: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', borderBottom: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', padding: '4px 0' }}>
+                                {group.items.map((it: any, sIdx: number) => (
+                                  <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                    <span style={{ background: '#eab308', color: '#0f172a', padding: '1px 5px', borderRadius: '3px', fontSize: '0.64rem', fontWeight: '900' }}>
+                                      STOP 0{sIdx + 1}
+                                    </span>
+                                    <button 
+                                      onClick={() => setShowViewIndividualCostSheetModal({ open: true, costSheet: it })} 
+                                      style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '3px 6px', borderRadius: '3px', cursor: 'pointer', fontWeight: '800', fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '2px' }}
+                                      title={`View Cost Sheet ${it.costSheetId}`}
+                                    >
+                                      <Eye size={10} /> View
+                                    </button>
+                                    <button 
+                                      onClick={() => handleOpenRevisionModal(it)} 
+                                      style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '3px 6px', borderRadius: '3px', cursor: 'pointer', fontWeight: '800', fontSize: '0.68rem' }}
+                                      title={`Edit Cost Sheet ${it.costSheetId}`}
+                                    >
+                                      ✏️ Edit
+                                    </button>
+                                    <button 
+                                      onClick={() => sendCostSheetWhatsApp(it)} 
+                                      style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '3px 6px', borderRadius: '3px', cursor: 'pointer', fontWeight: '800', fontSize: '0.68rem' }}
+                                      title={`Send Cost Sheet ${it.costSheetId} to WhatsApp`}
+                                    >
+                                      📲 Send
+                                    </button>
+                                    <button 
+                                      onClick={() => downloadCostSheetPDF(it)} 
+                                      style={{ background: '#334155', color: '#38bdf8', border: '1px solid #38bdf8', padding: '3px 5px', borderRadius: '3px', cursor: 'pointer', fontWeight: '800', fontSize: '0.68rem' }}
+                                      title={`Download PDF for ${it.costSheetId}`}
+                                    >
+                                      📥 PDF
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
 
-                                  if (setShowShiftToMatchingModal) {
-                                    setShowShiftToMatchingModal({
-                                      open: true,
-                                      item: item,
+                              <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                <button 
+                                  onClick={() => {
+                                    setShowSendToFollowupModal({
+                                      costSheet: group.items[0],
                                       customerName: custName,
-                                      customerNumber: custId,
-                                      mobile: mob,
-                                      matchId: matchId,
-                                      propertyTitle: propTitle,
-                                      note: ''
+                                      customerNumber: custNum,
+                                      mobile: custMobile,
+                                      propertyTitle: `${group.items.length} Properties`
                                     });
-                                  } else {
-                                    if (setSelectedMatchingId) setSelectedMatchingId(matchId);
-                                    if (setActiveTab) setActiveTab('matching_management');
-                                  }
-                                }} 
-                                style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: '1px solid #38bdf8', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}
-                                title="Shift to Matching Management for this customer under the same Matching ID to select & match other properties with a note"
-                              >
-                                ⚡ Shift to Matching
-                              </button>
-                              {setShowUpdateRequirementModal && (
-                                <button 
-                                  onClick={() => {
-                                    const custName = item.customerSnapshot?.customerName || item.customerName || 'Customer';
-                                    const custId = item.customerId || item.customerSnapshot?.customerNumber || item.mobile || 'SRM-CUS-2026';
-                                    const mob = item.customerSnapshot?.mobile || item.mobile || '';
-                                    const propCode = item.propertySnapshot?.propertyCode || item.propertySnapshot?.code || item.propertyCode || 'SRM-PROP-2026-000426';
-                                    const propTitle = item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || 'Property';
-
-                                    if (setUpdateReqForm) {
-                                      setUpdateReqForm({
-                                        budget_min: '₹50 Lakhs',
-                                        budget_max: '₹1.5 Crores',
-                                        preferredArea: propTitle || 'Barasat, Kolkata',
-                                        configuration: '3BHK',
-                                        dislike_reason: 'Over Budget',
-                                        remarks: ''
-                                      });
-                                    }
-                                    setShowUpdateRequirementModal({ 
-                                      open: true, 
-                                      customer: { 
-                                        custName, 
-                                        custCode: custId, 
-                                        mobile: mob, 
-                                        propertyCode: propCode
-                                      } 
+                                    setSendFollowupForm({
+                                      followupDate: new Date().toISOString().split('T')[0],
+                                      followupTime: '17:00',
+                                      priority: 'HIGH',
+                                      remarks: `Follow up with ${custName} regarding ${group.items.length} cost sheets.`
                                     });
-                                  }}
-                                  style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}
-                                  title="Update buyer preferences & requirements on-the-spot"
+                                  }} 
+                                  style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}
+                                  title="Send to Followup"
                                 >
-                                  ✏️ Update Requirement
+                                  📌 Send to Followup
                                 </button>
-                              )}
-                              {isSuperAdmin && (
                                 <button 
                                   onClick={() => {
-                                    if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Cost Sheet record ${item.costSheetId} for ${item.customerSnapshot?.customerName || 'Customer'}? It will be moved to Recycle Bin.`)) {
-                                      if (onRecycleItem) {
-                                        onRecycleItem({
-                                          id: item.id || item.costSheetId || `CS-${Date.now()}`,
-                                          title: `Cost Sheet - ${item.customerSnapshot?.customerName || 'Customer'} (${item.costSheetId})`,
-                                          category: 'Cost Sheet',
-                                          originalLocation: 'Cost Sheet Sharing Engine',
-                                          details: `Project: ${item.propertySnapshot?.title || 'N/A'}, Total: ${item.grandTotalFormatted || 'N/A'}`,
-                                          originalData: item
-                                        });
-                                      }
-                                      const updatedCostSheets = (individualCostSheets || []).filter((c: any) => 
-                                        c.costSheetId !== item.costSheetId && 
-                                        (!item.id || c.id !== item.id) &&
-                                        (!item.costSheetId || c.costSheetId !== item.costSheetId)
-                                      );
-                                      if (setIndividualCostSheets) {
-                                        setIndividualCostSheets(updatedCostSheets);
-                                      }
-                                      try {
-                                        setSelectedCostSheetIds(prev => prev.filter(id => id !== item.costSheetId && id !== item.id));
-                                        localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updatedCostSheets));
-                                      } catch (e) {}
-
-                                      if (syncAllToMongoDB) {
-                                        syncAllToMongoDB({
-                                          cost_sheets: updatedCostSheets
-                                        });
-                                      }
-                                      alert(`🗑️ Cost Sheet ${item.costSheetId} moved to Recycle Bin.`);
+                                    if (setShowShiftToMatchingModal) {
+                                      setShowShiftToMatchingModal({
+                                        open: true,
+                                        item: group.items[0],
+                                        customerName: custName,
+                                        customerNumber: custNum,
+                                        mobile: custMobile,
+                                        matchId: matchId,
+                                        propertyTitle: `${group.items.length} Properties`,
+                                        note: ''
+                                      });
+                                    } else {
+                                      if (setSelectedMatchingId) setSelectedMatchingId(matchId);
+                                      if (setActiveTab) setActiveTab('matching_management');
                                     }
                                   }} 
-                                  style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px' }}
-                                  title="Move this cost sheet record to Recycle Bin"
+                                  style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: '1px solid #38bdf8', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}
+                                  title="Shift to Matching Management"
                                 >
-                                  🗑️ Delete
+                                  ⚡ Shift to Matching
                                 </button>
-                              )}
+                                {setShowUpdateRequirementModal && (
+                                  <button 
+                                    onClick={() => {
+                                      if (setUpdateReqForm) {
+                                        setUpdateReqForm({
+                                          budget_min: '₹50 Lakhs',
+                                          budget_max: '₹1.5 Crores',
+                                          preferredArea: 'Kolkata',
+                                          configuration: '2BHK / 3BHK',
+                                          dislike_reason: 'Budget / Property Change',
+                                          remarks: ''
+                                        });
+                                      }
+                                      setShowUpdateRequirementModal({ 
+                                        open: true, 
+                                        customer: { 
+                                          custName, 
+                                          custCode: custNum, 
+                                          mobile: custMobile, 
+                                          propertyCode: group.items[0].propertyCode || ''
+                                        } 
+                                      });
+                                    }} 
+                                    style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}
+                                    title="Update buyer preferences & requirements"
+                                  >
+                                    ✏️ Update Requirement
+                                  </button>
+                                )}
+                                {isSuperAdmin && (
+                                  <button 
+                                    onClick={() => {
+                                      if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete all ${group.items.length} Cost Sheet records for ${custName}? They will be moved to Recycle Bin.`)) {
+                                        if (onRecycleItem) {
+                                          group.items.forEach((it: any) => {
+                                            onRecycleItem({
+                                              id: it.id || it.costSheetId || `CS-${Date.now()}`,
+                                              title: `Cost Sheet - ${custName} (${it.costSheetId})`,
+                                              category: 'Cost Sheet',
+                                              originalLocation: 'Cost Sheet Sharing Engine',
+                                              details: `Project: ${it.propertySnapshot?.title || 'N/A'}, Total: ${it.grandTotalFormatted || 'N/A'}`,
+                                              originalData: it
+                                            });
+                                          });
+                                        }
+                                        const updatedCostSheets = (individualCostSheets || []).filter((c: any) => 
+                                          !groupSheetIds.includes(c.costSheetId) && (!c.id || !groupSheetIds.includes(c.id))
+                                        );
+                                        if (setIndividualCostSheets) {
+                                          setIndividualCostSheets(updatedCostSheets);
+                                        }
+                                        try {
+                                          setSelectedCostSheetIds(prev => prev.filter(id => !groupSheetIds.includes(id)));
+                                          localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updatedCostSheets));
+                                        } catch (e) {}
+
+                                        if (syncAllToMongoDB) {
+                                          syncAllToMongoDB({ cost_sheets: updatedCostSheets });
+                                        }
+                                        alert(`🗑️ All ${group.items.length} Cost Sheets for ${custName} moved to Recycle Bin.`);
+                                      }
+                                    }} 
+                                    style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px' }}
+                                    title="Move all cost sheets for this customer to Recycle Bin"
+                                  >
+                                    🗑️ Delete
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>

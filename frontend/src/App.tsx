@@ -2516,6 +2516,8 @@ function PvaVerificationModalContent({
     const newAgrRecord = {
       id: `AGR-PVA-${nextPvaNum}`,
       agreement_code: pvaId,
+      visitScheduleId: safePlan.visitScheduleId || safePlan.visitPlanId || `SRM-VS-2026-${String(nextPvaNum).padStart(6, '0')}`,
+      visitId: safePlan.visitScheduleId || safePlan.visitPlanId || `SRM-VS-2026-${String(nextPvaNum).padStart(6, '0')}`,
       agreement_type: 'CUSTOMER_SITE_VISIT',
       title: `Customer Site Visit Agreement — ${safeStop.propertyTitle || 'Site Visit'}`,
       party_name: safePlan.customerName || 'Customer',
@@ -3239,6 +3241,200 @@ function InteractiveLeafletMap({
   );
 }
 
+function ShiftToMatchingModal({
+  isLight = false,
+  modalData,
+  onClose,
+  onConfirm
+}: {
+  isLight?: boolean;
+  modalData: any;
+  onClose: () => void;
+  onConfirm: (modalData: any, note: string) => void;
+}) {
+  const item = modalData?.item || {};
+  const custName = modalData?.customerName || item.customerName || item.customerSnapshot?.customerName || 'Valued Customer';
+  const custNum = modalData?.customerNumber || item.customerNumber || item.customerId || item.customerSnapshot?.customerNumber || 'SRM-CUS-2026-000188';
+  const custMobile = modalData?.mobile || item.mobile || item.customerSnapshot?.mobile || 'N/A';
+  const cleanMob = custMobile.replace(/\D/g, '');
+  const matchId = modalData?.matchId || item.matchId || item.matchingId || item.parentMatchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
+  const propTitle = modalData?.propertyTitle || item.propertyTitle || item.propertySnapshot?.propertyTitle || 'Current Property Matches';
+
+  const [note, setNote] = useState<string>(modalData?.note || '');
+  const [selectedTag, setSelectedTag] = useState<string>('');
+
+  const reasonTags = [
+    '💰 Over Budget - Need Cheaper Options',
+    '📍 Location Preference Changed',
+    '📐 Configuration Mismatch (Needs 2BHK/3BHK)',
+    '🚫 Disliked Visited Project',
+    '⏳ Possession Timeline Mismatch',
+    '🔍 Comparing Other Builder Inventory'
+  ];
+
+  const handleSelectTag = (tag: string) => {
+    setSelectedTag(tag);
+    if (!note) {
+      setNote(tag);
+    } else if (!note.includes(tag)) {
+      setNote(prev => `${prev}\n• ${tag}`);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2500, padding: '16px' }}>
+      <div style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '2px solid #0284c7', width: '96vw', maxWidth: '640px', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 25px 50px -12px rgba(2, 132, 199, 0.4)', maxHeight: '92vh', overflowY: 'auto' }}>
+        
+        {/* HEADER */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '14px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ background: '#0284c7', color: '#ffffff', padding: '3px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '900', fontFamily: 'monospace' }}>
+                MATCH ID: {matchId}
+              </span>
+              <span style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid #38bdf8', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '900' }}>
+                STATUS ➔ PENDING
+              </span>
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: '8px 0 2px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>⚡</span>
+              <span>SHIFT TO MATCHING MANAGEMENT</span>
+            </h3>
+            <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', margin: 0 }}>
+              Queue customer back to Smart AI Matching Engine to explore & recommend other properties.
+            </p>
+          </div>
+          <button 
+            onClick={onClose}
+            style={{ background: 'transparent', border: 'none', color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Close"
+          >
+            <X size={22} />
+          </button>
+        </div>
+
+        {/* CUSTOMER & SOURCE IDENTITY SUMMARY */}
+        <div style={{ background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.82rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '8px' }}>
+            <div>
+              <span style={{ color: '#0284c7', fontWeight: '900', fontSize: '0.74rem' }}>CUSTOMER DETAILS</span>
+              <div style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '1rem', marginTop: '1px' }}>{custName}</div>
+              <div style={{ color: '#22c55e', fontWeight: '800', fontFamily: 'monospace', fontSize: '0.78rem', marginTop: '2px' }}>
+                📞 {custMobile} • ID: {custNum}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ color: '#d97706', fontWeight: '900', fontSize: '0.74rem' }}>CURRENT RECORD</span>
+              <div style={{ color: isLight ? '#334155' : '#cbd5e1', fontWeight: '800', fontSize: '0.82rem', marginTop: '2px' }}>
+                {propTitle}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ fontSize: '0.75rem', color: isLight ? '#475569' : '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+            <span>ℹ️</span>
+            <span>Customer requirement profile will be reactivated in the pending matching workspace.</span>
+          </div>
+        </div>
+
+        {/* HANDOFF REASON & NOTES */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label style={{ fontSize: '0.82rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>
+              📝 Reason for Shift / Handoff Note:
+            </label>
+            <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>Optional but recommended</span>
+          </div>
+
+          {/* QUICK REASON TAG PILLS */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {reasonTags.map((tag, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleSelectTag(tag)}
+                style={{
+                  background: selectedTag === tag ? '#0284c7' : (isLight ? '#e2e8f0' : '#1e293b'),
+                  color: selectedTag === tag ? '#ffffff' : (isLight ? '#334155' : '#cbd5e1'),
+                  border: isLight ? '1px solid #cbd5e1' : '1px solid #475569',
+                  padding: '4px 9px',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Type reason or special requirements for Matching Management (e.g. Customer budget is capped at ₹30 Lakhs, needs 2BHK in Barasat or Madhyamgram)..."
+            rows={3}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              background: isLight ? '#f8fafc' : '#1e293b',
+              color: isLight ? '#0f172a' : '#ffffff',
+              border: isLight ? '1px solid #cbd5e1' : '1px solid #475569',
+              borderRadius: '8px',
+              padding: '10px 12px',
+              fontSize: '0.82rem',
+              outline: 'none',
+              resize: 'vertical'
+            }}
+          />
+        </div>
+
+        {/* WORKSPACE REDIRECTION EXPLANATION BANNER */}
+        <div style={{ background: 'rgba(2, 132, 199, 0.08)', border: '1px solid rgba(2, 132, 199, 0.3)', borderRadius: '8px', padding: '10px 12px', fontSize: '0.76rem', color: isLight ? '#0369a1' : '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '1rem' }}>🚀</span>
+          <div>
+            Clicking <strong>"Confirm & Shift to Matching"</strong> will queue this customer as <strong>PENDING</strong> in Matching Management and immediately switch your active view to the Smart AI Property Matcher.
+          </div>
+        </div>
+
+        {/* ACTION BUTTONS */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '14px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '9px 18px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(modalData, note)}
+            style={{
+              background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+              color: '#ffffff',
+              border: '1px solid #38bdf8',
+              padding: '9px 22px',
+              borderRadius: '8px',
+              fontWeight: '900',
+              fontSize: '0.84rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)'
+            }}
+          >
+            <span>⚡</span>
+            <span>Confirm & Shift to Matching</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const isMongoLoadedRef = useRef<boolean>(false);
   // 13 Main Navigation Categories
@@ -3591,7 +3787,7 @@ export default function App() {
             changed = true;
             updated.unshift({
               id: `CUS-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-              customer_number: custNo || `SRM-CUS-2026-${mob.slice(-6) || '000188'}`,
+              customer_number: custNo || `SRM-CUS-2026-${String(updated.length + 1).padStart(6, '0')}`,
               name: name,
               full_name: name,
               mobile: m.mobile || m.phone || '',
@@ -3953,20 +4149,26 @@ export default function App() {
     const allNums: number[] = [];
     customers.forEach(c => {
       if (c.customer_number) {
-        const match = c.customer_number.match(/\d+$/);
-        if (match) allNums.push(parseInt(match[0], 10));
+        const match = c.customer_number.match(/SRM-CUS-\d+-(\d+)/i) || c.customer_number.match(/\d+$/);
+        if (match) {
+          const n = parseInt(match[1] || match[0], 10);
+          if (!isNaN(n) && n < 188) allNums.push(n);
+        }
       }
     });
     matchingRequestsQueue.forEach(q => {
       if (q.customerNumber) {
-        const match = q.customerNumber.match(/\d+$/);
-        if (match) allNums.push(parseInt(match[0], 10));
+        const match = q.customerNumber.match(/SRM-CUS-\d+-(\d+)/i) || q.customerNumber.match(/\d+$/);
+        if (match) {
+          const n = parseInt(match[1] || match[0], 10);
+          if (!isNaN(n) && n < 188) allNums.push(n);
+        }
       }
     });
 
-    const maxVal = allNums.length > 0 ? Math.max(...allNums) : 187;
+    const maxVal = allNums.length > 0 ? Math.max(...allNums) : 0;
     const nextVal = maxVal + 1;
-    return `SRM-CUS-2026-000${nextVal}`;
+    return `SRM-CUS-2026-${String(nextVal).padStart(6, '0')}`;
   };
 
   const generateNextLeadCode = () => {
@@ -4377,7 +4579,7 @@ export default function App() {
       data = matchInQueue || {
         leadId: cleanId || 'SRM-LEAD-2026-000184',
         customerName: newCustomerForm.name || 'Valued Customer',
-        customerNumber: newCustomerForm.customer_number || 'SRM-CUS-2026-000188',
+        customerNumber: newCustomerForm.customer_number || 'SRM-CUS-2026-000001',
         mobile: newCustomerForm.mobile || '+91 98490 88888',
         source: newCustomerForm.lead_source || 'Meta Ads / Google Ads',
         campaign: newCustomerForm.campaign_id || 'CMP-2026-8802',
@@ -4819,15 +5021,23 @@ export default function App() {
   // Helper to dynamically sanitize customer list and filter out corrupted or explicitly flagged test records
   const sanitizeCustomerRecords = (list: any[]) => {
     if (!Array.isArray(list)) return [];
-    return list.filter((c: any) => {
-      if (!c || typeof c !== 'object') return false;
-      if (c.is_test === true || c.is_demo === true || c.is_dummy === true || c.test_record === true) return false;
-      const name = (c.name || c.full_name || c.customer_name || '').toString().trim();
-      const mob = (c.mobile || c.phone || '').toString().trim();
-      const num = (c.customer_number || c.id || '').toString().trim();
-      if (!name && !mob && !num) return false;
-      return true;
-    });
+    return list
+      .filter((c: any) => {
+        if (!c || typeof c !== 'object') return false;
+        if (c.is_test === true || c.is_demo === true || c.is_dummy === true || c.test_record === true) return false;
+        const name = (c.name || c.full_name || c.customer_name || '').toString().trim();
+        const mob = (c.mobile || c.phone || '').toString().trim();
+        const num = (c.customer_number || c.id || '').toString().trim();
+        if (!name && !mob && !num) return false;
+        return true;
+      })
+      .map((c: any, idx: number) => {
+        const custNum = c.customer_number || '';
+        if (custNum.includes('000188') || custNum === 'SRM-CUS-2026-000188') {
+          return { ...c, customer_number: `SRM-CUS-2026-${String(idx + 1).padStart(6, '0')}` };
+        }
+        return c;
+      });
   };
 
   // 6. CUSTOMERS MASTER VAULT (Direct MongoDB & Local Storage Source)
@@ -6342,13 +6552,26 @@ export default function App() {
       (c.name && c.name.toLowerCase() === custName.toLowerCase()) ||
       (cleanMob && c.mobile && c.mobile.replace(/\D/g, '') === cleanMob)
     );
+    if (!targetCust && (custName || custId)) {
+      targetCust = {
+        id: custId || `CUS-${Date.now()}`,
+        customer_number: custId || (cleanMob ? `SRM-CUS-2026-${cleanMob.slice(-6)}` : 'SRM-CUS-2026-000188'),
+        full_name: custName,
+        name: custName,
+        mobile: mob,
+        city: 'Kolkata',
+        status: 'PENDING'
+      };
+      setCustomers((prev: any[]) => [targetCust, ...prev]);
+    }
     if (targetCust) {
       setSelectedCust(targetCust);
     }
 
-    // 5. Close modal and switch tab to Matching Management
+    // 5. Close modal and switch tab to Matching Management (Smart AI Matcher)
     setShowShiftToMatchingModal(null);
     setActiveTab('matching_management');
+    setActiveMatchingSubTab('ai_matching_engine');
 
     alert(`⚡ SHIFTED BACK TO MATCHING MANAGEMENT (PENDING QUEUE) FOR ${custName} (${matchId})\n\n📌 Handoff Note Logged:\n"${handoffNote || 'No note specified'}"\n\nStatus set to PENDING. You are now in Matching Management workspace.`);
   };
@@ -6442,7 +6665,14 @@ export default function App() {
       const saved = localStorage.getItem('swaramayi_bookings_v3_clean');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.map((b: any) => {
+            if (b && typeof b === 'object' && b.booking_code && b.booking_code.includes('000087')) {
+              return { ...b, booking_code: 'SRM-BKG-2026-000001' };
+            }
+            return b;
+          });
+        }
       }
     } catch (e) {
       console.error('Error reading bookings from localStorage:', e);
@@ -6575,7 +6805,7 @@ export default function App() {
     );
 
     const leadNum = existingLead ? existingLead.lead_number : `SRM-LD-2026-000${leadsList.length + 101}`;
-    const finalCustomerCode = targetCustCode || (existingCustomer ? existingCustomer.customer_number : `SRM-CUS-2026-000${customers.length + 188}`);
+    const finalCustomerCode = targetCustCode || (existingCustomer ? existingCustomer.customer_number : `SRM-CUS-2026-${String(customers.length + 1).padStart(6, '0')}`);
     const todayStr = new Date().toISOString().split('T')[0];
 
     const scheduledDateVal = followupDate || todayStr;
@@ -6825,7 +7055,7 @@ export default function App() {
     );
 
     const leadNum = existingLead ? existingLead.lead_number : `SRM-LD-2026-000${leadsList.length + 101}`;
-    const finalCustomerCode = targetCustCode || (existingCustomer ? existingCustomer.customer_number : `SRM-CUS-2026-000${customers.length + 188}`);
+    const finalCustomerCode = targetCustCode || (existingCustomer ? existingCustomer.customer_number : `SRM-CUS-2026-${String(customers.length + 1).padStart(6, '0')}`);
     const todayStr = new Date().toISOString().split('T')[0];
 
     const draftLeadObj = {
@@ -6973,7 +7203,7 @@ export default function App() {
     const whatsappVal = (lead.whatsapp && lead.whatsapp !== 'N/A') ? lead.whatsapp : phoneVal;
 
     setNewCustomerForm({
-      customer_number: lead.customer_number || lead.customer_id || `SRM-CUS-2026-000${customers.length + 188}`,
+      customer_number: lead.customer_number || lead.customer_id || `SRM-CUS-2026-${String(customers.length + 1).padStart(6, '0')}`,
       name: lead.customer_name || lead.name || '',
       phone: phoneVal,
       mobile: phoneVal,
@@ -7057,7 +7287,15 @@ export default function App() {
       const saved = localStorage.getItem('swaramayi_agreements_vault_v5_clean');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.map((a: any, idx: number) => {
+            let code = a.agreement_code || '';
+            if (code.includes('595101') || /\bSRM-AGR-DEV-\d+-[1-9]\d{4,}\b/.test(code)) {
+              code = `SRM-AGR-DEV-2026-${String(idx + 1).padStart(6, '0')}`;
+            }
+            return { ...a, agreement_code: code };
+          });
+        }
       }
     } catch (e) {
       console.error('Error reading agreements from localStorage:', e);
@@ -7166,7 +7404,24 @@ export default function App() {
       const saved = localStorage.getItem('swaramayi_developers_v1');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          let projSeq = 0;
+          return parsed.map((d: any, idx: number) => {
+            let dId = d.id || '';
+            if (dId.includes('655434') || dId.includes('640480') || dId.includes('688790') || dId.includes('000105') || /\bSRM-DEV-\d+-[1-9]\d{4,}\b/.test(dId)) {
+              dId = `SRM-DEV-2026-${String(idx + 1).padStart(6, '0')}`;
+            }
+            const cleanProjects = (d.projects || []).map((p: any) => {
+              projSeq++;
+              let pCode = p.code || p.id || '';
+              if (pCode.includes('000088') || pCode.includes('000089') || pCode.includes('000090')) {
+                pCode = `SRM-PROJ-2026-${String(projSeq).padStart(6, '0')}`;
+              }
+              return { ...p, id: pCode, code: pCode };
+            });
+            return { ...d, id: dId, projects: cleanProjects };
+          });
+        }
       }
     } catch (e) {
       console.error('Error loading developers from localStorage:', e);
@@ -7381,7 +7636,14 @@ export default function App() {
               } catch (e) {}
             }
             if (Array.isArray(mData.bookings)) {
-              const cleanBookings = mData.bookings.filter((b: any) => b && typeof b === 'object');
+              const cleanBookings = mData.bookings
+                .filter((b: any) => b && typeof b === 'object')
+                .map((b: any) => {
+                  if (b.booking_code && b.booking_code.includes('000087')) {
+                    return { ...b, booking_code: 'SRM-BKG-2026-000001' };
+                  }
+                  return b;
+                });
               setBookings(cleanBookings);
               try {
                 localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(cleanBookings));
@@ -7864,7 +8126,7 @@ export default function App() {
       const locality = visitItem.locality || visitItem.location || visitItem.propertySnapshot?.locality || 'Barasat, Kolkata';
       const custName = visitItem.customerName || visitItem.customerSnapshot?.customerName || 'Customer';
       const custMobile = visitItem.mobile || visitItem.customerSnapshot?.mobile || '';
-      const custCode = visitItem.customerId || visitItem.customerNumber || visitItem.customerSnapshot?.customerNumber || (custMobile ? `SRM-CUS-2026-${custMobile.replace(/\D/g, '').slice(-6)}` : 'SRM-CUS-2026-000188');
+      const custCode = visitItem.customerId || visitItem.customerNumber || visitItem.customerSnapshot?.customerNumber || (custMobile ? `SRM-CUS-2026-${custMobile.replace(/\D/g, '').slice(-6)}` : 'SRM-CUS-2026-000001');
       const visitId = visitItem.visitId || visitItem.id || `SRM-VS-2026-${Date.now().toString().slice(-6)}`;
       const exec = visitItem.assignedFieldExecutive || visitItem.assignedExecutive || 'Punita Roy';
 
@@ -7893,7 +8155,7 @@ export default function App() {
       const defaultVisit = scheduledVisits[0] || (visitPlans[0] && visitPlans[0].stops && visitPlans[0].stops[0]) || null;
       const custName = defaultVisit?.customerName || (customers[0]?.name || customers[0]?.full_name) || '';
       const custMobile = defaultVisit?.mobile || customers[0]?.mobile || '';
-      const custCode = defaultVisit?.customerNumber || customers[0]?.customer_number || 'SRM-CUS-2026-000188';
+      const custCode = defaultVisit?.customerNumber || customers[0]?.customer_number || 'SRM-CUS-2026-000001';
       const propTitle = defaultVisit?.propertyTitle || (properties[0]?.title || properties[0]?.name) || 'Residential Flat';
       const propCode = defaultVisit?.propertyCode || properties[0]?.property_code || properties[0]?.id || 'SRM-PROP-01';
       const locality = defaultVisit?.locality || properties[0]?.locality || 'Barasat, Kolkata';
@@ -7940,7 +8202,7 @@ export default function App() {
       visitId: salesFeedbackForm.visitId || `SRM-VS-2026-${Date.now().toString().slice(-6)}`,
       custName: salesFeedbackForm.customerName,
       custMobile: salesFeedbackForm.custMobile,
-      custCode: salesFeedbackForm.custCode || (salesFeedbackForm.custMobile ? `SRM-CUS-2026-${salesFeedbackForm.custMobile.replace(/\D/g, '').slice(-6)}` : 'SRM-CUS-2026-000188'),
+      custCode: salesFeedbackForm.custCode || (salesFeedbackForm.custMobile ? `SRM-CUS-2026-${salesFeedbackForm.custMobile.replace(/\D/g, '').slice(-6)}` : 'SRM-CUS-2026-000001'),
       propTitle: salesFeedbackForm.propTitle || (salesFeedbackForm as any).propertyTitle || '',
       propCode: salesFeedbackForm.propCode || 'SRM-PROP-2026-000426',
       locality: salesFeedbackForm.locality || 'Barasat, Kolkata',
@@ -9262,10 +9524,88 @@ export default function App() {
       return updated;
     });
 
+    // Generate sequential Matching ID (starting from SRM-MAT-2026-000001)
+    let maxMatSeq = 0;
+    (matchingRequestsQueue || []).forEach((m: any) => {
+      const match = (m.requestId || m.id || m.matchingId || '').match(/SRM-MAT-\d+-(\d+)/i) || (m.requestId || m.id || '').match(/MAT-(\d+)/i);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val < 10000 && val > maxMatSeq) maxMatSeq = val;
+      }
+    });
+    const nextMatSeq = maxMatSeq + 1;
+    const matchingId = `SRM-MAT-2026-${String(nextMatSeq).padStart(6, '0')}`;
+
+    const newMatchingRecord = {
+      id: matchingId,
+      requestId: matchingId,
+      matchingId: matchingId,
+      customerName: custName,
+      customerNumber: newCustNumber,
+      mobile: newCustomerForm.mobile || newCustomerForm.phone || '+91 98490 12345',
+      email: newCustomerForm.email || '',
+      configuration: newCustomerForm.configuration || '2BHK',
+      property_type: newCustomerForm.property_type || 'Flat / Apartment',
+      preferredArea: newCustomerForm.preferredArea || newCustomerForm.locality || 'Kolkata',
+      budget: newCustomerForm.budget || `₹${newCustomerForm.budget_min || '40'} - ₹${newCustomerForm.budget_max || '80'} Lakhs`,
+      budget_min: Number(newCustomerForm.budget_min) ? Number(newCustomerForm.budget_min) * 100000 : 4000000,
+      budget_max: Number(newCustomerForm.budget_max) ? Number(newCustomerForm.budget_max) * 100000 : 8000000,
+      status: 'PENDING',
+      priority: newCustomerForm.priority || 'HOT',
+      score: newCustomerForm.priority === 'HOT' ? 88 : 72,
+      assignedExecutive: newCustomerForm.assigned_employee_id || newCustomerForm.assigned_employee_name || 'Avishek Das (Super Admin)',
+      assigned_employee_id: newCustomerForm.assigned_employee_id || 'Avishek Das (Super Admin)',
+      assigned_employee_name: newCustomerForm.assigned_employee_name || newCustomerForm.assigned_employee_id || 'Avishek Das (Super Admin)',
+      requestDate: new Date().toISOString(),
+      createdAt: new Date().toLocaleString(),
+      source: newCustomerForm.lead_source || 'Direct Intake'
+    };
+
+    setMatchingRequestsQueue((prev: any[]) => {
+      const cleanMobile = (newCustomerForm.mobile || '').replace(/\D/g, '');
+      const filtered = (prev || []).filter((r: any) => 
+        (r.customerNumber || '').toLowerCase() !== newCustNumber.toLowerCase() &&
+        (r.requestId || '').toLowerCase() !== matchingId.toLowerCase() &&
+        !(cleanMobile && cleanMobile.length >= 7 && r.mobile && r.mobile.replace(/\D/g, '') === cleanMobile)
+      );
+      const updatedQueue = [newMatchingRecord, ...filtered];
+      try {
+        localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(updatedQueue));
+      } catch (err) {}
+      syncAllToMongoDB({ matching_requests: updatedQueue });
+      return updatedQueue;
+    });
+
+    if (activeEditingLeadId) {
+      setLeadsList((prevLeads: any[]) => {
+        const updatedLeads = (prevLeads || []).map((l: any) => {
+          if (l.id === activeEditingLeadId || l.lead_number === activeEditingLeadId) {
+            return {
+              ...l,
+              lead_status: 'MATCHING_INITIATED',
+              matchingId: matchingId,
+              customer_number: newCustNumber
+            };
+          }
+          return l;
+        });
+        try {
+          localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(updatedLeads));
+        } catch (e) {}
+        return updatedLeads;
+      });
+    }
+
     setShowAddCustomerModal(false);
     setShowCustomerModal(false);
     setShowLeadModal(false);
-    alert(`👤 Customer Master ${newCustNumber} created & synced successfully to Database!`);
+
+    // Immediately handoff and navigate to Matching Management
+    setActiveTab('matching_management');
+    setSelectedMatchingId(matchingId);
+    setMatchingSearchQuery(custName);
+
+    alert(`🎯 MATCHING REQUEST GENERATED & HANDED OFF!\n\n• Matching ID: ${matchingId}\n• Customer: ${custName} (${newCustNumber})\n• Status: PENDING MATCHING\n\nRedirecting to Matching Management!`);
   };
 
   const handleCreatePropertySubmit = async (e: React.FormEvent) => {
@@ -9278,7 +9618,7 @@ export default function App() {
         property_code: editingProperty.property_code,
         title: newPropertyForm.title || p.title,
         developer: newPropertyForm.developer || p.developer,
-        developer_id: newPropertyForm.developer_id || p.developer_id || 'SRM-DEV-2026-000105',
+        developer_id: newPropertyForm.developer_id || p.developer_id || 'SRM-DEV-2026-000001',
         developer_mobile: devProjectMobile || newPropertyForm.developer_mobile || p.developer_mobile || '9883395102',
         developer_alt_mobile: devProjectAltMobile || newPropertyForm.developer_alt_mobile || p.developer_alt_mobile || '7044293951',
         locality: newPropertyForm.locality || p.locality,
@@ -9355,7 +9695,7 @@ export default function App() {
       property_code: newPropCode,
       title: newPropertyForm.title || 'New Luxury Project',
       developer: newPropertyForm.developer || 'Swaramayi Developer Partner',
-      developer_id: newPropertyForm.developer_id || 'SRM-DEV-2026-000105',
+      developer_id: newPropertyForm.developer_id || 'SRM-DEV-2026-000001',
       developer_mobile: devProjectMobile || newPropertyForm.developer_mobile || '9883395102',
       developer_alt_mobile: devProjectAltMobile || newPropertyForm.developer_alt_mobile || '7044293951',
       locality: newPropertyForm.locality || '',
@@ -9588,6 +9928,8 @@ export default function App() {
     const pvaId = `SRM-PVA-2026-000${projectVisitAgreements.length + 12}`;
     const newPva = {
       projectVisitAgreementId: pvaId,
+      visitScheduleId: v.visitScheduleId || v.visitId || `SRM-VS-2026-${String(projectVisitAgreements.length + 1).padStart(6, '0')}`,
+      visitId: v.visitScheduleId || v.visitId || `SRM-VS-2026-${String(projectVisitAgreements.length + 1).padStart(6, '0')}`,
       customerName: custName,
       customerMobile: v.mobile || '+91 98490 88888',
       customerId: fullCustNo,
@@ -10977,7 +11319,7 @@ export default function App() {
                 // Combine customers, leadsList, matchingRequestsQueue, cost sheets, visits, bookings, agreements, and invoices to form complete customer pool
                 const matchingCusts = (matchingRequestsQueue || []).map((m: any) => ({
                   id: m.requestId || m.id || `CUS-${Date.now()}`,
-                  customer_number: m.customerNumber || m.customerId || m.customer_number || `SRM-CUS-2026-${(m.mobile || '').slice(-6) || '000188'}`,
+                  customer_number: m.customerNumber || m.customerId || m.customer_number || `SRM-CUS-2026-${(m.mobile || '').slice(-6) || '000001'}`,
                   customerNumber: m.customerNumber || m.customerId || m.customer_number,
                   name: m.customerName || m.name || m.customer_name || 'Customer',
                   full_name: m.customerName || m.name || m.customer_name || 'Customer',
@@ -12880,7 +13222,7 @@ export default function App() {
             <form onSubmit={(e) => {
               e.preventDefault();
               const newId = `AGR-DEV-${Date.now().toString().slice(-4)}`;
-              const newCode = `SRM-AGR-DEV-2026-000${agreements.length + 1}`;
+              const newCode = `SRM-AGR-DEV-2026-${String(agreements.length + 1).padStart(6, '0')}`;
               const fullTitle = `Channel Partner Agreement — ${newDevAgreementForm.project_name} (${newDevAgreementForm.developer_name})`;
 
               const newAgreement = {
@@ -13001,7 +13343,18 @@ export default function App() {
         const projectTitle = selectedAgreement.project_name || selectedAgreement.title || selectedAgreement.property_details || 'Master Project';
         const developerName = selectedAgreement.developer_name || selectedAgreement.party_name || 'Dhriti Builders';
         const localityHub = selectedAgreement.locality_hub || selectedAgreement.locality || 'Locality Hub Sector';
-        const agreementCode = selectedAgreement.agreement_code || selectedAgreement.id || 'SRM-AGR-2026-000001';
+        const rawAgreementCode = selectedAgreement.agreement_code || selectedAgreement.id || 'SRM-AGR-2026-000001';
+        const agreementCode = (() => {
+          if (isDev) {
+            if (rawAgreementCode.includes('595101') || rawAgreementCode.match(/SRM-AGR-DEV-\d+-[1-9]\d{5}/)) {
+              const idx = Array.isArray(agreements) ? agreements.findIndex((a: any) => a && (a.id === selectedAgreement.id || a.agreement_code === selectedAgreement.agreement_code)) : -1;
+              const seq = idx >= 0 ? idx + 1 : 1;
+              return `SRM-AGR-DEV-2026-${String(seq).padStart(6, '0')}`;
+            }
+            return rawAgreementCode.startsWith('SRM-AGR-DEV-') ? rawAgreementCode : `SRM-AGR-DEV-2026-000001`;
+          }
+          return rawAgreementCode;
+        })();
         const salesExec = selectedAgreement.sales_executive || selectedAgreement.assigned_employee_name || 'Avishek Das (Super Admin)';
         const dateVal = selectedAgreement.signed_at || selectedAgreement.created_at || new Date().toLocaleString();
         const sigHash = selectedAgreement.signature_hash || `SHA256:verified_otp_${Math.floor(100000 + Math.random() * 900000)}`;
@@ -13013,15 +13366,23 @@ export default function App() {
 
         const partyHeader = isDev ? 'DEVELOPER & BUILDER IDENTIFIER:' : 'CUSTOMER IDENTIFIER:';
         const partyIconName = isDev ? `🏢 ${partyName}` : `👤 ${partyName}`;
+        const devId = selectedAgreement.developer_id || selectedAgreement.id || '';
+        const cleanDevId = (devId.includes('655434') || devId.includes('640480') || devId.match(/SRM-DEV(-\d+)?-[1-9]\d{5}/))
+          ? 'SRM-DEV-2026-000001'
+          : (devId || 'SRM-DEV-2026-000001');
         const partyIdLabel = isDev
-          ? `Developer ID: ${selectedAgreement.developer_id || selectedAgreement.id || 'SRM-DEV-2026-000105'}`
-          : `Customer ID: ${selectedAgreement.customer_number || selectedAgreement.customer_id || 'SRM-CUS-2026-000190'}`;
+          ? `Developer ID: ${cleanDevId}`
+          : `Customer ID: ${selectedAgreement.customer_number || selectedAgreement.customer_id || 'SRM-CUS-2026-000001'}`;
 
         const projHeader = isDev ? 'PROJECT & LOCALITY DETAILS:' : 'PROJECT & DEVELOPER:';
         const projSubText = isDev ? `Locality Hub: ${localityHub}` : `Developer: ${developerName}`;
+        const rawProjCode = selectedAgreement.project_id || '';
+        const cleanProjCode = (rawProjCode.includes('000088') || !rawProjCode)
+          ? 'SRM-PROJ-2026-000001'
+          : rawProjCode;
         const projCodes = isDev
-          ? `Master Project Code: ${selectedAgreement.project_id || 'SRM-PROJ-2026-000088'}`
-          : `Property Code: ${selectedAgreement.property_code || 'SRM-PROP-2026-000428'} | Cost Sheet: ${selectedAgreement.cost_sheet_id || 'COST-SHEET-2026-000001'}`;
+          ? `Master Project Code: ${cleanProjCode}`
+          : `Property Code: ${selectedAgreement.property_code || 'SRM-PROP-2026-000001'} | Cost Sheet: ${selectedAgreement.cost_sheet_id || 'COST-SHEET-2026-000001'}`;
 
         const execHeader = isDev ? 'ASSIGNED CORPORATE MANAGER:' : 'ASSIGNED SALES EXECUTIVE:';
         const dateLabel = isDev ? `Agreement Date: ${dateVal}` : `Visit Date: ${dateVal}`;
@@ -13299,7 +13660,31 @@ export default function App() {
         const matchId = match.matchId || cs.matchId || 'SRM-MAT-2026-710021';
         const matchScore = match.matchScore || cs.matchScore || 100;
         const salesExec = cs.preparedBy || cs.prepared_by || cs.salesExec || cs.sales_exec || cs.salesExecutive || cs.sales_executive || cs.createdBy || cs.created_by || cs.assignedSalesperson || cs.assigned_salesperson || cust.preparedBy || cust.assignedSalesperson || cust.assigned_salesperson || cust.salesExecutive || cust.executive_name || cust.assigned_to || match.assignedSalesperson || match.assigned_salesperson || match.salesExecutive || 'Priya Nair (Sales Exec)';
-        const timestampIso = cs.createdAt ? (typeof cs.createdAt === 'string' && cs.createdAt.includes('T') ? cs.createdAt : new Date(cs.createdAt).toISOString()) : new Date().toISOString();
+        // Format cost sheet creation date & time in local timezone (e.g. 13 Oct 2026 01:26 PM)
+        const formatCostSheetDateTime = (raw: any): string => {
+          if (!raw) {
+            const now = new Date();
+            return now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+          }
+          if (typeof raw === 'string') {
+            // If already formatted human-readable string without ISO T/Z
+            if (!raw.includes('T') && !raw.endsWith('Z') && (raw.includes('AM') || raw.includes('PM'))) {
+              return raw;
+            }
+            const d = new Date(raw);
+            if (!isNaN(d.getTime())) {
+              return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            }
+            return raw;
+          }
+          const d = new Date(raw);
+          if (!isNaN(d.getTime())) {
+            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+          }
+          return String(raw);
+        };
+        const rawTimeVal = cs.createdAt || cs.created_at || cs.date || cs.updatedAt;
+        const timestampIso = formatCostSheetDateTime(rawTimeVal);
 
         const costSheetCode = cs.costSheetId || 'COST-SHEET-2026-000001';
         const versionTag = cs.version || 'V01';
@@ -14848,6 +15233,16 @@ export default function App() {
         </div>
       )}
 
+      {/* MODAL: SHIFT TO MATCHING MANAGEMENT */}
+      {showShiftToMatchingModal && showShiftToMatchingModal.open && (
+        <ShiftToMatchingModal
+          isLight={isLight}
+          modalData={showShiftToMatchingModal}
+          onClose={() => setShowShiftToMatchingModal(null)}
+          onConfirm={(modalData, note) => handleExecuteShiftToMatching(modalData, note)}
+        />
+      )}
+
       {/* MODAL: REGISTER NEW UNIT BOOKING */}
       {/* MODAL: UPDATE CUSTOMER REQUIREMENT ON-THE-SPOT */}
       {showUpdateRequirementModal && showUpdateRequirementModal.open && showUpdateRequirementModal.customer && (
@@ -15279,7 +15674,7 @@ export default function App() {
 
             <form onSubmit={(e) => {
               e.preventDefault();
-              const newBkgCode = `SRM-BKG-2026-000${bookings.length + 201}`;
+              const newBkgCode = `SRM-BKG-2026-${String(bookings.length + 1).padStart(6, '0')}`;
               const tokAmt = Number(newBookingForm.token_amount || 500000);
               const agrValNum = Number(newBookingForm.agreement_value || 8400000);
               const brokAmt = agrValNum * 0.02;
@@ -15390,7 +15785,17 @@ export default function App() {
         const balanceValNum = Math.max(0, agreeValNum - tokenValNum);
         const tokenInWordsStr = numberToWordsIndian(tokenValNum);
 
-        const bkgCode = bkg.booking_code || bkg.bookingCode || 'SRM-BKG-2026-000087';
+        const bkgCode = (() => {
+          const rawCode = bkg.booking_code || bkg.bookingCode;
+          if (!rawCode || rawCode.includes('000087')) {
+            const idx = Array.isArray(bookings)
+              ? bookings.findIndex((item: any) => item && (item.id === bkg.id || item.booking_code === bkg.booking_code || (item.customer_name === bkg.customer_name && item.project_name === bkg.project_name)))
+              : -1;
+            const seq = idx >= 0 ? idx + 1 : 1;
+            return `SRM-BKG-2026-${String(seq).padStart(6, '0')}`;
+          }
+          return rawCode;
+        })();
         const bkgDate = bkg.booking_date || bkg.created_date || new Date().toISOString().split('T')[0];
 
         const activeT = {
@@ -19301,27 +19706,35 @@ export default function App() {
                 const scorePercent = Math.round((filledItems.length / auditItems.length) * 100);
 
                 return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: windowWidth <= 640 ? '12px' : '16px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
 
                     {/* 1. REQUIREMENT COMPLETENESS AUDIT SCORE CARD */}
                     <div style={{
                       background: isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.08)',
                       border: '1.5px solid #ef4444',
                       borderRadius: '12px',
-                      padding: '16px',
+                      padding: windowWidth <= 640 ? '12px 14px' : '16px',
                       display: 'flex',
+                      flexDirection: windowWidth <= 640 ? 'column' : 'row',
                       justifyContent: 'space-between',
-                      alignItems: 'center'
+                      alignItems: windowWidth <= 640 ? 'flex-start' : 'center',
+                      gap: '12px',
+                      width: '100%',
+                      maxWidth: '100%',
+                      minWidth: 0,
+                      boxSizing: 'border-box'
                     }}>
-                      <div>
-                        <span style={{ fontSize: '0.72rem', fontWeight: '900', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <span style={{ fontSize: windowWidth <= 640 ? '0.68rem' : '0.72rem', fontWeight: '900', color: scorePercent >= 80 ? '#22c55e' : '#ef4444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           REQUIREMENT COMPLETENESS AUDIT SCORE
                         </span>
-                        <div style={{ fontSize: '2rem', fontWeight: '900', color: scorePercent >= 80 ? '#22c55e' : scorePercent >= 50 ? '#ffffff' : '#ef4444', lineHeight: 1.1, marginTop: '2px' }}>
+                        <div style={{ fontSize: windowWidth <= 640 ? '1.5rem' : '1.85rem', fontWeight: '900', color: scorePercent >= 80 ? '#22c55e' : scorePercent >= 50 ? (isLight ? '#0f172a' : '#ffffff') : '#ef4444', lineHeight: 1.1, marginTop: '2px' }}>
                           {scorePercent}% COMPLETE
                         </div>
-                        <div style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
-                          Partial qualification profile. Fill missing BHK, Location, or Budget details for higher match accuracy.
+                        <div style={{ fontSize: windowWidth <= 640 ? '0.7rem' : '0.74rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px', lineHeight: '1.4' }}>
+                          {scorePercent >= 80 
+                            ? 'High quality profile ready for instant AI & property matching handoff.'
+                            : 'Partial qualification profile. Fill missing BHK, Location, or Budget details for higher match accuracy.'}
                         </div>
                       </div>
 
@@ -19329,34 +19742,61 @@ export default function App() {
                         background: scorePercent >= 80 ? '#22c55e' : '#ef4444',
                         color: '#ffffff',
                         fontWeight: '900',
-                        fontSize: '0.78rem',
-                        padding: '6px 14px',
+                        fontSize: windowWidth <= 640 ? '0.72rem' : '0.78rem',
+                        padding: windowWidth <= 640 ? '5px 12px' : '6px 14px',
                         borderRadius: '20px',
                         letterSpacing: '0.5px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        alignSelf: windowWidth <= 640 ? 'flex-start' : 'center'
                       }}>
                         {scorePercent >= 80 ? 'HIGH ACCURACY INTAKE' : 'BASIC INTAKE'}
                       </span>
                     </div>
 
                     {/* 2. REQUIREMENT COMPLETENESS AUDIT BREAKDOWN */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: '900', color: isLight ? '#0284c7' : '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                      width: '100%',
+                      maxWidth: '100%',
+                      minWidth: 0,
+                      boxSizing: 'border-box'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: windowWidth <= 540 ? 'flex-start' : 'center',
+                        flexDirection: windowWidth <= 540 ? 'column' : 'row',
+                        gap: '8px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}>
+                        <span style={{ fontSize: windowWidth <= 640 ? '0.76rem' : '0.82rem', fontWeight: '900', color: isLight ? '#0284c7' : '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           📊 REQUIREMENT COMPLETENESS AUDIT BREAKDOWN
                         </span>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <span style={{ background: isLight ? '#dcfce7' : '#064e3b', color: isLight ? '#15803d' : '#34d399', padding: '3px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '900' }}>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          <span style={{ background: isLight ? '#dcfce7' : '#064e3b', color: isLight ? '#15803d' : '#34d399', padding: '3px 8px', borderRadius: '12px', fontSize: '0.68rem', fontWeight: '900', whiteSpace: 'nowrap' }}>
                             ✓ {filledItems.length} Filled
                           </span>
-                          <span style={{ background: isLight ? '#fee2e2' : '#7f1d1d', color: isLight ? '#b91c1c' : '#f87171', padding: '3px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '900' }}>
+                          <span style={{ background: isLight ? '#fee2e2' : '#7f1d1d', color: isLight ? '#b91c1c' : '#f87171', padding: '3px 8px', borderRadius: '12px', fontSize: '0.68rem', fontWeight: '900', whiteSpace: 'nowrap' }}>
                             ⚠️ {missingItems.length} Needs Filling
                           </span>
                         </div>
                       </div>
 
                       {/* 2-COLUMN AUDIT ITEMS GRID */}
-                      <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '10px' }}>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: windowWidth <= 720 ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+                        gap: '8px',
+                        width: '100%',
+                        maxWidth: '100%',
+                        minWidth: 0,
+                        boxSizing: 'border-box'
+                      }}>
                         {auditItems.map(item => {
                           const isFilled = Boolean(item.value && String(item.value).trim());
 
@@ -19367,28 +19807,62 @@ export default function App() {
                                 background: isFilled ? (isLight ? '#f8fafc' : '#0f172a') : (isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.08)'),
                                 border: isFilled ? (isLight ? '1px solid #cbd5e1' : '1px solid #1e293b') : '1.5px solid #0284c7',
                                 borderRadius: '8px',
-                                padding: '10px 12px',
+                                padding: '8px 10px',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: '4px'
+                                gap: '3px',
+                                minWidth: 0,
+                                maxWidth: '100%',
+                                boxSizing: 'border-box',
+                                overflow: 'hidden'
                               }}
                             >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '0.72rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                                <span style={{
+                                  fontSize: '0.71rem',
+                                  fontWeight: '800',
+                                  color: isLight ? '#64748b' : '#94a3b8',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  minWidth: 0,
+                                  flex: '1 1 auto'
+                                }}>
                                   {item.label}
                                 </span>
-                                <span style={{ fontSize: '0.68rem', fontWeight: '900', color: isFilled ? '#22c55e' : '#ef4444' }}>
+                                <span style={{
+                                  fontSize: '0.66rem',
+                                  fontWeight: '900',
+                                  color: isFilled ? '#22c55e' : '#ef4444',
+                                  background: isFilled ? (isLight ? 'rgba(34, 197, 94, 0.12)' : 'rgba(34, 197, 94, 0.18)') : (isLight ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239, 68, 68, 0.18)'),
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  flexShrink: 0,
+                                  whiteSpace: 'nowrap'
+                                }}>
                                   {isFilled ? '✓ Filled' : '⚠️ Missing'}
                                 </span>
                               </div>
 
                               {isFilled ? (
-                                <div style={{ fontSize: '0.86rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <div
+                                  style={{
+                                    fontSize: '0.82rem',
+                                    fontWeight: '800',
+                                    color: isLight ? '#0f172a' : '#ffffff',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    minWidth: 0,
+                                    lineHeight: '1.3'
+                                  }}
+                                  title={String(item.value)}
+                                >
                                   {String(item.value)}
                                 </div>
                               ) : (
-                                <div>
-                                  <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#fbbf24' }}>
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontSize: '0.76rem', fontWeight: '800', color: '#fbbf24', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     Pending (Step {item.step})
                                   </div>
                                   <button
@@ -19396,20 +19870,24 @@ export default function App() {
                                     onClick={() => setLeadIntakeStep(item.step)}
                                     style={{
                                       width: '100%',
-                                      marginTop: '6px',
+                                      marginTop: '4px',
                                       background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                                       color: '#ffffff',
                                       border: 'none',
-                                      padding: '6px 10px',
+                                      padding: '5px 8px',
                                       borderRadius: '6px',
-                                      fontSize: '0.74rem',
+                                      fontSize: '0.72rem',
                                       fontWeight: '900',
                                       cursor: 'pointer',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
                                       gap: '4px',
-                                      boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)'
+                                      boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
+                                      boxSizing: 'border-box',
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis'
                                     }}
                                   >
                                     ✍️ Go to Step {item.step} to Fill
@@ -19427,35 +19905,45 @@ export default function App() {
                       background: isLight ? '#f1f5f9' : '#0b1329',
                       border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b',
                       borderRadius: '10px',
-                      padding: '12px 14px',
+                      padding: windowWidth <= 640 ? '10px 12px' : '12px 14px',
                       display: 'grid',
-                      gridTemplateColumns: windowWidth <= 640 ? '1fr 1fr' : 'repeat(6, 1fr)',
+                      gridTemplateColumns: windowWidth <= 520 
+                        ? '1fr' 
+                        : windowWidth <= 768 
+                        ? 'repeat(2, minmax(0, 1fr))' 
+                        : windowWidth <= 1024 
+                        ? 'repeat(3, minmax(0, 1fr))' 
+                        : 'repeat(6, minmax(0, 1fr))',
                       gap: '8px',
-                      fontSize: '0.72rem'
+                      fontSize: '0.72rem',
+                      width: '100%',
+                      maxWidth: '100%',
+                      minWidth: 0,
+                      boxSizing: 'border-box'
                     }}>
-                      <div>
-                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Customer Name:</span>
-                        <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.82rem' }}>{newCustomerForm.name || '-'}</strong>
+                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block', fontSize: '0.68rem' }}>Customer Name:</span>
+                        <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.8rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={newCustomerForm.name || '-'}>{newCustomerForm.name || '-'}</strong>
                       </div>
-                      <div>
-                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Mobile Phone:</span>
-                        <strong style={{ color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.82rem' }}>{newCustomerForm.mobile || '-'}</strong>
+                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block', fontSize: '0.68rem' }}>Mobile Phone:</span>
+                        <strong style={{ color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.8rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{newCustomerForm.mobile || '-'}</strong>
                       </div>
-                      <div>
-                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Assigned Exec:</span>
-                        <strong style={{ color: '#38bdf8', fontSize: '0.82rem' }}>{newCustomerForm.assigned_employee_name || 'Priya Nair (Sales Exec)'}</strong>
+                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block', fontSize: '0.68rem' }}>Assigned Exec:</span>
+                        <strong style={{ color: '#38bdf8', fontSize: '0.8rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={newCustomerForm.assigned_employee_name || 'Priya Nair (Sales Exec)'}>{newCustomerForm.assigned_employee_name || 'Priya Nair (Sales Exec)'}</strong>
                       </div>
-                      <div>
-                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Budget Range:</span>
-                        <strong style={{ color: '#22c55e', fontSize: '0.82rem' }}>{newCustomerForm.budget_min ? `₹${newCustomerForm.budget_min} - ₹${newCustomerForm.budget_max} ${newCustomerForm.budget_unit || 'Lakhs'}` : '-'}</strong>
+                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block', fontSize: '0.68rem' }}>Budget Range:</span>
+                        <strong style={{ color: '#22c55e', fontSize: '0.8rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{newCustomerForm.budget_min ? `₹${newCustomerForm.budget_min} - ₹${newCustomerForm.budget_max} ${newCustomerForm.budget_unit || 'Lakhs'}` : '-'}</strong>
                       </div>
-                      <div>
-                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Preferred Area:</span>
-                        <strong style={{ color: '#fbbf24', fontSize: '0.82rem' }}>{newCustomerForm.preferredArea || '(2BHK)'}</strong>
+                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block', fontSize: '0.68rem' }}>Preferred Area:</span>
+                        <strong style={{ color: '#fbbf24', fontSize: '0.8rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={newCustomerForm.preferredArea || '(2BHK)'}>{newCustomerForm.preferredArea || '(2BHK)'}</strong>
                       </div>
-                      <div>
-                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block' }}>Agreed Brokerage:</span>
-                        <strong style={{ color: '#22c55e', fontSize: '0.82rem' }}>💰 {newCustomerForm.brokerage_rate || '2.0% (CUSTOMER)'}</strong>
+                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block', fontSize: '0.68rem' }}>Agreed Brokerage:</span>
+                        <strong style={{ color: '#22c55e', fontSize: '0.8rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>💰 {newCustomerForm.brokerage_rate || '2.0% (CUSTOMER)'}</strong>
                       </div>
                     </div>
 
@@ -19464,12 +19952,16 @@ export default function App() {
                       background: isLight ? '#f0f9ff' : '#0b1329',
                       border: '1.5px solid #0284c7',
                       borderRadius: '10px',
-                      padding: '14px',
+                      padding: windowWidth <= 640 ? '10px 12px' : '14px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '8px'
+                      gap: '8px',
+                      width: '100%',
+                      maxWidth: '100%',
+                      minWidth: 0,
+                      boxSizing: 'border-box'
                     }}>
-                      <label style={{ fontSize: '0.78rem', fontWeight: '900', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: windowWidth <= 640 ? '0.74rem' : '0.78rem', fontWeight: '900', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         👤 ASSIGN SALES EXECUTIVE / CLIENT RELATIONSHIP MANAGER *
                       </label>
                       <select
@@ -19477,13 +19969,16 @@ export default function App() {
                         onChange={e => setNewCustomerForm({ ...newCustomerForm, assigned_employee_id: e.target.value, assigned_employee_name: e.target.value })}
                         style={{
                           width: '100%',
-                          padding: '10px 14px',
+                          maxWidth: '100%',
+                          boxSizing: 'border-box',
+                          padding: windowWidth <= 640 ? '8px 10px' : '10px 14px',
                           borderRadius: '8px',
                           border: '1px solid #0284c7',
                           background: isLight ? '#ffffff' : '#0f172a',
                           color: '#38bdf8',
                           fontWeight: '900',
-                          fontSize: '0.88rem'
+                          fontSize: windowWidth <= 640 ? '0.8rem' : '0.88rem',
+                          minWidth: 0
                         }}
                       >
                         {dynamicSalesExecutives.map((exec: any) => (
@@ -19502,12 +19997,42 @@ export default function App() {
               })()}
 
               {/* MODAL FOOTER ACTION BAR */}
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '14px', marginTop: '10px', flexWrap: 'nowrap', width: '100%' }}>
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <div style={{
+                display: 'flex',
+                gap: '10px',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                paddingTop: '14px',
+                marginTop: '10px',
+                flexWrap: 'wrap',
+                width: '100%',
+                maxWidth: '100%',
+                minWidth: 0,
+                boxSizing: 'border-box'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  gap: '8px',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  width: windowWidth <= 640 ? '100%' : 'auto'
+                }}>
                   <button
                     type="button"
                     onClick={() => { setShowLeadModal(false); setShowAddCustomerModal(false); }}
-                    style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                    style={{
+                      background: isLight ? '#e2e8f0' : '#334155',
+                      color: isLight ? '#0f172a' : '#ffffff',
+                      border: 'none',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      fontWeight: '800',
+                      fontSize: '0.8rem',
+                      whiteSpace: 'nowrap',
+                      cursor: 'pointer',
+                      flex: windowWidth <= 640 ? '1 1 auto' : 'initial'
+                    }}
                   >
                     ✕ Cancel
                   </button>
@@ -19516,18 +20041,48 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setLeadIntakeStep(leadIntakeStep - 1)}
-                      style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                      style={{
+                        background: isLight ? '#f1f5f9' : '#0f172a',
+                        color: isLight ? '#0f172a' : '#ffffff',
+                        border: isLight ? '1px solid #cbd5e1' : '1px solid #475569',
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        fontWeight: '800',
+                        fontSize: '0.8rem',
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        flex: windowWidth <= 640 ? '1 1 auto' : 'initial'
+                      }}
                     >
                       ← Previous Step
                     </button>
                   )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <div style={{
+                  display: 'flex',
+                  gap: '8px',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  justifyContent: windowWidth <= 768 ? 'stretch' : 'flex-end',
+                  flex: windowWidth <= 768 ? '1 1 100%' : 'initial',
+                  width: windowWidth <= 640 ? '100%' : 'auto'
+                }}>
                   <button
                     type="button"
                     onClick={handleSaveQualificationDraft}
-                    style={{ background: isLight ? '#f59e0b' : '#d97706', color: '#0f172a', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                    style={{
+                      background: isLight ? '#f59e0b' : '#d97706',
+                      color: '#0f172a',
+                      border: 'none',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      fontWeight: '900',
+                      fontSize: '0.8rem',
+                      whiteSpace: 'nowrap',
+                      cursor: 'pointer',
+                      flex: windowWidth <= 640 ? '1 1 100%' : 'initial'
+                    }}
                   >
                     💾 Save Draft (Step {leadIntakeStep})
                   </button>
@@ -19536,7 +20091,19 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => handleSaveBypassedLead(newLeadForm.call_disposition)}
-                      style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)' }}
+                      style={{
+                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        fontWeight: '900',
+                        fontSize: '0.82rem',
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)',
+                        flex: windowWidth <= 640 ? '1 1 100%' : 'initial'
+                      }}
                     >
                       💾 Save Lead & Exit (Bypass Steps 3-9)
                     </button>
@@ -19545,7 +20112,19 @@ export default function App() {
                       key="btn-step-next"
                       type="button"
                       onClick={() => setLeadIntakeStep(leadIntakeStep + 1)}
-                      style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)' }}
+                      style={{
+                        background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        fontWeight: '900',
+                        fontSize: '0.82rem',
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)',
+                        flex: windowWidth <= 640 ? '1 1 auto' : 'initial'
+                      }}
                     >
                       Next Step →
                     </button>
@@ -19554,7 +20133,27 @@ export default function App() {
                       key="btn-step-submit"
                       type="button"
                       onClick={handleCreateCustomerSubmit}
-                      style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.84rem', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: '0 4px 14px rgba(34, 197, 94, 0.4)' }}
+                      style={{
+                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: windowWidth <= 640 ? '10px 14px' : '9px 18px',
+                        borderRadius: '8px',
+                        fontWeight: '900',
+                        fontSize: windowWidth <= 640 ? '0.78rem' : '0.84rem',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(34, 197, 94, 0.4)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        flex: windowWidth <= 768 ? '1 1 100%' : 'initial',
+                        textAlign: 'center',
+                        whiteSpace: windowWidth <= 640 ? 'normal' : 'nowrap',
+                        lineHeight: '1.25',
+                        maxWidth: '100%',
+                        boxSizing: 'border-box'
+                      }}
                     >
                       🚀 GENERATE MATCHING ID & SEND TO MATCHING MANAGEMENT
                     </button>

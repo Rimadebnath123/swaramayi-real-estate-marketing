@@ -128,8 +128,12 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
 
   const handleSendInvoiceToBooking = (inv: any) => {
     // 1. Resolve booking code
-    const rawBookingCode = inv.booking_code || (inv.invoice_number ? inv.invoice_number.replace('SRM-INV-', 'SRM-BKG-').replace('SRM-DEV-INV-', 'SRM-BKG-') : 'SRM-BKG-2026-000087');
-    const bkgCode = rawBookingCode.includes('SRM-BKG-') ? rawBookingCode : `SRM-BKG-2026-${(inv.customer_number || '000087').replace(/\D/g, '').slice(-6) || '000087'}`;
+    const rawBookingCode = (inv.booking_code && !inv.booking_code.includes('000087'))
+      ? inv.booking_code
+      : (inv.invoice_number ? inv.invoice_number.replace('SRM-INV-', 'SRM-BKG-').replace('SRM-DEV-INV-', 'SRM-BKG-') : 'SRM-BKG-2026-000001');
+    const bkgCode = (rawBookingCode.includes('SRM-BKG-') && !rawBookingCode.includes('000087'))
+      ? rawBookingCode
+      : `SRM-BKG-2026-${(inv.customer_number || '000001').replace(/\D/g, '').slice(-6) || '000001'}`;
 
     // 2. Resolve customer details
     const matchedCust = (customers || []).find((c: any) => 

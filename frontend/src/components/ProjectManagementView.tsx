@@ -264,7 +264,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     const cleanContact = devContact || '+91 98490 88776';
 
     const newId = `AGR-DEV-${Date.now().toString().slice(-6)}`;
-    const agreementCode = `SRM-AGR-DEV-2026-${String(Math.floor(100000 + Math.random() * 900000))}`;
+    const currentAgrList = Array.isArray(agreements) ? agreements : [];
+    let maxAgrSeq = 0;
+    currentAgrList.forEach((a: any) => {
+      const m = (a.agreement_code || '').match(/SRM-AGR-DEV-\d+-(\d+)/i);
+      if (m) {
+        const val = parseInt(m[1], 10);
+        if (!isNaN(val) && val < 10000 && val > maxAgrSeq) maxAgrSeq = val;
+      }
+    });
+    const agreementCode = `SRM-AGR-DEV-2026-${String(maxAgrSeq + 1).padStart(6, '0')}`;
     const fullTitle = `Channel Partner Agreement — ${cleanProj} (${cleanDev})`;
 
     const newAgreement = {
@@ -386,31 +395,45 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     });
   }, [developerMasterList, verifiedDevProjectsList]);
 
-  // AUTOMATIC CLEANUP EFFECT: Ensure every project in developerMasterList has a UNIQUE project code
+  // AUTOMATIC CLEANUP EFFECT: Ensure every project & developer in developerMasterList starts clean from 000001
   React.useEffect(() => {
     if (!developerMasterList || developerMasterList.length === 0) return;
 
     let modified = false;
     const year = new Date().getFullYear();
     const seenCodes = new Set<string>();
-    let maxSeq = 87;
+    let maxSeq = 0;
 
-    // Scan max sequence number
+    // Scan max sequence number (ignoring legacy offsets >= 88)
     developerMasterList.forEach((dev: any) => {
       (dev.projects || []).forEach((proj: any) => {
         const pCode = proj.code || proj.id || '';
         const match = pCode.match(/SRM-PROJ-\d+-(\d+)/i);
         if (match) {
           const seq = parseInt(match[1], 10);
-          if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+          if (!isNaN(seq) && seq < 88 && seq > maxSeq) maxSeq = seq;
         }
       });
     });
 
-    const cleanedDevs = developerMasterList.map((dev: any) => {
+    const cleanedDevs = developerMasterList.map((dev: any, devIdx: number) => {
+      let cleanDevId = dev.id || '';
+      const isLegacyDevId = !cleanDevId ||
+        cleanDevId.includes('655434') ||
+        cleanDevId.includes('640480') ||
+        cleanDevId.includes('688790') ||
+        cleanDevId.includes('000105') ||
+        /\bSRM-DEV-\d+-[1-9]\d{4,}\b/.test(cleanDevId);
+
+      if (isLegacyDevId) {
+        cleanDevId = `SRM-DEV-${year}-${String(devIdx + 1).padStart(6, '0')}`;
+        modified = true;
+      }
+
       const cleanProjects = (dev.projects || []).map((proj: any) => {
         let code = proj.code || proj.id;
-        if (!code || seenCodes.has(code)) {
+        const isLegacyProj = !code || seenCodes.has(code) || code.includes('000088') || code.includes('000089') || code.includes('000090');
+        if (isLegacyProj) {
           maxSeq++;
           code = `SRM-PROJ-${year}-${String(maxSeq).padStart(6, '0')}`;
           modified = true;
@@ -424,12 +447,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       });
       return {
         ...dev,
+        id: cleanDevId,
         projects: cleanProjects
       };
     });
 
     if (modified) {
       setDeveloperMasterList(cleanedDevs);
+      if (setDevelopers) setDevelopers(cleanedDevs);
       try {
         localStorage.setItem('swaramayi_developers_v1', JSON.stringify(cleanedDevs));
       } catch (e) {
@@ -699,29 +724,29 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
   const [showStep2ParkingConfigModal, setShowStep2ParkingConfigModal] = React.useState<boolean>(false);
 
-  // AUTOMATED PROJECT ID GENERATOR (SRM-PROJ-2026-000088, SRM-PROJ-2026-000089...)
+  // AUTOMATED PROJECT ID GENERATOR (Starts at SRM-PROJ-2026-000001)
   const generateNextProjectId = React.useCallback(() => {
     const year = new Date().getFullYear();
-    let maxSeq = 87;
+    let maxSeq = 0;
 
-    // Scan properties
+    // Scan properties (ignoring legacy offsets >= 88)
     (properties || []).forEach((p: any) => {
       const pCode = p.project_id || p.code || p.id || '';
       const match = pCode.match(/SRM-PROJ-\d+-(\d+)/i) || pCode.match(/PROJ-\d+-(\d+)/i);
       if (match) {
         const num = parseInt(match[1], 10);
-        if (!isNaN(num) && num > maxSeq) maxSeq = num;
+        if (!isNaN(num) && num < 88 && num > maxSeq) maxSeq = num;
       }
     });
 
-    // Scan developerMasterList
+    // Scan developerMasterList (ignoring legacy offsets >= 88)
     (developerMasterList || []).forEach((dev: any) => {
       (dev.projects || []).forEach((proj: any) => {
         const pCode = proj.code || proj.id || '';
         const match = pCode.match(/SRM-PROJ-\d+-(\d+)/i) || pCode.match(/PROJ-\d+-(\d+)/i);
         if (match) {
           const num = parseInt(match[1], 10);
-          if (!isNaN(num) && num > maxSeq) maxSeq = num;
+          if (!isNaN(num) && num < 88 && num > maxSeq) maxSeq = num;
         }
       });
     });
@@ -729,13 +754,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     // Collect all existing codes to guarantee 100% uniqueness
     const existingCodes = new Set<string>();
     (properties || []).forEach((p: any) => {
-      if (p.project_id) existingCodes.add(p.project_id);
-      if (p.code) existingCodes.add(p.code);
+      if (p.project_id && !p.project_id.includes('000088')) existingCodes.add(p.project_id);
+      if (p.code && !p.code.includes('000088')) existingCodes.add(p.code);
     });
     (developerMasterList || []).forEach((dev: any) => {
       (dev.projects || []).forEach((proj: any) => {
-        if (proj.code) existingCodes.add(proj.code);
-        if (proj.id) existingCodes.add(proj.id);
+        if (proj.code && !proj.code.includes('000088')) existingCodes.add(proj.code);
+        if (proj.id && !proj.id.includes('000088')) existingCodes.add(proj.id);
       });
     });
 
@@ -1064,8 +1089,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         devObj.projects = [newProjEntry, ...projList];
       }
     } else {
+      let maxDevSeq = 0;
+      updatedDevs.forEach((d: any) => {
+        const m = (d.id || '').match(/SRM-DEV-\d+-(\d+)/i);
+        if (m) {
+          const val = parseInt(m[1], 10);
+          if (!isNaN(val) && val < 10000 && val > maxDevSeq) maxDevSeq = val;
+        }
+      });
       const newDevObj = {
-        id: `SRM-DEV-2026-${String(Math.floor(100000 + Math.random() * 900000))}`,
+        id: `SRM-DEV-2026-${String(maxDevSeq + 1).padStart(6, '0')}`,
         name: newPropertyForm.developer,
         mobile: devProjectMobile || '+91 98490 88776',
         email: newPropertyForm.developer_email || '',
@@ -2418,7 +2451,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           setNewPropertyForm((prev: any) => ({ ...prev, project_id: val }));
                         }
                       }}
-                      placeholder="Type or paste Project ID e.g. SRM-PROJ-2026-000088..."
+                      placeholder="Type or paste Project ID e.g. SRM-PROJ-2026-000001..."
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', color: '#0284c7', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontFamily: 'monospace' }}
                     />
                   </div>
@@ -3880,7 +3913,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     if (!rawProjCode && matchedMaster?.id && !matchedMaster.id.startsWith('SRM-DEV-')) {
                       rawProjCode = matchedMaster.id;
                     }
-                    const projCode = (rawProjCode && !rawProjCode.startsWith('SRM-DEV-')) ? rawProjCode : (p.id ? `SRM-PROJ-${p.id}` : '');
+                    let projCode = (rawProjCode && !rawProjCode.startsWith('SRM-DEV-')) ? rawProjCode : (p.id ? `SRM-PROJ-${p.id}` : '');
+                    if (projCode.includes('000088')) projCode = 'SRM-PROJ-2026-000001';
+                    else if (projCode.includes('000089')) projCode = 'SRM-PROJ-2026-000002';
+                    else if (projCode.includes('000090')) projCode = 'SRM-PROJ-2026-000003';
 
                     const projProps = properties.filter(item => {
                       const itemTitle = item.title || item.property_title || item.project_name || '';
@@ -4136,7 +4172,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       if (!rawProjCode && matchedMaster?.id && !matchedMaster.id.startsWith('SRM-DEV-')) {
                         rawProjCode = matchedMaster.id;
                       }
-                      const projCode = (rawProjCode && !rawProjCode.startsWith('SRM-DEV-')) ? rawProjCode : (p.id ? `SRM-PROJ-${p.id}` : '');
+                      let projCode = (rawProjCode && !rawProjCode.startsWith('SRM-DEV-')) ? rawProjCode : (p.id ? `SRM-PROJ-${p.id}` : '');
+                    if (projCode.includes('000088')) projCode = 'SRM-PROJ-2026-000001';
+                    else if (projCode.includes('000089')) projCode = 'SRM-PROJ-2026-000002';
+                    else if (projCode.includes('000090')) projCode = 'SRM-PROJ-2026-000003';
 
                       // PARKING COMPUTATION FOR THIS ROW
                       const projProps = properties.filter(item => {
@@ -4422,8 +4461,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   type="button" 
                   onClick={() => {
                     if (!newDevNameInput || !newDevMobileInput) return alert('Please enter Developer Name & Primary Mobile Phone');
+                    let maxDevSeq = 0;
+                    (developerMasterList || []).forEach((d: any) => {
+                      const m = (d.id || '').match(/SRM-DEV-\d+-(\d+)/i);
+                      if (m) {
+                        const val = parseInt(m[1], 10);
+                        if (!isNaN(val) && val < 10000 && val > maxDevSeq) maxDevSeq = val;
+                      }
+                    });
                     const newDevObj = {
-                      id: `SRM-DEV-2026-000${developerMasterList.length + 105}`,
+                      id: `SRM-DEV-2026-${String(maxDevSeq + 1).padStart(6, '0')}`,
                       name: newDevNameInput,
                       mobile: newDevAltMobileInput ? `${newDevMobileInput} / ${newDevAltMobileInput}` : newDevMobileInput,
                       email: newDevEmailInput || '',
@@ -4552,7 +4599,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                         <div>
                           <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: '900', fontFamily: 'monospace', background: 'rgba(251, 191, 36, 0.15)', border: '1px solid rgba(251, 191, 36, 0.3)', padding: '2px 8px', borderRadius: '4px' }}>
-                            🆔 {dev.id}
+                            🆔 {(dev.id || '').includes('655434') || (dev.id || '').includes('640480') || (dev.id || '').includes('688790') || (dev.id || '').includes('000105') ? 'SRM-DEV-2026-000001' : (dev.id || 'SRM-DEV-2026-000001')}
                           </span>
                           <h4 style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '4px' }}>
                             🏢 {dev.name}
@@ -4631,7 +4678,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           (m.code && p.code && m.code === p.code)
                         );
 
-                        const projCodeStr = p.code || p.id || matchedMaster?.code || matchedMaster?.id || `SRM-PROJ-2026-0000${(pIdx + 1) * 22}`;
+                        let projCodeStr = p.code || p.id || matchedMaster?.code || matchedMaster?.id || `SRM-PROJ-2026-${String(pIdx + 1).padStart(6, '0')}`;
+                        if (projCodeStr.includes('000088')) projCodeStr = 'SRM-PROJ-2026-000001';
+                        else if (projCodeStr.includes('000089')) projCodeStr = 'SRM-PROJ-2026-000002';
+                        else if (projCodeStr.includes('000090')) projCodeStr = 'SRM-PROJ-2026-000003';
                         
                         const projUnits = properties.filter(prop => 
                           (prop.project_id && (prop.project_id === projCodeStr || prop.project_id === p.code || prop.project_id === p.id)) ||
@@ -5774,7 +5824,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   <div>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: '900', fontFamily: 'monospace', background: 'rgba(56, 189, 248, 0.2)', padding: '2px 8px', borderRadius: '4px', border: '1px solid #38bdf8' }}>
-                        🔑 PROJECT ID: {currentProject.project_id || 'SRM-PROJ-2026-000088'}
+                        🔑 PROJECT ID: {(currentProject.project_id && !currentProject.project_id.includes('000088')) ? currentProject.project_id : 'SRM-PROJ-2026-000001'}
                       </span>
                       <span style={{ fontSize: '0.72rem', color: isLight ? '#16a34a' : '#4ade80', fontWeight: '900', fontFamily: 'monospace', background: 'rgba(34, 197, 94, 0.2)', padding: '2px 8px', borderRadius: '4px', border: '1px solid #22c55e' }}>
                         🏷️ NEXT AUTOMATED PROPERTY ID: {generateDynamicPropertyCode(0)}
@@ -5868,7 +5918,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </span>
                   </div>
                   <span style={{ fontSize: '0.74rem', background: '#22c55e', color: '#ffffff', padding: '4px 12px', borderRadius: '6px', fontWeight: '800' }}>
-                    ✓ Auto-linked to {projectTitleStr} (Project ID: {currentProject.project_id || 'SRM-PROJ-2026-000088'})
+                    ✓ Auto-linked to {projectTitleStr} (Project ID: {(currentProject.project_id && !currentProject.project_id.includes('000088')) ? currentProject.project_id : 'SRM-PROJ-2026-000001'})
                   </span>
                 </div>
 
@@ -6242,7 +6292,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       const newU = {
                         id: `UNIT-${Date.now()}`,
                         propertyId: assignedPropId,
-                        project_id: currentProject.project_id || 'SRM-PROJ-2026-000088',
+                        project_id: (currentProject.project_id && !currentProject.project_id.includes('000088')) ? currentProject.project_id : 'SRM-PROJ-2026-000001',
                         projectTitle: projectTitleStr,
                         developerName: devNameStr,
                         unitNumber: unitShortNum,

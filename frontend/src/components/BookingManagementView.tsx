@@ -91,14 +91,14 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
   };
 
   const handleTransferToBilling = (b: any) => {
-    const rawBookingCode = b.booking_code || 'SRM-BKG-2026-000087';
+    const rawBookingCode = (b.booking_code && !b.booking_code.includes('000087')) ? b.booking_code : 'SRM-BKG-2026-000001';
     const generatedCustomerInvoiceNumber = rawBookingCode.includes('SRM-BKG-')
       ? rawBookingCode.replace('SRM-BKG-', 'SRM-INV-')
-      : `SRM-INV-2026-0000${(invoices?.length || 0) + 87}`;
+      : `SRM-INV-2026-${String((invoices?.length || 0) + 1).padStart(6, '0')}`;
 
     const generatedDeveloperInvoiceNumber = rawBookingCode.includes('SRM-BKG-')
       ? rawBookingCode.replace('SRM-BKG-', 'SRM-DEV-INV-')
-      : `SRM-DEV-INV-2026-0000${(invoices?.length || 0) + 87}`;
+      : `SRM-DEV-INV-2026-${String((invoices?.length || 0) + 1).padStart(6, '0')}`;
 
     const brokerageAmt = Number(b.brokerage_amount) || 102297;
     const taxableVal = brokerageAmt;
@@ -321,7 +321,12 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
   };
 
   const allCombinedBookings = React.useMemo(() => {
-    const list = [...(bookings || [])];
+    const list = (bookings || []).map((b: any) => {
+      if (b && typeof b === 'object' && b.booking_code && b.booking_code.includes('000087')) {
+        return { ...b, booking_code: 'SRM-BKG-2026-000001' };
+      }
+      return b;
+    });
     const seenKeys = new Set<string>();
 
     list.forEach(b => {

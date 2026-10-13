@@ -1,5 +1,5 @@
 import React from 'react';
-import { Share2, Plus, Trash2, Printer, Search, Eye, Clock, Calendar, CheckCircle2, MessageSquare, AlertCircle, X } from 'lucide-react';
+import { Share2, Plus, Trash2, Printer, Search, Eye, Clock, Calendar, CheckCircle2, MessageSquare, AlertCircle, X, LayoutGrid, List } from 'lucide-react';
 import { getCustomerUsedPropertyCodes } from './MatchingManagementView';
 
 interface CostSheetSharingViewProps {
@@ -98,6 +98,79 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
   const isSuperAdmin = isStrictSuperAdmin;
+
+  const isMobile = (windowWidth || 1024) <= 768;
+  const isSmallMobile = (windowWidth || 1024) <= 480;
+
+  const [viewMode, setViewMode] = React.useState<'auto' | 'cards' | 'table'>('auto');
+  const effectiveView = viewMode === 'auto' ? (isMobile ? 'cards' : 'table') : viewMode;
+
+  const handleDeleteSingle = (item: any, custName: string) => {
+    if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Cost Sheet record ${item.costSheetId} for ${custName}? It will be moved to Recycle Bin.`)) {
+      if (onRecycleItem) {
+        onRecycleItem({
+          id: item.id || item.costSheetId || `CS-${Date.now()}`,
+          title: `Cost Sheet - ${custName} (${item.costSheetId})`,
+          category: 'Cost Sheet',
+          originalLocation: 'Cost Sheet Sharing Engine',
+          details: `Project: ${item.propertySnapshot?.title || item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || item.propertyTitle || 'N/A'}, Total: ${item.formattedPriceBreakup?.totalEstimatedCostStr || item.grandTotalFormatted || 'N/A'}`,
+          originalData: item
+        });
+      }
+      const updatedCostSheets = (individualCostSheets || []).filter((c: any) => 
+        c.costSheetId !== item.costSheetId && 
+        (!item.id || c.id !== item.id) &&
+        (!item.costSheetId || c.costSheetId !== item.costSheetId)
+      );
+      if (setIndividualCostSheets) {
+        setIndividualCostSheets(updatedCostSheets);
+      }
+      try {
+        setSelectedCostSheetIds(prev => prev.filter(id => id !== item.costSheetId && id !== item.id));
+        localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updatedCostSheets));
+      } catch (e) {}
+
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({
+          cost_sheets: updatedCostSheets
+        });
+      }
+      alert(`🗑️ Cost Sheet ${item.costSheetId} moved to Recycle Bin.`);
+    }
+  };
+
+  const handleDeleteGroup = (group: any, custName: string) => {
+    const groupSheetIds = group.items.map((it: any) => it.costSheetId);
+    if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete all ${group.items.length} Cost Sheet records for ${custName}? They will be moved to Recycle Bin.`)) {
+      if (onRecycleItem) {
+        group.items.forEach((it: any) => {
+          onRecycleItem({
+            id: it.id || it.costSheetId || `CS-${Date.now()}`,
+            title: `Cost Sheet - ${custName} (${it.costSheetId})`,
+            category: 'Cost Sheet',
+            originalLocation: 'Cost Sheet Sharing Engine',
+            details: `Project: ${it.propertySnapshot?.title || it.propertySnapshot?.propertyTitle || it.propertySnapshot?.projectName || it.propertyTitle || 'N/A'}, Total: ${it.formattedPriceBreakup?.totalEstimatedCostStr || it.grandTotalFormatted || 'N/A'}`,
+            originalData: it
+          });
+        });
+      }
+      const updatedCostSheets = (individualCostSheets || []).filter((c: any) => 
+        !groupSheetIds.includes(c.costSheetId) && (!c.id || !groupSheetIds.includes(c.id))
+      );
+      if (setIndividualCostSheets) {
+        setIndividualCostSheets(updatedCostSheets);
+      }
+      try {
+        setSelectedCostSheetIds(prev => prev.filter(id => !groupSheetIds.includes(id)));
+        localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updatedCostSheets));
+      } catch (e) {}
+
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({ cost_sheets: updatedCostSheets });
+      }
+      alert(`🗑️ All ${group.items.length} Cost Sheets for ${custName} moved to Recycle Bin.`);
+    }
+  };
 
   const [localCostSheetSubTab, setLocalCostSheetSubTab] = React.useState<'active_cost_sheets' | 'need_to_followup'>('active_cost_sheets');
 
@@ -377,19 +450,19 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '20px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', minWidth: 0 }}>
       
       {/* SUB-NAVIGATION TABS */}
-      <div style={{ display: 'flex', gap: '10px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '8px', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', flexWrap: 'wrap', width: '100%', boxSizing: 'border-box' }}>
         <button 
           onClick={() => setLocalCostSheetSubTab('active_cost_sheets')} 
-          style={{ padding: '8px 18px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: localCostSheetSubTab === 'active_cost_sheets' ? '#0284c7' : '#1e293b', color: localCostSheetSubTab === 'active_cost_sheets' ? '#ffffff' : '#94a3b8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', display: 'flex', alignItems: 'center', gap: '6px' }}
+          style={{ flex: isMobile ? '1 1 calc(50% - 4px)' : 'none', padding: isMobile ? '8px 10px' : '8px 18px', borderRadius: '8px', fontSize: isMobile ? '0.78rem' : '0.85rem', fontWeight: '800', cursor: 'pointer', background: localCostSheetSubTab === 'active_cost_sheets' ? '#0284c7' : (isLight ? '#f1f5f9' : '#1e293b'), color: localCostSheetSubTab === 'active_cost_sheets' ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', whiteSpace: 'nowrap' }}
         >
           📄 Active Cost Sheets ({displayedCostSheets.length})
         </button>
         <button 
           onClick={() => setLocalCostSheetSubTab('need_to_followup')} 
-          style={{ padding: '8px 18px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: localCostSheetSubTab === 'need_to_followup' ? '#0284c7' : '#1e293b', color: localCostSheetSubTab === 'need_to_followup' ? '#ffffff' : '#94a3b8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', display: 'flex', alignItems: 'center', gap: '6px' }}
+          style={{ flex: isMobile ? '1 1 calc(50% - 4px)' : 'none', padding: isMobile ? '8px 10px' : '8px 18px', borderRadius: '8px', fontSize: isMobile ? '0.78rem' : '0.85rem', fontWeight: '800', cursor: 'pointer', background: localCostSheetSubTab === 'need_to_followup' ? '#0284c7' : (isLight ? '#f1f5f9' : '#1e293b'), color: localCostSheetSubTab === 'need_to_followup' ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', whiteSpace: 'nowrap' }}
         >
           📌 Need to Followup ({localCostSheetFollowups.length})
         </button>
@@ -397,18 +470,18 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
 
       {/* SUB-TAB 1: ACTIVE COST SHEETS */}
       {localCostSheetSubTab === 'active_cost_sheets' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', minWidth: 0 }}>
 
           {/* SEARCH & STATUS / CUSTOMER FILTER STRIP */}
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: '240px', display: 'flex', alignItems: 'center', gap: '8px', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '6px 12px' }}>
-              <Search size={15} color="#38bdf8" />
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: isMobile ? '10px' : '12px', padding: isMobile ? '12px' : '16px', display: 'flex', gap: isMobile ? '10px' : '14px', alignItems: 'stretch', flexWrap: 'wrap', width: '100%', boxSizing: 'border-box' }}>
+            <div style={{ flex: isMobile ? '1 1 100%' : '1 1 240px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '6px 12px' }}>
+              <Search size={15} color="#38bdf8" style={{ flexShrink: 0 }} />
               <input 
                 type="text" 
                 value={individualCostSheetsSearch} 
                 onChange={(e) => setIndividualCostSheetsSearch(e.target.value)} 
-                placeholder="Search Cost Sheet ID (e.g. COST-SHEET-2026-000001), Customer Name, Match ID, or Property..." 
-                style={{ background: 'transparent', border: 'none', color: isLight ? '#0f172a' : '#ffffff', outline: 'none', fontSize: '0.85rem', width: '100%', fontWeight: '800' }} 
+                placeholder={isMobile ? "Search Cost Sheet, Customer, Property..." : "Search Cost Sheet ID (e.g. COST-SHEET-2026-000001), Customer Name, Match ID, or Property..."} 
+                style={{ background: 'transparent', border: 'none', color: isLight ? '#0f172a' : '#ffffff', outline: 'none', fontSize: '0.85rem', width: '100%', fontWeight: '700' }} 
               />
               {individualCostSheetsSearch && (
                 <button
@@ -422,15 +495,15 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
             </div>
 
             {/* Filter by Customer */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>Filter Customer:</span>
+            <div style={{ flex: isMobile ? '1 1 100%' : 'none', display: 'flex', flexDirection: isSmallMobile ? 'column' : 'row', alignItems: isSmallMobile ? 'flex-start' : 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', whiteSpace: 'nowrap' }}>Filter Customer:</span>
               <select 
                 value={selectedCustomerFilter} 
                 onChange={(e) => {
                   setSelectedCustomerFilter(e.target.value);
                   setSelectedCostSheetIds([]);
                 }} 
-                style={{ background: isLight ? '#f8fafc' : '#0f172a', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '6px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '800', maxWidth: '240px' }}
+                style={{ width: isMobile ? '100%' : 'auto', background: isLight ? '#f8fafc' : '#0f172a', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '6px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '800', maxWidth: isMobile ? '100%' : '240px' }}
               >
                 <option value="ALL">👥 All Customers ({costSheetCustomers.length})</option>
                 {costSheetCustomers.map((c) => (
@@ -442,12 +515,12 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
             </div>
 
             {/* Filter Status */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>Filter Status:</span>
+            <div style={{ flex: isMobile ? '1 1 100%' : 'none', display: 'flex', flexDirection: isSmallMobile ? 'column' : 'row', alignItems: isSmallMobile ? 'flex-start' : 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', whiteSpace: 'nowrap' }}>Filter Status:</span>
               <select 
                 value={individualCostSheetsStatusFilter} 
                 onChange={(e) => setIndividualCostSheetsStatusFilter(e.target.value)} 
-                style={{ background: isLight ? '#f8fafc' : '#0f172a', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '6px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '800' }}
+                style={{ width: isMobile ? '100%' : 'auto', background: isLight ? '#f8fafc' : '#0f172a', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '6px 12px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '800' }}
               >
                 <option value="ALL">📋 Active Cost Sheets ({pendingCostSheets.length})</option>
                 <option value="GENERATED">🟢 GENERATED</option>
@@ -467,7 +540,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                 onClick={() => {
                   if (setSearchQuery) setSearchQuery('');
                 }}
-                style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#f87171', borderRadius: '6px', padding: '6px 12px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                style={{ width: isMobile ? '100%' : 'auto', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#f87171', borderRadius: '6px', padding: '6px 12px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
                 title="Clear navbar search filter to show all cost sheets"
               >
                 <X size={14} /> Clear Navbar Filter: "{searchQuery}"
@@ -477,7 +550,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
 
           {/* ACTIVE CUSTOMER DETAILS BANNER (RESPECT OF CUSTOMER) */}
           {selectedCustomerFilter !== 'ALL' && selectedCustomerObj && (
-            <div style={{ background: isLight ? '#f0f9ff' : 'rgba(56, 189, 248, 0.1)', border: '1px solid #0284c7', borderRadius: '10px', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ background: isLight ? '#f0f9ff' : 'rgba(56, 189, 248, 0.1)', border: '1px solid #0284c7', borderRadius: '10px', padding: isMobile ? '10px 12px' : '10px 16px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexWrap: 'wrap', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ fontSize: '1.2rem' }}>👤</span>
                 <div>
@@ -489,7 +562,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                   {selectedCustomerObj.customerId && (
                     <span style={{ color: '#94a3b8', fontSize: '0.78rem', marginLeft: '6px', fontFamily: 'monospace' }}>[{selectedCustomerObj.customerId}]</span>
                   )}
-                  <span style={{ background: '#0284c7', color: '#ffffff', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '900', marginLeft: '10px' }}>
+                  <span style={{ background: '#0284c7', color: '#ffffff', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '900', marginLeft: '10px', display: 'inline-block', marginTop: '2px' }}>
                     {selectedCustomerObj.count} Cost Sheet{selectedCustomerObj.count > 1 ? 's' : ''} on Record
                   </span>
                 </div>
@@ -499,7 +572,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                   setSelectedCustomerFilter('ALL');
                   setSelectedCostSheetIds([]);
                 }} 
-                style={{ background: 'transparent', border: '1px solid #0284c7', color: '#38bdf8', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.78rem' }}
+                style={{ width: isMobile ? '100%' : 'auto', background: 'transparent', border: '1px solid #0284c7', color: '#38bdf8', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.78rem', textAlign: 'center' }}
               >
                 Show All Customers
               </button>
@@ -512,12 +585,15 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
               background: isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.15)',
               border: '1px solid #ef4444',
               borderRadius: '10px',
-              padding: '12px 18px',
+              padding: isMobile ? '10px 12px' : '12px 18px',
               display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
               justifyContent: 'space-between',
-              alignItems: 'center',
+              alignItems: isMobile ? 'stretch' : 'center',
               flexWrap: 'wrap',
-              gap: '10px'
+              gap: '10px',
+              width: '100%',
+              boxSizing: 'border-box'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '1.1rem' }}>☑️</span>
@@ -525,10 +601,11 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                   <strong>{selectedCostSheetIds.length}</strong> Cost Sheet{selectedCostSheetIds.length > 1 ? 's' : ''} Selected
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: isMobile ? '100%' : 'auto' }}>
                 <button
                   onClick={() => setSelectedCostSheetIds([])}
                   style={{
+                    flex: isMobile ? 1 : 'none',
                     background: 'transparent',
                     border: isLight ? '1px solid #cbd5e1' : '1px solid #475569',
                     color: isLight ? '#475569' : '#cbd5e1',
@@ -536,7 +613,8 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontWeight: '700',
-                    fontSize: '0.8rem'
+                    fontSize: '0.8rem',
+                    textAlign: 'center'
                   }}
                 >
                   Deselect All
@@ -544,6 +622,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                 <button
                   onClick={handleDeleteSelectedCostSheets}
                   style={{
+                    flex: isMobile ? 1 : 'none',
                     background: '#ef4444',
                     color: '#ffffff',
                     border: 'none',
@@ -554,6 +633,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                     fontSize: '0.82rem',
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '6px',
                     boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)'
                   }}
@@ -564,15 +644,61 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
             </div>
           )}
 
-          {/* MASTER INDIVIDUAL COST SHEETS TABLE */}
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>
-                📄 Master Individual Cost Sheets Vault ({filteredCostSheets.length}{filteredCostSheets.length !== displayedCostSheets.length ? ` of ${displayedCostSheets.length}` : ''} Records)
-              </h3>
-              <span style={{ fontSize: '0.75rem', color: '#4ade80', background: 'rgba(34, 197, 94, 0.15)', padding: '4px 10px', borderRadius: '20px', fontWeight: '800' }}>
-                ● ONE PROPERTY = ONE COST SHEET ENFORCED
-              </span>
+          {/* MASTER INDIVIDUAL COST SHEETS VAULT */}
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: isMobile ? '12px' : '16px', padding: isMobile ? '12px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', minWidth: 0 }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: '10px' }}>
+              <div>
+                <h3 style={{ fontSize: isMobile ? '0.98rem' : '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
+                  📄 Master Individual Cost Sheets Vault ({filteredCostSheets.length}{filteredCostSheets.length !== displayedCostSheets.length ? ` of ${displayedCostSheets.length}` : ''} Records)
+                </h3>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
+                <span style={{ fontSize: '0.72rem', color: '#4ade80', background: 'rgba(34, 197, 94, 0.15)', padding: '4px 10px', borderRadius: '20px', fontWeight: '800' }}>
+                  ● ONE PROPERTY = ONE COST SHEET ENFORCED
+                </span>
+                <div style={{ display: 'flex', background: isLight ? '#f1f5f9' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '2px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('cards')}
+                    style={{
+                      background: effectiveView === 'cards' ? '#0284c7' : 'transparent',
+                      color: effectiveView === 'cards' ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'),
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.72rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Card Layout (Optimized for Mobile/Touch)"
+                  >
+                    <LayoutGrid size={12} /> Cards
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('table')}
+                    style={{
+                      background: effectiveView === 'table' ? '#0284c7' : 'transparent',
+                      color: effectiveView === 'table' ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'),
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.72rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Table Layout (Spreadsheet Master View)"
+                  >
+                    <List size={12} /> Table
+                  </button>
+                </div>
+              </div>
             </div>
 
             {displayedCostSheets.length === 0 ? (
@@ -601,9 +727,655 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                   Reset All Filters
                 </button>
               </div>
+            ) : effectiveView === 'cards' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', boxSizing: 'border-box' }}>
+                {groupedCostSheets.map((group: any, gIdx: number) => {
+                  // CASE 1: Single Cost Sheet Card
+                  if (group.items.length <= 1) {
+                    const item = group.items[0];
+                    const itemPropCode = item.propertyCode || item.propertySnapshot?.propertyCode;
+                    const itemCustId = item.customerId || item.customerSnapshot?.customerNumber || item.customerSnapshot?.customerId;
+                    const itemCustMob = item.customerSnapshot?.mobile || item.mobile;
+                    const cleanMob = itemCustMob ? itemCustMob.replace(/\D/g, '') : '';
+
+                    const matchedProp = (properties || []).find((p: any) => 
+                      (p.property_code && itemPropCode && p.property_code === itemPropCode) ||
+                      (p.id && itemPropCode && p.id === itemPropCode) ||
+                      (p.property_code && item.propertyId && p.property_code === item.propertyId) ||
+                      (p.id && item.propertyId && p.id === item.propertyId)
+                    );
+
+                    const matchedCust = (customers || []).find((c: any) => 
+                      (c.customer_number && itemCustId && c.customer_number === itemCustId) ||
+                      (c.id && itemCustId && c.id === itemCustId) ||
+                      (cleanMob && cleanMob.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMob)
+                    );
+
+                    const custName = item.customerSnapshot?.customerName || item.customerName || matchedCust?.full_name || matchedCust?.name || 'Prospect Customer';
+                    const custMobile = item.customerSnapshot?.mobile || item.mobile || matchedCust?.mobile || 'N/A';
+                    const custNum = item.customerId || item.customerSnapshot?.customerNumber || matchedCust?.customer_number || '';
+
+                    const matchId = item.matchId || item.matchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
+                    const matchScore = item.matchSnapshot?.matchScore || item.matchScore || (matchedCust?.quality_score) || 88;
+
+                    const propCodeStr = itemPropCode || matchedProp?.property_code || 'SRM-PROP-2026-000426';
+                    const rawPropTitle = item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name;
+                    const propTitleStr = rawPropTitle && !rawPropTitle.startsWith('1 Properties') 
+                      ? rawPropTitle 
+                      : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'BARASAT ECO RESIDENCY');
+
+                    const devNameStr = item.propertySnapshot?.developerName || matchedProp?.developer || matchedProp?.developer_name || matchedProp?.builder_name || 'Swaramayi Partner Developer';
+                    const localityStr = item.propertySnapshot?.locality || matchedProp?.locality || 'Barasat / Banamalipur';
+                    const bhkStr = item.propertySnapshot?.bhk || item.propertySnapshot?.configuration || matchedProp?.configuration || matchedProp?.bhk || '3BHK';
+                    const propTypeStr = item.propertySnapshot?.property_type || item.propertySnapshot?.propertyType || item.propertyType || matchedProp?.property_type || 'Flat / Apartment';
+
+                    const basePriceNum = item.pricingSnapshot?.basePrice || item.base_price || matchedProp?.base_price || 5114880;
+                    const basePriceStr = item.formattedPriceBreakup?.basePriceStr || (basePriceNum ? `₹${Number(basePriceNum).toLocaleString('en-IN')}` : '₹51,14,880');
+                    const totalEstNum = item.pricingSnapshot?.totalEstimatedCost || item.final_estimated_price || matchedProp?.final_estimated_price || 5677517;
+                    const totalEstStr = item.formattedPriceBreakup?.totalEstimatedCostStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : '₹56,77,517');
+
+                    const statusStr = item.status || 'GENERATED';
+                    const createdAtStr = formatDisplayDateTime(item.createdAt || item.created_at || 'Just Now');
+                    const createdByStr = (() => {
+                      const cb = item.createdBy || item.created_by;
+                      if (cb) return cb;
+                      const as = item.customerSnapshot?.assignedSalesperson;
+                      if (as) return as;
+                      return 'Avishek Das (Super Admin)';
+                    })();
+
+                    const usedProps = getCustomerUsedPropertyCodes(
+                      custNum,
+                      custName,
+                      custMobile,
+                      individualCostSheets
+                    );
+
+                    const isChecked = selectedCostSheetIds.includes(item.costSheetId);
+
+                    return (
+                      <div
+                        key={item.costSheetId || gIdx}
+                        style={{
+                          background: isLight ? '#f8fafc' : '#0f172a',
+                          border: isChecked ? '2px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                          borderRadius: '12px',
+                          padding: isMobile ? '12px' : '16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '12px',
+                          boxShadow: isLight ? '0 2px 8px rgba(0,0,0,0.04)' : '0 4px 12px rgba(0,0,0,0.2)',
+                          boxSizing: 'border-box',
+                          width: '100%',
+                          minWidth: 0
+                        }}
+                      >
+                        {/* Top Row: Checkbox, ID, Version, Status */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input 
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedCostSheetIds(prev => [...prev, item.costSheetId]);
+                                } else {
+                                  setSelectedCostSheetIds(prev => prev.filter(id => id !== item.costSheetId));
+                                }
+                              }}
+                              style={{ cursor: 'pointer', transform: 'scale(1.15)' }}
+                              title={`Select Cost Sheet ${item.costSheetId}`}
+                            />
+                            <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.88rem' }}>
+                              {item.costSheetId}
+                            </span>
+                            <span style={{ background: item.versionNumber > 1 ? '#fbbf24' : '#0284c7', color: '#0f172a', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '900' }}>
+                              {item.version || 'V01'}
+                            </span>
+                          </div>
+
+                          <span style={{
+                            background: statusStr === 'GENERATED' ? 'rgba(56, 189, 248, 0.2)' : statusStr === 'SENT_TO_CUSTOMER' ? 'rgba(34, 197, 94, 0.2)' : statusStr === 'REVISED' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(168, 85, 247, 0.2)',
+                            color: statusStr === 'GENERATED' ? '#38bdf8' : statusStr === 'SENT_TO_CUSTOMER' ? '#4ade80' : statusStr === 'REVISED' ? '#fbbf24' : '#a855f7',
+                            padding: '3px 9px',
+                            borderRadius: '20px',
+                            fontSize: '0.72rem',
+                            fontWeight: '900'
+                          }}>
+                            {statusStr}
+                          </span>
+                        </div>
+
+                        {/* Customer & Match Row */}
+                        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '8px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px' }}>
+                            <div>
+                              <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.90rem' }}>👤 {custName}</strong>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '2px' }}>
+                                <span style={{ fontSize: '0.78rem', color: '#4ade80', fontFamily: 'monospace', fontWeight: '800' }}>{custMobile}</span>
+                                {custNum && <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'monospace' }}>[{custNum}]</span>}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <span style={{ fontFamily: 'monospace', color: '#fbbf24', fontWeight: '800', fontSize: '0.75rem' }}>{matchId}</span>
+                              <div style={{ marginTop: '2px' }}>
+                                <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800' }}>
+                                  🔥 {matchScore}% Match
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {usedProps.length > 0 && (
+                            <div style={{ marginTop: '4px', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid #0284c7', borderRadius: '4px', padding: '4px 6px', fontSize: '0.68rem' }}>
+                              <span style={{ color: '#38bdf8', fontWeight: '800' }}>🏢 Customer Property Codes ({usedProps.length}):</span>
+                              <div style={{ color: '#fbbf24', fontWeight: '900', fontFamily: 'monospace', display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '2px' }}>
+                                {usedProps.map(p => (
+                                  <span key={p.propertyCode} style={{ background: '#0f172a', border: '1px solid #eab308', padding: '1px 4px', borderRadius: '3px' }}>
+                                    {p.propertyCode}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Property Specs */}
+                        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '8px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '800', fontSize: '0.75rem' }}>{propCodeStr}</span>
+                            <span style={{ fontSize: '0.66rem', color: '#a855f7', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid #a855f7', padding: '1px 5px', borderRadius: '3px', fontWeight: '800' }}>
+                              🏢 {propTypeStr}
+                            </span>
+                          </div>
+                          <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.84rem' }}>{propTitleStr}</strong>
+                          <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                            📍 {localityStr} • {devNameStr} ({bhkStr})
+                          </span>
+                        </div>
+
+                        {/* Price Details Grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <div style={{ background: isLight ? '#f1f5f9' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '8px 10px' }}>
+                            <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block', fontWeight: '700' }}>Asking Base</span>
+                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.86rem' }}>{basePriceStr}</strong>
+                          </div>
+                          <div style={{ background: 'rgba(34, 197, 94, 0.12)', border: '1px solid #22c55e', borderRadius: '8px', padding: '8px 10px' }}>
+                            <span style={{ fontSize: '0.7rem', color: '#4ade80', display: 'block', fontWeight: '800' }}>Total Estimated Cost</span>
+                            <strong style={{ color: '#4ade80', fontSize: '0.92rem', fontWeight: '900' }}>{totalEstStr}</strong>
+                          </div>
+                        </div>
+
+                        {/* Footer Metadata */}
+                        <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', paddingTop: '6px' }}>
+                          <span>📅 {createdAtStr}</span>
+                          <span>👤 {createdByStr}</span>
+                        </div>
+
+                        {/* Actions Grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: isSmallMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '6px' }}>
+                          <button 
+                            onClick={() => setShowViewIndividualCostSheetModal({ open: true, costSheet: item })} 
+                            style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '7px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                          >
+                            <Eye size={13} /> View
+                          </button>
+                          <button 
+                            onClick={() => handleOpenRevisionModal(item)} 
+                            style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '7px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                            title="Edit Customer Details or Pricing & Create Revisions"
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button 
+                            onClick={() => sendCostSheetWhatsApp(item)} 
+                            style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '7px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                            title="Send Cost Sheet directly to customer WhatsApp"
+                          >
+                            📲 Send
+                          </button>
+                          <button 
+                            onClick={() => downloadCostSheetPDF(item)} 
+                            style={{ background: '#334155', color: '#38bdf8', border: '1px solid #38bdf8', padding: '7px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                          >
+                            📥 PDF
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if (setActiveTab) setActiveTab('visit_management');
+                              if (setActiveVisitSubTab) setActiveVisitSubTab('visit_route_planner');
+                              setShowScheduleVisitModal({ open: true, costSheet: item });
+                            }} 
+                            style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '7px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                            title="Schedule Site Visit for this Cost Sheet customer & property"
+                          >
+                            🚘 Visit
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setShowSendToFollowupModal({
+                                costSheet: item,
+                                customerName: custName,
+                                customerNumber: custNum,
+                                mobile: custMobile,
+                                propertyTitle: propTitleStr
+                              });
+                              setSendFollowupForm({
+                                followupDate: new Date().toISOString().split('T')[0],
+                                followupTime: '17:00',
+                                priority: 'HIGH',
+                                remarks: `Follow up with ${custName} regarding cost sheet ${item.costSheetId} for ${propTitleStr}.`
+                              });
+                            }} 
+                            style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', border: 'none', padding: '7px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                            title="Send Cost Sheet to Need to Followup management list"
+                          >
+                            📌 Followup
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if (setShowShiftToMatchingModal) {
+                                setShowShiftToMatchingModal({
+                                  open: true,
+                                  item: item,
+                                  customerName: custName,
+                                  customerNumber: custNum,
+                                  mobile: custMobile,
+                                  matchId: matchId,
+                                  propertyTitle: propTitleStr,
+                                  note: ''
+                                });
+                              } else {
+                                if (setSelectedMatchingId) setSelectedMatchingId(matchId);
+                                if (setActiveTab) setActiveTab('matching_management');
+                              }
+                            }} 
+                            style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: '1px solid #38bdf8', padding: '7px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                            title="Shift to Matching Management"
+                          >
+                            ⚡ Matching
+                          </button>
+                          {setShowUpdateRequirementModal && (
+                            <button 
+                              onClick={() => {
+                                if (setUpdateReqForm) {
+                                  setUpdateReqForm({
+                                    budget_min: '₹50 Lakhs',
+                                    budget_max: '₹1.5 Crores',
+                                    preferredArea: propTitleStr || 'Barasat, Kolkata',
+                                    configuration: '3BHK',
+                                    dislike_reason: 'Over Budget',
+                                    remarks: ''
+                                  });
+                                }
+                                setShowUpdateRequirementModal({ 
+                                  open: true, 
+                                  customer: { 
+                                    custName, 
+                                    custCode: custNum, 
+                                    mobile: custMobile, 
+                                    propertyCode: propCodeStr
+                                  } 
+                                });
+                              }} 
+                              style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '7px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                              title="Update buyer preferences & requirements on-the-spot"
+                            >
+                              ✏️ Update Req
+                            </button>
+                          )}
+                          {isSuperAdmin && (
+                            <button 
+                              onClick={() => handleDeleteSingle(item, custName)} 
+                              style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '7px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                              title="Move this cost sheet record to Recycle Bin"
+                            >
+                              🗑️ Delete
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // CASE 2: Multi-Cost Sheet Group Card
+                  const firstItem = group.items[0];
+                  const itemCustId = firstItem.customerId || firstItem.customerSnapshot?.customerNumber || firstItem.customerSnapshot?.customerId;
+                  const itemCustMob = firstItem.customerSnapshot?.mobile || firstItem.mobile;
+                  const cleanMob = itemCustMob ? itemCustMob.replace(/\D/g, '') : '';
+
+                  const matchedCust = (customers || []).find((c: any) => 
+                    (c.customer_number && itemCustId && c.customer_number === itemCustId) ||
+                    (c.id && itemCustId && c.id === itemCustId) ||
+                    (cleanMob && cleanMob.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMob)
+                  );
+
+                  const custName = firstItem.customerSnapshot?.customerName || firstItem.customerName || matchedCust?.full_name || matchedCust?.name || 'Prospect Customer';
+                  const custMobile = firstItem.customerSnapshot?.mobile || firstItem.mobile || matchedCust?.mobile || 'N/A';
+                  const custNum = firstItem.customerId || firstItem.customerSnapshot?.customerNumber || matchedCust?.customer_number || '';
+
+                  const matchId = firstItem.matchId || firstItem.matchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
+                  const matchScore = firstItem.matchSnapshot?.matchScore || firstItem.matchScore || (matchedCust?.quality_score) || 88;
+
+                  const groupSheetIds = group.items.map((it: any) => it.costSheetId);
+                  const isAllGroupSelected = groupSheetIds.length > 0 && groupSheetIds.every(id => selectedCostSheetIds.includes(id));
+
+                  const combinedBaseNum = group.items.reduce((acc: number, it: any) => {
+                    const b = it.pricingSnapshot?.basePrice || it.base_price || 0;
+                    return acc + Number(b || 0);
+                  }, 0);
+
+                  const combinedTotalEstNum = group.items.reduce((acc: number, it: any) => {
+                    const t = it.pricingSnapshot?.totalEstimatedCost || it.final_estimated_price || 0;
+                    return acc + Number(t || 0);
+                  }, 0);
+
+                  const createdAtStr = formatDisplayDateTime(firstItem.createdAt || firstItem.created_at || 'Just Now');
+                  const createdByStr = (() => {
+                    const cb = firstItem.createdBy || firstItem.created_by;
+                    if (cb) return cb;
+                    const as = firstItem.customerSnapshot?.assignedSalesperson;
+                    if (as) return as;
+                    return 'Avishek Das (Super Admin)';
+                  })();
+
+                  const usedProps = getCustomerUsedPropertyCodes(
+                    custNum,
+                    custName,
+                    custMobile,
+                    individualCostSheets
+                  );
+
+                  return (
+                    <div
+                      key={`group-${group.groupKey || gIdx}`}
+                      style={{
+                        background: isLight ? '#f8fafc' : '#0f172a',
+                        border: isAllGroupSelected ? '2px solid #a855f7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                        borderRadius: '12px',
+                        padding: isMobile ? '12px' : '16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px',
+                        boxShadow: isLight ? '0 2px 8px rgba(0,0,0,0.04)' : '0 4px 12px rgba(0,0,0,0.2)',
+                        boxSizing: 'border-box',
+                        width: '100%',
+                        minWidth: 0
+                      }}
+                    >
+                      {/* Group Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input 
+                            type="checkbox"
+                            checked={isAllGroupSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedCostSheetIds(prev => Array.from(new Set([...prev, ...groupSheetIds])));
+                              } else {
+                                setSelectedCostSheetIds(prev => prev.filter(id => !groupSheetIds.includes(id)));
+                              }
+                            }}
+                            style={{ cursor: 'pointer', transform: 'scale(1.15)' }}
+                            title={`Select all ${group.items.length} Cost Sheets for ${custName}`}
+                          />
+                          <span style={{
+                            background: 'rgba(168, 85, 247, 0.2)',
+                            color: '#c084fc',
+                            border: '1px solid #a855f7',
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            fontSize: '0.72rem',
+                            fontWeight: '900'
+                          }}>
+                            📑 MULTI-COST SHEET ({group.items.length} STOPS)
+                          </span>
+                        </div>
+                        <span style={{ fontFamily: 'monospace', color: '#fbbf24', fontWeight: '800', fontSize: '0.75rem' }}>
+                          {matchId}
+                        </span>
+                      </div>
+
+                      {/* Customer Info */}
+                      <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '8px', padding: '10px 12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px' }}>
+                          <div>
+                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.90rem' }}>👤 {custName}</strong>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '2px' }}>
+                              <span style={{ fontSize: '0.78rem', color: '#4ade80', fontFamily: 'monospace', fontWeight: '800' }}>{custMobile}</span>
+                              {custNum && <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'monospace' }}>[{custNum}]</span>}
+                            </div>
+                          </div>
+                          <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '2px 7px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800' }}>
+                            🔥 {matchScore}% Match
+                          </span>
+                        </div>
+                        {usedProps.length > 0 && (
+                          <div style={{ marginTop: '4px', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid #0284c7', borderRadius: '4px', padding: '4px 6px', fontSize: '0.68rem' }}>
+                            <span style={{ color: '#38bdf8', fontWeight: '800' }}>🏢 Customer Property Codes ({usedProps.length}):</span>
+                            <div style={{ color: '#fbbf24', fontWeight: '900', fontFamily: 'monospace', display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '2px' }}>
+                              {usedProps.map(p => (
+                                <span key={p.propertyCode} style={{ background: '#0f172a', border: '1px solid #eab308', padding: '1px 4px', borderRadius: '3px' }}>
+                                  {p.propertyCode}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Stops List */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#c084fc' }}>
+                          🚘 MULTI-PROPERTY SCHEDULE ({group.items.length} STOPS):
+                        </span>
+                        {group.items.map((it: any, sIdx: number) => {
+                          const stopNum = sIdx + 1;
+                          const csId = it.costSheetId;
+                          const itPropCode = it.propertyCode || it.propertySnapshot?.propertyCode;
+                          const matchedP = (properties || []).find((p: any) => 
+                            (p.property_code && itPropCode && p.property_code === itPropCode) ||
+                            (p.id && itPropCode && p.id === itPropCode) ||
+                            (p.property_code && it.propertyId && p.property_code === it.propertyId) ||
+                            (p.id && it.propertyId && p.id === it.propertyId)
+                          );
+                          const pCode = itPropCode || matchedP?.property_code || 'SRM-PROP-2026-000426';
+                          const rawTitle = it.propertySnapshot?.propertyTitle || it.propertySnapshot?.projectName || matchedP?.title || matchedP?.property_title || matchedP?.project_name;
+                          const pTitle = rawTitle && !rawTitle.startsWith('1 Properties') 
+                            ? rawTitle 
+                            : (matchedP?.title || matchedP?.property_title || matchedP?.project_name || 'Property Site');
+                          const loc = it.propertySnapshot?.locality || matchedP?.locality || 'Locality Hub';
+                          const dev = it.propertySnapshot?.developerName || matchedP?.developer || matchedP?.developer_name || matchedP?.builder_name;
+                          const bhk = it.propertySnapshot?.bhk || it.propertySnapshot?.configuration || matchedP?.configuration || matchedP?.bhk || '2BHK';
+                          const pType = it.propertySnapshot?.property_type || it.propertySnapshot?.propertyType || it.propertyType || matchedP?.property_type || 'Flat / Apartment';
+                          const bPriceNum = it.pricingSnapshot?.basePrice || it.base_price || 0;
+                          const bPriceStr = it.formattedPriceBreakup?.basePriceStr || (bPriceNum ? `₹${Number(bPriceNum).toLocaleString('en-IN')}` : 'N/A');
+                          const tEstNum = it.pricingSnapshot?.totalEstimatedCost || it.final_estimated_price || 0;
+                          const tEstStr = it.formattedPriceBreakup?.totalEstimatedCostStr || (tEstNum ? `₹${Number(tEstNum).toLocaleString('en-IN')}` : 'N/A');
+                          const st = it.status || 'GENERATED';
+
+                          return (
+                            <div key={sIdx} style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ background: '#eab308', color: '#0f172a', padding: '1px 6px', borderRadius: '3px', fontSize: '0.68rem', fontWeight: '900' }}>
+                                    STOP 0{stopNum}
+                                  </span>
+                                  <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontSize: '0.78rem', fontWeight: '900' }}>
+                                    {csId}
+                                  </span>
+                                  <span style={{ background: it.versionNumber > 1 ? '#fbbf24' : '#0284c7', color: '#0f172a', padding: '1px 5px', borderRadius: '3px', fontSize: '0.64rem', fontWeight: '900' }}>
+                                    {it.version || 'V01'}
+                                  </span>
+                                </div>
+                                <span style={{
+                                  background: st === 'GENERATED' ? 'rgba(56, 189, 248, 0.2)' : st === 'SENT_TO_CUSTOMER' ? 'rgba(34, 197, 94, 0.2)' : st === 'REVISED' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(168, 85, 247, 0.2)',
+                                  color: st === 'GENERATED' ? '#38bdf8' : st === 'SENT_TO_CUSTOMER' ? '#4ade80' : st === 'REVISED' ? '#fbbf24' : '#a855f7',
+                                  padding: '2px 7px',
+                                  borderRadius: '12px',
+                                  fontSize: '0.68rem',
+                                  fontWeight: '900'
+                                }}>
+                                  {st}
+                                </span>
+                              </div>
+
+                              <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.84rem' }}>🏢 {pTitle}</strong>
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                                <span style={{ color: '#38bdf8', fontFamily: 'monospace' }}>Code: {pCode}</span>
+                                <span>•</span>
+                                <span>📍 {loc} {dev ? `• ${dev}` : ''} ({bhk})</span>
+                              </div>
+
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isLight ? '#f1f5f9' : '#0f172a', padding: '5px 8px', borderRadius: '6px', fontSize: '0.75rem' }}>
+                                <span>Base: <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{bPriceStr}</strong></span>
+                                <span style={{ color: '#4ade80', fontWeight: '900' }}>Total: {tEstStr}</span>
+                              </div>
+
+                              {/* Stop Actions */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', marginTop: '2px' }}>
+                                <button 
+                                  onClick={() => setShowViewIndividualCostSheetModal({ open: true, costSheet: it })} 
+                                  style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '5px 4px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.70rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                                >
+                                  <Eye size={11} /> View
+                                </button>
+                                <button 
+                                  onClick={() => handleOpenRevisionModal(it)} 
+                                  style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '5px 4px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.70rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                                >
+                                  ✏️ Edit
+                                </button>
+                                <button 
+                                  onClick={() => sendCostSheetWhatsApp(it)} 
+                                  style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '5px 4px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.70rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                                >
+                                  📲 Send
+                                </button>
+                                <button 
+                                  onClick={() => downloadCostSheetPDF(it)} 
+                                  style={{ background: '#334155', color: '#38bdf8', border: '1px solid #38bdf8', padding: '5px 4px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.70rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                                >
+                                  📥 PDF
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Combined Total */}
+                      <div style={{ background: isLight ? '#f0fdf4' : 'rgba(34, 197, 94, 0.1)', border: '1.5px solid #22c55e', borderRadius: '8px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                        <span style={{ fontSize: '0.74rem', color: '#38bdf8', fontWeight: '800' }}>COMBINED TOTAL ({group.items.length} STOPS):</span>
+                        <strong style={{ color: '#4ade80', fontWeight: '900', fontSize: '1rem' }}>
+                          ₹{Number(combinedTotalEstNum).toLocaleString('en-IN')}
+                        </strong>
+                      </div>
+
+                      {/* Footer Metadata */}
+                      <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', paddingTop: '6px' }}>
+                        <span>📅 {createdAtStr}</span>
+                        <span>👤 {createdByStr}</span>
+                      </div>
+
+                      {/* Group Action Buttons */}
+                      <div style={{ display: 'grid', gridTemplateColumns: isSmallMobile ? '1fr' : 'repeat(2, 1fr)', gap: '6px' }}>
+                        <button 
+                          onClick={() => {
+                            if (setActiveTab) setActiveTab('visit_management');
+                            if (setActiveVisitSubTab) setActiveVisitSubTab('visit_route_planner');
+                            setShowScheduleVisitModal({ open: true, costSheet: group.items[0] });
+                          }} 
+                          style={{ gridColumn: isSmallMobile ? '1' : 'span 2', background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900', fontSize: '0.76rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                        >
+                          🚘 Visit Schedule ({group.items.length} Stops)
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setShowSendToFollowupModal({
+                              costSheet: group.items[0],
+                              customerName: custName,
+                              customerNumber: custNum,
+                              mobile: custMobile,
+                              propertyTitle: `${group.items.length} Properties`
+                            });
+                            setSendFollowupForm({
+                              followupDate: new Date().toISOString().split('T')[0],
+                              followupTime: '17:00',
+                              priority: 'HIGH',
+                              remarks: `Follow up with ${custName} regarding ${group.items.length} cost sheets.`
+                            });
+                          }} 
+                          style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                        >
+                          📌 Send to Followup
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (setShowShiftToMatchingModal) {
+                              setShowShiftToMatchingModal({
+                                open: true,
+                                item: group.items[0],
+                                customerName: custName,
+                                customerNumber: custNum,
+                                mobile: custMobile,
+                                matchId: matchId,
+                                propertyTitle: `${group.items.length} Properties`,
+                                note: ''
+                              });
+                            } else {
+                              if (setSelectedMatchingId) setSelectedMatchingId(matchId);
+                              if (setActiveTab) setActiveTab('matching_management');
+                            }
+                          }} 
+                          style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: '1px solid #38bdf8', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                        >
+                          ⚡ Shift to Matching
+                        </button>
+                        {setShowUpdateRequirementModal && (
+                          <button 
+                            onClick={() => {
+                              if (setUpdateReqForm) {
+                                setUpdateReqForm({
+                                  budget_min: '₹50 Lakhs',
+                                  budget_max: '₹1.5 Crores',
+                                  preferredArea: 'Kolkata',
+                                  configuration: '2BHK / 3BHK',
+                                  dislike_reason: 'Budget / Property Change',
+                                  remarks: ''
+                                });
+                              }
+                              setShowUpdateRequirementModal({ 
+                                open: true, 
+                                customer: { 
+                                  custName, 
+                                  custCode: custNum, 
+                                  mobile: custMobile, 
+                                  propertyCode: group.items[0].propertyCode || ''
+                                } 
+                              });
+                            }} 
+                            style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                          >
+                            ✏️ Update Requirement
+                          </button>
+                        )}
+                        {isSuperAdmin && (
+                          <button 
+                            onClick={() => handleDeleteGroup(group, custName)}
+                            style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                          >
+                            🗑️ Delete All ({group.items.length})
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
-              <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <div className="table-responsive-wrapper" style={{ width: '100%', maxWidth: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', minWidth: 0 }}>
+                <table style={{ width: '100%', minWidth: '980px', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                   <thead>
                     <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
                       <th style={{ padding: '12px', width: '42px', textAlign: 'center' }}>
@@ -1364,33 +2136,284 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
 
       {/* SUB-TAB 2: NEED TO FOLLOWUP */}
       {localCostSheetSubTab === 'need_to_followup' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', minWidth: 0 }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: isMobile ? '12px' : '16px', padding: isMobile ? '12px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', minWidth: 0 }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: isMobile ? '0.98rem' : '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                   📌 Cost Sheet Follow-up Management ({localCostSheetFollowups.length} Records)
                 </h3>
-                <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
+                <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', margin: '4px 0 0 0' }}>
                   Track pending callbacks, quotation negotiation notes, and customer response schedules for active cost sheets.
                 </p>
               </div>
-              <span style={{ fontSize: '0.75rem', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.15)', padding: '6px 14px', borderRadius: '20px', fontWeight: '800' }}>
-                ● LIVE FOLLOWUP ENGINE ACTIVE
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
+                <span style={{ fontSize: '0.72rem', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.15)', padding: '4px 10px', borderRadius: '20px', fontWeight: '800' }}>
+                  ● LIVE FOLLOWUP ACTIVE
+                </span>
+                <div style={{ display: 'flex', background: isLight ? '#f1f5f9' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '6px', padding: '2px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('cards')}
+                    style={{
+                      background: effectiveView === 'cards' ? '#0284c7' : 'transparent',
+                      color: effectiveView === 'cards' ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'),
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.72rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <LayoutGrid size={12} /> Cards
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('table')}
+                    style={{
+                      background: effectiveView === 'table' ? '#0284c7' : 'transparent',
+                      color: effectiveView === 'table' ? '#ffffff' : (isLight ? '#64748b' : '#94a3b8'),
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.72rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <List size={12} /> Table
+                  </button>
+                </div>
+              </div>
             </div>
 
             {localCostSheetFollowups.length === 0 ? (
-              <div style={{ padding: '36px 20px', textAlign: 'center', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px', border: '1px dashed #38bdf8' }}>
+              <div style={{ padding: isMobile ? '24px 14px' : '36px 20px', textAlign: 'center', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px', border: '1px dashed #38bdf8' }}>
                 <Clock size={32} color="#38bdf8" style={{ margin: '0 auto 10px auto' }} />
                 <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '1.05rem' }}>📭 NO PENDING COST SHEET FOLLOW-UPS</h4>
                 <p style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.82rem', marginTop: '4px' }}>
                   Click "📌 Send to Followup" on any Cost Sheet record in the Active Cost Sheets tab to add follow-up tasks here.
                 </p>
               </div>
+            ) : effectiveView === 'cards' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+                {localCostSheetFollowups.map((fol: any) => (
+                  <div
+                    key={fol.id}
+                    style={{
+                      background: isLight ? '#f8fafc' : '#0f172a',
+                      border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                      borderRadius: '12px',
+                      padding: isMobile ? '12px' : '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                      boxSizing: 'border-box',
+                      width: '100%',
+                      minWidth: 0
+                    }}
+                  >
+                    {/* Header: ID, Priority, Status */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.80rem' }}>
+                          {fol.id}
+                        </span>
+                        <span style={{ background: fol.priority === 'HIGH' ? 'rgba(239, 68, 68, 0.2)' : fol.priority === 'MEDIUM' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(34, 197, 94, 0.2)', color: fol.priority === 'HIGH' ? '#ef4444' : fol.priority === 'MEDIUM' ? '#f59e0b' : '#22c55e', padding: '2px 7px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '900' }}>
+                          {fol.priority || 'HIGH'}
+                        </span>
+                      </div>
+                      <span style={{ background: fol.status === 'COMPLETED' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: fol.status === 'COMPLETED' ? '#4ade80' : '#fbbf24', padding: '2px 8px', borderRadius: '12px', fontSize: '0.70rem', fontWeight: '900' }}>
+                        {fol.status === 'COMPLETED' ? '✅ COMPLETED' : '⏳ PENDING'}
+                      </span>
+                    </div>
+
+                    {/* Schedule block */}
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '6px', padding: '6px 10px', fontSize: '0.78rem' }}>
+                      <span style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Calendar size={13} color="#fbbf24" /> {fol.followupDate}
+                      </span>
+                      <span>•</span>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={12} color="#a855f7" /> {fol.followupTime}
+                      </span>
+                    </div>
+
+                    {/* Customer & Cost Sheet */}
+                    <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '8px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px' }}>
+                        <div>
+                          <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.88rem' }}>👤 {fol.customerName}</strong>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '2px' }}>
+                            <span style={{ fontSize: '0.78rem', color: '#4ade80', fontFamily: 'monospace', fontWeight: '800' }}>{fol.customerMobile}</span>
+                            {fol.customerNumber && <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'monospace' }}>[{fol.customerNumber}]</span>}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: '800', fontFamily: 'monospace' }}>
+                          {fol.costSheetId}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
+                        🏢 {fol.propertyTitle}
+                      </div>
+                    </div>
+
+                    {/* Remarks */}
+                    {fol.remarks && (
+                      <div style={{ background: isLight ? '#f1f5f9' : '#1e293b', borderLeft: '3px solid #38bdf8', borderRadius: '4px', padding: '6px 10px', fontSize: '0.78rem', color: isLight ? '#334155' : '#cbd5e1', lineHeight: '1.35' }}>
+                        "{fol.remarks}"
+                      </div>
+                    )}
+
+                    {/* Action buttons grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: isSmallMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '6px', marginTop: '2px' }}>
+                      <button
+                        onClick={() => {
+                          const cleanMob = (fol.customerMobile || '').replace(/\D/g, '');
+                          if (!cleanMob) {
+                            alert(`⚠️ Mobile number missing for ${fol.customerName || 'Customer'}`);
+                            return;
+                          }
+                          const phone = cleanMob.length === 10 ? '91' + cleanMob : cleanMob;
+                          const msg = `Hello ${fol.customerName || 'Customer'},\n\nGreetings from Swaramayi Real Estate! 🏡\n\nFollowing up regarding your Cost Sheet ${fol.costSheetId} for ${fol.propertyTitle}.\n\nScheduled Followup Time: ${fol.followupDate} at ${fol.followupTime}.\nNotes: ${fol.remarks}\n\nPlease let us know if you need any adjustments or wish to proceed!`;
+                          window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`, '_blank');
+                        }}
+                        style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                      >
+                        📲 WhatsApp
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowEditFollowupModal(fol);
+                          setEditFollowupForm({
+                            followupDate: fol.followupDate || new Date().toISOString().split('T')[0],
+                            followupTime: fol.followupTime || '17:00',
+                            priority: fol.priority || 'HIGH',
+                            remarks: fol.remarks || ''
+                          });
+                        }}
+                        style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`↩️ Move Cost Sheet ${fol.costSheetId || ''} for ${fol.customerName || 'Customer'} back to Active Cost Sheets?`)) {
+                            if (setIndividualCostSheets) {
+                              setIndividualCostSheets((prev: any[]) => {
+                                const targetId = fol.costSheetId || fol.id;
+                                const exists = prev.some(c => 
+                                  c.costSheetId === targetId || 
+                                  c.id === targetId ||
+                                  (fol.costSheetId && (c.costSheetId === fol.costSheetId || c.id === fol.costSheetId))
+                                );
+                                
+                                let updatedCS;
+                                if (exists) {
+                                  updatedCS = prev.map(c => 
+                                    (c.costSheetId === targetId || c.id === targetId || (fol.costSheetId && (c.costSheetId === fol.costSheetId || c.id === fol.costSheetId)))
+                                      ? { ...c, status: 'GENERATED' } 
+                                      : c
+                                  );
+                                } else {
+                                  const newCS = {
+                                    id: fol.id || `CS-${Date.now()}`,
+                                    costSheetId: fol.costSheetId || `COST-SHEET-2026-${Date.now().toString().slice(-6)}`,
+                                    customerId: fol.customerNumber || '',
+                                    customerName: fol.customerName || 'Customer',
+                                    mobile: fol.customerMobile || '',
+                                    customerSnapshot: {
+                                      customerName: fol.customerName || 'Customer',
+                                      customerNumber: fol.customerNumber || '',
+                                      mobile: fol.customerMobile || '',
+                                    },
+                                    propertySnapshot: {
+                                      propertyTitle: fol.propertyTitle || 'SK Construction (Madhyamgram)',
+                                      locality: 'Madhyamgram / North 24 Parganas',
+                                      bhk: '3BHK',
+                                      superBuiltupArea: '1,283 Sq.Ft.'
+                                    },
+                                    status: 'GENERATED',
+                                    createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+                                    createdBy: 'Avishek Das (Super Admin)',
+                                    version: 'V01',
+                                    versionNumber: 1
+                                  };
+                                  updatedCS = [newCS, ...prev];
+                                }
+
+                                try {
+                                  localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updatedCS));
+                                } catch (e) {}
+                                if (syncAllToMongoDB) {
+                                  syncAllToMongoDB({ cost_sheets: updatedCS });
+                                }
+                                return updatedCS;
+                              });
+                            }
+
+                            const updatedFol = localCostSheetFollowups.filter(item => item.id !== fol.id && item.costSheetId !== fol.costSheetId);
+                            saveCostSheetFollowups(updatedFol);
+
+                            try {
+                              const existingVisitFol = localStorage.getItem('swaramayi_visit_followups_v1');
+                              if (existingVisitFol) {
+                                const parsed = JSON.parse(existingVisitFol);
+                                if (Array.isArray(parsed)) {
+                                  const cleanedVisitFol = parsed.filter((v: any) => 
+                                    v.costSheetId !== fol.costSheetId && 
+                                    v.id !== fol.id &&
+                                    !(v.customerName === fol.customerName && v.costSheetId === fol.costSheetId)
+                                  );
+                                  localStorage.setItem('swaramayi_visit_followups_v1', JSON.stringify(cleanedVisitFol));
+                                }
+                              }
+                            } catch (e) {}
+
+                            setLocalCostSheetSubTab('active_cost_sheets');
+                            alert(`📄 Cost Sheet ${fol.costSheetId || ''} restored to Active Cost Sheets!`);
+                          }
+                        }}
+                        style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: '1px solid #38bdf8', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                      >
+                        📄 Resend
+                      </button>
+                      <button
+                        onClick={() => {
+                          const updated = localCostSheetFollowups.map(item => 
+                            item.id === fol.id ? { ...item, status: item.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED' } : item
+                          );
+                          saveCostSheetFollowups(updated);
+                        }}
+                        style={{ background: fol.status === 'COMPLETED' ? '#0284c7' : '#10b981', color: '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                      >
+                        {fol.status === 'COMPLETED' ? '🔄 Reopen' : '✅ Done'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to delete follow-up task ${fol.id}?`)) {
+                            const updated = localCostSheetFollowups.filter(item => item.id !== fol.id);
+                            saveCostSheetFollowups(updated);
+                          }
+                        }}
+                        style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
-              <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <div className="table-responsive-wrapper" style={{ width: '100%', maxWidth: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', minWidth: 0 }}>
+                <table style={{ width: '100%', minWidth: '850px', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                   <thead>
                     <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#64748b' : '#94a3b8', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
                       <th style={{ padding: '12px' }}>Follow-up ID & Schedule</th>
@@ -1598,11 +2621,11 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
 
       {/* SEND TO FOLLOWUP MODAL */}
       {showSendToFollowupModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', width: '100%', maxWidth: '520px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: isSmallMobile ? 'flex-start' : 'center', justifyContent: 'center', zIndex: 99999, padding: isSmallMobile ? '8px' : isMobile ? '12px' : '20px', overflowY: 'auto' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', width: '100%', maxWidth: '520px', maxHeight: isMobile ? '94vh' : 'auto', overflowY: 'auto', padding: isSmallMobile ? '14px' : isMobile ? '18px' : '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: '16px', boxSizing: 'border-box' }}>
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: isSmallMobile ? '0.98rem' : '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 📌 Send Cost Sheet to Need to Followup
               </h3>
               <button 
@@ -1626,7 +2649,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isSmallMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', marginBottom: '6px' }}>
                     📅 Follow-up Date
@@ -1635,7 +2658,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                     type="date"
                     value={sendFollowupForm.followupDate}
                     onChange={(e) => setSendFollowupForm({ ...sendFollowupForm, followupDate: e.target.value })}
-                    style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
+                    style={{ width: '100%', boxSizing: 'border-box', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
                   />
                 </div>
                 <div>
@@ -1646,7 +2669,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                     type="time"
                     value={sendFollowupForm.followupTime}
                     onChange={(e) => setSendFollowupForm({ ...sendFollowupForm, followupTime: e.target.value })}
-                    style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
+                    style={{ width: '100%', boxSizing: 'border-box', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
                   />
                 </div>
               </div>
@@ -1658,7 +2681,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                 <select 
                   value={sendFollowupForm.priority}
                   onChange={(e) => setSendFollowupForm({ ...sendFollowupForm, priority: e.target.value })}
-                  style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
+                  style={{ width: '100%', boxSizing: 'border-box', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
                 >
                   <option value="HIGH">🔴 HIGH PRIORITY</option>
                   <option value="MEDIUM">🟡 MEDIUM PRIORITY</option>
@@ -1675,15 +2698,15 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                   value={sendFollowupForm.remarks}
                   onChange={(e) => setSendFollowupForm({ ...sendFollowupForm, remarks: e.target.value })}
                   placeholder="Enter specific remarks, negotiation notes, or callback requirements..."
-                  style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', resize: 'vertical' }}
+                  style={{ width: '100%', boxSizing: 'border-box', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', resize: 'vertical' }}
                 />
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: isSmallMobile ? 'stretch' : 'flex-end', flexDirection: isSmallMobile ? 'column-reverse' : 'row', marginTop: '10px' }}>
               <button
                 onClick={() => setShowSendToFollowupModal(null)}
-                style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.82rem' }}
+                style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.82rem', width: isSmallMobile ? '100%' : 'auto' }}
               >
                 Cancel
               </button>
@@ -1752,7 +2775,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                   setLocalCostSheetSubTab('need_to_followup');
                   alert(`📌 Customer ${showSendToFollowupModal.customerName} sent to Need to Followup and removed from Active Cost Sheets!`);
                 }}
-                style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.85rem', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)' }}
+                style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.85rem', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)', width: isSmallMobile ? '100%' : 'auto' }}
               >
                 📌 Confirm & Send to Followup
               </button>
@@ -1764,11 +2787,11 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
 
       {/* EDIT FOLLOWUP MODAL */}
       {showEditFollowupModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '20px' }}>
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', width: '100%', maxWidth: '520px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: isSmallMobile ? 'flex-start' : 'center', justifyContent: 'center', zIndex: 99999, padding: isSmallMobile ? '8px' : isMobile ? '12px' : '20px', overflowY: 'auto' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', width: '100%', maxWidth: '520px', maxHeight: isMobile ? '94vh' : 'auto', overflowY: 'auto', padding: isSmallMobile ? '14px' : isMobile ? '18px' : '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: '16px', boxSizing: 'border-box' }}>
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '14px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: isSmallMobile ? '0.98rem' : '1.15rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 ✏️ Edit Cost Sheet Follow-up Task
               </h3>
               <button 
@@ -1792,7 +2815,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isSmallMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: isLight ? '#64748b' : '#94a3b8', marginBottom: '6px' }}>
                     📅 Follow-up Date
@@ -1801,7 +2824,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                     type="date"
                     value={editFollowupForm.followupDate}
                     onChange={(e) => setEditFollowupForm({ ...editFollowupForm, followupDate: e.target.value })}
-                    style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
+                    style={{ width: '100%', boxSizing: 'border-box', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
                   />
                 </div>
                 <div>
@@ -1812,7 +2835,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                     type="time"
                     value={editFollowupForm.followupTime}
                     onChange={(e) => setEditFollowupForm({ ...editFollowupForm, followupTime: e.target.value })}
-                    style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
+                    style={{ width: '100%', boxSizing: 'border-box', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
                   />
                 </div>
               </div>
@@ -1824,7 +2847,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                 <select 
                   value={editFollowupForm.priority}
                   onChange={(e) => setEditFollowupForm({ ...editFollowupForm, priority: e.target.value })}
-                  style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
+                  style={{ width: '100%', boxSizing: 'border-box', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
                 >
                   <option value="HIGH">🔴 HIGH PRIORITY</option>
                   <option value="MEDIUM">🟡 MEDIUM PRIORITY</option>
@@ -1841,15 +2864,15 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                   value={editFollowupForm.remarks}
                   onChange={(e) => setEditFollowupForm({ ...editFollowupForm, remarks: e.target.value })}
                   placeholder="Enter specific remarks, negotiation notes, or callback requirements..."
-                  style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', resize: 'vertical' }}
+                  style={{ width: '100%', boxSizing: 'border-box', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', resize: 'vertical' }}
                 />
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: isSmallMobile ? 'stretch' : 'flex-end', flexDirection: isSmallMobile ? 'column-reverse' : 'row', marginTop: '10px' }}>
               <button
                 onClick={() => setShowEditFollowupModal(null)}
-                style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.82rem' }}
+                style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.82rem', width: isSmallMobile ? '100%' : 'auto' }}
               >
                 Cancel
               </button>
@@ -1870,7 +2893,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                   setShowEditFollowupModal(null);
                   alert(`✏️ Follow-up details updated successfully!`);
                 }}
-                style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.85rem', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)' }}
+                style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.85rem', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)', width: isSmallMobile ? '100%' : 'auto' }}
               >
                 💾 Save Changes
               </button>

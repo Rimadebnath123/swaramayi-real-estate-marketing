@@ -11233,7 +11233,7 @@ export default function App() {
         </header>
 
         {/* MAIN BODY DISPLAY */}
-        <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
+        <div style={{ flex: 1, padding: windowWidth <= 480 ? '12px 8px' : windowWidth <= 768 ? '16px 12px' : '24px', overflowY: 'auto', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}>
           
           {/* CATEGORY 1: MAIN DASHBOARD (ADVANCED BI CONTROL CENTER) */}
           {activeTab === 'main_dashboard' && (
@@ -13758,7 +13758,7 @@ export default function App() {
         const facingPossession = prop.facingPossession || 'North-East Facing • Ready to Move';
 
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: windowWidth <= 640 ? 'flex-start' : 'center', justifyContent: 'center', zIndex: 2200, padding: windowWidth <= 640 ? '8px' : '16px', overflowY: 'auto' }}>
             <style>{`
               @media print {
                 @page {
@@ -13830,17 +13830,17 @@ export default function App() {
               }
             `}</style>
 
-            <div className="printable-costsheet-modal-wrapper" style={{ background: '#1e293b', border: '1px solid #334155', width: '96vw', maxWidth: '880px', maxHeight: '96vh', borderRadius: '18px', padding: '0', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)' }}>
+            <div className="printable-costsheet-modal-wrapper" style={{ background: '#1e293b', border: '1px solid #334155', width: windowWidth <= 640 ? '100%' : '96vw', maxWidth: '880px', maxHeight: windowWidth <= 640 ? '98vh' : '96vh', borderRadius: windowWidth <= 640 ? '12px' : '18px', padding: '0', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)', boxSizing: 'border-box' }}>
               
               {/* MODAL DARK HEADER BAR WITH ACTION BUTTONS TOOLBAR */}
-              <div className="no-print" style={{ background: '#0f172a', borderBottom: '1px solid #334155', padding: '14px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="no-print" style={{ background: '#0f172a', borderBottom: '1px solid #334155', padding: windowWidth <= 640 ? '10px 12px' : '14px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ background: 'rgba(2, 132, 199, 0.2)', border: '1px solid #0284c7', padding: '6px', borderRadius: '8px', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       📜
                     </div>
                     <div>
-                      <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.05rem', fontWeight: '900', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h3 style={{ margin: 0, color: '#ffffff', fontSize: windowWidth <= 640 ? '0.88rem' : '1.05rem', fontWeight: '900', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         INDIVIDUAL PROPERTY COST SHEET — <span style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{costSheetCode}</span>
                       </h3>
                       <div style={{ fontSize: '0.74rem', color: '#f59e0b', fontWeight: '800', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -13861,16 +13861,16 @@ export default function App() {
                 </div>
 
                 {/* ACTION TOOLBAR BUTTONS */}
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <button 
                     onClick={() => downloadCostSheetPDF(cs)}
-                    style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '7px 14px', borderRadius: '7px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)' }}
+                    style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: windowWidth <= 640 ? '6px 10px' : '7px 14px', borderRadius: '7px', fontWeight: '800', fontSize: windowWidth <= 640 ? '0.72rem' : '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)' }}
                   >
                     📥 Download PDF
                   </button>
                   <button 
                     onClick={() => window.print()}
-                    style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '7px 14px', borderRadius: '7px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)' }}
+                    style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: windowWidth <= 640 ? '6px 10px' : '7px 14px', borderRadius: '7px', fontWeight: '800', fontSize: windowWidth <= 640 ? '0.72rem' : '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)' }}
                   >
                     🖨️ Print Cost Sheet
                   </button>
@@ -13879,7 +13879,7 @@ export default function App() {
                       const msg = `Hello ${custName},\n\nGreetings from Swaramayi Real Estate Marketing! 🏡\n\nHere is your official Property Cost Sheet Breakdown & Investment Summary:\n\n📄 Cost Sheet ID: ${costSheetCode} (${versionTag})\n📍 Locality: ${locality}\n📐 Configuration: ${bhk}\n📐 Super Built-Up Area: ${superAreaStr}\n🏷️ Asking Rate per Sq.Ft.: ${ratePerSqftStr}\n\n💰 Price Breakdown:\n• Asking Base Price: ${basePriceStr}\n• Total Estimated Cost (Incl. Taxes & Charges): ${totalEstStr}\n\nPlease review the details. Reply to schedule a site visit or ask any questions!\n\nThank you,\nSwaramayi Real Estate Team`;
                       window.open(`https://api.whatsapp.com/send?phone=${(custMobile || '').replace(/\D/g, '')}&text=${encodeURIComponent(msg)}`, '_blank');
                     }}
-                    style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '7px 14px', borderRadius: '7px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(234, 179, 8, 0.3)' }}
+                    style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: windowWidth <= 640 ? '6px 10px' : '7px 14px', borderRadius: '7px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.72rem' : '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(234, 179, 8, 0.3)' }}
                   >
                     📲 Send to Customer
                   </button>
@@ -13890,7 +13890,7 @@ export default function App() {
                       if (setActiveVisitSubTab) setActiveVisitSubTab('visit_route_planner');
                       if (setShowScheduleVisitModal) setShowScheduleVisitModal({ open: true, costSheet: cs });
                     }}
-                    style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '7px 14px', borderRadius: '7px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(168, 85, 247, 0.3)' }}
+                    style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: windowWidth <= 640 ? '6px 10px' : '7px 14px', borderRadius: '7px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.72rem' : '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(168, 85, 247, 0.3)' }}
                   >
                     🚖 Visit Schedule
                   </button>
@@ -13899,7 +13899,7 @@ export default function App() {
                       setShowViewIndividualCostSheetModal(null);
                       handleOpenRevisionModal(cs);
                     }}
-                    style={{ background: 'transparent', color: '#f59e0b', border: '1px solid #f59e0b', padding: '6px 14px', borderRadius: '7px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                    style={{ background: 'transparent', color: '#f59e0b', border: '1px solid #f59e0b', padding: windowWidth <= 640 ? '5px 10px' : '6px 14px', borderRadius: '7px', fontWeight: '800', fontSize: windowWidth <= 640 ? '0.72rem' : '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                   >
                     ✏️ Create Revision
                   </button>
@@ -13922,7 +13922,7 @@ export default function App() {
                         if (setActiveTab) setActiveTab('matching_management');
                       }
                     }}
-                    style={{ background: '#0284c7', color: '#ffffff', border: '1px solid #38bdf8', padding: '6px 14px', borderRadius: '7px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                    style={{ background: '#0284c7', color: '#ffffff', border: '1px solid #38bdf8', padding: windowWidth <= 640 ? '5px 10px' : '6px 14px', borderRadius: '7px', fontWeight: '800', fontSize: windowWidth <= 640 ? '0.72rem' : '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                   >
                     ⚡ Shift to Matching (Other Property)
                   </button>
@@ -13930,21 +13930,21 @@ export default function App() {
               </div>
 
               {/* MAIN SCROLLABLE CONTENT BODY */}
-              <div className="printable-costsheet-modal-body-wrapper" style={{ flex: 1, overflowY: 'auto', padding: '16px 18px', background: '#0f172a' }}>
+              <div className="printable-costsheet-modal-body-wrapper" style={{ flex: 1, overflowY: 'auto', padding: windowWidth <= 640 ? '10px 8px' : '16px 18px', background: '#0f172a' }}>
                 
                 {/* WHITE PRINTABLE SHEET CARD */}
-                <div className="printable-contract-card" style={{ background: '#ffffff', color: '#0f172a', borderRadius: '12px', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+                <div className="printable-contract-card" style={{ background: '#ffffff', color: '#0f172a', borderRadius: '12px', padding: windowWidth <= 640 ? '12px 10px' : '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', boxSizing: 'border-box', maxWidth: '100%', overflow: 'hidden' }}>
                   
                   {/* BRAND HEADER */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0284c7', paddingBottom: '8px', gap: '14px' }}>
-                    <div style={{ flex: 1, minWidth: '240px' }}>
-                      <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#0284c7', margin: '0 0 2px 0', letterSpacing: '-0.3px', textTransform: 'uppercase' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0284c7', paddingBottom: '8px', gap: '10px', flexWrap: windowWidth <= 640 ? 'wrap' : 'nowrap' }}>
+                    <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                      <h2 style={{ fontSize: windowWidth <= 640 ? '1.15rem' : '1.5rem', fontWeight: '900', color: '#0284c7', margin: '0 0 2px 0', letterSpacing: '-0.3px', textTransform: 'uppercase' }}>
                         SWARAMAYI REAL ESTATE MARKETING
                       </h2>
-                      <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#64748b', letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: '2px' }}>
+                      <div style={{ fontSize: '0.74rem', fontWeight: '800', color: '#64748b', letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: '2px' }}>
                         ENTERPRISE REAL ESTATE SOLUTION • OFFICIAL PROPERTY COST SHEET
                       </div>
-                      <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', lineHeight: '1.35' }}>
+                      <div style={{ fontSize: '0.74rem', color: '#475569', fontWeight: '600', lineHeight: '1.35' }}>
                         4, Samarkunja Apartment, Sarada Sarani, Udayrajpur,
                         <br />
                         Madhyamgram, Kolkata - 700129 • Phone: +91 88021 30791
@@ -13952,14 +13952,14 @@ export default function App() {
                     </div>
 
                     {/* COST SHEET ID HIGHLIGHT CARD */}
-                    <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '8px', padding: '8px 14px', textAlign: 'right', flexShrink: 0, minWidth: '195px' }}>
+                    <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '8px', padding: '8px 12px', textAlign: windowWidth <= 640 ? 'left' : 'right', flexShrink: 0, width: windowWidth <= 640 ? '100%' : 'auto', minWidth: windowWidth <= 640 ? 0 : '195px', boxSizing: 'border-box' }}>
                       <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#64748b', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
                         COST SHEET ID
                       </div>
                       <div style={{ fontSize: '1.02rem', fontWeight: '900', color: '#0284c7', fontFamily: 'monospace', margin: '1px 0' }}>
                         {costSheetCode}
                       </div>
-                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', marginTop: '3px' }}>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: windowWidth <= 640 ? 'flex-start' : 'flex-end', marginTop: '3px' }}>
                         <span style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7', border: '1px solid #38bdf8', padding: '2px 7px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '900' }}>
                           VERSION: {versionTag}
                         </span>
@@ -13971,7 +13971,7 @@ export default function App() {
                   </div>
 
                   {/* DATE & METADATA BANNER STRIP */}
-                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '0.80rem' }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: windowWidth <= 640 ? '0.72rem' : '0.80rem' }}>
                     <div>
                       <span style={{ color: '#64748b', fontWeight: '700' }}>Date & Time: </span>
                       <strong style={{ color: '#0f172a', fontFamily: 'monospace' }}>{timestampIso}</strong>
@@ -13991,7 +13991,7 @@ export default function App() {
                   </div>
 
                   {/* 2-COLUMN GRID: CUSTOMER & PROPERTY SPECIFICATIONS */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '10px' }}>
                     
                     {/* CUSTOMER INFORMATION CARD */}
                     <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '8px', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -14116,107 +14116,109 @@ export default function App() {
                       </span>
                     </div>
 
-                    <div style={{ border: '1.5px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                        <thead>
-                          <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #cbd5e1', color: '#475569', textAlign: 'left', fontWeight: '800' }}>
-                            <th style={{ padding: '5px 12px' }}>Charge Particulars</th>
-                            <th style={{ padding: '5px 12px', textAlign: 'right' }}>Amount (INR)</th>
-                          </tr>
-                        </thead>
-                        <tbody style={{ color: '#0f172a' }}>
-                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '4px 12px' }}>
-                              <strong style={{ color: '#0f172a' }}>1. Base Property Asking Price</strong>
-                              <span style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: '600', marginLeft: '6px' }}>
-                                ({ratePerSqftStr} on {superAreaStr})
-                              </span>
-                            </td>
-                            <td style={{ padding: '4px 12px', textAlign: 'right', fontWeight: '900', fontSize: '0.82rem' }}>
-                              {basePriceStr}
-                            </td>
-                          </tr>
-
-                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '4px 12px' }}>2. Floor Rise Charge (Floor 5th Floor)</td>
-                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#64748b' }}>{floorRiseStr}</td>
-                          </tr>
-
-                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '4px 12px' }}>3. Preferential Location Charge (PLC - Facing)</td>
-                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#64748b' }}>{plcStr}</td>
-                          </tr>
-
-                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '4px 12px' }}>4. Covered Car Parking Slot Charge</td>
-                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '600' }}>{parkingStr}</td>
-                          </tr>
-
-                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '4px 12px' }}>5. Clubhouse & Gated Amenities Membership</td>
-                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{clubStr}</td>
-                          </tr>
-
-                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '4px 12px' }}>6. Advance Maintenance Charge (1 Year)</td>
-                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{maintStr}</td>
-                          </tr>
-
-                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '4px 12px' }}>7. Infrastructure & Legal Documentation Charges</td>
-                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '600' }}>{infraStr}</td>
-                          </tr>
-
-                          {discNum > 0 && (
-                            <tr style={{ borderBottom: '1px solid #f1f5f9', background: 'rgba(239, 68, 68, 0.05)' }}>
-                              <td style={{ padding: '4px 12px', color: '#ef4444', fontWeight: '800' }}>
-                                7.1 Special Promotional Discount / Festival Rebate
+                    <div style={{ border: '1.5px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', maxWidth: '100%' }}>
+                      <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+                        <table style={{ width: '100%', minWidth: '340px', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                          <thead>
+                            <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #cbd5e1', color: '#475569', textAlign: 'left', fontWeight: '800' }}>
+                              <th style={{ padding: '5px 12px' }}>Charge Particulars</th>
+                              <th style={{ padding: '5px 12px', textAlign: 'right' }}>Amount (INR)</th>
+                            </tr>
+                          </thead>
+                          <tbody style={{ color: '#0f172a' }}>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '4px 12px' }}>
+                                <strong style={{ color: '#0f172a' }}>1. Base Property Asking Price</strong>
+                                <span style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: '600', marginLeft: '6px' }}>
+                                  ({ratePerSqftStr} on {superAreaStr})
+                                </span>
                               </td>
-                              <td style={{ padding: '4px 12px', textAlign: 'right', color: '#ef4444', fontWeight: '900' }}>
-                                -{discountStr.startsWith('₹') ? discountStr : (discountStr.startsWith('-₹') ? discountStr.substring(1) : formatIndianRupees(discNum))}
+                              <td style={{ padding: '4px 12px', textAlign: 'right', fontWeight: '900', fontSize: '0.82rem' }}>
+                                {basePriceStr}
                               </td>
                             </tr>
-                          )}
 
-                          {/* SUBTOTAL ROW */}
-                          <tr style={{ background: '#f8fafc', borderTop: '1.5px solid #cbd5e1', borderBottom: '1.5px solid #cbd5e1' }}>
-                            <td style={{ padding: '5px 12px', fontWeight: '900', color: '#0f172a', fontSize: '0.80rem', letterSpacing: '0.3px' }}>
-                              SUBTOTAL (BEFORE TAXES & GOVERNMENT CHARGES)
-                            </td>
-                            <td style={{ padding: '5px 12px', textAlign: 'right', fontWeight: '900', color: '#0f172a', fontSize: '0.85rem' }}>
-                              {subtotalStr}
-                            </td>
-                          </tr>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '4px 12px' }}>2. Floor Rise Charge (Floor 5th Floor)</td>
+                              <td style={{ padding: '4px 12px', textAlign: 'right', color: '#64748b' }}>{floorRiseStr}</td>
+                            </tr>
 
-                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '4px 12px' }}>8. Goods & Services Tax (GST)</td>
-                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{gstStr}</td>
-                          </tr>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '4px 12px' }}>3. Preferential Location Charge (PLC - Facing)</td>
+                              <td style={{ padding: '4px 12px', textAlign: 'right', color: '#64748b' }}>{plcStr}</td>
+                            </tr>
 
-                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '4px 12px' }}>9. Stamp Duty Charges</td>
-                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{stampStr}</td>
-                          </tr>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '4px 12px' }}>4. Covered Car Parking Slot Charge</td>
+                              <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '600' }}>{parkingStr}</td>
+                            </tr>
 
-                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '4px 12px' }}>10. Registration & Property Transfer Fee</td>
-                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{regStr}</td>
-                          </tr>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '4px 12px' }}>5. Clubhouse & Gated Amenities Membership</td>
+                              <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{clubStr}</td>
+                            </tr>
 
-                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '4px 12px' }}>11. Lawyer / Legal Verification Charges</td>
-                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '600' }}>{lawyerStr}</td>
-                          </tr>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '4px 12px' }}>6. Advance Maintenance Charge (1 Year)</td>
+                              <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{maintStr}</td>
+                            </tr>
 
-                          <tr>
-                            <td style={{ padding: '4px 12px' }}>12. Brokerage & Agency Consultancy Charges</td>
-                            <td style={{ padding: '4px 12px', textAlign: 'right', color: '#16a34a', fontWeight: '900' }}>{brokStr}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '4px 12px' }}>7. Infrastructure & Legal Documentation Charges</td>
+                              <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '600' }}>{infraStr}</td>
+                            </tr>
+
+                            {discNum > 0 && (
+                              <tr style={{ borderBottom: '1px solid #f1f5f9', background: 'rgba(239, 68, 68, 0.05)' }}>
+                                <td style={{ padding: '4px 12px', color: '#ef4444', fontWeight: '800' }}>
+                                  7.1 Special Promotional Discount / Festival Rebate
+                                </td>
+                                <td style={{ padding: '4px 12px', textAlign: 'right', color: '#ef4444', fontWeight: '900' }}>
+                                  -{discountStr.startsWith('₹') ? discountStr : (discountStr.startsWith('-₹') ? discountStr.substring(1) : formatIndianRupees(discNum))}
+                                </td>
+                              </tr>
+                            )}
+
+                            {/* SUBTOTAL ROW */}
+                            <tr style={{ background: '#f8fafc', borderTop: '1.5px solid #cbd5e1', borderBottom: '1.5px solid #cbd5e1' }}>
+                              <td style={{ padding: '5px 12px', fontWeight: '900', color: '#0f172a', fontSize: '0.80rem', letterSpacing: '0.3px' }}>
+                                SUBTOTAL (BEFORE TAXES & GOVERNMENT CHARGES)
+                              </td>
+                              <td style={{ padding: '5px 12px', textAlign: 'right', fontWeight: '900', color: '#0f172a', fontSize: '0.85rem' }}>
+                                {subtotalStr}
+                              </td>
+                            </tr>
+
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '4px 12px' }}>8. Goods & Services Tax (GST)</td>
+                              <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{gstStr}</td>
+                            </tr>
+
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '4px 12px' }}>9. Stamp Duty Charges</td>
+                              <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{stampStr}</td>
+                            </tr>
+
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '4px 12px' }}>10. Registration & Property Transfer Fee</td>
+                              <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '700' }}>{regStr}</td>
+                            </tr>
+
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '4px 12px' }}>11. Lawyer / Legal Verification Charges</td>
+                              <td style={{ padding: '4px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '600' }}>{lawyerStr}</td>
+                            </tr>
+
+                            <tr>
+                              <td style={{ padding: '4px 12px' }}>12. Brokerage & Agency Consultancy Charges</td>
+                              <td style={{ padding: '4px 12px', textAlign: 'right', color: '#16a34a', fontWeight: '900' }}>{brokStr}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
 
                       {/* GREEN TOTAL COST BANNER */}
-                      <div style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff', padding: '8px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff', padding: '8px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                         <div>
                           <h3 style={{ fontSize: '0.92rem', fontWeight: '900', margin: 0, letterSpacing: '0.4px', textTransform: 'uppercase' }}>
                             TOTAL ESTIMATED PROPERTY COST
@@ -14281,22 +14283,22 @@ export default function App() {
         const totalEst = calc.totalEstimatedCostStr || '₹0';
 
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
-            <div style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '2px solid #0284c7', width: '96vw', maxWidth: '640px', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: windowWidth <= 640 ? 'flex-start' : 'center', justifyContent: 'center', zIndex: 2200, padding: windowWidth <= 640 ? '8px' : '16px', overflowY: 'auto' }}>
+            <div style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '2px solid #0284c7', width: windowWidth <= 640 ? '100%' : '96vw', maxWidth: '640px', maxHeight: '94vh', overflowY: 'auto', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)', boxSizing: 'border-box' }}>
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0284c7', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0284c7', paddingBottom: '12px', gap: '10px' }}>
                 <div>
                   <span style={{ background: '#0284c7', color: '#ffffff', padding: '3px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '900', fontFamily: 'monospace' }}>
                     NEW COST SHEET CODE: {nextId}
                   </span>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', margin: '6px 0 2px 0' }}>
+                  <h3 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', margin: '6px 0 2px 0' }}>
                     📄 CREATE INDIVIDUAL COST SHEET
                   </h3>
                   <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', margin: 0 }}>
                     1 Property = 1 Individual Cost Sheet Enforced • Automatic Customer Master Integration
                   </p>
                 </div>
-                <X size={24} color={isLight ? '#64748b' : '#94a3b8'} style={{ cursor: 'pointer' }} onClick={() => setShowSingleCostSheetConfirmModal(null)} />
+                <X size={24} color={isLight ? '#64748b' : '#94a3b8'} style={{ cursor: 'pointer', flexShrink: 0 }} onClick={() => setShowSingleCostSheetConfirmModal(null)} />
               </div>
 
               {/* SUMMARY GRID */}
@@ -14316,12 +14318,12 @@ export default function App() {
               </div>
 
               {/* PRICING HIGHLIGHT */}
-              <div style={{ background: 'rgba(2, 132, 199, 0.1)', border: '1.5px solid #0284c7', borderRadius: '12px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ background: 'rgba(2, 132, 199, 0.1)', border: '1.5px solid #0284c7', borderRadius: '12px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <div>
                   <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>Asking Base Price</span>
                   <div style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>{basePrice}</div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: windowWidth <= 480 ? 'left' : 'right' }}>
                   <span style={{ fontSize: '0.75rem', color: '#22c55e', fontWeight: '900' }}>Total Est. Investment</span>
                   <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#22c55e', fontFamily: 'monospace' }}>{totalEst}</div>
                 </div>
@@ -14332,11 +14334,11 @@ export default function App() {
               </div>
 
               {/* ACTIONS */}
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '12px' }}>
-                <button onClick={() => setShowSingleCostSheetConfirmModal(null)} style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '800', fontSize: '0.84rem', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: isLight ? 'flex-end' : 'flex-end', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '12px', flexDirection: windowWidth <= 480 ? 'column-reverse' : 'row' }}>
+                <button onClick={() => setShowSingleCostSheetConfirmModal(null)} style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '800', fontSize: '0.84rem', cursor: 'pointer', width: windowWidth <= 480 ? '100%' : 'auto' }}>
                   Cancel
                 </button>
-                <button onClick={executeSingleCostSheetCreation} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '900', fontSize: '0.86rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)' }}>
+                <button onClick={executeSingleCostSheetCreation} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '900', fontSize: '0.86rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)', width: windowWidth <= 480 ? '100%' : 'auto' }}>
                   ✅ CONFIRM & CREATE COST SHEET ({nextId})
                 </button>
               </div>
@@ -14353,19 +14355,19 @@ export default function App() {
         const propTitle = cs.propertySnapshot?.propertyTitle || cs.propertyTitle || 'Property';
 
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
-            <div style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '2px solid #eab308', width: '96vw', maxWidth: '580px', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.82)', display: 'flex', alignItems: windowWidth <= 640 ? 'flex-start' : 'center', justifyContent: 'center', zIndex: 2200, padding: windowWidth <= 640 ? '8px' : '16px', overflowY: 'auto' }}>
+            <div style={{ background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '2px solid #eab308', width: windowWidth <= 640 ? '100%' : '96vw', maxWidth: '580px', maxHeight: '94vh', overflowY: 'auto', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)', boxSizing: 'border-box' }}>
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #eab308', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #eab308', paddingBottom: '12px', gap: '10px' }}>
                 <div>
                   <span style={{ background: '#eab308', color: '#0f172a', padding: '3px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '900' }}>
                     DUPLICATE DETECTED
                   </span>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', margin: '6px 0 2px 0' }}>
+                  <h3 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', margin: '6px 0 2px 0' }}>
                     🔒 ACTIVE COST SHEET ALREADY EXISTS
                   </h3>
                 </div>
-                <X size={24} color={isLight ? '#64748b' : '#94a3b8'} style={{ cursor: 'pointer' }} onClick={() => setShowDuplicateCostSheetModal(null)} />
+                <X size={24} color={isLight ? '#64748b' : '#94a3b8'} style={{ cursor: 'pointer', flexShrink: 0 }} onClick={() => setShowDuplicateCostSheetModal(null)} />
               </div>
 
               <div style={{ background: 'rgba(234, 179, 8, 0.12)', border: '1.5px solid #eab308', borderRadius: '12px', padding: '14px', fontSize: '0.85rem', color: isLight ? '#0f172a' : '#ffffff', lineHeight: '1.5' }}>
@@ -14374,8 +14376,8 @@ export default function App() {
                 Under the rule <strong>1 Property = 1 Individual Cost Sheet</strong>, you can either view the existing active Cost Sheet or create a revised version (V02).
               </div>
 
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '12px' }}>
-                <button onClick={() => setShowDuplicateCostSheetModal(null)} style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '12px', flexDirection: windowWidth <= 480 ? 'column-reverse' : 'row' }}>
+                <button onClick={() => setShowDuplicateCostSheetModal(null)} style={{ background: isLight ? '#e2e8f0' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', width: windowWidth <= 480 ? '100%' : 'auto' }}>
                   Close
                 </button>
                 <button 
@@ -14384,7 +14386,7 @@ export default function App() {
                     setShowDuplicateCostSheetModal(null);
                     handleOpenRevisionModal(sheet);
                   }} 
-                  style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer' }}
+                  style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', width: windowWidth <= 480 ? '100%' : 'auto' }}
                 >
                   ✏️ Create Revision (V02)
                 </button>
@@ -14394,7 +14396,7 @@ export default function App() {
                     setShowDuplicateCostSheetModal(null);
                     setShowViewIndividualCostSheetModal({ open: true, costSheet: sheet });
                   }} 
-                  style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '9px 18px', borderRadius: '9px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer' }}
+                  style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', width: windowWidth <= 480 ? '100%' : 'auto' }}
                 >
                   👁️ View Active Cost Sheet
                 </button>
@@ -14579,17 +14581,17 @@ export default function App() {
         const calcBrokFee = brokPct === 0 ? 0 : (brokPct > 0 ? Math.round((brokBaseSum * brokPct) / 100) : (showRevisionModal.revBrokerage || 0));
 
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2200, padding: '16px' }}>
-            <div className="printable-costsheet-modal-wrapper custom-modal-scrollbar" style={{ background: '#1e293b', border: '2px solid #eab308', width: '96vw', maxWidth: '880px', maxHeight: '96vh', borderRadius: '18px', padding: '0', display: 'flex', flexDirection: 'column', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85)' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: windowWidth <= 640 ? 'flex-start' : 'center', justifyContent: 'center', zIndex: 2200, padding: windowWidth <= 640 ? '8px' : '16px', overflowY: 'auto' }}>
+            <div className="printable-costsheet-modal-wrapper custom-modal-scrollbar" style={{ background: '#1e293b', border: '2px solid #eab308', width: windowWidth <= 640 ? '100%' : '96vw', maxWidth: '880px', maxHeight: windowWidth <= 640 ? '98vh' : '96vh', borderRadius: windowWidth <= 640 ? '12px' : '18px', padding: '0', display: 'flex', flexDirection: 'column', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85)', boxSizing: 'border-box' }}>
               
               {/* MODAL HEADER */}
-              <div style={{ background: '#0f172a', borderBottom: '1px solid #334155', padding: '16px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ background: '#0f172a', borderBottom: '1px solid #334155', padding: windowWidth <= 640 ? '12px 14px' : '16px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h3 style={{ margin: 0, color: '#f59e0b', fontSize: '1.15rem', fontWeight: '900', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ margin: 0, color: '#f59e0b', fontSize: windowWidth <= 640 ? '0.98rem' : '1.15rem', fontWeight: '900', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>✏️</span>
                     <span>/ FULL COST SHEET EDITOR & REVISION MANAGER</span>
                   </h3>
-                  <div style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: '800', marginTop: '4px', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: '800', marginTop: '4px', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <span>TARGET ID: {costSheetId}</span>
                     <span>•</span>
                     <span>CURRENT VERSION: {currVer}</span>
@@ -14608,7 +14610,7 @@ export default function App() {
               </div>
 
               {/* MODAL BODY */}
-              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '18px', background: '#0f172a' }}>
+              <div style={{ padding: windowWidth <= 640 ? '14px 12px' : '20px 24px', display: 'flex', flexDirection: 'column', gap: '18px', background: '#0f172a' }}>
                 
                 {/* CUSTOMER & PROPERTY CONTEXT ROW */}
                 <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '14px 18px', display: 'grid', gridTemplateColumns: windowWidth <= 768 ? '1fr' : '1fr 1fr 1.2fr', gap: '12px', alignItems: 'center' }}>
@@ -14873,25 +14875,25 @@ export default function App() {
                 </div>
 
                 {/* BOTTOM ACTION BAR */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #334155', paddingTop: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #334155', paddingTop: '14px', flexWrap: 'wrap', gap: '10px', flexDirection: windowWidth <= 640 ? 'column-reverse' : 'row' }}>
                   <button 
                     onClick={() => setShowRevisionModal(null)} 
-                    style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '800', fontSize: '0.84rem', cursor: 'pointer' }}
+                    style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '800', fontSize: '0.84rem', cursor: 'pointer', width: windowWidth <= 640 ? '100%' : 'auto' }}
                   >
                     Cancel
                   </button>
 
-                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto', flexDirection: windowWidth <= 480 ? 'column' : 'row' }}>
                     <button 
                       onClick={() => executeCreateRevision(true)} 
-                      style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '10px 22px', borderRadius: '8px', fontWeight: '900', fontSize: '0.86rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)' }}
+                      style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.86rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)', width: windowWidth <= 480 ? '100%' : 'auto' }}
                     >
                       <span>🧰</span>
                       <span>SAVE EDITS (Update In-Place)</span>
                     </button>
                     <button 
                       onClick={() => executeCreateRevision(false)} 
-                      style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '10px 24px', borderRadius: '8px', fontWeight: '900', fontSize: '0.86rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(234, 179, 8, 0.3)' }}
+                      style={{ background: '#eab308', color: '#0f172a', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '900', fontSize: '0.86rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(234, 179, 8, 0.3)', width: windowWidth <= 480 ? '100%' : 'auto' }}
                     >
                       <span>🚀</span>
                       <span>SAVE AS NEW REVISION ({nextVerCode})</span>

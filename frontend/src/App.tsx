@@ -1,4 +1,3 @@
-// Vercel deployment trigger
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   LayoutDashboard, UserCog, Building, Users, CreditCard, User, FileCheck,
@@ -7477,9 +7476,9 @@ export default function App() {
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         return `http://localhost:5000${endpoint}`;
       }
-      return endpoint; // Vercel vercel.json proxies /api/* to Render backend
+      return endpoint;
     }
-    return `https://swaramayi-real-estate-marketing.onrender.com${endpoint}`;
+    return endpoint;
   };
 
   const syncAllToMongoDB = React.useCallback(async (overrideData?: any) => {
@@ -10739,7 +10738,7 @@ export default function App() {
           <button 
             onClick={() => { 
               if (isMobile) setIsMobileSidebarOpen(false); 
-              const websiteUrl = 'https://swaramayi-website.vercel.app/';
+              const websiteUrl = import.meta.env.VITE_WEBSITE_URL || 'https://www.swaramayi.com';
               if (typeof window !== 'undefined') {
                 window.open(websiteUrl, '_blank', 'noopener,noreferrer');
               }
@@ -15971,7 +15970,7 @@ export default function App() {
                 {/* LOGO BESIDE COMPANY NAME */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '2px' }}>
                   <div style={{ background: activeT.logoBg || '#ffffff', border: `2px solid ${activeT.logoBorder || '#fde047'}`, padding: '4px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '46px', height: '46px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', flexShrink: 0 }}>
-                    <img src="/swaramayi-logo.png" alt="Swaramayi Logo" style={{ width: '36px', height: '36px', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLElement).src = 'https://swaramayi-website.vercel.app/logo.png'; }} />
+                    <img src="/swaramayi-logo.png" alt="Swaramayi Logo" style={{ width: '36px', height: '36px', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLElement).src = '/logo.png'; }} />
                   </div>
 
                   <h1 style={{ fontSize: '1.45rem', fontWeight: '900', color: '#0f172a', margin: 0, letterSpacing: '-0.3px', textTransform: 'uppercase' }}>
@@ -16015,7 +16014,7 @@ export default function App() {
                   <span>🆔 WBRERA: WBRERA/A/NOR/2025/000737</span>
                   <span>📧 Email: avishek@swaramayi.info</span>
                   <span>📱 Phone: +91 88021 30791</span>
-                  <span>🌐 Web: https://swaramayi-website.vercel.app/</span>
+                  <span>🌐 Web: https://www.swaramayi.com</span>
                 </div>
               </div>
 
@@ -17460,7 +17459,7 @@ export default function App() {
                 {/* LOGO BESIDE COMPANY NAME */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', flexWrap: 'nowrap' }}>
                   <div style={{ background: activeT.logoBg || '#ffffff', border: `2px solid ${activeT.logoBorder || '#fde047'}`, padding: '4px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '42px', height: '42px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', flexShrink: 0 }}>
-                    <img src="/swaramayi-logo.png" alt="Swaramayi Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLElement).src = 'https://swaramayi-website.vercel.app/logo.png'; }} />
+                    <img src="/swaramayi-logo.png" alt="Swaramayi Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLElement).src = '/logo.png'; }} />
                   </div>
 
                   <h1 style={{ fontSize: '1.2rem', fontWeight: '900', color: activeT.headerTitle || '#0f172a', margin: 0, letterSpacing: '-0.3px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
@@ -17504,7 +17503,7 @@ export default function App() {
                   <span>🆔 WBRERA: {showPrintInvoiceModal.invoice.company_rera_no || 'WBRERA/A/NOR/2025/000737'}</span>
                   <span>📧 Email: {showPrintInvoiceModal.invoice.company_email || 'avishek@swaramayi.info'}</span>
                   <span>📱 Phone: {showPrintInvoiceModal.invoice.company_mobile || '+91 88021 30791'}</span>
-                  <span>🌐 Web: {showPrintInvoiceModal.invoice.company_website || 'https://swaramayi-website.vercel.app/'}</span>
+                  <span>🌐 Web: {showPrintInvoiceModal.invoice.company_website || 'https://www.swaramayi.com'}</span>
                 </div>
               </div>
 

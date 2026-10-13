@@ -4053,12 +4053,12 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
               </label>
               <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '10px 14px', fontFamily: 'monospace', fontSize: '0.75rem', color: '#38bdf8', wordBreak: 'break-all', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                 <span>
-                  https://swaramayi-website.vercel.app/properties/property-srm-prop-2026?rate=true&advisor={encodeURIComponent(ratingAdvisorName)}&customer={encodeURIComponent(ratingCustomerName || 'Customer')}#rate-advisor
+                  https://www.swaramayi.com/properties/property-srm-prop-2026?rate=true&advisor={encodeURIComponent(ratingAdvisorName)}&customer={encodeURIComponent(ratingCustomerName || 'Customer')}#rate-advisor
                 </span>
                 <button
                   type="button"
                   onClick={() => {
-                    const link = `https://swaramayi-website.vercel.app/properties/property-srm-prop-2026?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(ratingCustomerName || 'Customer')}#rate-advisor`;
+                    const link = `https://www.swaramayi.com/properties/property-srm-prop-2026?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(ratingCustomerName || 'Customer')}#rate-advisor`;
                     if (navigator.clipboard) {
                       navigator.clipboard.writeText(link);
                       setCopiedRatingLinkSuccess(true);
@@ -4084,7 +4084,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
               onClick={() => {
                 const targetCustomer = ratingCustomerName || 'Customer';
                 const targetMobile = ratingCustomerMobile || '';
-                const link = `https://swaramayi-website.vercel.app/properties/property-srm-prop-2026?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(targetCustomer)}#rate-advisor`;
+                const link = `https://www.swaramayi.com/properties/property-srm-prop-2026?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(targetCustomer)}#rate-advisor`;
 
                 if (ratingDeliveryChannel === 'WHATSAPP') {
                   window.open(`https://wa.me/${targetMobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Dear ${targetCustomer}, thank you for your recent property consultation with Swaramayi Real Estate. Please rate your assigned Property Advisor (${ratingAdvisorName}) here: ${link}`)}`, '_blank');

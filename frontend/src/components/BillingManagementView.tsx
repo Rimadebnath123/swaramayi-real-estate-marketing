@@ -854,7 +854,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                               company_rera_no: i.company_rera_no || 'WBRERA/A/NOR/2025/000737',
                               company_email: i.company_email || 'avishek@swaramayi.info',
                               company_mobile: i.company_mobile || '+91 88021 30791',
-                              company_website: i.company_website || 'https://swaramayi-website.vercel.app/',
+                              company_website: i.company_website || 'https://www.swaramayi.com',
                               payment_status: i.payment_status || 'UNPAID_PENDING',
                               payment_mode: i.payment_mode || '',
                               payment_ref: i.payment_ref || '',

@@ -31,7 +31,7 @@ export const WebsitePortalView: React.FC<WebsitePortalViewProps> = ({ isLight, w
     }
   }, [properties]);
 
-  const websiteUrl = 'https://swaramayi-website.vercel.app/';
+  const websiteUrl = import.meta.env.VITE_WEBSITE_URL || 'https://www.swaramayi.com';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minHeight: '80vh' }}>

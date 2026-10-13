@@ -8693,10 +8693,37 @@ export default function App() {
 
     const geofenceMatch = geofences.find(g => lat >= g.latMin && lat <= g.latMax && lng >= g.lngMin && lng <= g.lngMax);
 
+    // Google Maps Geocoder if SDK loaded & available
+    try {
+      if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Geocoder) {
+        const geocoder = new (window as any).google.maps.Geocoder();
+        const googleRes = await new Promise<any>((resolve) => {
+          geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
+            if (status === 'OK' && results && results[0]) {
+              resolve(results[0]);
+            } else {
+              resolve(null);
+            }
+          });
+        });
+
+        if (googleRes && googleRes.formatted_address) {
+          const formattedAddress = googleRes.formatted_address;
+          return {
+            locality: formattedAddress,
+            fullAddress: formattedAddress,
+            rawDetails: googleRes
+          };
+        }
+      }
+    } catch (e) {
+      console.log('Google reverse geocoder fallback to OpenStreetMap Nominatim', e);
+    }
+
     // 2. OpenStreetMap Nominatim Reverse Geocoding API Call for Maximum Detailed Full Address
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
       const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
         signal: controller.signal,
         headers: { 'Accept-Language': 'en' }
@@ -8732,9 +8759,11 @@ export default function App() {
         const secondaryLoc = city && !primaryLoc.toLowerCase().includes(city.toLowerCase()) ? city : '';
         const shortLocalityStr = secondaryLoc ? `${primaryLoc} Hub / ${secondaryLoc}` : primaryLoc;
 
+        const bestAddress = constructedFullAddress || data.display_name || (geofenceMatch ? geofenceMatch.fullAddress : shortLocalityStr);
+
         return {
-          locality: shortLocalityStr,
-          fullAddress: constructedFullAddress || (geofenceMatch ? geofenceMatch.fullAddress : shortLocalityStr),
+          locality: bestAddress,
+          fullAddress: bestAddress,
           rawDetails: addr
         };
       }
@@ -8744,16 +8773,16 @@ export default function App() {
 
     if (geofenceMatch) {
       return {
-        locality: geofenceMatch.locality,
+        locality: geofenceMatch.fullAddress || geofenceMatch.locality,
         fullAddress: geofenceMatch.fullAddress,
         rawDetails: null
       };
     }
 
-    const fallbackLocStr = `Sector (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+    const fallbackLocStr = `Sector (${lat.toFixed(4)}, ${lng.toFixed(4)}), Exact Coordinates (${lat}, ${lng})`;
     return {
       locality: fallbackLocStr,
-      fullAddress: `Exact Coordinates (${lat}, ${lng}), Landed Locality Area`,
+      fullAddress: fallbackLocStr,
       rawDetails: null
     };
   };
@@ -8774,16 +8803,18 @@ export default function App() {
         const accuracy = position.coords.accuracy ? ` (±${Math.round(position.coords.accuracy)}m accuracy)` : '';
 
         const result = await detectLocalityFromCoords(lat, lng);
+        const fetchedAddress = result.fullAddress || result.locality || '';
 
         setNewPropertyForm(prev => ({
           ...prev,
           latitude: lat,
           longitude: lng,
-          full_address: result.fullAddress || prev.full_address || ''
+          locality: fetchedAddress || prev.locality || '',
+          full_address: result.fullAddress || fetchedAddress || prev.full_address || ''
         }));
 
         setIsCapturingGps(false);
-        setGpsCaptureStatus(`✓ GPS Coordinates Captured Live (${lat}, ${lng}${accuracy}) • Address: ${result.fullAddress}`);
+        setGpsCaptureStatus(`✓ GPS Coordinates Captured Live (${lat}, ${lng}${accuracy}) • Address: ${fetchedAddress}`);
       },
       async (error) => {
         setIsCapturingGps(false);
@@ -8795,14 +8826,16 @@ export default function App() {
         const fallbackLat = '22.722361';
         const fallbackLng = '88.493403';
         const result = await detectLocalityFromCoords(fallbackLat, fallbackLng);
+        const fetchedAddress = result.fullAddress || result.locality || '';
 
         setNewPropertyForm(prev => ({
           ...prev,
           latitude: prev.latitude || fallbackLat,
           longitude: prev.longitude || fallbackLng,
-          full_address: prev.full_address || result.fullAddress
+          locality: fetchedAddress || prev.locality || '',
+          full_address: prev.full_address || result.fullAddress || fetchedAddress || ''
         }));
-        setGpsCaptureStatus(`⚠️ ${errorMsg} Default coordinates set (${fallbackLat}, ${fallbackLng}) • Address: ${result.fullAddress}`);
+        setGpsCaptureStatus(`⚠️ ${errorMsg} Default coordinates set (${fallbackLat}, ${fallbackLng}) • Address: ${fetchedAddress}`);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -12724,6 +12757,7 @@ export default function App() {
               setDevProjectOtpInput={setDevProjectOtpInput}
               isCapturingGps={isCapturingGps}
               gpsCaptureStatus={gpsCaptureStatus}
+              setGpsCaptureStatus={setGpsCaptureStatus}
               handleCaptureCurrentGpsLocation={handleCaptureCurrentGpsLocation}
               detectLocalityFromCoords={detectLocalityFromCoords}
               handleCreatePropertySubmit={handleCreatePropertySubmit}
@@ -18905,13 +18939,13 @@ export default function App() {
                       <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
                         Primary Preferred Locality *
                       </label>
-                      <input
-                        type="text"
+                      <LocationAutocompleteInput
+                        isLight={isLight}
                         value={newCustomerForm.preferredArea || ''}
-                        onChange={e => setNewCustomerForm({ ...newCustomerForm, preferredArea: e.target.value })}
+                        onChange={(val) => setNewCustomerForm({ ...newCustomerForm, preferredArea: val })}
                         placeholder="e.g. Enter preferred locality or sector"
+                        required={true}
                         style={{
-                          width: '100%',
                           padding: '10px 14px',
                           borderRadius: '8px',
                           border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
@@ -18927,13 +18961,13 @@ export default function App() {
                       <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
                         Secondary Preferred Localities
                       </label>
-                      <input
-                        type="text"
+                      <LocationAutocompleteInput
+                        isLight={isLight}
+                        isMulti={true}
                         value={newCustomerForm.secondary_areas || ''}
-                        onChange={e => setNewCustomerForm({ ...newCustomerForm, secondary_areas: e.target.value })}
+                        onChange={(val) => setNewCustomerForm({ ...newCustomerForm, secondary_areas: val })}
                         placeholder="e.g. Hitec City, Barasat, Sodepur"
                         style={{
-                          width: '100%',
                           padding: '10px 14px',
                           borderRadius: '8px',
                           border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',

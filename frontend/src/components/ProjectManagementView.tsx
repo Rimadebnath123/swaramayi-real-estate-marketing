@@ -1,6 +1,6 @@
 import { extractAllIdentifiers, isItemInRecycledSet } from '../App';
 import React from 'react';
-import { Upload, Building2, Share2, ArrowRightLeft, Compass, Navigation, Camera, Video, Search, X, Download, Trash2, ChevronDown } from 'lucide-react';
+import { Upload, Building2, Share2, ArrowRightLeft, Compass, Navigation, Camera, Video, Search, X, Download, Trash2, ChevronDown, MapPin } from 'lucide-react';
 
 export const parseSqftValue = (val: any): number => {
   if (val === null || val === undefined) return 0;
@@ -49,6 +49,7 @@ interface ProjectManagementViewProps {
   setDevProjectOtpInput: (val: string) => void;
   isCapturingGps: boolean;
   gpsCaptureStatus: string;
+  setGpsCaptureStatus?: (status: string | null) => void;
   handleCaptureCurrentGpsLocation: () => void;
   handleCreatePropertySubmit: (e: React.FormEvent) => void;
   generateNextPropertyCode: () => string;
@@ -137,6 +138,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   setDevProjectOtpInput,
   isCapturingGps,
   gpsCaptureStatus,
+  setGpsCaptureStatus,
   handleCaptureCurrentGpsLocation,
   handleCreatePropertySubmit,
   generateNextPropertyCode,
@@ -575,6 +577,107 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const [newDevEmailInput, setNewDevEmailInput] = React.useState<string>('');
   const [newDevProjectTitleInput, setNewDevProjectTitleInput] = React.useState<string>('');
   const [viewPropertyModal, setViewPropertyModal] = React.useState<any | null>(null);
+
+  // 📍 GPS COORDINATES AUTO-FETCH ADDRESS STATE & HANDLER
+  const [isFetchingCoordsAddress, setIsFetchingCoordsAddress] = React.useState<boolean>(false);
+  const [coordsAddressMessage, setCoordsAddressMessage] = React.useState<string | null>(null);
+  const coordsLookupDebounceRef = React.useRef<any>(null);
+  const lastFetchedCoordsRef = React.useRef<string>('');
+
+  const fetchAddressForCoordinates = React.useCallback(async (latInput: string, lngInput: string, force: boolean = false) => {
+    const latStr = (latInput || '').trim();
+    const lngStr = (lngInput || '').trim();
+    const lat = parseFloat(latStr);
+    const lng = parseFloat(lngStr);
+
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return;
+    }
+    const coordKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+    if (!force && lastFetchedCoordsRef.current === coordKey) {
+      return;
+    }
+
+    setIsFetchingCoordsAddress(true);
+    setCoordsAddressMessage(`📡 Reverse geocoding GPS coordinates (${lat.toFixed(5)}, ${lng.toFixed(5)})...`);
+
+    try {
+      let resolvedAddress = '';
+      if (detectLocalityFromCoords) {
+        const result = await detectLocalityFromCoords(latStr, lngStr);
+        resolvedAddress = result.fullAddress || result.locality || '';
+      }
+
+      // Direct Nominatim reverse fetch if detectLocalityFromCoords returned blank
+      if (!resolvedAddress) {
+        try {
+          const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+            headers: { 'Accept-Language': 'en' }
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            resolvedAddress = data.display_name || '';
+          }
+        } catch (e) {
+          console.warn('Fallback Nominatim reverse geocode error:', e);
+        }
+      }
+
+      if (resolvedAddress) {
+        lastFetchedCoordsRef.current = coordKey;
+        setNewPropertyForm((prev: any) => ({
+          ...prev,
+          latitude: latStr,
+          longitude: lngStr,
+          locality: resolvedAddress,
+          full_address: resolvedAddress
+        }));
+        setCoordsAddressMessage(`✓ Auto-Fetched Address: ${resolvedAddress}`);
+        if (setGpsCaptureStatus) {
+          setGpsCaptureStatus(`✓ GPS Coordinates Address Auto-Fetched: ${resolvedAddress}`);
+        }
+      } else {
+        setCoordsAddressMessage(`⚠️ Could not determine address for coordinates (${latStr}, ${lngStr})`);
+      }
+    } catch (err) {
+      console.error('Failed to fetch address from coordinates:', err);
+      setCoordsAddressMessage(`⚠️ Error fetching address for (${latStr}, ${lngStr})`);
+    } finally {
+      setIsFetchingCoordsAddress(false);
+    }
+  }, [detectLocalityFromCoords, setNewPropertyForm, setGpsCaptureStatus]);
+
+  const handleCoordsInputChange = (field: 'latitude' | 'longitude', val: string) => {
+    let newLat = field === 'latitude' ? val : (newPropertyForm.latitude || '');
+    let newLng = field === 'longitude' ? val : (newPropertyForm.longitude || '');
+
+    // Auto-detect pasted "lat, lng" pair
+    if (val.includes(',') || val.includes(';') || (val.includes(' ') && val.trim().split(/\s+/).length === 2)) {
+      const parts = val.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+      if (parts.length >= 2 && !isNaN(parseFloat(parts[0])) && !isNaN(parseFloat(parts[1]))) {
+        newLat = parts[0];
+        newLng = parts[1];
+        setNewPropertyForm((prev: any) => ({ ...prev, latitude: newLat, longitude: newLng }));
+        if (coordsLookupDebounceRef.current) clearTimeout(coordsLookupDebounceRef.current);
+        coordsLookupDebounceRef.current = setTimeout(() => {
+          fetchAddressForCoordinates(newLat, newLng);
+        }, 500);
+        return;
+      }
+    }
+
+    setNewPropertyForm((prev: any) => ({ ...prev, [field]: val }));
+
+    if (coordsLookupDebounceRef.current) {
+      clearTimeout(coordsLookupDebounceRef.current);
+    }
+
+    if (newLat.trim().length >= 4 && newLng.trim().length >= 4) {
+      coordsLookupDebounceRef.current = setTimeout(() => {
+        fetchAddressForCoordinates(newLat, newLng);
+      }, 700);
+    }
+  };
 
   // 🔍 ADVANCE MASTER PROJECT SEARCH MODAL STATES
   const [showAdvanceProjectSearchModal, setShowAdvanceProjectSearchModal] = React.useState<boolean>(false);
@@ -1715,13 +1818,34 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Locality Hub / Sector *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>
+                      Locality Hub / Sector *
+                    </label>
+                    {isFetchingCoordsAddress && (
+                      <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ display: 'inline-block', width: '8px', height: '8px', border: '2px solid #38bdf8', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                        Auto-fetching address...
+                      </span>
+                    )}
+                  </div>
                   <input 
                     type="text" 
                     value={newPropertyForm.locality} 
                     onChange={(e) => setNewPropertyForm({ ...newPropertyForm, locality: e.target.value })} 
-                    placeholder="e.g. Locality Hub / Sector / Area" 
-                    style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    placeholder={isFetchingCoordsAddress ? "Detecting address from GPS coordinates..." : "e.g. Locality Hub / Sector / Area"} 
+                    style={{ 
+                      width: '100%', 
+                      background: isLight ? '#ffffff' : '#1e293b', 
+                      border: isFetchingCoordsAddress ? '1.5px solid #38bdf8' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), 
+                      color: isLight ? '#0f172a' : '#ffffff', 
+                      padding: '10px 14px', 
+                      borderRadius: '8px', 
+                      fontSize: '0.9rem',
+                      fontWeight: newPropertyForm.locality ? '700' : 'normal',
+                      boxShadow: isFetchingCoordsAddress ? '0 0 10px rgba(56, 189, 248, 0.3)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }} 
                     required 
                   />
                 </div>
@@ -1839,28 +1963,54 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     <Compass size={16} color="#a855f7" /> 📍 GPS Location Coordinates & Device Auto-Capture
                   </span>
 
-                  <button 
-                    type="button" 
-                    onClick={handleCaptureCurrentGpsLocation} 
-                    disabled={isCapturingGps}
-                    style={{ 
-                      background: isCapturingGps ? '#334155' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', 
-                      color: '#ffffff', 
-                      border: 'none', 
-                      padding: '8px 16px', 
-                      borderRadius: '8px', 
-                      fontWeight: '900', 
-                      fontSize: '0.8rem', 
-                      cursor: isCapturingGps ? 'wait' : 'pointer', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '6px',
-                      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)' 
-                    }}
-                  >
-                    <Navigation size={15} />
-                    {isCapturingGps ? '📡 Capturing GPS...' : '🎯 CAPTURE MY CURRENT GPS LOCATION'}
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {/* AUTO FETCH ADDRESS ON DEMAND BUTTON */}
+                    <button 
+                      type="button" 
+                      onClick={() => fetchAddressForCoordinates(newPropertyForm.latitude, newPropertyForm.longitude, true)} 
+                      disabled={isFetchingCoordsAddress || !newPropertyForm.latitude || !newPropertyForm.longitude}
+                      title="Auto-fetch address from current coordinates into Locality Hub / Sector"
+                      style={{ 
+                        background: (!newPropertyForm.latitude || !newPropertyForm.longitude) ? (isLight ? '#f1f5f9' : '#1e293b') : (isLight ? '#e0f2fe' : 'rgba(56, 189, 248, 0.15)'), 
+                        color: (!newPropertyForm.latitude || !newPropertyForm.longitude) ? '#94a3b8' : '#0284c7', 
+                        border: (!newPropertyForm.latitude || !newPropertyForm.longitude) ? '1px solid transparent' : '1px solid #38bdf8', 
+                        padding: '8px 14px', 
+                        borderRadius: '8px', 
+                        fontWeight: '800', 
+                        fontSize: '0.78rem', 
+                        cursor: (!newPropertyForm.latitude || !newPropertyForm.longitude) ? 'not-allowed' : (isFetchingCoordsAddress ? 'wait' : 'pointer'), 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '6px' 
+                      }}
+                    >
+                      <MapPin size={14} />
+                      {isFetchingCoordsAddress ? '⏳ Fetching Address...' : '🔍 FETCH ADDRESS FROM COORDS'}
+                    </button>
+
+                    <button 
+                      type="button" 
+                      onClick={handleCaptureCurrentGpsLocation} 
+                      disabled={isCapturingGps}
+                      style={{ 
+                        background: isCapturingGps ? '#334155' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', 
+                        color: '#ffffff', 
+                        border: 'none', 
+                        padding: '8px 16px', 
+                        borderRadius: '8px', 
+                        fontWeight: '900', 
+                        fontSize: '0.8rem', 
+                        cursor: isCapturingGps ? 'wait' : 'pointer', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '6px',
+                        boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)' 
+                      }}
+                    >
+                      <Navigation size={15} />
+                      {isCapturingGps ? '📡 Capturing GPS...' : '🎯 CAPTURE MY CURRENT GPS LOCATION'}
+                    </button>
+                  </div>
                 </div>
 
                 {gpsCaptureStatus && (
@@ -1869,13 +2019,24 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   </div>
                 )}
 
+                {coordsAddressMessage && !gpsCaptureStatus && (
+                  <div style={{ background: coordsAddressMessage.startsWith('✓') ? 'rgba(34, 197, 94, 0.15)' : 'rgba(56, 189, 248, 0.15)', border: `1px solid ${coordsAddressMessage.startsWith('✓') ? '#22c55e' : '#38bdf8'}`, borderRadius: '6px', padding: '8px 12px', fontSize: '0.78rem', color: coordsAddressMessage.startsWith('✓') ? '#4ade80' : '#38bdf8', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <MapPin size={14} />
+                    {coordsAddressMessage}
+                  </div>
+                )}
+
                 <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>GPS Latitude (Exact Map Lat)</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700' }}>GPS Latitude (Exact Map Lat)</label>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Paste lat or "lat, lng" pair</span>
+                    </div>
                     <input 
                       type="text" 
                       value={newPropertyForm.latitude} 
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, latitude: e.target.value })} 
+                      onChange={(e) => handleCoordsInputChange('latitude', e.target.value)} 
+                      onBlur={() => fetchAddressForCoordinates(newPropertyForm.latitude, newPropertyForm.longitude)}
                       placeholder="e.g. 22.698021 or 22.722361" 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
                     />
@@ -1885,7 +2046,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     <input 
                       type="text" 
                       value={newPropertyForm.longitude} 
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, longitude: e.target.value })} 
+                      onChange={(e) => handleCoordsInputChange('longitude', e.target.value)} 
+                      onBlur={() => fetchAddressForCoordinates(newPropertyForm.latitude, newPropertyForm.longitude)}
                       placeholder="e.g. 88.463723 or 78.34891" 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#4ade80', fontWeight: '800', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
                     />

@@ -57,24 +57,38 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
   // Deduplicated Customer Agreements (combines agreements vault + PVA records without duplicates)
   const customerAgreements = React.useMemo(() => {
     const map = new Map<string, any>();
+    const seenVisitKeys = new Set<string>();
+
+    const getContractKey = (item: any) => {
+      const vId = (item.visitScheduleId || item.visitId || '').toString().trim().toLowerCase();
+      const pTitle = (item.property_details || item.projectTitle || item.title || '').toString().split('—').pop().trim().toLowerCase();
+      const party = (item.party_name || item.customerName || item.customer_name || '').toString().trim().toLowerCase();
+      if (vId) return `visit_${vId}`;
+      if (party && pTitle) return `cust_${party}_${pTitle}`;
+      return (item.agreement_code || item.projectVisitAgreementId || item.id || '').toString().toLowerCase();
+    };
 
     // 1. Add from agreements vault (customer site visit agreements)
     (agreements || []).forEach((a: any) => {
       if (a.category === 'CUSTOMER' || a.agreement_type === 'CUSTOMER_SITE_VISIT' || (a.agreement_code && a.agreement_code.includes('PVA'))) {
-        const key = a.agreement_code || a.id;
-        if (key && !map.has(key)) {
-          map.set(key, a);
+        const idKey = a.agreement_code || a.id;
+        const cKey = getContractKey(a);
+        if (idKey && !map.has(idKey) && !seenVisitKeys.has(cKey)) {
+          seenVisitKeys.add(cKey);
+          map.set(idKey, a);
         }
       }
     });
 
     // 2. Add from projectVisitAgreements if not already present
     (projectVisitAgreements || []).forEach((pva: any) => {
-      const key = pva.projectVisitAgreementId || pva.id;
-      if (key && !map.has(key)) {
-        map.set(key, {
-          id: key,
-          agreement_code: key,
+      const idKey = pva.projectVisitAgreementId || pva.id;
+      const cKey = getContractKey(pva);
+      if (idKey && !map.has(idKey) && !seenVisitKeys.has(cKey)) {
+        seenVisitKeys.add(cKey);
+        map.set(idKey, {
+          id: idKey,
+          agreement_code: idKey,
           agreement_type: 'CUSTOMER_SITE_VISIT',
           category: 'CUSTOMER',
           title: `Customer Site Visit Agreement — ${pva.projectTitle || 'Site Visit'}`,

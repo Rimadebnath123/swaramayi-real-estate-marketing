@@ -5590,13 +5590,13 @@ export default function App() {
     const subtotalBeforeTax = Math.max(0, grossSubtotal - discountAmount);
 
     const gstPct = parsePct(prop.gst_pct, basePriceNum > 0 && basePriceNum < 4500000 ? 1 : 5);
-    const gstAmount = basePriceNum > 0 ? Math.round(basePriceNum * (gstPct / 100)) : 0;
+    const gstAmount = subtotalBeforeTax > 0 ? Math.round(subtotalBeforeTax * (gstPct / 100)) : 0;
 
     const stampDutyPct = parsePct(prop.stamp_duty_pct, 5);
-    const stampDutyAmount = basePriceNum > 0 ? Math.round(basePriceNum * (stampDutyPct / 100)) : 0;
+    const stampDutyAmount = subtotalBeforeTax > 0 ? Math.round(subtotalBeforeTax * (stampDutyPct / 100)) : 0;
 
     const registrationPct = parsePct(prop.registration_fee_pct, 1);
-    const registrationAmount = basePriceNum > 0 ? Math.round(basePriceNum * (registrationPct / 100)) : 0;
+    const registrationAmount = subtotalBeforeTax > 0 ? Math.round(subtotalBeforeTax * (registrationPct / 100)) : 0;
 
     const totalEstimatedCost = subtotalBeforeTax + gstAmount + stampDutyAmount + registrationAmount + computedBrokerage;
 
@@ -5774,22 +5774,55 @@ export default function App() {
             const pBreakup = cs.formattedPriceBreakup || {};
             const baseNum = ps.basePrice || (pBreakup.basePriceStr ? parseFloat(String(pBreakup.basePriceStr).replace(/,/g, '').replace(/[^\d.]/g, '')) : 0) || cs.base_price || 0;
             const superNum = parseFloat(String(propSnap.superBuiltupArea || propSnap.super_builtup_area || propSnap.builtupArea || propSnap.carpetArea || '').replace(/,/g, '').replace(/[^\d.]/g, '')) || 0;
-            if (baseNum > 0 && superNum > 0) {
-              const correctRate = Math.round(baseNum / superNum);
-              const correctRateStr = `₹${correctRate.toLocaleString('en-IN')}/Sq.Ft.`;
-              return {
-                ...cs,
-                pricingSnapshot: {
-                  ...ps,
-                  ratePerSqft: correctRate
-                },
-                formattedPriceBreakup: {
-                  ...pBreakup,
-                  ratePerSqftStr: correctRateStr
-                }
-              };
-            }
-            return cs;
+            const correctRate = (baseNum > 0 && superNum > 0) ? Math.round(baseNum / superNum) : (ps.ratePerSqft || 0);
+            const correctRateStr = correctRate > 0 ? `₹${correctRate.toLocaleString('en-IN')}/Sq.Ft.` : (pBreakup.ratePerSqftStr || 'N/A');
+
+            const floorNum = ps.floorRise !== undefined ? ps.floorRise : parsePriceToNumeric(pBreakup.floorRiseStr || 0);
+            const plcNum = ps.plc !== undefined ? ps.plc : parsePriceToNumeric(pBreakup.plcStr || 0);
+            const parkNum = ps.parkingCharge !== undefined ? ps.parkingCharge : parsePriceToNumeric(pBreakup.parkingStr || 0);
+            const clubNum = ps.clubCharge !== undefined ? ps.clubCharge : parsePriceToNumeric(pBreakup.clubStr || 0);
+            const maintNum = ps.maintenance !== undefined ? ps.maintenance : parsePriceToNumeric(pBreakup.maintenanceStr || 0);
+            const infraNum = ps.infrastructureCharge !== undefined ? ps.infrastructureCharge : parsePriceToNumeric(pBreakup.infrastructureStr || 0);
+            const discNum = ps.discountAmount !== undefined ? ps.discountAmount : parsePriceToNumeric(pBreakup.discountStr || 0);
+
+            const calculatedSubtotal = Math.max(0, (baseNum + floorNum + plcNum + parkNum + clubNum + maintNum + infraNum) - discNum);
+            const subtotalBeforeTax = ps.subtotalBeforeTax || calculatedSubtotal || baseNum;
+
+            const gstPct = ps.gstPct !== undefined ? ps.gstPct : 0;
+            const stampDutyPct = ps.stampDutyPct !== undefined ? ps.stampDutyPct : 5;
+            const registrationPct = ps.registrationPct !== undefined ? ps.registrationPct : 1;
+            const brokFee = ps.brokerageCharge !== undefined ? ps.brokerageCharge : 0;
+
+            const gstAmt = subtotalBeforeTax > 0 ? Math.round(subtotalBeforeTax * (gstPct / 100)) : 0;
+            const stampDutyAmt = subtotalBeforeTax > 0 ? Math.round(subtotalBeforeTax * (stampDutyPct / 100)) : 0;
+            const regAmt = subtotalBeforeTax > 0 ? Math.round(subtotalBeforeTax * (registrationPct / 100)) : 0;
+            const totalCost = subtotalBeforeTax + gstAmt + stampDutyAmt + regAmt + brokFee;
+
+            return {
+              ...cs,
+              pricingSnapshot: {
+                ...ps,
+                basePrice: baseNum,
+                ratePerSqft: correctRate,
+                subtotalBeforeTax: subtotalBeforeTax,
+                gstPct: gstPct,
+                gstAmount: gstAmt,
+                stampDutyPct: stampDutyPct,
+                stampDutyAmount: stampDutyAmt,
+                registrationPct: registrationPct,
+                registrationAmount: regAmt,
+                totalEstimatedCost: totalCost
+              },
+              formattedPriceBreakup: {
+                ...pBreakup,
+                ratePerSqftStr: correctRateStr,
+                subtotalStr: formatIndianRupees(subtotalBeforeTax),
+                gstStr: gstAmt > 0 ? `${formatIndianRupees(gstAmt)} (${gstPct}%)` : `₹0 (${gstPct}%)`,
+                stampDutyStr: stampDutyAmt > 0 ? `${formatIndianRupees(stampDutyAmt)} (${stampDutyPct}%)` : `₹0 (${stampDutyPct}%)`,
+                registrationStr: regAmt > 0 ? `${formatIndianRupees(regAmt)} (${registrationPct}%)` : `₹0 (${registrationPct}%)`,
+                totalEstimatedCostStr: formatIndianRupees(totalCost)
+              }
+            };
           });
         }
       }
@@ -6338,9 +6371,9 @@ export default function App() {
     const stampPct = form.revStampDutyPct !== undefined ? form.revStampDutyPct : 5;
     const regPct = form.revRegPct !== undefined ? form.revRegPct : 1;
 
-    const gst = base > 0 ? Math.round((base * gstPct) / 100) : 0;
-    const stamp = base > 0 ? Math.round((base * stampPct) / 100) : 0;
-    const reg = base > 0 ? Math.round((base * regPct) / 100) : 0;
+    const gst = subtotal > 0 ? Math.round((subtotal * gstPct) / 100) : 0;
+    const stamp = subtotal > 0 ? Math.round((subtotal * stampPct) / 100) : 0;
+    const reg = subtotal > 0 ? Math.round((subtotal * regPct) / 100) : 0;
     const grandTotal = subtotal + gst + stamp + reg + brok;
 
     return { subtotal, gst, stamp, reg, grandTotal, brok };
@@ -6418,6 +6451,7 @@ export default function App() {
         brokeragePct: brokPct,
         brokerageCharge: finalBrokNum,
         discountAmount: form.revDiscount,
+        subtotalBeforeTax: liveCalc.subtotal,
         gstPct: form.revGstPct,
         gstAmount: liveCalc.gst,
         stampDutyPct: form.revStampDutyPct,
@@ -9924,27 +9958,14 @@ export default function App() {
       return vp;
     }));
 
-    // 3. Create or Update PVA Record in projectVisitAgreements
-    const pvaId = `SRM-PVA-2026-000${projectVisitAgreements.length + 12}`;
-    const newPva = {
-      projectVisitAgreementId: pvaId,
-      visitScheduleId: v.visitScheduleId || v.visitId || `SRM-VS-2026-${String(projectVisitAgreements.length + 1).padStart(6, '0')}`,
-      visitId: v.visitScheduleId || v.visitId || `SRM-VS-2026-${String(projectVisitAgreements.length + 1).padStart(6, '0')}`,
-      customerName: custName,
-      customerMobile: v.mobile || '+91 98490 88888',
-      customerId: fullCustNo,
-      sevenDigitCustomerId: sevenDigitCustNo,
-      projectTitle: propTitle,
-      developerName: devName,
-      salesPersonName: execName,
-      visitDate: v.visitDate || new Date().toISOString().split('T')[0],
-      protectionStartDate: new Date().toISOString().split('T')[0],
-      protectionEndDate: new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0],
-      status: 'VISIT_COMPLETED',
-      whatsappConfirmed: true,
-      developerWhatsapp: devPhone
-    };
-    setProjectVisitAgreements(prev => [newPva, ...prev.filter(p => p.customerId !== fullCustNo || p.projectTitle !== propTitle)]);
+    // 3. Do not create new project visit agreement on visit done.
+    // If an existing PVA was already created (e.g. during OTP verification), update its completion status.
+    setProjectVisitAgreements(prev => (prev || []).map(p => {
+      const isMatch = (v.visitScheduleId && (p.visitScheduleId === v.visitScheduleId || p.visitId === v.visitScheduleId)) ||
+                      (v.visitId && (p.visitScheduleId === v.visitId || p.visitId === v.visitId)) ||
+                      (p.customerId === fullCustNo && p.projectTitle === propTitle);
+      return isMatch ? { ...p, status: 'VISIT_COMPLETED', whatsappConfirmed: true, developerWhatsapp: devPhone } : p;
+    }));
 
     // 4. Trigger WhatsApp Developer Confirmation
     window.open(waUrl, '_blank');
@@ -13695,37 +13716,44 @@ export default function App() {
         const ratePerSqftStr = pb.ratePerSqftStr || `₹${ratePerSqftNum.toLocaleString('en-IN')}/Sq.Ft.`;
         const basePriceStr = pb.basePriceStr || `₹${Number(basePriceNum).toLocaleString('en-IN')}`;
 
-        const floorRiseStr = pb.floorRiseStr || (pricing.floorRise ? `₹${Number(pricing.floorRise).toLocaleString('en-IN')}` : 'N/A');
-        const plcStr = pb.plcStr || (pricing.plc ? `₹${Number(pricing.plc).toLocaleString('en-IN')}` : 'N/A');
-        const parkingStr = pb.parkingStr || (pricing.parkingCharge ? `₹${Number(pricing.parkingCharge).toLocaleString('en-IN')}` : 'Included in Flat Price');
-        const clubNum = pricing.clubCharge !== undefined ? pricing.clubCharge : 40000;
-        const clubStr = pb.clubStr || (clubNum > 0 ? `₹${Number(clubNum).toLocaleString('en-IN')}` : 'Included in Flat Price');
-        const maintNum = pricing.maintenance !== undefined ? pricing.maintenance : 500;
-        const maintStr = pb.maintenanceStr || (maintNum > 0 ? `₹${Number(maintNum).toLocaleString('en-IN')}` : 'Included in Flat Price');
-        const infraStr = pb.infrastructureStr || (pricing.infrastructureCharge ? `₹${Number(pricing.infrastructureCharge).toLocaleString('en-IN')}` : 'Included in Flat Price');
+        const floorRiseNum = pricing.floorRise !== undefined ? pricing.floorRise : parsePriceToNumeric(pb.floorRiseStr || 0);
+        const floorRiseStr = pb.floorRiseStr || (floorRiseNum ? formatIndianRupees(floorRiseNum) : 'N/A');
+        const plcNum = pricing.plc !== undefined ? pricing.plc : parsePriceToNumeric(pb.plcStr || 0);
+        const plcStr = pb.plcStr || (plcNum ? formatIndianRupees(plcNum) : 'N/A');
+        const parkingNum = pricing.parkingCharge !== undefined ? pricing.parkingCharge : parsePriceToNumeric(pb.parkingStr || 0);
+        const parkingStr = pb.parkingStr || (parkingNum ? formatIndianRupees(parkingNum) : 'Included in Flat Price');
+        const clubNum = pricing.clubCharge !== undefined ? pricing.clubCharge : parsePriceToNumeric(pb.clubStr || 0);
+        const clubStr = pb.clubStr || (clubNum > 0 ? formatIndianRupees(clubNum) : 'Included in Flat Price');
+        const maintNum = pricing.maintenance !== undefined ? pricing.maintenance : parsePriceToNumeric(pb.maintenanceStr || 0);
+        const maintStr = pb.maintenanceStr || (maintNum > 0 ? formatIndianRupees(maintNum) : 'Included in Flat Price');
+        const infraNum = pricing.infrastructureCharge !== undefined ? pricing.infrastructureCharge : parsePriceToNumeric(pb.infrastructureStr || 0);
+        const infraStr = pb.infrastructureStr || (infraNum > 0 ? formatIndianRupees(infraNum) : 'Included in Flat Price');
         const discNum = pricing.discountAmount !== undefined && pricing.discountAmount > 0 ? pricing.discountAmount : parsePriceToNumeric(cs.discountAmount || prop.discount_amount || prop.discount || 0);
         const discountStr = pb.discountStr && pb.discountStr !== 'N/A' ? pb.discountStr : (discNum > 0 ? formatIndianRupees(discNum) : 'N/A');
 
-        const subtotalNum = pricing.subtotalBeforeTax || (basePriceNum + (typeof clubNum === 'number' ? clubNum : 0) + (typeof maintNum === 'number' ? maintNum : 0));
-        const subtotalStr = pb.subtotalStr || `₹${Number(subtotalNum).toLocaleString('en-IN')}`;
+        const calculatedSubtotal = Math.max(0, (basePriceNum + floorRiseNum + plcNum + parkingNum + (typeof clubNum === 'number' ? clubNum : 0) + (typeof maintNum === 'number' ? maintNum : 0) + (typeof infraNum === 'number' ? infraNum : 0)) - discNum);
+        const subtotalNum = calculatedSubtotal > 0 ? calculatedSubtotal : (pricing.subtotalBeforeTax || basePriceNum);
+        const subtotalStr = formatIndianRupees(subtotalNum);
 
-        const gstPct = pricing.gstPct !== undefined ? pricing.gstPct : 5;
-        const gstAmtNum = pricing.gstAmount !== undefined ? pricing.gstAmount : Math.round(basePriceNum * (gstPct / 100));
-        const gstStr = pb.gstStr || `₹${Number(gstAmtNum).toLocaleString('en-IN')} (${gstPct}%)`;
+        const gstPct = pricing.gstPct !== undefined ? pricing.gstPct : 0;
+        const gstAmtNum = gstPct > 0 ? Math.round(subtotalNum * (gstPct / 100)) : 0;
+        const gstStr = gstAmtNum > 0 ? `${formatIndianRupees(gstAmtNum)} (${gstPct}%)` : `₹0 (${gstPct}%)`;
 
         const stampPct = pricing.stampDutyPct !== undefined ? pricing.stampDutyPct : 5;
-        const stampAmtNum = pricing.stampDutyAmount !== undefined ? pricing.stampDutyAmount : Math.round(basePriceNum * (stampPct / 100));
-        const stampStr = pb.stampDutyStr || `₹${Number(stampAmtNum).toLocaleString('en-IN')} (${stampPct}%)`;
+        const stampAmtNum = stampPct > 0 ? Math.round(subtotalNum * (stampPct / 100)) : 0;
+        const stampStr = stampAmtNum > 0 ? `${formatIndianRupees(stampAmtNum)} (${stampPct}%)` : `₹0 (${stampPct}%)`;
 
         const regPct = pricing.registrationPct !== undefined ? pricing.registrationPct : 1;
-        const regAmtNum = pricing.registrationAmount !== undefined ? pricing.registrationAmount : Math.round(basePriceNum * (regPct / 100));
-        const regStr = pb.registrationStr || `₹${Number(regAmtNum).toLocaleString('en-IN')} (${regPct}%)`;
+        const regAmtNum = regPct > 0 ? Math.round(subtotalNum * (regPct / 100)) : 0;
+        const regStr = regAmtNum > 0 ? `${formatIndianRupees(regAmtNum)} (${regPct}%)` : `₹0 (${regPct}%)`;
 
         const lawyerStr = pb.lawyerStr || 'Included in Flat Price';
-        const brokStr = pb.brokerageStr || '0% (Zero Brokerage for Buyer)';
+        const brokChargeNum = pricing.brokerageCharge !== undefined ? pricing.brokerageCharge : parsePriceToNumeric(pb.brokerageStr || 0);
+        const brokPct = pricing.brokeragePct !== undefined ? pricing.brokeragePct : 0;
+        const brokStr = brokChargeNum > 0 ? `${formatIndianRupees(brokChargeNum)}${brokPct > 0 ? ` (${brokPct}%)` : ''}` : (pb.brokerageStr || '0% (Zero Brokerage for Buyer)');
 
-        const totalEstNum = pricing.totalEstimatedCost || (subtotalNum + gstAmtNum + stampAmtNum + regAmtNum);
-        const totalEstStr = pb.totalEstimatedCostStr || `₹${Number(totalEstNum).toLocaleString('en-IN')}`;
+        const totalEstNum = subtotalNum + gstAmtNum + stampAmtNum + regAmtNum + (brokChargeNum > 0 ? brokChargeNum : 0);
+        const totalEstStr = formatIndianRupees(totalEstNum);
 
         const facingPossession = prop.facingPossession || 'North-East Facing • Ready to Move';
 

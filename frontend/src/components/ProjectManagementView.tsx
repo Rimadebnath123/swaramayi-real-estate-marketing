@@ -3073,23 +3073,24 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       <option value="Flat / Apartment (New / Builder)">🏢 Flat / Apartment (New / Builder)</option>
                       <option value="Flat / Apartment (Resale)">🔄 Flat / Apartment (Resale)</option>
                       <option value="Flat / Apartment (For Rent)">🔑 Flat / Apartment (For Rent)</option>
-                      <option value="Semi Complex (New / Builder)">🏢 Semi Complex (New / Builder)</option>
+                      <option value="Semi Complex (New / Builder)">🏙️ Semi Complex (New / Builder)</option>
                       <option value="Semi Complex (Resale)">🔄 Semi Complex (Resale)</option>
                       <option value="Semi Complex (For Rent)">🔑 Semi Complex (For Rent)</option>
                       <option value="Gated Villa (New / Builder)">🏰 Gated Villa (New / Builder)</option>
                       <option value="Gated Villa (Resale)">🔄 Gated Villa (Resale)</option>
                       <option value="Gated Villa (For Rent)">🔑 Gated Villa (For Rent)</option>
-                      <option value="Semi Complex (New / Builder)">🏙️ Semi Complex (New / Builder)</option>
-                      <option value="Semi Complex (Resale)">🔄 Semi Complex (Resale)</option>
-                      <option value="Semi Complex (For Rent)">🔑 Semi Complex (For Rent)</option>
+                      <option value="Independent House / Bungalow (New / Builder)">🏡 Independent House / Bungalow (New / Builder)</option>
                       <option value="Independent House (Resale)">🔄 Independent House (Resale)</option>
                       <option value="Independent House (For Rent)">🔑 Independent House (For Rent)</option>
                       <option value="Commercial Space (New / Builder)">🏢 Commercial Space (New / Builder)</option>
                       <option value="Commercial Space (Resale)">🔄 Commercial Space (Resale)</option>
                       <option value="Commercial Space (For Lease / Rent)">🔑 Commercial Space (For Lease / Rent)</option>
-                      <option value="PG / Co-Living Space">🛌 PG / Co-Living Space (For Rent)</option>
+                      <option value="Commercial Shop / Showroom">🏬 Commercial Shop / Showroom</option>
+                      <option value="Commercial Office Space">🏢 Commercial Office Space</option>
+                      <option value="PG / Co-Living Space (For Rent)">🛌 PG / Co-Living Space (For Rent)</option>
                       <option value="Open Plot / Land (New / Builder)">📐 Open Plot / Land (New / Builder)</option>
                       <option value="Open Plot / Land (Resale)">📐 Open Plot / Land (Resale)</option>
+                      <option value="Industrial Land / Warehouse">🏭 Industrial Land / Warehouse</option>
                     </select>
                   </div>
                   <div>
@@ -3216,7 +3217,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   <div>
                     <label style={{ fontSize: '0.78rem', color: '#22c55e', fontWeight: '900', display: 'block', marginBottom: '6px' }}>Possession Status *</label>
                     <select 
-                      value={newPropertyForm.possession_status || newPropertyForm.possession || 'Ready to Move In (Immediate)'} 
+                      value={(newPropertyForm.possession_status === 'Ready to Move In (Immediate)' ? 'Ready to Move' : (newPropertyForm.possession_status === 'Newly Launched Project' ? 'New Launch / Soft Launch' : newPropertyForm.possession_status)) || 'Ready to Move'} 
                       onChange={(e) => {
                         const val = e.target.value;
                         const isUnderConst = val.toLowerCase().includes('under construction') || val.toLowerCase().includes('construction');
@@ -3230,9 +3231,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       }} 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #22c55e', color: '#22c55e', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }}
                     >
-                      <option value="Ready to Move In (Immediate)">🔑 Ready to Move In (Immediate)</option>
+                      <option value="Ready to Move">🔑 Ready to Move</option>
                       <option value="Under Construction">🏗️ Under Construction</option>
-                      <option value="Newly Launched Project">🌟 Newly Launched Project</option>
+                      <option value="New Launch / Soft Launch">🌟 New Launch / Soft Launch</option>
+                      <option value="Resale Property">🔄 Resale Property</option>
+                      <option value="Any Condition">🌐 Any Condition</option>
                     </select>
                   </div>
 
@@ -3852,7 +3855,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   <div>
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Possession Status</label>
                     <select 
-                      value={newPropertyForm.possession_status} 
+                      value={(newPropertyForm.possession_status === 'Ready to Move In (Immediate)' ? 'Ready to Move' : (newPropertyForm.possession_status === 'Newly Launched Project' ? 'New Launch / Soft Launch' : newPropertyForm.possession_status)) || 'Ready to Move'} 
                       onChange={(e) => {
                         const val = e.target.value;
                         const isUnderConst = val.toLowerCase().includes('under construction') || val.toLowerCase().includes('construction');
@@ -3868,7 +3871,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     >
                       <option value="Ready to Move">Ready to Move</option>
                       <option value="Under Construction">Under Construction</option>
-                      <option value="New Pre-Launch">New Pre-Launch</option>
+                      <option value="New Launch / Soft Launch">New Launch / Soft Launch</option>
+                      <option value="Resale Property">Resale Property</option>
+                      <option value="Any Condition">Any Condition</option>
                     </select>
                   </div>
                   {(newPropertyForm.possession_status || '').includes('Under Construction') && (
@@ -6115,6 +6120,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       >
                         <option value="Ready to Move">🔑 Ready to Move</option>
                         <option value="Under Construction">🏗️ Under Construction</option>
+                        <option value="New Launch / Soft Launch">🌟 New Launch / Soft Launch</option>
+                        <option value="Resale Property">🔄 Resale Property</option>
+                        <option value="Any Condition">🌐 Any Condition</option>
                       </select>
                     </div>
 

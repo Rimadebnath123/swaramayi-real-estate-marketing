@@ -521,6 +521,7 @@ export async function loadData() {
       if (Array.isArray(mongoData.bookings)) dbStore.data.bookings = mongoData.bookings as any;
       if (Array.isArray(mongoData.invoices)) dbStore.data.invoices = mongoData.invoices as any;
       if (Array.isArray(mongoData.site_visits)) dbStore.data.site_visits = mongoData.site_visits as any;
+      if (Array.isArray(mongoData.cost_sheets)) (dbStore.data as any).cost_sheets = mongoData.cost_sheets as any;
       if (Array.isArray(mongoData.matching_requests)) (dbStore.data as any).matching_requests = mongoData.matching_requests as any;
       if (Array.isArray(mongoData.developers)) (dbStore.data as any).developers = mongoData.developers as any;
       if (Array.isArray(mongoData.rating_invites)) (dbStore.data as any).rating_invites = mongoData.rating_invites as any;

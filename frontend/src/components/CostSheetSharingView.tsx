@@ -219,10 +219,32 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
     (visitPlans || []).length
   );
 
-  // Active Cost Sheets pending in Vault (excluding records shifted to Visit Schedule or Sent to Followup)
+  // Active Cost Sheets pending in Vault (excluding records shifted to Visit Schedule, Shifted to Matching, or Sent to Followup)
   const pendingCostSheets = React.useMemo(() => {
-    return (individualCostSheets || []).filter(c => c.status !== 'CONVERTED_TO_VISIT' && c.status !== 'SENT_TO_FOLLOWUP');
-  }, [individualCostSheets]);
+    return (individualCostSheets || []).filter(c => {
+      if (c.status === 'CONVERTED_TO_VISIT' || c.status === 'SENT_TO_FOLLOWUP' || c.status === 'SHIFTED_TO_MATCHING' || c.status === 'CANCELLED') return false;
+      const cCustNo = (c.customerId || c.customerNumber || c.customerSnapshot?.customerId || c.customerSnapshot?.customerNumber || '').toLowerCase().trim();
+      const cMob = (c.mobile || c.customerSnapshot?.mobile || '').replace(/\D/g, '');
+      const hasActiveVisit = (scheduledVisits || []).some((v: any) => {
+        if (v.status === 'CANCELLED' || v.status === 'DELETED') return false;
+        const vCustNo = (v.customerNumber || v.customerId || '').toLowerCase().trim();
+        const vMob = (v.mobile || '').replace(/\D/g, '');
+        if (c.costSheetId && (v.costSheetId === c.costSheetId || v.id === c.costSheetId)) return true;
+        if (cCustNo && vCustNo && cCustNo === vCustNo) return true;
+        if (cMob && vMob && cMob.length >= 7 && cMob === vMob) return true;
+        return false;
+      }) || (visitPlans || []).some((p: any) => {
+        if (p.status === 'CANCELLED' || p.status === 'DELETED') return false;
+        const pCustNo = (p.customerNumber || p.customerId || '').toLowerCase().trim();
+        const pMob = (p.mobile || '').replace(/\D/g, '');
+        if (cCustNo && pCustNo && cCustNo === pCustNo) return true;
+        if (cMob && pMob && cMob.length >= 7 && cMob === pMob) return true;
+        return false;
+      });
+      if (hasActiveVisit) return false;
+      return true;
+    });
+  }, [individualCostSheets, scheduledVisits, visitPlans]);
 
   // Active Cost Sheets displayed in Vault
   const displayedCostSheets = React.useMemo(() => {
@@ -239,8 +261,8 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
       return (individualCostSheets || []).filter(c => c.status === individualCostSheetsStatusFilter);
     }
     // Default 'ALL': Display active pending cost sheets, auto-shifting converted & followup ones
-    return (individualCostSheets || []).filter(c => c.status !== 'CONVERTED_TO_VISIT' && c.status !== 'SENT_TO_FOLLOWUP');
-  }, [individualCostSheets, individualCostSheetsStatusFilter]);
+    return pendingCostSheets;
+  }, [individualCostSheets, individualCostSheetsStatusFilter, pendingCostSheets]);
 
   // Customer Filter State ('ALL' or a customer identifier key)
   const [selectedCustomerFilter, setSelectedCustomerFilter] = React.useState<string>('ALL');

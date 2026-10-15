@@ -199,7 +199,7 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
             onClick={() => {
               const plan = (visitPlans && visitPlans.length > 0) ? visitPlans[0] : {
                 visitPlanId: 'SRM-VP-2026-000001',
-                visitScheduleId: 'SRM-VS-2026-000087',
+                visitScheduleId: 'SRM-VS-2026-000001',
                 customerName: 'Valued Customer',
                 customerNumber: 'SRM-CUS-2026-000185',
                 mobile: '+91 98765 43210',

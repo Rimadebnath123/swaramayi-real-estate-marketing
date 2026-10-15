@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Zap, Search, X, SearchCode, Eye, FileText, Trash2 } from 'lucide-react';
 import { computeTotalBaseWithOtherCharges } from './ProjectManagementView';
 
@@ -198,6 +198,29 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
   const isSuperAdmin = isStrictSuperAdmin;
 
+  // Auto-clear lingering external search query (e.g. COST-SHEET-..., SRM-INV-...) when viewing Matching Management
+  useEffect(() => {
+    if (searchQuery) {
+      const s = searchQuery.trim().toUpperCase();
+      if (
+        s.startsWith('COST-SHEET-') || 
+        s.startsWith('SRM-CS-') || 
+        s.startsWith('SRM-CSS-') || 
+        s.startsWith('CS-') || 
+        s.startsWith('SRM-INV-') || 
+        s.startsWith('INV-') || 
+        s.startsWith('SRM-AGR-') || 
+        s.startsWith('AGR-') || 
+        s.startsWith('SRM-PROP-') || 
+        s.startsWith('PROP-') || 
+        s.startsWith('SRM-VS-') || 
+        s.startsWith('VIS-')
+      ) {
+        setSearchQuery('');
+      }
+    }
+  }, []);
+
   // Dynamic property status helper
   const getDynamicPropertyStatus = (p: any) => {
     const isSoldOutByBilling = (invoices || []).some((inv: any) => {
@@ -258,10 +281,48 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
     }
   };
 
-  // PROPERTY SOURCING REQUEST MODAL STATES
+  // PROPERTY SOURCING REQUEST MODAL STATES & MULTI-SELECT OPTIONS
   const [sourcingModalRequest, setSourcingModalRequest] = useState<any | null>(null);
+  const [selectedSourcingReasons, setSelectedSourcingReasons] = useState<string[]>([]);
   const [sourcingReasonInput, setSourcingReasonInput] = useState<string>('');
   const [sourcingError, setSourcingError] = useState<string>('');
+
+  const SOURCING_REASON_OPTIONS = [
+    '🚫 No properties matching requirement in current inventory',
+    '❌ Current matched properties not suitable for customer',
+    '📍 Specific off-market location or project requested',
+    '💰 Budget or BHK criteria mismatch in available stock',
+    '📐 Super Built-up Area or Floor preference unavailable in inventory',
+    '🚗 Parking or specific amenity requirements unavailable in stock'
+  ];
+
+  const toggleSourcingReason = (chip: string) => {
+    let nextSelected: string[];
+    if (selectedSourcingReasons.includes(chip)) {
+      nextSelected = selectedSourcingReasons.filter(r => r !== chip);
+    } else {
+      nextSelected = [...selectedSourcingReasons, chip];
+    }
+    setSelectedSourcingReasons(nextSelected);
+
+    // Synchronize to textarea
+    const combined = nextSelected.join('\n');
+    setSourcingReasonInput(combined);
+    if (nextSelected.length > 0 || combined.trim()) {
+      setSourcingError('');
+    }
+  };
+
+  const selectAllSourcingReasons = () => {
+    setSelectedSourcingReasons(SOURCING_REASON_OPTIONS);
+    setSourcingReasonInput(SOURCING_REASON_OPTIONS.join('\n'));
+    setSourcingError('');
+  };
+
+  const clearAllSourcingReasons = () => {
+    setSelectedSourcingReasons([]);
+    setSourcingReasonInput('');
+  };
 
   // RESPONSIVE VIEW MODE TOGGLES (DEFAULT TO CARDS ON MOBILE & TABLET FOR 100% VISIBILITY)
   const [vaultViewMode, setVaultViewMode] = useState<'cards' | 'table'>(windowWidth <= 1024 ? 'cards' : 'table');
@@ -271,8 +332,9 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
   const handleConfirmMoveToSourcing = () => {
     if (!sourcingModalRequest) return;
 
-    if (!sourcingReasonInput.trim()) {
-      setSourcingError('⚠️ Message Required! Please write why you are sending this customer into Property Sourcing Request.');
+    const finalReason = sourcingReasonInput.trim() || selectedSourcingReasons.join('\n');
+    if (!finalReason) {
+      setSourcingError('⚠️ Reason Required! Please select at least one option or enter why you are sending this customer into Property Sourcing Request.');
       return;
     }
 
@@ -302,8 +364,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
       priority: cust.priority || 'HOT',
       assigned_executive: sourcingModalRequest.assignedExecutive || cust.assigned_employee_name || 'Punita Roy (Sales Exec)',
       status: 'PENDING_SOURCING',
-      notes: sourcingReasonInput.trim(),
-      sourcing_reason: sourcingReasonInput.trim(),
+      notes: finalReason,
+      sourcing_reason: finalReason,
       lead_details: {
         customer_name: sourcingModalRequest.customerName || cust.name || 'Customer',
         mobile: sourcingModalRequest.mobile || cust.mobile || '',
@@ -332,7 +394,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
         loan_required: cust.loan_required || 'Yes',
         loan_amount: cust.loan_amount || '₹40 Lakhs',
         loan_status: cust.loan_status || 'Pre-Approved',
-        sourcing_reason: sourcingReasonInput.trim(),
+        sourcing_reason: finalReason,
         created_at: new Date().toISOString()
       }
     };
@@ -355,13 +417,14 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
           return false;
         });
 
+        let nextList: any[];
         if (existingIdx !== -1) {
           const existingItem = existingList[existingIdx];
           const updatedItem = {
             ...existingItem,
             matching_id: sourcingModalRequest.requestId || existingItem.matching_id,
-            notes: sourcingReasonInput.trim(),
-            sourcing_reason: sourcingReasonInput.trim(),
+            notes: finalReason,
+            sourcing_reason: finalReason,
             status: 'PENDING_SOURCING',
             updated_at: new Date().toISOString(),
             lead_details: {
@@ -379,11 +442,27 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             return true;
           });
 
-          return [updatedItem, ...remaining];
+          nextList = [updatedItem, ...remaining];
+        } else {
+          nextList = [newSourcingObj, ...existingList];
         }
 
-        return [newSourcingObj, ...existingList];
+        try {
+          localStorage.setItem('swaramayi_sourcing_requests_v1', JSON.stringify(nextList));
+        } catch (e) {
+          console.error('Error persisting sourcing requests', e);
+        }
+        return nextList;
       });
+    } else {
+      try {
+        const saved = localStorage.getItem('swaramayi_sourcing_requests_v1');
+        const list = saved ? JSON.parse(saved) : [];
+        const nextList = [newSourcingObj, ...(Array.isArray(list) ? list : [])];
+        localStorage.setItem('swaramayi_sourcing_requests_v1', JSON.stringify(nextList));
+      } catch (e) {
+        console.error('Error saving sourcing requests fallback', e);
+      }
     }
 
     // AUTOMATICALLY REMOVE FROM MATCHING MANAGEMENT QUEUE UPON TRANSFER
@@ -420,9 +499,10 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
     }
 
     setSourcingModalRequest(null);
+    setSelectedSourcingReasons([]);
     setSourcingReasonInput('');
     setSourcingError('');
-    alert(`🎉 SUCCESS! Customer ${newSourcingObj.customer_name} transferred to Property Sourcing Requests Desk.\n\n• Sourcing ID: ${newSourcingId}\n• Reason: "${sourcingReasonInput.trim()}"\n\n(Customer request removed from Matching Management Vault)`);
+    alert(`🎉 SUCCESS! Customer ${newSourcingObj.customer_name} transferred to Property Sourcing Requests Desk.\n\n• Sourcing ID: ${newSourcingId}\n• Reason: "${finalReason}"\n\n(Customer request removed from Matching Management Vault)`);
     setActiveTab('property_sourcing_requests');
   };
 
@@ -509,7 +589,14 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
         </div>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto' }}>
-          <button onClick={() => alert(`⚡ Recalculated live AI property match ranker for ${selectedCust.name}!`)} style={{ width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: 'center', background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button 
+            onClick={() => {
+              const confirmed = window.confirm(`⚡ Run live AI property match ranker for ${selectedCust.name}?\n\nClick OK to confirm, or Cancel / ESC to abort.`);
+              if (!confirmed) return;
+              alert(`⚡ Recalculated live AI property match ranker for ${selectedCust.name}!`);
+            }} 
+            style={{ width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: 'center', background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
             <Zap size={15} /> ⚡ Run Real-Time AI Matcher
           </button>
         </div>
@@ -594,9 +681,49 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             return false;
           };
 
+          const findActiveVisitForCust = (custNum?: string, custName?: string, mob?: string) => {
+            const cNum = (custNum || '').toString().trim().toLowerCase();
+            const cName = (custName || '').toString().trim().toLowerCase();
+            const cMob = (mob || '').toString().replace(/\D/g, '');
+
+            const v = (scheduledVisits || []).find((sv: any) => {
+              if (sv.status === 'CANCELLED' || sv.status === 'DELETED') return false;
+              const svNum = (sv.customerNumber || sv.customerId || '').toString().trim().toLowerCase();
+              const svName = (sv.customerName || sv.name || '').toString().trim().toLowerCase();
+              const svMob = (sv.mobile || '').toString().replace(/\D/g, '');
+              if (cNum && svNum && cNum === svNum) return true;
+              if (cMob && svMob && cMob.length >= 7 && cMob === svMob) return true;
+              if (cName && svName && cName.length > 2 && cName === svName) return true;
+              return false;
+            });
+            if (v) return v;
+
+            let localPlans: any[] = [];
+            try {
+              const saved = typeof window !== 'undefined' ? localStorage.getItem('swaramayi_visit_plans_v7_clean') : null;
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed)) localPlans = parsed;
+              }
+            } catch (e) {
+              console.error(e);
+            }
+
+            return localPlans.find((vp: any) => {
+              if (vp.status === 'CANCELLED' || vp.status === 'DELETED') return false;
+              const vpNum = (vp.customerNumber || vp.customerId || '').toString().trim().toLowerCase();
+              const vpName = (vp.customerName || vp.name || '').toString().trim().toLowerCase();
+              const vpMob = (vp.mobile || '').toString().replace(/\D/g, '');
+              if (cNum && vpNum && cNum === vpNum) return true;
+              if (cMob && vpMob && cMob.length >= 7 && cMob === vpMob) return true;
+              if (cName && vpName && cName.length > 2 && cName === vpName) return true;
+              return false;
+            });
+          };
+
           const findActualCostSheet = (reqId?: string, custNum?: string, custName?: string, mob?: string) => {
             return (individualCostSheets || []).find((cs: any) => {
-              if (cs.status === 'CONVERTED_TO_VISIT' || cs.status === 'SHIFTED_TO_MATCHING' || cs.status === 'CANCELLED') return false;
+              if (cs.status === 'SHIFTED_TO_MATCHING' || cs.status === 'CANCELLED') return false;
 
               const csCustId = (cs.customerId || cs.customerNumber || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber || '').toString().trim().toLowerCase();
               const csMatchId = (cs.matchingRequestId || cs.matchId || cs.requestId || cs.parentMatchingId || cs.matchSnapshot?.matchId || '').toString().trim().toLowerCase();
@@ -624,13 +751,16 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             if (custNum) seenCustNums.add(custNum);
             if (mob) seenMobiles.add(mob);
 
-            const actualCostSheet = findActualCostSheet(r.requestId || r.id, r.customerNumber || r.customerId, r.customerName || r.name, r.mobile) || (r.costSheetId ? { costSheetId: r.costSheetId } : null);
-            const isCreated = !!actualCostSheet;
+            const isShiftedToMatch = r.status === 'PENDING' && (r.handoffNote || (r.notes && r.notes.includes('Shifted')));
+            const activeVisit = isShiftedToMatch ? null : findActiveVisitForCust(r.customerNumber || r.customerId, r.customerName || r.name, r.mobile);
+            const actualCostSheet = isShiftedToMatch ? null : (findActualCostSheet(r.requestId || r.id, r.customerNumber || r.customerId, r.customerName || r.name, r.mobile) || (r.costSheetId ? { costSheetId: r.costSheetId } : null));
+            const isCreated = !!actualCostSheet || !!activeVisit;
+            const effectiveCsId = isShiftedToMatch ? undefined : (actualCostSheet?.costSheetId || actualCostSheet?.id || activeVisit?.costSheetId || r.costSheetId || undefined);
 
             list.push({
               ...r,
-              status: isCreated ? 'COST_SHEET_CREATED' : (r.status || 'PENDING'),
-              costSheetId: actualCostSheet?.costSheetId || actualCostSheet?.id || r.costSheetId || undefined
+              status: isShiftedToMatch ? 'PENDING' : (activeVisit ? 'CONVERTED_TO_VISIT' : (isCreated ? 'COST_SHEET_CREATED' : (r.status || 'PENDING'))),
+              costSheetId: effectiveCsId
             });
           });
 
@@ -650,8 +780,10 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
               seenCustNums.add(numKey);
               if (cleanMob) seenMobiles.add(cleanMob);
 
+              const activeVisit = findActiveVisitForCust(custNum, custName, custMob);
               const actualCostSheet = findActualCostSheet(reqId, custNum, custName, custMob);
-              const isCreated = !!actualCostSheet;
+              const isCreated = !!actualCostSheet || !!activeVisit;
+              const effectiveCostSheetId = actualCostSheet?.costSheetId || activeVisit?.costSheetId || (activeVisit?.stops && activeVisit.stops[0]?.costSheetId);
 
               list.push({
                 id: reqId,
@@ -681,8 +813,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                 priority: c.priority || 'HOT',
                 leadScore: c.score || c.quality_score || 90,
                 assignedExecutive: c.assigned_salesperson || 'Abinash Roy (Admin)',
-                status: isCreated ? 'COST_SHEET_CREATED' : 'PENDING',
-                costSheetId: actualCostSheet?.costSheetId || undefined,
+                status: activeVisit ? 'CONVERTED_TO_VISIT' : (isCreated ? 'COST_SHEET_CREATED' : 'PENDING'),
+                costSheetId: effectiveCostSheetId || undefined,
                 created_at: c.created_at || new Date().toISOString()
               });
             }
@@ -690,6 +822,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
 
           (individualCostSheets || []).forEach((cs, idx) => {
             if (!cs) return;
+            if (cs.status === 'SHIFTED_TO_MATCHING') return;
             const snap = cs.customerSnapshot || {};
             const custName = cs.customerName || snap.customerName || cs.name || 'Customer';
             const custMob = cs.mobile || cs.customerMobile || snap.mobile || '';
@@ -706,7 +839,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
               if (numKey) seenCustNums.add(numKey);
               if (cleanMob) seenMobiles.add(cleanMob);
 
-              const actualCostSheet = findActualCostSheet(reqId, custNum, custName, custMob) || { costSheetId: cs.costSheetId || cs.id };
+              const activeVisit = findActiveVisitForCust(custNum, custName, custMob);
 
               list.push({
                 id: reqId,
@@ -736,8 +869,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                 priority: cs.priority || 'HOT',
                 leadScore: 95,
                 assignedExecutive: cs.assignedExecutive || 'Subhankar Mandal',
-                status: 'COST_SHEET_CREATED',
-                costSheetId: actualCostSheet?.costSheetId || actualCostSheet?.id || cs.costSheetId || cs.id,
+                status: activeVisit || cs.status === 'CONVERTED_TO_VISIT' ? 'CONVERTED_TO_VISIT' : 'COST_SHEET_CREATED',
+                costSheetId: cs.costSheetId || cs.id,
                 created_at: cs.createdAt || cs.created_at || new Date().toISOString()
               });
             }
@@ -790,8 +923,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                 priority: 'HOT',
                 leadScore: 90,
                 assignedExecutive: v.assignedExecutive || 'Subhankar Mandal',
-                status: actualCostSheet ? 'COST_SHEET_CREATED' : 'PENDING',
-                costSheetId: actualCostSheet?.costSheetId || undefined,
+                status: 'CONVERTED_TO_VISIT',
+                costSheetId: v.costSheetId || actualCostSheet?.costSheetId || 'VISIT-ACTIVE',
                 created_at: v.visitDate || v.date || new Date().toISOString()
               });
             }
@@ -800,12 +933,118 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
           return list;
         })();
 
-        const pendingRequests = allMatchingRequests.filter(r => !r.costSheetId && r.status !== 'COST_SHEET_CREATED');
-        const matchedReq = selectedMatchingId ? allMatchingRequests.find(r => 
+        // Available active inventory for property matching
+        const availableInventory = (properties || []).filter((p: any) => 
+          p.status !== 'SOLD' && p.status !== 'RESERVED' && p.status !== 'ARCHIVED' && p.status !== 'DELETED'
+        );
+
+        // Evaluate Dynamic Property Matching for Each Inbound Request against Inventory
+        const evaluateRequestMatches = (req: any) => {
+          if (req.status === 'MATCHED') return { isMatched: true, matchCount: 1, topScore: 100 };
+          if (!availableInventory.length || typeof calculatePropertyMatchScore !== 'function') {
+            return { isMatched: false, matchCount: 0, topScore: 0 };
+          }
+
+          const custContext = {
+            id: req.customerId || req.customerNumber,
+            customer_number: req.customerNumber,
+            name: req.customerName,
+            budget: req.budget,
+            budget_min: req.budget_min,
+            budget_max: req.budget_max,
+            budget_unit: req.budget_unit,
+            budget_flexibility: req.budget_flexibility,
+            preferredArea: req.preferredArea,
+            secondary_areas: req.secondaryAreas || req.secondary_areas,
+            configuration: req.configuration,
+            bhk: req.configuration,
+            property_type: req.propertyType || req.property_type,
+            carpet_area_min: req.carpet_area_min || req.super_builtup_area_min,
+            carpet_area_max: req.carpet_area_max || req.super_builtup_area_max,
+            parking: req.parking || req.parkingRequired,
+            parking_type: req.parking_type || req.parking,
+            avoided_floors: req.avoided_floors || req.non_preferred_floor,
+            non_preferred_floor: req.avoided_floors || req.non_preferred_floor,
+            preferred_floors: req.preferred_floors || req.floor_pref
+          };
+
+          let count = 0;
+          let topScore = 0;
+          for (const p of availableInventory) {
+            try {
+              const res = calculatePropertyMatchScore(custContext, p);
+              if (res && res.isStrictMatch !== false && res.total > 0) {
+                count++;
+                if (res.total > topScore) topScore = res.total;
+              }
+            } catch (e) {}
+          }
+          return { isMatched: count > 0, matchCount: count, topScore };
+        };
+
+        const allMatchingRequestsEnriched = allMatchingRequests.map(req => {
+          const matchInfo = evaluateRequestMatches(req);
+          return {
+            ...req,
+            isMatched: matchInfo.isMatched,
+            matchCount: matchInfo.matchCount,
+            topScore: matchInfo.topScore
+          };
+        });
+
+        // Active inbound requests in the vault awaiting conversion (no cost sheet, no visit)
+        const activeInboundRequests = allMatchingRequestsEnriched.filter(r => 
+          !r.costSheetId && r.status !== 'COST_SHEET_CREATED' && r.status !== 'CONVERTED_TO_VISIT'
+        );
+
+        // MATCHED: Requests that have qualifying property matches available in inventory
+        const matchedRequests = activeInboundRequests.filter(r => r.isMatched || r.status === 'MATCHED');
+
+        // PENDING: All active inbound matching requests awaiting cost sheet creation / visit conversion
+        const pendingRequests = activeInboundRequests;
+
+        const matchedReq = selectedMatchingId ? allMatchingRequestsEnriched.find(r => 
           (r.requestId && r.requestId.toLowerCase() === selectedMatchingId.toLowerCase()) || 
           (r.customerNumber && r.customerNumber.toLowerCase() === selectedMatchingId.toLowerCase())
         ) : null;
         const activeMatchingReq = matchedReq || null;
+
+        // Helper to ignore external module queries (e.g. COST-SHEET-..., SRM-INV-...) in Matching Snapshot Vault
+        const shouldIgnoreGlobalSearch = (q: string): boolean => {
+          if (!q || !q.trim()) return false;
+          const s = q.trim().toUpperCase();
+          return (
+            s.startsWith('COST-SHEET-') || 
+            s.startsWith('SRM-CS-') || 
+            s.startsWith('SRM-CSS-') || 
+            s.startsWith('CS-') || 
+            s.startsWith('SRM-INV-') || 
+            s.startsWith('INV-') || 
+            s.startsWith('SRM-AGR-') || 
+            s.startsWith('AGR-') || 
+            s.startsWith('SRM-PROP-') || 
+            s.startsWith('PROP-') || 
+            s.startsWith('SRM-VS-') || 
+            s.startsWith('VIS-')
+          );
+        };
+
+        // Filtered Vault for Cards and Table Views
+        const filteredVault = allMatchingRequestsEnriched.filter(req => {
+          if (matchingVaultFilter === 'PENDING_ONLY') {
+            if (req.costSheetId || req.status === 'COST_SHEET_CREATED' || req.status === 'CONVERTED_TO_VISIT') return false;
+          }
+
+          if (matchingSearchQuery && matchingSearchQuery.trim()) {
+            if (!matchesSearchQuery(req, matchingSearchQuery.trim())) return false;
+          }
+
+          if (searchQuery && searchQuery.trim() && !shouldIgnoreGlobalSearch(searchQuery)) {
+            if (!matchesSearchQuery(req, searchQuery.trim())) return false;
+          }
+
+          return true;
+        });
 
         return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -814,7 +1053,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
           <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? 'repeat(2, 1fr)' : windowWidth <= 820 ? 'repeat(3, 1fr)' : windowWidth <= 1200 ? 'repeat(4, 1fr)' : 'repeat(7, 1fr)', gap: '10px' }}>
             <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
               <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>MATCHING REQUESTS</span>
-              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#38bdf8', marginTop: '2px', margin: 0 }}>{allMatchingRequests.length}</h4>
+              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#38bdf8', marginTop: '2px', margin: 0 }}>{allMatchingRequestsEnriched.length}</h4>
             </div>
             <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
               <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>PENDING</span>
@@ -822,23 +1061,23 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             </div>
             <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
               <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>IN PROGRESS</span>
-              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#38bdf8', marginTop: '2px', margin: 0 }}>{allMatchingRequests.filter(r => r.status === 'IN_PROGRESS').length}</h4>
+              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#38bdf8', marginTop: '2px', margin: 0 }}>{allMatchingRequestsEnriched.filter(r => r.status === 'IN_PROGRESS' || (selectedMatchingId && r.requestId === selectedMatchingId)).length}</h4>
             </div>
             <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
               <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>MATCHED</span>
-              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#4ade80', marginTop: '2px', margin: 0 }}>{allMatchingRequests.filter(r => r.status === 'MATCHED' || (r.score && r.score >= 80)).length}</h4>
+              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#4ade80', marginTop: '2px', margin: 0 }}>{matchedRequests.length}</h4>
             </div>
             <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
               <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>SELECTED</span>
-              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#4ade80', marginTop: '2px', margin: 0 }}>{allMatchingRequests.filter(r => r.status === 'SELECTED' || r.selectedCount > 0).length}</h4>
+              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#4ade80', marginTop: '2px', margin: 0 }}>{allMatchingRequestsEnriched.filter(r => r.status === 'SELECTED' || r.selectedCount > 0).length}</h4>
             </div>
             <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
               <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>SHARED WITH CUS</span>
-              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#38bdf8', marginTop: '2px', margin: 0 }}>{costSheetShares.length}</h4>
+              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#38bdf8', marginTop: '2px', margin: 0 }}>{allMatchingRequestsEnriched.filter(r => r.costSheetId || r.status === 'COST_SHEET_CREATED').length || costSheetShares.length}</h4>
             </div>
             <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: windowWidth <= 640 ? '10px 6px' : '12px 10px', borderRadius: '10px', textAlign: 'center', minWidth: 0 }}>
               <span style={{ fontSize: '0.65rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', lineHeight: '1.2' }}>SITE VISIT REQ</span>
-              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#22c55e', marginTop: '2px', margin: 0 }}>{scheduledVisits.length}</h4>
+              <h4 style={{ fontSize: windowWidth <= 640 ? '1.05rem' : '1.2rem', fontWeight: '900', color: '#22c55e', marginTop: '2px', margin: 0 }}>{allMatchingRequestsEnriched.filter(r => r.status === 'CONVERTED_TO_VISIT').length || scheduledVisits.length}</h4>
             </div>
           </div>
 
@@ -846,7 +1085,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
           <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #22c55e', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h3 style={{ fontSize: windowWidth <= 480 ? '0.92rem' : windowWidth <= 640 ? '1rem' : '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>📥 INBOUND MATCHING REQUESTS SNAPSHOT VAULT ({allMatchingRequests.length})</h3>
+                <h3 style={{ fontSize: windowWidth <= 480 ? '0.92rem' : windowWidth <= 640 ? '1rem' : '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>📥 INBOUND MATCHING REQUESTS SNAPSHOT VAULT ({allMatchingRequestsEnriched.length})</h3>
                 <span style={{ background: '#22c55e', color: '#ffffff', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: '900' }}>QUALIFIED HANDOFF ACTIVE</span>
               </div>
 
@@ -889,7 +1128,11 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                 </div>
 
                 <button 
-                  onClick={() => setMatchingVaultFilter('PENDING_ONLY')}
+                  type="button"
+                  onClick={() => {
+                    setMatchingVaultFilter('PENDING_ONLY');
+                    if (searchQuery && shouldIgnoreGlobalSearch(searchQuery)) setSearchQuery('');
+                  }}
                   style={{ 
                     flex: windowWidth <= 640 ? '1' : 'none',
                     textAlign: 'center',
@@ -906,7 +1149,11 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                   ⚡ PENDING ({pendingRequests.length})
                 </button>
                 <button 
-                  onClick={() => setMatchingVaultFilter('ALL')}
+                  type="button"
+                  onClick={() => {
+                    setMatchingVaultFilter('ALL');
+                    if (searchQuery && shouldIgnoreGlobalSearch(searchQuery)) setSearchQuery('');
+                  }}
                   style={{ 
                     flex: windowWidth <= 640 ? '1' : 'none',
                     textAlign: 'center',
@@ -920,17 +1167,69 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     cursor: 'pointer' 
                   }}
                 >
-                  📋 ALL ({allMatchingRequests.length})
+                  📋 ALL ({allMatchingRequestsEnriched.length})
                 </button>
               </div>
             </div>
 
+            {/* SEARCH BANNER IF GLOBAL SEARCH IS ACTIVE */}
+            {searchQuery && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: shouldIgnoreGlobalSearch(searchQuery) ? 'rgba(251, 191, 36, 0.12)' : 'rgba(56, 189, 248, 0.12)', border: shouldIgnoreGlobalSearch(searchQuery) ? '1px solid #fbbf24' : '1px solid #0284c7', borderRadius: '8px', padding: '6px 12px', fontSize: '0.8rem', color: shouldIgnoreGlobalSearch(searchQuery) ? '#fbbf24' : '#38bdf8' }}>
+                <span>
+                  {shouldIgnoreGlobalSearch(searchQuery) ? (
+                    <>⚠️ Universal Search active for <strong>"{searchQuery}"</strong> (from Cost Sheet/Billing). Snapshot Vault displays all active inbound requests.</>
+                  ) : (
+                    <>🔍 Filtered by Universal Search: <strong>"{searchQuery}"</strong> ({filteredVault.length} matching request(s) found)</>
+                  )}
+                </span>
+                <button 
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  style={{ background: shouldIgnoreGlobalSearch(searchQuery) ? '#fbbf24' : '#0284c7', color: shouldIgnoreGlobalSearch(searchQuery) ? '#0f172a' : '#ffffff', border: 'none', borderRadius: '4px', padding: '3px 10px', fontSize: '0.72rem', fontWeight: '900', cursor: 'pointer' }}
+                >
+                  Clear Search ✕
+                </button>
+              </div>
+            )}
+
             {/* CONDITIONAL RENDER: RESPONSIVE CARDS VIEW vs FULL TABLE VIEW */}
             {vaultViewMode === 'cards' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {allMatchingRequests
-                  .filter(req => (matchingVaultFilter === 'ALL' || (!req.costSheetId && req.status !== 'COST_SHEET_CREATED')) && matchesSearchQuery(req, searchQuery || matchingSearchQuery))
-                  .map((req) => {
+                {filteredVault.length === 0 ? (
+                  <div style={{ padding: '36px 16px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
+                    <div style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginBottom: '4px' }}>
+                      📭 No Matching Requests Found
+                    </div>
+                    <div style={{ fontSize: '0.8rem' }}>
+                      {matchingSearchQuery ? (
+                        <>
+                          No requests matched search "{matchingSearchQuery}".{' '}
+                          <button 
+                            type="button"
+                            onClick={() => setMatchingSearchQuery('')}
+                            style={{ color: '#38bdf8', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '800' }}
+                          >
+                            Clear Search
+                          </button>
+                        </>
+                      ) : searchQuery && !shouldIgnoreGlobalSearch(searchQuery) ? (
+                        <>
+                          No requests matched "{searchQuery}".{' '}
+                          <button 
+                            type="button"
+                            onClick={() => setSearchQuery('')}
+                            style={{ color: '#38bdf8', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '800' }}
+                          >
+                            Clear Universal Search
+                          </button>
+                        </>
+                      ) : (
+                        'There are currently no active property matching requests in the vault.'
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  filteredVault.map((req) => {
                     const isCostSheetCreated = !!req.costSheetId;
                     const isSelected = selectedMatchingId === req.requestId;
                     return (
@@ -972,9 +1271,18 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                             <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', border: '1px solid #22c55e', padding: '3px 10px', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem' }}>
                               🟢 COST SHEET CREATED ({req.costSheetId})
                             </span>
+                          ) : req.isMatched ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
+                              <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', border: '1px solid #22c55e', padding: '3px 10px', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem' }}>
+                                🎯 MATCHED ({req.matchCount || 1} Prop • {req.topScore || 90}% WMI)
+                              </span>
+                              <span style={{ fontSize: '0.68rem', color: '#fbbf24', fontWeight: '700' }}>
+                                ⚡ Ready for Cost Sheet
+                              </span>
+                            </div>
                           ) : (
                             <span style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', border: '1px solid #fbbf24', padding: '3px 10px', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem' }}>
-                              ⚡ PENDING (NO COST SHEET ID)
+                              ⚡ PENDING (0 Matches • Needs Sourcing)
                             </span>
                           )}
                         </div>
@@ -1027,7 +1335,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                                   const cust = customers.find(c => c.customer_number === req.customerNumber || c.name === req.customerName);
                                   if (cust) setSelectedCust(cust);
                                   setSourcingModalRequest(req);
-                                  setSourcingReasonInput('');
+                                  setSelectedSourcingReasons(['🚫 No properties matching requirement in current inventory']);
+                                  setSourcingReasonInput('🚫 No properties matching requirement in current inventory');
                                   setSourcingError('');
                                 }} 
                                 style={{ flex: windowWidth <= 1024 ? '1 1 150px' : '1', minWidth: windowWidth <= 640 ? '100%' : '140px', justifyContent: 'center', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)' }}
@@ -1036,10 +1345,11 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                               </button>
                               <button 
                                 onClick={() => {
+                                  const confirmed = window.confirm(`⚡ Run automated inventory matcher for ${req.customerName} (${req.requestId})?\n\nClick OK to match properties, or Cancel / ESC to abort.`);
+                                  if (!confirmed) return;
                                   setSelectedMatchingId(req.requestId);
                                   const cust = customers.find(c => c.customer_number === req.customerNumber || c.name === req.customerName);
                                   if (cust) setSelectedCust(cust);
-                                  alert(`⚡ Running automated inventory matcher for ${req.customerName} (${req.requestId})`);
                                 }} 
                                 style={{ flex: windowWidth <= 1024 ? '1 1 110px' : 'none', minWidth: windowWidth <= 640 ? '100%' : '100px', justifyContent: 'center', background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                               >
@@ -1059,7 +1369,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                         </div>
                       </div>
                     );
-                  })}
+                  }))}
               </div>
             ) : (
               <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'thin' }}>
@@ -1076,28 +1386,43 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {(() => {
-                      const filteredVault = allMatchingRequests.filter(req => 
-                        (matchingVaultFilter === 'ALL' || (!req.costSheetId && req.status !== 'COST_SHEET_CREATED')) && 
-                        matchesSearchQuery(req, searchQuery || matchingSearchQuery)
-                      );
-
-                      if (filteredVault.length === 0) {
-                        return (
-                          <tr>
-                            <td colSpan={7} style={{ padding: '36px 16px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
-                              <div style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginBottom: '4px' }}>
-                                📭 No Matching Requests Found
-                              </div>
-                              <div style={{ fontSize: '0.8rem' }}>
-                                There are currently no active property matching requests in the vault.
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      }
-
-                      return filteredVault.map((req) => {
+                    {filteredVault.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ padding: '36px 16px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
+                          <div style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginBottom: '4px' }}>
+                            📭 No Matching Requests Found
+                          </div>
+                          <div style={{ fontSize: '0.8rem' }}>
+                            {matchingSearchQuery ? (
+                              <>
+                                No requests matched search "{matchingSearchQuery}".{' '}
+                                <button 
+                                  type="button"
+                                  onClick={() => setMatchingSearchQuery('')}
+                                  style={{ color: '#38bdf8', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '800' }}
+                                >
+                                  Clear Search
+                                </button>
+                              </>
+                            ) : searchQuery && !shouldIgnoreGlobalSearch(searchQuery) ? (
+                              <>
+                                No requests matched "{searchQuery}".{' '}
+                                <button 
+                                  type="button"
+                                  onClick={() => setSearchQuery('')}
+                                  style={{ color: '#38bdf8', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '800' }}
+                                >
+                                  Clear Universal Search
+                                </button>
+                              </>
+                            ) : (
+                              'There are currently no active property matching requests in the vault.'
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredVault.map((req) => {
                         const isCostSheetCreated = !!req.costSheetId;
                         return (
                           <tr key={req.requestId} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: selectedMatchingId === req.requestId ? 'rgba(2, 132, 199, 0.15)' : 'transparent' }}>
@@ -1148,9 +1473,18 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                                 <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', border: '1px solid #22c55e', padding: '2px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem', display: 'inline-block' }}>
                                   🟢 COST SHEET CREATED ({req.costSheetId})
                                 </span>
+                              ) : req.isMatched ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', border: '1px solid #22c55e', padding: '2px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem', display: 'inline-block' }}>
+                                    🎯 MATCHED ({req.matchCount || 1} Prop • {req.topScore || 90}% WMI)
+                                  </span>
+                                  <span style={{ fontSize: '0.68rem', color: '#fbbf24', fontWeight: '700' }}>
+                                    ⚡ Ready for Cost Sheet
+                                  </span>
+                                </div>
                               ) : (
                                 <span style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', border: '1px solid #fbbf24', padding: '2px 8px', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem', display: 'inline-block' }}>
-                                  ⚡ PENDING (NO COST SHEET ID)
+                                  ⚡ PENDING (0 Matches • Needs Sourcing)
                                 </span>
                               )}
                             </td>
@@ -1175,7 +1509,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                                         const cust = customers.find(c => c.customer_number === req.customerNumber || c.name === req.customerName);
                                         if (cust) setSelectedCust(cust);
                                         setSourcingModalRequest(req);
-                                        setSourcingReasonInput('');
+                                        setSelectedSourcingReasons(['🚫 No properties matching requirement in current inventory']);
+                                        setSourcingReasonInput('🚫 No properties matching requirement in current inventory');
                                         setSourcingError('');
                                       }} 
                                       style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)' }}
@@ -1184,8 +1519,11 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                                     </button>
                                     <button 
                                       onClick={() => {
+                                        const confirmed = window.confirm(`⚡ Run automated inventory matcher for ${req.customerName} (${req.requestId})?\n\nClick OK to match properties, or Cancel / ESC to abort.`);
+                                        if (!confirmed) return;
                                         setSelectedMatchingId(req.requestId);
-                                        alert(`⚡ Running automated inventory matcher for ${req.customerName} (${req.requestId})`);
+                                        const cust = customers.find(c => c.customer_number === req.customerNumber || c.name === req.customerName);
+                                        if (cust) setSelectedCust(cust);
                                       }} 
                                       style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '6px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer' }}
                                     >
@@ -1206,8 +1544,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                             </td>
                           </tr>
                         );
-                      });
-                    })()}
+                      }))}
                   </tbody>
                 </table>
               </div>
@@ -1231,7 +1568,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                 value={selectedMatchingId} 
                 onChange={(e) => {
                   setSelectedMatchingId(e.target.value);
-                  const req = allMatchingRequests.find(r => r.requestId === e.target.value);
+                  const req = allMatchingRequestsEnriched.find(r => r.requestId === e.target.value);
                   if (req) {
                     const cust = customers.find(c => c.customer_number === req.customerNumber || c.name === req.customerName);
                     if (cust) setSelectedCust(cust);
@@ -1240,11 +1577,11 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                 style={{ width: windowWidth <= 1100 ? '100%' : 'auto', maxWidth: '100%', background: isLight ? '#f8fafc' : '#0f172a', color: '#38bdf8', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '8px 14px', fontSize: '0.85rem', fontWeight: '800' }}
               >
                 <option value="">-- Select a Matching Request to Open Workspace --</option>
-                {allMatchingRequests
-                  .filter(req => matchingVaultFilter === 'ALL' || (!req.costSheetId && req.status !== 'COST_SHEET_CREATED'))
+                {allMatchingRequestsEnriched
+                  .filter(req => matchingVaultFilter === 'ALL' || (!req.costSheetId && req.status !== 'COST_SHEET_CREATED' && req.status !== 'CONVERTED_TO_VISIT'))
                   .map((req) => (
                     <option key={req.requestId} value={req.requestId}>
-                      ⚡ {req.requestId} — {req.customerName} ({req.configuration}, {req.preferredArea})
+                      {req.isMatched ? '🎯' : '⚡'} {req.requestId} — {req.customerName} ({req.configuration}, {req.preferredArea}) {req.isMatched ? `[Matched: ${req.topScore}% WMI]` : '[Pending Match]'}
                     </option>
                   ))}
               </select>
@@ -1263,7 +1600,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     setMatchingSearchQuery(val);
                     if (val.trim()) {
                       const q = val.trim().toLowerCase();
-                      const match = allMatchingRequests.find(r => 
+                      const match = allMatchingRequestsEnriched.find(r => 
                         (r.requestId && r.requestId.toLowerCase().includes(q)) ||
                         (r.customerNumber && r.customerNumber.toLowerCase().includes(q)) ||
                         (r.customerName && r.customerName.toLowerCase().includes(q)) ||
@@ -1279,6 +1616,16 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                   placeholder="Enter Matching ID (e.g. SRM-MAT-2026-000421), Customer ID, or Phone..." 
                   style={{ background: 'transparent', border: 'none', color: isLight ? '#0f172a' : '#ffffff', outline: 'none', fontSize: '0.85rem', width: '100%', fontWeight: '800' }} 
                 />
+                {matchingSearchQuery && (
+                  <button 
+                    type="button" 
+                    onClick={() => setMatchingSearchQuery('')}
+                    style={{ background: 'none', border: 'none', color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer', fontSize: '0.9rem', padding: '0 4px', fontWeight: '900' }}
+                    title="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1361,11 +1708,28 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                       </button>
                     )}
                     <button 
-                      onClick={() => alert(`⚡ Executed real-time property matching engine for ${activeMatchingReq.requestId} snapshot!`)} 
+                      onClick={() => {
+                        const confirmed = window.confirm(`⚡ Run property matching engine for ${activeMatchingReq.requestId} snapshot?\n\nClick OK to confirm, or Cancel / ESC to abort.`);
+                        if (!confirmed) return;
+                        alert(`⚡ Executed real-time property matching engine for ${activeMatchingReq.requestId} snapshot!`);
+                      }} 
                       title={`Run property matcher engine for ${activeMatchingReq.requestId}`}
                       style={{ flex: '1 1 auto', minWidth: windowWidth <= 480 ? '100%' : '140px', justifyContent: 'center', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '8px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.78rem' : '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', boxSizing: 'border-box' }}
                     >
                       <Zap size={14} /> ⚡ {windowWidth <= 640 ? 'Run Matcher' : `Run Matcher (${activeMatchingReq.requestId})`}
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setSourcingModalRequest(activeMatchingReq);
+                        setSelectedSourcingReasons(['🚫 No properties matching requirement in current inventory']);
+                        setSourcingReasonInput(`Current inventory has no suitable properties matching customer requirement (${activeMatchingReq.preferredArea || 'Any Locality'}, ${activeMatchingReq.configuration || 'Any BHK'}, ${activeMatchingReq.budget || 'Budget'}). Transferred to Property Sourcing Requests for dedicated property searching.`);
+                        setSourcingError('');
+                      }} 
+                      title="If no property matches or is suitable as per customer requirement, send customer to Property Sourcing Requests"
+                      style={{ flex: '1 1 auto', minWidth: windowWidth <= 480 ? '100%' : '170px', justifyContent: 'center', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.78rem' : '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', boxSizing: 'border-box', boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)' }}
+                    >
+                      📦 Send to Property Sourcing Requests
                     </button>
                   </div>
                 </div>
@@ -1486,6 +1850,32 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '4px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: '900', border: '1px solid #22c55e' }}>
                       {selectedPropertyIds.length} PROPERTIES SELECTED
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSourcingModalRequest(activeMatchingReq);
+                        setSelectedSourcingReasons(['❌ Current matched properties not suitable for customer']);
+                        setSourcingReasonInput(`Current matched properties not suitable for customer ${activeMatchingReq.customerName} (${activeMatchingReq.configuration || ''}, ${activeMatchingReq.preferredArea || ''}, ${activeMatchingReq.budget || ''}). Requesting property searching via Property Sourcing Requests desk.`);
+                        setSourcingError('');
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '20px',
+                        padding: '4px 12px',
+                        fontSize: '0.74rem',
+                        fontWeight: '900',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
+                      }}
+                      title="If none of the matched properties are suitable as per customer requirement, send to Property Sourcing Requests"
+                    >
+                      📦 Not Suitable? Send to Property Sourcing Requests
+                    </button>
                   </div>
                 </div>
 
@@ -1627,7 +2017,12 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                   possession_status: 'Ready to Move',
                   final_price: '₹51,14,880',
                   base_price: '₹48,00,000',
-                  area_sqft: '1450 SqFt'
+                  area_sqft: '1450 SqFt',
+                  super_builtup_area: 1450,
+                  car_parking: '1 Covered Parking Slot',
+                  floor: '2nd Floor',
+                  floor_num: '2nd Floor',
+                  total_floors: 'G+4 Floors (5 Storey)'
                 }
               ];
 
@@ -1649,32 +2044,57 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                 : [];
               const activeCustUsedCodesSet = new Set(activeCustUsedProps.map(p => (p.propertyCode || '').toString().trim().toUpperCase()));
 
-              const matchedPropsList = displayProps
+              const evaluatedPropsList = displayProps
                 .map(p => {
+                  const linkedCust = (customers || []).find(c => 
+                    (c.customer_number && (c.customer_number === activeMatchingReq?.customerNumber || c.customer_number === activeMatchingReq?.customerId)) ||
+                    (c.mobile && activeMatchingReq?.mobile && c.mobile.replace(/\D/g, '') === String(activeMatchingReq.mobile).replace(/\D/g, '')) ||
+                    (c.name && activeMatchingReq?.customerName && c.name.toLowerCase() === activeMatchingReq.customerName.toLowerCase())
+                  );
+
                   const currentMatchingCust = {
-                    ...selectedCust,
-                    ...activeMatchingReq,
-                    name: activeMatchingReq.customerName || activeMatchingReq.name || selectedCust?.name,
-                    customer_number: activeMatchingReq.customerNumber || activeMatchingReq.customerId || selectedCust?.customer_number,
-                    budget: activeMatchingReq.budget || selectedCust?.budget,
-                    budget_min: activeMatchingReq.budget_min || selectedCust?.budget_min,
-                    budget_max: activeMatchingReq.budget_max || selectedCust?.budget_max,
-                    budget_flexibility: activeMatchingReq.budget_flexibility || selectedCust?.budget_flexibility,
-                    preferredArea: activeMatchingReq.preferredArea || selectedCust?.preferredArea,
-                    secondary_areas: activeMatchingReq.secondary_areas || activeMatchingReq.secondaryAreas || selectedCust?.secondary_areas,
-                    configuration: activeMatchingReq.configuration || selectedCust?.configuration,
-                    parking: activeMatchingReq.parking || activeMatchingReq.parkingRequired || selectedCust?.parking || selectedCust?.parking_required
+                    ...(linkedCust || {}),
+                    ...(selectedCust || {}),
+                    ...(activeMatchingReq || {}),
+                    name: activeMatchingReq.customerName || activeMatchingReq.name || selectedCust?.name || linkedCust?.name,
+                    customer_number: activeMatchingReq.customerNumber || activeMatchingReq.customerId || selectedCust?.customer_number || linkedCust?.customer_number,
+                    budget: activeMatchingReq.budget || selectedCust?.budget || linkedCust?.budget,
+                    budget_min: activeMatchingReq.budget_min !== undefined ? activeMatchingReq.budget_min : (selectedCust?.budget_min || linkedCust?.budget_min),
+                    budget_max: activeMatchingReq.budget_max !== undefined ? activeMatchingReq.budget_max : (selectedCust?.budget_max || linkedCust?.budget_max),
+                    budget_unit: activeMatchingReq.budget_unit || selectedCust?.budget_unit || linkedCust?.budget_unit,
+                    budget_flexibility: activeMatchingReq.budget_flexibility || selectedCust?.budget_flexibility || linkedCust?.budget_flexibility,
+                    preferredArea: activeMatchingReq.preferredArea || selectedCust?.preferredArea || linkedCust?.preferredArea,
+                    secondary_areas: activeMatchingReq.secondary_areas || activeMatchingReq.secondaryAreas || selectedCust?.secondary_areas || linkedCust?.secondary_areas,
+                    configuration: activeMatchingReq.configuration || selectedCust?.configuration || linkedCust?.configuration,
+                    bhk: activeMatchingReq.configuration || selectedCust?.configuration || linkedCust?.configuration,
+                    property_type: activeMatchingReq.property_type || activeMatchingReq.propertyType || activeMatchingReq.propertyCategory || selectedCust?.property_type || linkedCust?.property_type,
+                    carpet_area_min: activeMatchingReq.carpet_area_min || activeMatchingReq.super_builtup_area_min || selectedCust?.carpet_area_min || linkedCust?.carpet_area_min,
+                    carpet_area_max: activeMatchingReq.carpet_area_max || activeMatchingReq.super_builtup_area_max || selectedCust?.carpet_area_max || linkedCust?.carpet_area_max,
+                    parking: activeMatchingReq.parking || activeMatchingReq.parkingRequired || selectedCust?.parking || linkedCust?.parking,
+                    parking_type: activeMatchingReq.parking_type || activeMatchingReq.parking || selectedCust?.parking_type || linkedCust?.parking_type,
+                    avoided_floors: activeMatchingReq.avoided_floors || activeMatchingReq.non_preferred_floor || selectedCust?.avoided_floors || linkedCust?.avoided_floors,
+                    non_preferred_floor: activeMatchingReq.avoided_floors || activeMatchingReq.non_preferred_floor || selectedCust?.avoided_floors || linkedCust?.avoided_floors,
+                    preferred_floors: activeMatchingReq.preferred_floors || activeMatchingReq.floor_pref || selectedCust?.preferred_floors || linkedCust?.preferred_floors
                   };
                   const res = calculatePropertyMatchScore(currentMatchingCust, p);
-                  let matchVal = res.total;
+                  let matchVal = res.isStrictMatch === false ? 0 : res.total;
                   const targetPCode = activeMatchingReq.propertyCode || activeMatchingReq.propCode;
-                  if (targetPCode && p.property_code === targetPCode) {
+                  if (res.isStrictMatch !== false && targetPCode && p.property_code === targetPCode) {
                     matchVal = Math.max(matchVal, 96);
                   }
-                  return { ...p, matchTotal: matchVal, breakdown: res.breakdown, isStrictMatch: res.isStrictMatch !== false };
-                })
+                  return { 
+                    ...p, 
+                    matchTotal: matchVal, 
+                    breakdown: res.breakdown, 
+                    isStrictMatch: res.isStrictMatch !== false,
+                    mismatchReasons: res.mismatchReasons || [],
+                    mismatchReason: res.reason || ''
+                  };
+                });
+
+              const matchedPropsList = evaluatedPropsList
                 .filter(p => {
-                  // STRICT CRITERIA ENFORCEMENT: Filter out any property that fails Location, Budget OR BHK!
+                  // STRICT CRITERIA ENFORCEMENT: Filter out any property that fails qualification
                   if (p.matchTotal <= 0 || p.isStrictMatch === false) return false;
 
                   if (!propertySearchQuery.trim()) return true;
@@ -1698,15 +2118,132 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                   return b.matchTotal - a.matchTotal;
                 });
 
+              const nonMatchedPropsList = evaluatedPropsList.filter(p => p.matchTotal <= 0 || p.isStrictMatch === false);
+
               if (matchedPropsList.length === 0) {
                 return (
-                  <div style={{ padding: '35px 20px', textAlign: 'center', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', color: isLight ? '#64748b' : '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ fontSize: '1.8rem' }}>🎯 🚫</div>
-                    <div style={{ fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.95rem' }}>
-                      No Inventory Properties Match Strictly ({activeMatchingReq.preferredArea || 'Selected Locality'}, {activeMatchingReq.configuration || 'Any BHK'}, {activeMatchingReq.budget || 'Budget'})
+                  <div style={{ padding: '24px 20px', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '14px', border: isLight ? '1.5px dashed #ef4444' : '1.5px dashed #ef4444', color: isLight ? '#64748b' : '#94a3b8', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ fontSize: '2.2rem' }}>🎯 🚫</div>
+                        <div>
+                          <div style={{ fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', fontSize: '1.05rem' }}>
+                            No Inventory Properties Match Strictly
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
+                            Customer Request: <strong style={{ color: '#38bdf8' }}>{activeMatchingReq.preferredArea || 'Any Locality'}</strong> • <strong style={{ color: '#fbbf24' }}>{activeMatchingReq.configuration || 'Any BHK'}</strong> • <strong style={{ color: '#4ade80' }}>{activeMatchingReq.budget || 'Budget'}</strong>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const reasonSummary = nonMatchedPropsList.length > 0 
+                            ? `Current inventory properties did not qualify customer strict criteria (${nonMatchedPropsList.map(np => `${np.property_code}: ${np.mismatchReasons?.join(', ')}`).join(' | ')}). Sent to Property Sourcing Desk for dedicated property searching.`
+                            : `No matching inventory properties found for customer requirements (${activeMatchingReq.preferredArea || 'Any Locality'}, ${activeMatchingReq.configuration || 'Any BHK'}, ${activeMatchingReq.budget || 'Budget'}). Sent to Property Sourcing Desk for off-market / builder property sourcing search.`;
+                          setSourcingModalRequest(activeMatchingReq);
+                          setSelectedSourcingReasons(['🚫 No properties matching requirement in current inventory', '💰 Budget or BHK criteria mismatch in available stock']);
+                          setSourcingReasonInput(reasonSummary);
+                          setSourcingError('');
+                        }}
+                        style={{
+                          background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                          color: '#ffffff',
+                          border: 'none',
+                          padding: '11px 22px',
+                          borderRadius: '8px',
+                          fontWeight: '900',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 14px rgba(2, 132, 199, 0.4)'
+                        }}
+                        title="Send customer requirement to Property Sourcing Requests for active property searching"
+                      >
+                        📦 Send to Property Sourcing Requests for Property Searching →
+                      </button>
                     </div>
-                    <div style={{ fontSize: '0.8rem', maxWidth: '550px' }}>
-                      Strict Property Matching Enforcement is ACTIVE. Only properties matching the customer's exact <strong>Location</strong>, <strong>Budget Range</strong>, and <strong>BHK Configuration</strong> are displayed.
+
+                    {/* EVALUATED INVENTORY PROPERTIES & EXACT MISMATCH REASONS */}
+                    <div style={{ background: isLight ? '#ffffff' : '#0b1329', borderRadius: '12px', border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b', paddingBottom: '8px' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '900', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          ⚠️ EVALUATED INVENTORY UNITS & EXACT MISMATCH REASONS ({nonMatchedPropsList.length})
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                          Verified against 7 Strict Qualification Rules
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {nonMatchedPropsList.map((np: any) => {
+                          const reasons: string[] = np.mismatchReasons && np.mismatchReasons.length > 0 
+                            ? np.mismatchReasons 
+                            : (np.mismatchReason ? [np.mismatchReason] : ['Criteria Qualification Mismatch']);
+                          return (
+                            <div 
+                              key={np.id || np.property_code}
+                              style={{ 
+                                background: isLight ? '#f8fafc' : '#0f172a', 
+                                border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', 
+                                borderRadius: '10px', 
+                                padding: '12px 14px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <span style={{ fontFamily: 'monospace', fontWeight: '900', color: '#38bdf8', fontSize: '0.84rem', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '2px 8px', borderRadius: '4px' }}>
+                                    {np.property_code}
+                                  </span>
+                                  <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.9rem' }}>
+                                    {np.title || np.project || 'Inventory Unit'}
+                                  </strong>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.76rem', color: isLight ? '#475569' : '#94a3b8' }}>
+                                  <span>📍 {np.locality || 'Locality'}</span>
+                                  <span>•</span>
+                                  <span>🏢 {np.configuration || 'BHK'}</span>
+                                  <span>•</span>
+                                  <span style={{ color: '#4ade80', fontWeight: '900' }}>{computeTotalBaseWithOtherCharges(np)}</span>
+                                </div>
+                              </div>
+
+                              {/* MISMATCH REASON BADGES */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  Specific Non-Match Reasons:
+                                </span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  {reasons.map((r: string, rIdx: number) => (
+                                    <div 
+                                      key={rIdx} 
+                                      style={{ 
+                                        background: 'rgba(239, 68, 68, 0.1)', 
+                                        color: isLight ? '#b91c1c' : '#f87171', 
+                                        border: '1px solid rgba(239, 68, 68, 0.25)', 
+                                        padding: '4px 10px', 
+                                        borderRadius: '6px', 
+                                        fontSize: '0.76rem', 
+                                        fontWeight: '700',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px'
+                                      }}
+                                    >
+                                      <span style={{ color: '#ef4444' }}>❌</span> {r}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 );
@@ -1814,23 +2351,26 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                               🎯 High Precision 7-Criteria Match Explanation:
                             </div>
                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', fontSize: '0.68rem' }}>
+                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.loc === 25 ? '#22c55e' : p.breakdown.loc === 15 ? '#38bdf8' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.loc === 25 ? '#4ade80' : p.breakdown.loc === 15 ? '#38bdf8' : '#ef4444', fontWeight: '700' }}>
+                                ✓ Location ({p.breakdown.loc}%/25%{p.breakdown.loc === 15 ? ' Secondary' : p.breakdown.loc === 25 ? ' Primary' : ''})
+                              </span>
                               <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.bud === 25 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.bud === 25 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                {p.breakdown.bud === 25 ? '✓' : '✗'} Budget ({p.breakdown.bud}%/25%)
+                                ✓ Budget ({p.breakdown.bud}%/25%)
                               </span>
-                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.loc >= 15 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.loc >= 15 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                ✓ Location ({p.breakdown.loc}%/20%)
-                              </span>
-                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.bhk >= 12 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.bhk >= 12 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
+                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.bhk === 15 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.bhk === 15 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
                                 ✓ BHK ({p.breakdown.bhk}%/15%)
                               </span>
-                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.sqft >= 10 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.sqft >= 10 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                ✓ SqFt ({p.breakdown.sqft}%/15%)
+                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.floor_pref === 15 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.floor_pref === 15 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
+                                ✓ Floor ({p.breakdown.floor_pref}%/15%)
                               </span>
-                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.possession_facing >= 7 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.possession_facing >= 7 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                ✓ Possession & Facing ({p.breakdown.possession_facing}%/10%)
+                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.parking === 10 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.parking === 10 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
+                                ✓ Parking ({p.breakdown.parking}%/10%)
                               </span>
-                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.floor_pref >= 4 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.floor_pref >= 4 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                ✓ Floor ({p.breakdown.floor_pref}%/5%)
+                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.sqft === 5 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.sqft === 5 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
+                                ✓ Built-up Area ({p.breakdown.sqft}%/5%)
+                              </span>
+                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown.type === 5 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.type === 5 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
+                                ✓ Category ({p.breakdown.type}%/5%)
                               </span>
                             </div>
                           </div>
@@ -1973,29 +2513,26 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', fontSize: '0.68rem' }}>
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.loc === 25 ? '#22c55e' : p.breakdown.loc === 15 ? '#38bdf8' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.loc === 25 ? '#4ade80' : p.breakdown.loc === 15 ? '#38bdf8' : '#ef4444', fontWeight: '700' }}>
+                                    ✓ Location ({p.breakdown.loc}%/25%{p.breakdown.loc === 15 ? ' Secondary' : p.breakdown.loc === 25 ? ' Primary' : ''})
+                                  </span>
                                   <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.bud === 25 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.bud === 25 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                    {p.breakdown.bud === 25 ? '✓' : '✗'} Budget Range ({p.breakdown.bud}%/25% match)
+                                    ✓ Budget ({p.breakdown.bud}%/25%)
                                   </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.loc >= 15 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.loc >= 15 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                    ✓ Location ({p.breakdown.loc}%/20% match)
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.bhk === 15 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.bhk === 15 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
+                                    ✓ BHK ({p.breakdown.bhk}%/15%)
                                   </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.bhk >= 12 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.bhk >= 12 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                    ✓ BHK Config ({p.breakdown.bhk}%/15% match)
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.floor_pref === 15 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.floor_pref === 15 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
+                                    ✓ Floor ({p.breakdown.floor_pref}%/15%)
                                   </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.sqft >= 10 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.sqft >= 10 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                    ✓ Sq.Ft Area ({p.breakdown.sqft}%/15% match)
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.parking === 10 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.parking === 10 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
+                                    ✓ Parking ({p.breakdown.parking}%/10%)
                                   </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.possession_facing >= 7 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.possession_facing >= 7 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                    ✓ Possession & Facing ({p.breakdown.possession_facing}%/10% match)
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.sqft === 5 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.sqft === 5 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
+                                    ✓ Built-up Area ({p.breakdown.sqft}%/5%)
                                   </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.floor_pref >= 4 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.floor_pref >= 4 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                    ✓ Floor Preference ({p.breakdown.floor_pref}%/5% match)
-                                  </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.type >= 4 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.type >= 4 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                    ✓ Category Type ({p.breakdown.type}%/5% match)
-                                  </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.condition >= 3 ? '#22c55e' : '#fbbf24'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.condition >= 3 ? '#4ade80' : '#fbbf24', fontWeight: '700' }}>
-                                    ✓ Condition ({p.breakdown.condition}%/5% match)
+                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown.type === 5 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown.type === 5 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
+                                    ✓ Category ({p.breakdown.type}%/5%)
                                   </span>
                                 </div>
                               </div>
@@ -2100,7 +2637,35 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             </div>
 
             {/* SELECTION ACTION BUTTON - ONE PROPERTY = ONE COST SHEET */}
-            <div style={{ borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: windowWidth <= 1024 ? '10px' : '12px', display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <div style={{ borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: windowWidth <= 1024 ? '10px' : '12px', display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+              <button 
+                type="button"
+                onClick={() => {
+                  setSourcingModalRequest(activeMatchingReq);
+                  setSelectedSourcingReasons(['❌ Current matched properties not suitable for customer']);
+                  setSourcingReasonInput(`Current matched properties not suitable as per customer requirement. Requesting custom property searching in Property Sourcing Requests.`);
+                  setSourcingError('');
+                }}
+                style={{ 
+                  width: windowWidth <= 1024 ? '100%' : 'auto', 
+                  justifyContent: 'center', 
+                  background: isLight ? '#f1f5f9' : '#1e293b', 
+                  color: '#38bdf8', 
+                  border: '1.5px solid #0284c7', 
+                  padding: windowWidth <= 640 ? '10px 14px' : windowWidth <= 1024 ? '11px 18px' : '12px 20px', 
+                  borderRadius: '10px', 
+                  fontWeight: '900', 
+                  fontSize: windowWidth <= 640 ? '0.78rem' : windowWidth <= 1024 ? '0.84rem' : '0.88rem', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(2, 132, 199, 0.2)'
+                }}
+                title="If none of the inventory properties are suitable for the customer, send to Property Sourcing Requests"
+              >
+                📦 No Property Suitable? Send to Property Sourcing Requests
+              </button>
               <button 
                 onClick={() => {
                   if (selectedPropertyIds.length === 0) {
@@ -2201,7 +2766,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                   </span>
                 </div>
               </div>
-              <X size={20} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => { setSourcingModalRequest(null); setSourcingError(''); }} />
+              <X size={20} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => { setSourcingModalRequest(null); setSelectedSourcingReasons([]); setSourcingReasonInput(''); setSourcingError(''); }} />
             </div>
 
             {/* CUSTOMER & MATCHING SNAPSHOT */}
@@ -2222,34 +2787,119 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
               </div>
             </div>
 
-            {/* MANDATORY MESSAGE INPUT AREA */}
+            {/* MANDATORY MULTI-SELECT MESSAGE INPUT AREA */}
             <div>
-              <label style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: '900', display: 'block', marginBottom: '6px' }}>
-                📝 Why are you sending this customer into Property Sourcing Request? * (Mandatory)
-              </label>
-              <p style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8', margin: '0 0 8px 0' }}>
-                Without entering a valid message, customer details cannot move to the Property Sourcing Request section.
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                <label style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  📝 Why are you sending this customer into Property Sourcing Request? * (Mandatory - Select Multiple Options)
+                </label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {selectedSourcingReasons.length > 0 && (
+                    <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: '800', background: 'rgba(56, 189, 248, 0.15)', border: '1px solid #0284c7', padding: '2px 8px', borderRadius: '12px' }}>
+                      ✓ {selectedSourcingReasons.length} {selectedSourcingReasons.length === 1 ? 'Option' : 'Options'} Selected
+                    </span>
+                  )}
+                  <button 
+                    type="button" 
+                    onClick={selectAllSourcingReasons}
+                    style={{ background: 'transparent', border: 'none', color: '#0284c7', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                  >
+                    Select All
+                  </button>
+                  <span style={{ color: isLight ? '#cbd5e1' : '#475569', fontSize: '0.7rem' }}>|</span>
+                  <button 
+                    type="button" 
+                    onClick={clearAllSourcingReasons}
+                    style={{ background: 'transparent', border: 'none', color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+
+              <p style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8', margin: '0 0 10px 0' }}>
+                Select all applicable reasons below (multiple choices allowed) and/or customize the compiled message in the text box.
               </p>
-              <textarea
-                rows={4}
-                value={sourcingReasonInput}
-                onChange={(e) => {
-                  setSourcingReasonInput(e.target.value);
-                  if (e.target.value.trim()) setSourcingError('');
-                }}
-                placeholder="Enter reason (e.g. Current inventory doesn't match client's exact floor / facing requirement; requesting off-market builder sourcing for 2BHK in Madhamgram)..."
-                style={{
-                  width: '100%',
-                  background: isLight ? '#ffffff' : '#0f172a',
-                  border: sourcingError ? '2px solid #ef4444' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
-                  color: isLight ? '#0f172a' : '#ffffff',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  fontSize: '0.85rem',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
+
+              {/* MULTI-SELECT CHECKBOX / CHIP OPTIONS GRID */}
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? '1fr' : 'repeat(2, 1fr)', gap: '8px', marginBottom: '12px' }}>
+                {SOURCING_REASON_OPTIONS.map((reasonChip, idx) => {
+                  const isChecked = selectedSourcingReasons.includes(reasonChip);
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => toggleSourcingReason(reasonChip)}
+                      style={{
+                        background: isChecked 
+                          ? (isLight ? '#e0f2fe' : 'rgba(2, 132, 199, 0.25)') 
+                          : (isLight ? '#f8fafc' : '#0f172a'),
+                        border: isChecked 
+                          ? '1.5px solid #0284c7' 
+                          : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                        color: isChecked 
+                          ? (isLight ? '#0369a1' : '#38bdf8') 
+                          : (isLight ? '#334155' : '#cbd5e1'),
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        fontSize: '0.75rem',
+                        fontWeight: isChecked ? '800' : '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '8px',
+                        transition: 'all 0.15s ease',
+                        boxShadow: isChecked ? '0 2px 6px rgba(2, 132, 199, 0.15)' : 'none'
+                      }}
+                    >
+                      <input 
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}} // handled by parent div onClick
+                        style={{
+                          width: '15px',
+                          height: '15px',
+                          cursor: 'pointer',
+                          accentColor: '#0284c7',
+                          marginTop: '2px',
+                          flexShrink: 0
+                        }}
+                      />
+                      <span style={{ lineHeight: '1.35', flex: 1, wordBreak: 'break-word' }}>
+                        {reasonChip}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* EDITABLE COMPILED REASON MESSAGE TEXTAREA */}
+              <div>
+                <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                  Compiled Reason Message / Custom Sourcing Instructions:
+                </label>
+                <textarea
+                  rows={4}
+                  value={sourcingReasonInput}
+                  onChange={(e) => {
+                    setSourcingReasonInput(e.target.value);
+                    if (e.target.value.trim() || selectedSourcingReasons.length > 0) setSourcingError('');
+                  }}
+                  placeholder="Select reasons above or type additional custom requirements..."
+                  style={{
+                    width: '100%',
+                    background: isLight ? '#ffffff' : '#0f172a',
+                    border: sourcingError ? '2px solid #ef4444' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                    color: isLight ? '#0f172a' : '#ffffff',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+
               {sourcingError && (
                 <div style={{ color: '#ef4444', fontSize: '0.76rem', fontWeight: '800', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   ⚠️ {sourcingError}
@@ -2261,7 +2911,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '6px', flexWrap: 'wrap' }}>
               <button
                 type="button"
-                onClick={() => { setSourcingModalRequest(null); setSourcingError(''); }}
+                onClick={() => { setSourcingModalRequest(null); setSelectedSourcingReasons([]); setSourcingReasonInput(''); setSourcingError(''); }}
                 style={{ flex: windowWidth <= 480 ? '1' : 'none', background: '#334155', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}
               >
                 Cancel

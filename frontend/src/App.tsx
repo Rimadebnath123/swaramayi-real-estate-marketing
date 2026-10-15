@@ -1152,12 +1152,14 @@ function ScheduleVisitModalContent({
   targetCustomerId,
   targetCustName,
   targetCustMobile,
-  eligibleCostSheets,
-  properties,
-  visitPlans,
+  eligibleCostSheets = [],
+  properties = [],
+  visitPlans = [],
   setVisitPlans,
+  scheduledVisits = [],
   setScheduledVisits,
   setIndividualCostSheets,
+  setMatchingRequestsQueue,
   setShowScheduleVisitModal,
   setActiveTab,
   setActiveVisitSubTab,
@@ -1271,11 +1273,12 @@ function ScheduleVisitModalContent({
   const [transportMode, setTransportMode] = useState<string>('🚗 Cab Pick & Drop Needed');
 
   const [orderedStops, setOrderedStops] = useState<any[]>(() => {
-    const initList = initialCS ? [initialCS] : eligibleCostSheets.slice(0, 1);
+    const initList = initialCS ? [initialCS] : (Array.isArray(eligibleCostSheets) ? eligibleCostSheets.slice(0, 1) : []);
     return initList.map((cs: any, idx: number) => {
+      if (!cs) return null;
       const pCode = cs?.propertyCode || cs?.propertySnapshot?.propertyCode;
       const csTitle = (cs?.propertySnapshot?.propertyTitle || '').toLowerCase();
-      const matchedProp = properties.find((p: any) => 
+      const matchedProp = (properties || []).find((p: any) => 
         p && (
           p.property_code === pCode || 
           p.id === pCode || 
@@ -1284,26 +1287,26 @@ function ScheduleVisitModalContent({
       );
       return {
         stopNum: idx + 1,
-        costSheetId: cs.costSheetId,
+        costSheetId: cs.costSheetId || cs.id || `CS-0${idx + 1}`,
         propertyId: cs.propertyId || matchedProp?.id || `PROP-0${idx + 1}`,
-        propertyCode: pCode,
+        propertyCode: pCode || matchedProp?.property_code || `PROP-0${idx + 1}`,
         propertyTitle: cs.propertySnapshot?.propertyTitle || matchedProp?.title || 'Property Site',
         locality: cs.propertySnapshot?.locality || matchedProp?.locality || 'Barasat, Kolkata',
         developer: matchedProp?.developer || 'Swaramayi Partner Developer',
         latitude: matchedProp?.latitude || '22.722361° N',
         longitude: matchedProp?.longitude || '88.493403° E'
       };
-    });
+    }).filter(Boolean);
   });
 
   const [createdSuccess, setCreatedSuccess] = useState<any | null>(null);
 
   // Check duplicate active schedule
-  const activeExistingPlan = visitPlans.find((p: any) => p.customerNumber === targetCustomerId && p.visitDate === visitDate && p.status !== 'COMPLETED');
+  const activeExistingPlan = (visitPlans || []).find((p: any) => p && p.customerNumber === targetCustomerId && p.visitDate === visitDate && p.status !== 'COMPLETED');
 
   // Auto-optimize handler
   const handleAutoOptimize = () => {
-    const sorted = [...orderedStops].sort((a, b) => a.locality.localeCompare(b.locality));
+    const sorted = [...orderedStops].sort((a, b) => String(a?.locality || '').localeCompare(String(b?.locality || '')));
     setOrderedStops(sorted.map((s, idx) => ({ ...s, stopNum: idx + 1 })));
     alert('⚡ ROUTE AUTO-OPTIMIZED!\n\nSequence reordered based on GPS coordinates, travel distance, and time window efficiency.');
   };
@@ -1335,14 +1338,14 @@ function ScheduleVisitModalContent({
         return;
       }
       setSelectedCsIds(selectedCsIds.filter(id => id !== csId));
-      setOrderedStops(orderedStops.filter(s => s.costSheetId !== csId));
+      setOrderedStops(orderedStops.filter(s => s && s.costSheetId !== csId));
     } else {
       setSelectedCsIds([...selectedCsIds, csId]);
-      const cs = eligibleCostSheets.find((c: any) => c.costSheetId === csId);
+      const cs = (eligibleCostSheets || []).find((c: any) => c && (c.costSheetId === csId || c.id === csId));
       if (cs) {
         const pCode = cs?.propertyCode || cs?.propertySnapshot?.propertyCode;
         const csTitle = (cs?.propertySnapshot?.propertyTitle || '').toLowerCase();
-        const matchedProp = properties.find((p: any) => 
+        const matchedProp = (properties || []).find((p: any) => 
           p && (
             p.property_code === pCode || 
             p.id === pCode || 
@@ -1351,9 +1354,9 @@ function ScheduleVisitModalContent({
         );
         setOrderedStops([...orderedStops, {
           stopNum: orderedStops.length + 1,
-          costSheetId: cs.costSheetId,
+          costSheetId: cs.costSheetId || cs.id || `CS-${orderedStops.length + 1}`,
           propertyId: cs.propertyId || matchedProp?.id || 'PROP-NEW',
-          propertyCode: pCode,
+          propertyCode: pCode || matchedProp?.property_code || 'PROP-NEW',
           propertyTitle: cs.propertySnapshot?.propertyTitle || matchedProp?.title || 'Property Site',
           locality: cs.propertySnapshot?.locality || matchedProp?.locality || 'Barasat, Kolkata',
           developer: matchedProp?.developer || 'Partner Developer',
@@ -1366,107 +1369,264 @@ function ScheduleVisitModalContent({
 
   // Execute Creation
   const handleConfirmCreate = () => {
-    const nextPlanNum = visitPlans.length + 87;
-    const masterScheduleId = `SRM-VS-2026-0000${nextPlanNum}`;
+    try {
+      // 1. Resolve Stops to Use
+      let stopsToUse = (Array.isArray(orderedStops) && orderedStops.length > 0) ? orderedStops : [];
+      if (stopsToUse.length === 0) {
+        if (initialCS) {
+          stopsToUse = [{
+            stopNum: 1,
+            costSheetId: initialCS.costSheetId || initialCS.id || 'CS-GEN-01',
+            propertyId: initialCS.propertyId || 'PROP-01',
+            propertyCode: initialCS.propertyCode || initialCS.propertySnapshot?.propertyCode || 'PROP-01',
+            propertyTitle: initialCS.propertySnapshot?.propertyTitle || 'Property Site',
+            locality: initialCS.propertySnapshot?.locality || 'Barasat, Kolkata',
+            developer: 'Swaramayi Partner Developer',
+            latitude: '22.722361° N',
+            longitude: '88.493403° E'
+          }];
+        } else if (Array.isArray(eligibleCostSheets) && eligibleCostSheets.length > 0 && eligibleCostSheets[0]) {
+          const firstCs = eligibleCostSheets[0];
+          stopsToUse = [{
+            stopNum: 1,
+            costSheetId: firstCs.costSheetId || firstCs.id || 'CS-GEN-01',
+            propertyId: firstCs.propertyId || 'PROP-01',
+            propertyCode: firstCs.propertyCode || firstCs.propertySnapshot?.propertyCode || 'PROP-01',
+            propertyTitle: firstCs.propertySnapshot?.propertyTitle || 'Property Site',
+            locality: firstCs.propertySnapshot?.locality || 'Barasat, Kolkata',
+            developer: 'Swaramayi Partner Developer',
+            latitude: '22.722361° N',
+            longitude: '88.493403° E'
+          }];
+        }
+      }
 
-    const stopsData = orderedStops.map((stop, idx) => ({
-      stopId: `SRM-VSTOP-2026-0002${idx + 1}`,
-      costSheetId: stop.costSheetId,
-      propertyId: stop.propertyId,
-      propertyCode: stop.propertyCode,
-      propertyTitle: stop.propertyTitle,
-      locality: stop.locality,
-      developer: stop.developer,
-      latitude: stop.latitude,
-      longitude: stop.longitude,
-      address: `${stop.propertyTitle}, ${stop.locality}`,
-      timeWindow: `0${10 + idx}:00 AM - 11:30 AM`,
-      scheduledTime: `0${10 + idx}:20 AM`,
-      durationMinutes: 45,
-      distanceFromPrev: `${(3.2 + idx * 0.8).toFixed(1)} KM`,
-      etaMinutes: 10 + idx * 2,
-      status: idx === 0 ? 'VISIT_STARTED' : 'PENDING',
-      otpVerified: false,
-      geofenceVerified: false,
-      arrivalTime: '',
-      completionTime: '',
-      feedbackRating: 0,
-      feedbackRemarks: '',
-      skipReason: ''
-    }));
+      if (stopsToUse.length === 0) {
+        alert('⚠️ Please select at least one property/cost sheet to create a Visit Schedule.');
+        return;
+      }
 
-    const newPlan = {
-      visitPlanId: masterScheduleId,
-      visitScheduleId: masterScheduleId,
-      customerName: targetCustName,
-      customerNumber: targetCustomerId,
-      mobile: targetCustMobile,
-      matchingId: 'SRM-MAT-2026-000421',
-      officeName: (branches && branches.length > 0 ? (branches.find((b: any) => b.id === 'BR-01' || (b.branch_name && b.branch_name.includes('Head Office'))) || branches[0]) : null)?.branch_name || 'Head Office (Kolkata)',
-      officeAddress: (branches && branches.length > 0 ? (branches.find((b: any) => b.id === 'BR-01' || (b.branch_name && b.branch_name.includes('Head Office'))) || branches[0]) : null)?.address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129',
-      assignedExecutive: assignedExec,
-      assignedExecutivePhone: '+91 98490 00014',
-      visitDate: visitDate,
-      startTime: startTime,
-      status: 'ASSIGNED',
-      transport: transportMode || '🏎️ Self Driving / Direct Arrival at Site',
-      pickupAddress: pickupAddress || '',
-      pickupLat: '22.720500° N',
-      pickupLng: '88.485000° E',
-      pickupStatus: 'PENDING',
-      pickupTime: pickupTime,
-      dropAddress: dropAddress || '',
-      dropLat: '22.725000° N',
-      dropLng: '88.498000° E',
-      dropStatus: 'PENDING',
-      currentStopIndex: 0,
-      autoNavigateNext: true,
-      totalDistanceKm: `${(4.5 * stopsData.length).toFixed(1)} KM`,
-      totalDurationMinutes: 45 * stopsData.length + 30,
-      delayStatus: '🟢 ON SCHEDULE',
-      deviationStatus: '🟢 ON ROUTE',
-      stops: stopsData,
-      auditLogs: [
-        { time: new Date().toLocaleTimeString(), user: 'Admin (BM)', action: 'VISIT_SCHEDULE_CREATED', details: `Created Master Visit Schedule ID ${masterScheduleId} with ${stopsData.length} stops` },
-        { time: new Date().toLocaleTimeString(), user: 'Ramesh Pawar (Field Exec)', action: 'VISIT_SCHEDULE_ASSIGNED', details: `Assigned Sales Executive to Visit Schedule ${masterScheduleId}` },
-        { time: new Date().toLocaleTimeString(), user: 'System AI Engine', action: 'ROUTE_OPTIMIZED', details: 'Optimized multi-property route based on GPS distance & time windows' }
-      ]
-    };
+      // 2. Generate Master Schedule ID safely
+      const existingVisitNumbers: number[] = [];
+      const extractSeq = (item: any) => {
+        if (!item) return;
+        const idStr = String(item.visitPlanId || item.visitScheduleId || item.visitId || item.id || '');
+        const match = idStr.match(/SRM-VS-2026-(\d+)/);
+        if (match && match[1]) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > 0) {
+            if (num >= 87 && num <= 90) return; // ignore artificial legacy 87/88 offset
+            existingVisitNumbers.push(num);
+          }
+        }
+      };
 
-    setVisitPlans((prev: any[]) => [newPlan, ...prev]);
+      if (Array.isArray(visitPlans)) visitPlans.forEach(extractSeq);
+      if (Array.isArray(scheduledVisits)) scheduledVisits.forEach(extractSeq);
 
-    const propertyTitleDisplay = stopsData.length === 1 
-      ? stopsData[0].propertyTitle 
-      : `${stopsData[0]?.propertyTitle || 'Property'} (+${stopsData.length - 1} more: ${stopsData.slice(1).map(s => s.propertyTitle).join(', ')})`;
+      try {
+        const storedPlans = JSON.parse(localStorage.getItem('swaramayi_visit_plans_v7_clean') || '[]');
+        if (Array.isArray(storedPlans)) storedPlans.forEach(extractSeq);
+        const storedVisits = JSON.parse(localStorage.getItem('swaramayi_scheduled_visits_v7_clean') || '[]');
+        if (Array.isArray(storedVisits)) storedVisits.forEach(extractSeq);
+      } catch (e) {}
 
-    const singleVisitSummary = {
-      visitId: masterScheduleId,
-      costSheetId: selectedCsIds[0],
-      customerName: targetCustName,
-      customerNumber: targetCustomerId,
-      mobile: targetCustMobile,
-      propertyTitle: propertyTitleDisplay,
-      propertyCode: stopsData[0]?.propertyCode,
-      locality: stopsData[0]?.locality,
-      visitDate: visitDate,
-      visitTime: startTime,
-      assignedExecutive: assignedExec,
-      transport: transportMode,
-      status: 'ASSIGNED',
-      conflictStatus: '🟢 NO OVERLAP CONFLICT',
-      totalStops: stopsData.length,
-      stops: stopsData
-    };
+      const maxSeq = existingVisitNumbers.length > 0 ? Math.max(0, ...existingVisitNumbers) : 0;
+      const nextPlanNum = maxSeq + 1;
+      const masterScheduleId = `SRM-VS-2026-${String(nextPlanNum).padStart(6, '0')}`;
 
-    setScheduledVisits((prev: any[]) => [singleVisitSummary, ...prev]);
+      // 3. Construct Stop Details
+      const stopsData = stopsToUse.map((stop: any, idx: number) => ({
+        stopId: `SRM-VSTOP-2026-${String(idx + 1).padStart(6, '0')}`,
+        costSheetId: stop?.costSheetId || `CS-${idx + 1}`,
+        propertyId: stop?.propertyId || `PROP-0${idx + 1}`,
+        propertyCode: stop?.propertyCode || `PROP-0${idx + 1}`,
+        propertyTitle: stop?.propertyTitle || 'Property Site',
+        locality: stop?.locality || 'Barasat, Kolkata',
+        developer: stop?.developer || 'Swaramayi Partner Developer',
+        latitude: stop?.latitude || '22.722361° N',
+        longitude: stop?.longitude || '88.493403° E',
+        address: `${stop?.propertyTitle || 'Property Site'}, ${stop?.locality || 'Barasat, Kolkata'}`,
+        timeWindow: `0${10 + idx}:00 AM - 11:30 AM`,
+        scheduledTime: `0${10 + idx}:20 AM`,
+        durationMinutes: 45,
+        distanceFromPrev: `${(3.2 + idx * 0.8).toFixed(1)} KM`,
+        etaMinutes: 10 + idx * 2,
+        status: idx === 0 ? 'VISIT_STARTED' : 'PENDING',
+        otpVerified: false,
+        geofenceVerified: false,
+        arrivalTime: '',
+        completionTime: '',
+        feedbackRating: 0,
+        feedbackRemarks: '',
+        skipReason: ''
+      }));
 
-    setIndividualCostSheets((prev: any[]) => prev.map(sheet => 
-      selectedCsIds.includes(sheet.costSheetId)
-        ? { ...sheet, status: 'CONVERTED_TO_VISIT', visitId: masterScheduleId }
-        : sheet
-    ));
+      // 4. Resolve Target Office
+      const targetOffice = (Array.isArray(branches) && branches.length > 0)
+        ? (branches.find((b: any) => b && (b.id === 'BR-01' || (typeof b.branch_name === 'string' && b.branch_name.includes('Head Office')))) || branches[0])
+        : null;
 
-    setCreatedSuccess(newPlan);
+      // 5. Construct Complete Visit Plan
+      const newPlan = {
+        visitPlanId: masterScheduleId,
+        visitScheduleId: masterScheduleId,
+        customerName: targetCustName || 'Valued Customer',
+        customerNumber: targetCustomerId || 'SRM-CUS-2026-000192',
+        mobile: targetCustMobile || '',
+        matchingId: 'SRM-MAT-2026-000421',
+        officeName: targetOffice?.branch_name || 'Head Office (Kolkata)',
+        officeAddress: targetOffice?.address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129',
+        assignedExecutive: assignedExec || 'Avishek Das (Super Admin)',
+        assignedExecutivePhone: '+91 98490 00014',
+        visitDate: visitDate || new Date().toISOString().split('T')[0],
+        startTime: startTime || '10:00 AM',
+        status: 'ASSIGNED',
+        transport: transportMode || '🚗 Cab Pick & Drop Needed',
+        pickupAddress: pickupAddress || '',
+        pickupLat: '22.720500° N',
+        pickupLng: '88.485000° E',
+        pickupStatus: 'PENDING',
+        pickupTime: pickupTime || '10:00 AM',
+        dropAddress: dropAddress || '',
+        dropLat: '22.725000° N',
+        dropLng: '88.498000° E',
+        dropStatus: 'PENDING',
+        currentStopIndex: 0,
+        autoNavigateNext: true,
+        totalDistanceKm: `${(4.5 * stopsData.length).toFixed(1)} KM`,
+        totalDurationMinutes: 45 * stopsData.length + 30,
+        delayStatus: '🟢 ON SCHEDULE',
+        deviationStatus: '🟢 ON ROUTE',
+        stops: stopsData,
+        auditLogs: [
+          { time: new Date().toLocaleTimeString(), user: 'Admin (BM)', action: 'VISIT_SCHEDULE_CREATED', details: `Created Master Visit Schedule ID ${masterScheduleId} with ${stopsData.length} stops` },
+          { time: new Date().toLocaleTimeString(), user: assignedExec || 'Executive', action: 'VISIT_SCHEDULE_ASSIGNED', details: `Assigned Sales Executive to Visit Schedule ${masterScheduleId}` },
+          { time: new Date().toLocaleTimeString(), user: 'System AI Engine', action: 'ROUTE_OPTIMIZED', details: 'Optimized multi-property route based on GPS distance & time windows' }
+        ]
+      };
+
+      // 6. Update Visit Plans State & Storage
+      if (setVisitPlans) {
+        setVisitPlans((prev: any[]) => {
+          const cur = Array.isArray(prev) ? prev : [];
+          const filtered = cur.filter((p: any) => p && (p.visitPlanId !== masterScheduleId && p.visitScheduleId !== masterScheduleId));
+          const updated = [newPlan, ...filtered];
+          try {
+            localStorage.setItem('swaramayi_visit_plans_v7_clean', JSON.stringify(updated));
+          } catch (e) {
+            console.error('Error persisting visit plans:', e);
+          }
+          return updated;
+        });
+      }
+
+      // 7. Construct and Update Scheduled Visits Summary
+      const propertyTitleDisplay = stopsData.length === 1 
+        ? stopsData[0].propertyTitle 
+        : `${stopsData[0]?.propertyTitle || 'Property'} (+${stopsData.length - 1} more: ${stopsData.slice(1).map(s => s?.propertyTitle || 'Property').join(', ')})`;
+
+      const effectiveCsIds = (Array.isArray(selectedCsIds) && selectedCsIds.length > 0)
+        ? selectedCsIds
+        : stopsData.map(s => s.costSheetId);
+
+      const singleVisitSummary = {
+        visitId: masterScheduleId,
+        costSheetId: effectiveCsIds[0] || stopsData[0]?.costSheetId,
+        customerName: targetCustName || 'Valued Customer',
+        customerNumber: targetCustomerId || 'SRM-CUS-2026-000192',
+        mobile: targetCustMobile || '',
+        propertyTitle: propertyTitleDisplay,
+        propertyCode: stopsData[0]?.propertyCode || '',
+        locality: stopsData[0]?.locality || '',
+        visitDate: visitDate || new Date().toISOString().split('T')[0],
+        visitTime: startTime || '10:00 AM',
+        assignedExecutive: assignedExec || 'Avishek Das (Super Admin)',
+        transport: transportMode || '🚗 Cab Pick & Drop Needed',
+        status: 'ASSIGNED',
+        conflictStatus: '🟢 NO OVERLAP CONFLICT',
+        totalStops: stopsData.length,
+        stops: stopsData
+      };
+
+      if (setScheduledVisits) {
+        setScheduledVisits((prev: any[]) => {
+          const cur = Array.isArray(prev) ? prev : [];
+          const filtered = cur.filter((v: any) => v && (v.visitId !== masterScheduleId && v.visitScheduleId !== masterScheduleId));
+          const updated = [singleVisitSummary, ...filtered];
+          try {
+            localStorage.setItem('swaramayi_scheduled_visits_v7_clean', JSON.stringify(updated));
+          } catch (e) {
+            console.error('Error persisting scheduled visits:', e);
+          }
+          return updated;
+        });
+      }
+
+      // 8. Update Individual Cost Sheets
+      if (setIndividualCostSheets) {
+        setIndividualCostSheets((prev: any[]) => {
+          const cur = Array.isArray(prev) ? prev : [];
+          const updated = cur.map((sheet: any) => {
+            if (!sheet) return sheet;
+            if (effectiveCsIds.includes(sheet.costSheetId) || effectiveCsIds.includes(sheet.id)) {
+              return { ...sheet, status: 'CONVERTED_TO_VISIT', visitId: masterScheduleId };
+            }
+            return sheet;
+          });
+          try {
+            localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updated));
+            localStorage.setItem('swaramayi_individual_cost_sheets_v7_clean', JSON.stringify(updated));
+          } catch (e) {
+            console.error('Error persisting individual cost sheets:', e);
+          }
+          return updated;
+        });
+      }
+
+      // 9. Update Matching Requests Queue
+      if (setMatchingRequestsQueue) {
+        setMatchingRequestsQueue((prev: any[]) => {
+          const cur = Array.isArray(prev) ? prev : [];
+          const cleanTargetMob = String(targetCustMobile || '').replace(/\D/g, '');
+          const updated = cur.map((req: any) => {
+            if (!req) return req;
+            const cleanCustNum = String(req.customerNumber || '');
+            const cleanReqMob = String(req.mobile || '').replace(/\D/g, '');
+
+            const isTarget = (cleanCustNum && cleanCustNum === targetCustomerId) ||
+                             (cleanTargetMob && cleanReqMob && cleanReqMob === cleanTargetMob);
+            if (isTarget) {
+              return {
+                ...req,
+                status: 'CONVERTED_TO_VISIT',
+                visitId: masterScheduleId,
+                costSheetId: effectiveCsIds[0] || req.costSheetId,
+                handoffNote: undefined
+              };
+            }
+            return req;
+          });
+          try {
+            localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(updated));
+            localStorage.setItem('swaramayi_matching_queue_v3_clean', JSON.stringify(updated));
+          } catch (e) {
+            console.error('Error persisting matching queue:', e);
+          }
+          return updated;
+        });
+      }
+
+      // 10. Automatically select the newly created schedule and show success dialog
+      if (setSelectedVisitPlanId) {
+        setSelectedVisitPlanId(masterScheduleId);
+      }
+
+      setCreatedSuccess(newPlan);
+    } catch (err: any) {
+      console.error('Error creating visit schedule:', err);
+      alert('⚠️ Error creating visit schedule: ' + (err?.message || err));
+    }
   };
 
   if (createdSuccess) {
@@ -1491,6 +1651,9 @@ function ScheduleVisitModalContent({
               onClick={() => {
                 setCreatedSuccess(null);
                 setShowScheduleVisitModal(null);
+                if (setSelectedVisitPlanId) setSelectedVisitPlanId(createdSuccess.visitScheduleId);
+                if (setActiveTab) setActiveTab('visit_management');
+                if (setActiveVisitSubTab) setActiveVisitSubTab('visit_route_planner');
               }} 
             />
           </div>
@@ -1526,39 +1689,46 @@ function ScheduleVisitModalContent({
 
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '16px' }}>
             <button 
+              type="button"
               onClick={() => {
                 setCreatedSuccess(null);
                 setShowScheduleVisitModal(null);
+                if (setSelectedVisitPlanId) setSelectedVisitPlanId(createdSuccess.visitScheduleId);
+                if (setActiveTab) setActiveTab('visit_management');
+                if (setActiveVisitSubTab) setActiveVisitSubTab('visit_route_planner');
               }}
               style={{ background: isLight ? '#f1f5f9' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer' }}
             >
               ✖ CLOSE
             </button>
             <button 
+              type="button"
               onClick={() => {
                 setCreatedSuccess(null);
                 setShowScheduleVisitModal(null);
-                setSelectedVisitPlanId(createdSuccess.visitScheduleId);
-                setActiveTab('visit_management');
-                setActiveVisitSubTab('visit_route_planner');
+                if (setSelectedVisitPlanId) setSelectedVisitPlanId(createdSuccess.visitScheduleId);
+                if (setActiveTab) setActiveTab('visit_management');
+                if (setActiveVisitSubTab) setActiveVisitSubTab('visit_route_planner');
               }}
               style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer' }}
             >
               👁️ VIEW VISIT SCHEDULE DETAIL
             </button>
             <button 
+              type="button"
               onClick={() => {
                 setCreatedSuccess(null);
                 setShowScheduleVisitModal(null);
-                setSelectedVisitPlanId(createdSuccess.visitScheduleId);
-                setActiveTab('visit_management');
-                setActiveVisitSubTab('visit_route_planner');
+                if (setSelectedVisitPlanId) setSelectedVisitPlanId(createdSuccess.visitScheduleId);
+                if (setActiveTab) setActiveTab('visit_management');
+                if (setActiveVisitSubTab) setActiveVisitSubTab('visit_route_planner');
               }}
               style={{ background: '#a855f7', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer' }}
             >
               🗺️ VIEW ROUTE MAP
             </button>
             <button 
+              type="button"
               onClick={() => {
                 const msg = `📱 *SWARAMAYI CRM — NEW VISIT SCHEDULE DISPATCH*\n\n` +
                   `*Visit Schedule ID*: ${createdSuccess.visitScheduleId}\n` +
@@ -1634,7 +1804,7 @@ function ScheduleVisitModalContent({
           </div>
           <div>
             <span style={{ fontSize: '0.7rem', color: '#fbbf24', fontWeight: '800', textTransform: 'uppercase' }}>ELIGIBLE COST SHEETS IN VAULT</span>
-            <h4 style={{ color: '#4ade80', fontWeight: '900', fontSize: '0.95rem', marginTop: '2px' }}>{eligibleCostSheets.length} Cost Sheets Available</h4>
+            <h4 style={{ color: '#4ade80', fontWeight: '900', fontSize: '0.95rem', marginTop: '2px' }}>{(eligibleCostSheets || []).length} Cost Sheets Available</h4>
             <span style={{ color: '#cbd5e1', fontSize: '0.75rem' }}>Select multiple properties below to include in single Visit Schedule ID</span>
           </div>
         </div>
@@ -1646,21 +1816,23 @@ function ScheduleVisitModalContent({
           </h4>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            {eligibleCostSheets.map((cs: any) => {
-              const isChecked = selectedCsIds.includes(cs.costSheetId);
+            {(eligibleCostSheets || []).map((cs: any) => {
+              if (!cs) return null;
+              const csId = cs.costSheetId || cs.id;
+              const isChecked = selectedCsIds.includes(csId);
               const title = cs.propertySnapshot?.propertyTitle || cs.propertyCode || 'Property';
 
               return (
                 <div 
-                  key={cs.costSheetId}
-                  onClick={() => handleToggleCs(cs.costSheetId)}
+                  key={csId}
+                  onClick={() => handleToggleCs(csId)}
                   style={{ background: isChecked ? 'rgba(168, 85, 247, 0.15)' : '#0f172a', border: isChecked ? '2px solid #a855f7' : '1px solid #334155', borderRadius: '10px', padding: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
                 >
                   <input type="checkbox" checked={isChecked} readOnly style={{ width: '18px', height: '18px', accentColor: '#a855f7' }} />
                   <div>
-                    <span style={{ fontFamily: 'monospace', color: '#fbbf24', fontSize: '0.75rem', fontWeight: '900' }}>{cs.costSheetId}</span>
+                    <span style={{ fontFamily: 'monospace', color: '#fbbf24', fontSize: '0.75rem', fontWeight: '900' }}>{csId}</span>
                     <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', fontSize: '0.85rem' }}>{title}</h4>
-                    <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>Locality: {cs.propertySnapshot?.locality || 'Hyderabad'}</span>
+                    <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>Locality: {cs.propertySnapshot?.locality || 'Barasat, Kolkata'}</span>
                   </div>
                 </div>
               );
@@ -1793,8 +1965,9 @@ function ScheduleVisitModalContent({
 
         {/* MODAL FOOTER BUTTONS */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '14px' }}>
-          <button onClick={() => setShowScheduleVisitModal(null)} style={{ background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem' }}>Cancel</button>
+          <button type="button" onClick={() => setShowScheduleVisitModal(null)} style={{ background: '#334155', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem' }}>Cancel</button>
           <button 
+            type="button"
             onClick={handleConfirmCreate}
             style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '10px 24px', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
@@ -2383,7 +2556,7 @@ function PvaVerificationModalContent({
   const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
   const safePlan = plan || {
     visitPlanId: 'SRM-VP-2026-000001',
-    visitScheduleId: 'SRM-VS-2026-000087',
+    visitScheduleId: 'SRM-VS-2026-000001',
     customerName: 'Customer',
     customerNumber: 'SRM-CUS-2026-000184',
     mobile: '+91 98490 12345',
@@ -2464,7 +2637,7 @@ function PvaVerificationModalContent({
 
     const newPva = {
       projectVisitAgreementId: pvaId,
-      visitScheduleId: safePlan.visitPlanId || safePlan.visitScheduleId || 'SRM-VS-2026-000087',
+      visitScheduleId: safePlan.visitPlanId || safePlan.visitScheduleId || 'SRM-VS-2026-000001',
       visitStopId: safeStop.stopId || 'SRM-VSTOP-2026-000001',
       customerId: safePlan.customerNumber || 'SRM-CUS-2026-000184',
       customerName: safePlan.customerName || 'Customer',
@@ -3845,8 +4018,25 @@ export default function App() {
     let checkin = v.gps_checkin;
     if (!checkin || isHyd(checkin)) checkin = '22.722361° N, 88.493403° E (Verified)';
 
+    let vId = v.visitId;
+    let vSchedId = v.visitScheduleId;
+    let vPlanId = v.visitPlanId;
+
+    const cleanStops = (v.stops || []).map((s: any) => {
+      if (!s) return s;
+      let sId = s.stopId || '';
+      if (typeof sId === 'string' && sId.includes('00021')) {
+        sId = sId.replace('00021', '000001');
+      }
+      return { ...s, stopId: sId };
+    });
+
     return {
       ...v,
+      visitId: vId || v.visitId,
+      visitScheduleId: vSchedId || v.visitScheduleId,
+      visitPlanId: vPlanId || v.visitPlanId,
+      stops: cleanStops.length > 0 ? cleanStops : v.stops,
       locality: loc,
       address: addr,
       latitude: lat,
@@ -3890,6 +4080,9 @@ export default function App() {
       return s.includes('hyderabad') || s.includes('kondapur') || (s.includes('17.4') && s.includes('78.3'));
     };
 
+    let pId = p.visitPlanId;
+    let pSchedId = p.visitScheduleId;
+
     let newPickup = p.pickupAddress || '';
     if (isHyd(newPickup)) newPickup = '';
 
@@ -3918,11 +4111,17 @@ export default function App() {
       if (!sLng || isHyd(sLng) || isHyd(s.address)) sLng = '88.493403° E';
       let sAddr = s.address;
       if (isHyd(sAddr)) sAddr = s.locality || 'Barasat Site';
-      return { ...s, latitude: sLat, longitude: sLng, address: sAddr };
+      let sId = s.stopId || '';
+      if (typeof sId === 'string' && sId.includes('00021')) {
+        sId = sId.replace('00021', '000001');
+      }
+      return { ...s, stopId: sId || s.stopId, latitude: sLat, longitude: sLng, address: sAddr };
     });
 
     return {
       ...p,
+      visitPlanId: pId || p.visitPlanId,
+      visitScheduleId: pSchedId || p.visitScheduleId,
       transport: newTransport,
       pickupAddress: newPickup,
       dropAddress: newDrop,
@@ -3987,19 +4186,6 @@ export default function App() {
 
   useEffect(() => {
     try {
-      const dataKeysToClear = [
-        'swaramayi_customers_v7_clean',
-        'swaramayi_customers_master_v3_clean',
-        'swaramayi_project_visit_agreements_v7_clean',
-        'swaramayi_project_visit_agreements_v2_clean',
-        'swaramayi_agreements_vault_v5_clean',
-        'swaramayi_bookings_v3_clean',
-        'swaramayi_invoices_v6'
-      ];
-      dataKeysToClear.forEach(k => {
-        try { localStorage.removeItem(k); } catch(e) {}
-      });
-
       const keys = Object.keys(localStorage);
       for (const key of keys) {
         if (key && key.startsWith('swaramayi_')) {
@@ -6563,22 +6749,74 @@ export default function App() {
       return updated;
     });
 
-    // 2. Update individualCostSheets to mark cost sheets for this customer/matchId as SHIFTED_TO_MATCHING
-    setIndividualCostSheets((prev: any[]) => prev.map((cs: any) => {
-      const csCustId = cs.customerId || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber;
-      const csMatchId = cs.matchingId || cs.requestId;
-      const csMob = cs.customerSnapshot?.mobile || cs.mobile || '';
-      const csCleanMob = csMob.replace(/\D/g, '');
-      if ((custId && csCustId === custId) || (matchId && csMatchId === matchId) || (cleanMob && csCleanMob && csCleanMob === cleanMob)) {
-        return { ...cs, status: 'SHIFTED_TO_MATCHING' };
-      }
-      return cs;
-    }));
+    // 2. REMOVE from scheduledVisits & visitPlans so customer does NOT stay in Visit Management
+    setScheduledVisits((prev: any[]) => {
+      const updated = (prev || []).filter(sv => {
+        const svCustNo = (sv.customerNumber || sv.customerId || '').toString().toLowerCase().trim();
+        const svMob = (sv.mobile || '').toString().replace(/\D/g, '');
+        const svVisitId = (sv.visitId || sv.id || sv.visitScheduleId || '').toString().toLowerCase().trim();
+        const svMatchId = (sv.matchId || sv.matchingId || '').toString().toLowerCase().trim();
+        const svCostSheetId = (sv.costSheetId || '').toString().toLowerCase().trim();
+        const targetVisitId = (item.visitId || item.visitPlanId || item.visitScheduleId || '').toString().toLowerCase().trim();
+        const targetCostSheetId = (item.costSheetId || '').toString().toLowerCase().trim();
 
-    // 3. Set filter to PENDING_ONLY
+        if (targetVisitId && svVisitId && (svVisitId === targetVisitId || svVisitId.includes(targetVisitId))) return false;
+        if (targetCostSheetId && svCostSheetId && svCostSheetId === targetCostSheetId) return false;
+        if (custId && svCustNo && (svCustNo === custId.toLowerCase() || svCustNo.includes(custId.toLowerCase()))) return false;
+        if (cleanMob && svMob && svMob.length >= 7 && (svMob === cleanMob || svMob.includes(cleanMob))) return false;
+        if (matchId && svMatchId && svMatchId === matchId.toLowerCase()) return false;
+        return true;
+      });
+      try {
+        localStorage.setItem('swaramayi_scheduled_visits_v7_clean', JSON.stringify(updated.map(sanitizeScheduledVisit)));
+      } catch (e) {
+        console.error('Error saving scheduled visits after shift to matching:', e);
+      }
+      return updated;
+    });
+
+    setVisitPlans((prev: any[]) => {
+      const updated = (prev || []).filter(vp => {
+        const vpCustNo = (vp.customerNumber || vp.customerId || '').toString().toLowerCase().trim();
+        const vpMob = (vp.mobile || '').toString().replace(/\D/g, '');
+        const vpPlanId = (vp.visitPlanId || vp.visitScheduleId || vp.id || '').toString().toLowerCase().trim();
+        const targetPlanId = (item.visitPlanId || item.visitScheduleId || item.visitId || '').toString().toLowerCase().trim();
+
+        if (targetPlanId && vpPlanId && (vpPlanId === targetPlanId || vpPlanId.includes(targetPlanId))) return false;
+        if (custId && vpCustNo && (vpCustNo === custId.toLowerCase() || vpCustNo.includes(custId.toLowerCase()))) return false;
+        if (cleanMob && vpMob && vpMob.length >= 7 && (vpMob === cleanMob || vpMob.includes(cleanMob))) return false;
+        return true;
+      });
+      try {
+        localStorage.setItem('swaramayi_visit_plans_v7_clean', JSON.stringify(updated.map(sanitizePlanObj)));
+      } catch (e) {
+        console.error('Error saving visit plans after shift to matching:', e);
+      }
+      return updated;
+    });
+
+    // 3. Update individualCostSheets to mark cost sheets for this customer/matchId as SHIFTED_TO_MATCHING
+    setIndividualCostSheets((prev: any[]) => {
+      const updated = prev.map((cs: any) => {
+        const csCustId = cs.customerId || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber;
+        const csMatchId = cs.matchingId || cs.requestId;
+        const csMob = cs.customerSnapshot?.mobile || cs.mobile || '';
+        const csCleanMob = csMob.replace(/\D/g, '');
+        if ((custId && csCustId === custId) || (matchId && csMatchId === matchId) || (cleanMob && csCleanMob && csCleanMob === cleanMob)) {
+          return { ...cs, status: 'SHIFTED_TO_MATCHING', visitId: undefined };
+        }
+        return cs;
+      });
+      try {
+        localStorage.setItem('swaramayi_individual_cost_sheets_v7_clean', JSON.stringify(updated));
+      } catch (e) { console.error(e); }
+      return updated;
+    });
+
+    // 4. Set filter to PENDING_ONLY
     setMatchingVaultFilter('PENDING_ONLY');
 
-    // 4. Select matching ID and customer
+    // 5. Select matching ID and customer
     setSelectedMatchingId(matchId);
     let targetCust = customers.find((c: any) => 
       (c.customer_number && c.customer_number === custId) ||
@@ -6601,12 +6839,140 @@ export default function App() {
       setSelectedCust(targetCust);
     }
 
-    // 5. Close modal and switch tab to Matching Management (Smart AI Matcher)
+    // 6. Close modal and switch tab to Matching Management (Smart AI Matcher)
     setShowShiftToMatchingModal(null);
+    if (searchQuery) setSearchQuery('');
     setActiveTab('matching_management');
     setActiveMatchingSubTab('ai_matching_engine');
 
-    alert(`⚡ SHIFTED BACK TO MATCHING MANAGEMENT (PENDING QUEUE) FOR ${custName} (${matchId})\n\n📌 Handoff Note Logged:\n"${handoffNote || 'No note specified'}"\n\nStatus set to PENDING. You are now in Matching Management workspace.`);
+    alert(`⚡ SHIFTED BACK TO MATCHING MANAGEMENT (PENDING QUEUE) FOR ${custName} (${matchId})\n\n📌 Handoff Note Logged:\n"${handoffNote || 'No note specified'}"\n\n• Customer removed from Visit Management\n• Customer queued as PENDING in Matching Management workspace.`);
+  };
+
+  // RETURN VISIT TO COST SHEET SHARING WORKFLOW
+  const handleReturnVisitToCostSheet = (visitItem: any) => {
+    if (!visitItem) return;
+
+    const custName = visitItem.customerName || visitItem.name || 'Customer';
+    const custId = visitItem.customerNumber || visitItem.customerId || '';
+    const mob = visitItem.mobile || visitItem.customerMobile || '';
+    const cleanMob = mob.replace(/\D/g, '');
+    const visitId = visitItem.visitId || visitItem.visitPlanId || visitItem.visitScheduleId || visitItem.id || '';
+    const costSheetId = visitItem.costSheetId || (visitItem.stops && visitItem.stops[0]?.costSheetId) || '';
+
+    const timestamp = new Date().toLocaleString('en-IN');
+
+    // 1. Remove visit from scheduledVisits
+    setScheduledVisits((prev: any[]) => {
+      const updated = (prev || []).filter(sv => {
+        const svId = (sv.visitId || sv.id || sv.visitScheduleId || '').toString().trim().toLowerCase();
+        const svCostSheet = (sv.costSheetId || '').toString().trim().toLowerCase();
+        const svCustNo = (sv.customerNumber || sv.customerId || '').toString().trim().toLowerCase();
+        const svMob = (sv.mobile || '').toString().replace(/\D/g, '');
+
+        if (visitId && svId && (svId === visitId.toLowerCase() || svId.includes(visitId.toLowerCase()))) return false;
+        if (costSheetId && svCostSheet && svCostSheet === costSheetId.toLowerCase()) return false;
+        if (custId && svCustNo && svCustNo === custId.toLowerCase()) return false;
+        if (cleanMob && svMob && svMob.length >= 7 && svMob === cleanMob) return false;
+        return true;
+      });
+      try {
+        localStorage.setItem('swaramayi_scheduled_visits_v7_clean', JSON.stringify(updated.map(sanitizeScheduledVisit)));
+      } catch (e) { console.error(e); }
+      return updated;
+    });
+
+    // 2. Remove visit from visitPlans
+    setVisitPlans((prev: any[]) => {
+      const updated = (prev || []).filter(vp => {
+        const vpId = (vp.visitPlanId || vp.visitScheduleId || vp.id || '').toString().trim().toLowerCase();
+        const vpCustNo = (vp.customerNumber || vp.customerId || '').toString().trim().toLowerCase();
+        const vpMob = (vp.mobile || '').toString().replace(/\D/g, '');
+
+        if (visitId && vpId && (vpId === visitId.toLowerCase() || vpId.includes(visitId.toLowerCase()))) return false;
+        if (custId && vpCustNo && vpCustNo === custId.toLowerCase()) return false;
+        if (cleanMob && vpMob && vpMob.length >= 7 && vpMob === cleanMob) return false;
+        return true;
+      });
+      try {
+        localStorage.setItem('swaramayi_visit_plans_v7_clean', JSON.stringify(updated.map(sanitizePlanObj)));
+      } catch (e) { console.error(e); }
+      return updated;
+    });
+
+    // 3. Restore Cost Sheet in individualCostSheets from CONVERTED_TO_VISIT back to SHARED
+    setIndividualCostSheets((prev: any[]) => {
+      let restoredAny = false;
+      const updated = prev.map((cs: any) => {
+        const csId = (cs.costSheetId || cs.id || '').toString().trim().toLowerCase();
+        const csCustId = (cs.customerId || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber || '').toString().trim().toLowerCase();
+        const csMob = (cs.mobile || cs.customerSnapshot?.mobile || '').toString().replace(/\D/g, '');
+        const targetCsId = costSheetId.toLowerCase();
+
+        const isMatch = (targetCsId && csId && (csId === targetCsId || csId.includes(targetCsId))) ||
+                        (custId && csCustId && csCustId === custId.toLowerCase()) ||
+                        (cleanMob && csMob && csMob.length >= 7 && csMob === cleanMob);
+
+        if (isMatch) {
+          restoredAny = true;
+          return {
+            ...cs,
+            status: 'SHARED',
+            visitId: undefined,
+            notes: cs.notes ? `${cs.notes}\n[Returned from Visit on ${timestamp}]` : `[Returned from Visit on ${timestamp}]`
+          };
+        }
+        return cs;
+      });
+
+      // If no existing sheet was found, recreate an active sheet record for this customer
+      if (!restoredAny && (costSheetId || custId)) {
+        updated.unshift({
+          id: costSheetId || `CS-${Date.now()}`,
+          costSheetId: costSheetId || `COST-SHEET-2026-000101`,
+          customerName: custName,
+          customerNumber: custId,
+          mobile: mob,
+          propertyTitle: visitItem.propertyTitle || 'Residential Apartment',
+          propertyCode: visitItem.propertyCode || 'SRM-PROP-2026-000001',
+          status: 'SHARED',
+          visitId: undefined,
+          created_at: new Date().toISOString(),
+          notes: `[Returned from Site Visit on ${timestamp}]`
+        });
+      }
+
+      try {
+        localStorage.setItem('swaramayi_individual_cost_sheets_v7_clean', JSON.stringify(updated));
+      } catch (e) { console.error(e); }
+      return updated;
+    });
+
+    // 4. Update matchingRequestsQueue: status remains/becomes COST_SHEET_CREATED (so it does not show as PENDING in matching)
+    setMatchingRequestsQueue((prev: any[]) => prev.map(req => {
+      const rCustNum = (req.customerNumber || req.customerId || '').toString().trim().toLowerCase();
+      const rMob = (req.mobile || '').toString().replace(/\D/g, '');
+      if ((custId && rCustNum && rCustNum === custId.toLowerCase()) || (cleanMob && rMob && cleanMob === rMob)) {
+        return {
+          ...req,
+          status: 'COST_SHEET_CREATED',
+          costSheetId: costSheetId || req.costSheetId,
+          visitId: undefined,
+          handoffNote: undefined
+        };
+      }
+      return req;
+    }));
+
+    // 5. Navigate to Cost Sheet Sharing workspace
+    setActiveTab('cost_sheet_share');
+    setActiveCostSheetShareSubTab('individual_cost_sheets');
+    if (costSheetId) {
+      setSearchQuery(costSheetId);
+    } else if (custId) {
+      setSearchQuery(custId);
+    }
+
+    alert(`↩️ SUCCESS: Returned ${custName} (${custId || visitId}) to Cost Sheet Sharing!\n\n• Removed visit from Visit Management\n• Reactivated Cost Sheet in Cost Sheet Sharing Vault\n• Switched active workspace to Cost Sheet Sharing.`);
   };
 
   // DELETE ALL CURRENT RECORDS INSIDE FUNCTION
@@ -6699,12 +7065,7 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.map((b: any) => {
-            if (b && typeof b === 'object' && b.booking_code && b.booking_code.includes('000087')) {
-              return { ...b, booking_code: 'SRM-BKG-2026-000001' };
-            }
-            return b;
-          });
+          return parsed;
         }
       }
     } catch (e) {
@@ -7669,14 +8030,7 @@ export default function App() {
               } catch (e) {}
             }
             if (Array.isArray(mData.bookings)) {
-              const cleanBookings = mData.bookings
-                .filter((b: any) => b && typeof b === 'object')
-                .map((b: any) => {
-                  if (b.booking_code && b.booking_code.includes('000087')) {
-                    return { ...b, booking_code: 'SRM-BKG-2026-000001' };
-                  }
-                  return b;
-                });
+              const cleanBookings = mData.bookings.filter((b: any) => b && typeof b === 'object');
               setBookings(cleanBookings);
               try {
                 localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(cleanBookings));
@@ -8113,7 +8467,9 @@ export default function App() {
       const saved = localStorage.getItem('swaramayi_visit_feedbacks_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter(Boolean);
+        }
       }
     } catch (e) {
       console.error('Error reading visit feedbacks from localStorage:', e);
@@ -8160,11 +8516,12 @@ export default function App() {
       const custName = visitItem.customerName || visitItem.customerSnapshot?.customerName || 'Customer';
       const custMobile = visitItem.mobile || visitItem.customerSnapshot?.mobile || '';
       const custCode = visitItem.customerId || visitItem.customerNumber || visitItem.customerSnapshot?.customerNumber || (custMobile ? `SRM-CUS-2026-${custMobile.replace(/\D/g, '').slice(-6)}` : 'SRM-CUS-2026-000001');
-      const visitId = visitItem.visitId || visitItem.id || `SRM-VS-2026-${Date.now().toString().slice(-6)}`;
+      const visitId = visitItem.visitId || visitItem.id || 'SRM-VS-2026-000001';
+      const numPart = (visitId || '').replace(/[^0-9]/g, '').slice(-6) || '000001';
       const exec = visitItem.assignedFieldExecutive || visitItem.assignedExecutive || 'Punita Roy';
 
       setSalesFeedbackForm({
-        feedbackId: `FB-${Date.now().toString().slice(-6)}`,
+        feedbackId: `SRM-VFB-2026-${numPart}`,
         visitId,
         customerName: custName,
         custMobile,
@@ -8192,11 +8549,12 @@ export default function App() {
       const propTitle = defaultVisit?.propertyTitle || (properties[0]?.title || properties[0]?.name) || 'Residential Flat';
       const propCode = defaultVisit?.propertyCode || properties[0]?.property_code || properties[0]?.id || 'SRM-PROP-01';
       const locality = defaultVisit?.locality || properties[0]?.locality || 'Barasat, Kolkata';
-      const visitId = defaultVisit?.visitId || `SRM-VS-2026-${Date.now().toString().slice(-6)}`;
+      const visitId = defaultVisit?.visitId || 'SRM-VS-2026-000001';
+      const numPart = (visitId || '').replace(/[^0-9]/g, '').slice(-6) || '000001';
       const exec = defaultVisit?.assignedFieldExecutive || 'Avishek Das (Super Admin)';
 
       setSalesFeedbackForm({
-        feedbackId: `FB-${Date.now().toString().slice(-6)}`,
+        feedbackId: `SRM-VFB-2026-${numPart}`,
         visitId,
         customerName: custName,
         custMobile,
@@ -8229,10 +8587,16 @@ export default function App() {
 
     const feedbackDetails = (salesFeedbackForm.reason || (salesFeedbackForm as any).executive_notes || (salesFeedbackForm as any).dislike_reason || 'Good visit, customer interested in property.').trim();
 
+    const cleanVisitId = salesFeedbackForm.visitId || 'SRM-VS-2026-000001';
+    const numPart = cleanVisitId.replace(/[^0-9]/g, '').slice(-6) || '000001';
+    const feedbackId = (salesFeedbackForm.feedbackId && !salesFeedbackForm.feedbackId.startsWith('FB-Date'))
+      ? salesFeedbackForm.feedbackId
+      : `SRM-VFB-2026-${numPart}`;
+
     const ratingNum = Number(salesFeedbackForm.rating) || 5;
     const newFb = {
-      id: salesFeedbackForm.feedbackId || `FB-${Date.now().toString().slice(-6)}`,
-      visitId: salesFeedbackForm.visitId || `SRM-VS-2026-${Date.now().toString().slice(-6)}`,
+      id: feedbackId,
+      visitId: cleanVisitId,
       custName: salesFeedbackForm.customerName,
       custMobile: salesFeedbackForm.custMobile,
       custCode: salesFeedbackForm.custCode || (salesFeedbackForm.custMobile ? `SRM-CUS-2026-${salesFeedbackForm.custMobile.replace(/\D/g, '').slice(-6)}` : 'SRM-CUS-2026-000001'),
@@ -8252,42 +8616,84 @@ export default function App() {
       createdAt: salesFeedbackForm.feedback_date || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     };
 
-    setVisitFeedbacks(prev => [newFb, ...(prev || []).filter(f => f.id !== newFb.id && f.visitId !== newFb.visitId)]);
+    setVisitFeedbacks(prev => {
+      const updated = [newFb, ...(prev || []).filter(f => f.id !== newFb.id && f.visitId !== newFb.visitId)];
+      try {
+        localStorage.setItem('swaramayi_visit_feedbacks_v2', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
 
-    // Update scheduledVisits state
-    setScheduledVisits(prev => prev.map(sv => {
-      if (sv.visitId === newFb.visitId || sv.id === newFb.visitId || (sv.customerName === newFb.custName && sv.propertyTitle === newFb.propTitle)) {
-        return {
-          ...sv,
-          feedback: true,
-          feedbackRating: newFb.rating,
-          feedbackSatisfaction: newFb.satisfaction,
-          feedbackRemarks: newFb.reason,
-          buyerIntent: newFb.intent,
-          feedbackLoggedAt: newFb.createdAt
-        };
-      }
-      return sv;
-    }));
+    // Update scheduledVisits state with immediate local persistence
+    setScheduledVisits(prev => {
+      const updated = (prev || []).map(sv => {
+        const isMatch = sv.visitId === newFb.visitId || 
+                        sv.id === newFb.visitId || 
+                        (sv.customerName && newFb.custName && sv.customerName.toLowerCase().trim() === newFb.custName.toLowerCase().trim() && (sv.propertyTitle === newFb.propTitle || !newFb.propTitle)) ||
+                        (sv.mobile && newFb.custMobile && sv.mobile.replace(/\D/g, '') === newFb.custMobile.replace(/\D/g, ''));
+        if (isMatch) {
+          return {
+            ...sv,
+            visitId: sv.visitId || newFb.visitId,
+            feedback: true,
+            feedbackLogged: true,
+            feedbackRating: newFb.rating,
+            feedbackSatisfaction: newFb.satisfaction,
+            feedbackRemarks: newFb.reason,
+            buyerIntent: newFb.intent,
+            feedbackLoggedAt: newFb.createdAt
+          };
+        }
+        return sv;
+      });
+      try {
+        localStorage.setItem('swaramayi_scheduled_visits_v7_clean', JSON.stringify(updated.map(sanitizeScheduledVisit)));
+      } catch (e) {}
+      return updated;
+    });
 
-    // Update visitPlans state
-    setVisitPlans(prev => prev.map(vp => {
-      if (vp.stops && Array.isArray(vp.stops)) {
-        const updatedStops = vp.stops.map((st: any) => {
-          if (st.visitId === newFb.visitId || st.propertyTitle === newFb.propTitle) {
-            return {
-              ...st,
-              feedback: true,
-              feedbackRating: newFb.rating,
-              feedbackRemarks: newFb.reason
-            };
-          }
-          return st;
-        });
+    // Update visitPlans state with immediate local persistence
+    setVisitPlans(prev => {
+      const updated = (prev || []).map(vp => {
+        const isMatchPlan = vp.visitPlanId === newFb.visitId ||
+                            vp.visitScheduleId === newFb.visitId ||
+                            (vp.customerName && newFb.custName && vp.customerName.toLowerCase().trim() === newFb.custName.toLowerCase().trim()) ||
+                            (vp.mobile && newFb.custMobile && vp.mobile.replace(/\D/g, '') === newFb.custMobile.replace(/\D/g, ''));
+        let updatedStops = vp.stops;
+        if (vp.stops && Array.isArray(vp.stops)) {
+          updatedStops = vp.stops.map((st: any) => {
+            if (st.visitId === newFb.visitId || st.propertyTitle === newFb.propTitle || isMatchPlan) {
+              return {
+                ...st,
+                feedback: true,
+                feedbackLogged: true,
+                feedbackRating: newFb.rating,
+                feedbackRemarks: newFb.reason
+              };
+            }
+            return st;
+          });
+        }
+        if (isMatchPlan) {
+          return {
+            ...vp,
+            visitPlanId: vp.visitPlanId || newFb.visitId,
+            visitScheduleId: vp.visitScheduleId || newFb.visitId,
+            feedback: true,
+            feedbackLogged: true,
+            feedbackRating: newFb.rating,
+            feedbackSatisfaction: newFb.satisfaction,
+            feedbackRemarks: newFb.reason,
+            stops: updatedStops
+          };
+        }
         return { ...vp, stops: updatedStops };
-      }
-      return vp;
-    }));
+      });
+      try {
+        localStorage.setItem('swaramayi_visit_plans_v7_clean', JSON.stringify(updated.map(sanitizePlanObj)));
+      } catch (e) {}
+      return updated;
+    });
 
     setShowLogSalesFeedbackModal(false);
     setActiveVisitSubTab('visit_feedback');
@@ -9561,10 +9967,27 @@ export default function App() {
       investment_purpose: newCustomerForm.investment_purpose || 'BUY / OUTRIGHT PURCHASE',
       property_type: newCustomerForm.property_type || 'Flat / Apartment',
       configuration: newCustomerForm.configuration || '2BHK',
+      bhk: newCustomerForm.configuration || '2BHK',
       preferredArea: newCustomerForm.preferredArea || 'Kolkata',
+      secondary_areas: newCustomerForm.secondary_areas || '',
+      secondaryAreas: newCustomerForm.secondary_areas || '',
       budget: newCustomerForm.budget || `₹${newCustomerForm.budget_min || '40'} - ₹${newCustomerForm.budget_max || '80'} Lakhs`,
       budget_min: newCustomerForm.budget_min || '40',
       budget_max: newCustomerForm.budget_max || '80',
+      budget_unit: newCustomerForm.budget_unit || 'Lakhs',
+      budget_flexibility: newCustomerForm.budget_flexibility || 'Strict Fixed (0% Stretch)',
+      carpet_area_min: newCustomerForm.carpet_area_min || '',
+      carpet_area_max: newCustomerForm.carpet_area_max || '',
+      super_builtup_area_min: newCustomerForm.carpet_area_min || '',
+      super_builtup_area_max: newCustomerForm.carpet_area_max || '',
+      area_unit: newCustomerForm.area_unit || 'Sq.Ft.',
+      parking: newCustomerForm.parking || 'Required',
+      parking_type: newCustomerForm.parking_type || newCustomerForm.parking || 'Required',
+      avoided_floors: Array.isArray(newCustomerForm.avoided_floors) ? newCustomerForm.avoided_floors.join(', ') : (newCustomerForm.avoided_floors || newCustomerForm.non_preferred_floor || ''),
+      non_preferred_floor: Array.isArray(newCustomerForm.avoided_floors) ? newCustomerForm.avoided_floors.join(', ') : (newCustomerForm.avoided_floors || newCustomerForm.non_preferred_floor || ''),
+      preferred_floors: Array.isArray(newCustomerForm.preferred_floors) ? newCustomerForm.preferred_floors.join(', ') : (newCustomerForm.preferred_floors || ''),
+      possession_status: newCustomerForm.possession_status || newCustomerForm.property_condition || 'Ready to Move',
+      facing: newCustomerForm.facing || '',
       priority: (newCustomerForm.priority || 'HOT') as any,
       score: newCustomerForm.priority === 'HOT' ? 88 : 72,
       assigned_employee_id: newCustomerForm.assigned_employee_id || 'Avishek Das',
@@ -9611,11 +10034,28 @@ export default function App() {
       mobile: newCustomerForm.mobile || newCustomerForm.phone || '+91 98490 12345',
       email: newCustomerForm.email || '',
       configuration: newCustomerForm.configuration || '2BHK',
+      bhk: newCustomerForm.configuration || '2BHK',
       property_type: newCustomerForm.property_type || 'Flat / Apartment',
       preferredArea: newCustomerForm.preferredArea || newCustomerForm.locality || 'Kolkata',
+      secondary_areas: newCustomerForm.secondary_areas || '',
+      secondaryAreas: newCustomerForm.secondary_areas || '',
       budget: newCustomerForm.budget || `₹${newCustomerForm.budget_min || '40'} - ₹${newCustomerForm.budget_max || '80'} Lakhs`,
       budget_min: Number(newCustomerForm.budget_min) ? Number(newCustomerForm.budget_min) * 100000 : 4000000,
       budget_max: Number(newCustomerForm.budget_max) ? Number(newCustomerForm.budget_max) * 100000 : 8000000,
+      budget_unit: newCustomerForm.budget_unit || 'Lakhs',
+      budget_flexibility: newCustomerForm.budget_flexibility || 'Strict Fixed (0% Stretch)',
+      carpet_area_min: newCustomerForm.carpet_area_min || '',
+      carpet_area_max: newCustomerForm.carpet_area_max || '',
+      super_builtup_area_min: newCustomerForm.carpet_area_min || '',
+      super_builtup_area_max: newCustomerForm.carpet_area_max || '',
+      area_unit: newCustomerForm.area_unit || 'Sq.Ft.',
+      parking: newCustomerForm.parking || 'Required',
+      parking_type: newCustomerForm.parking_type || newCustomerForm.parking || 'Required',
+      avoided_floors: Array.isArray(newCustomerForm.avoided_floors) ? newCustomerForm.avoided_floors.join(', ') : (newCustomerForm.avoided_floors || newCustomerForm.non_preferred_floor || ''),
+      non_preferred_floor: Array.isArray(newCustomerForm.avoided_floors) ? newCustomerForm.avoided_floors.join(', ') : (newCustomerForm.avoided_floors || newCustomerForm.non_preferred_floor || ''),
+      preferred_floors: Array.isArray(newCustomerForm.preferred_floors) ? newCustomerForm.preferred_floors.join(', ') : (newCustomerForm.preferred_floors || ''),
+      possessionStatus: newCustomerForm.possession_status || newCustomerForm.property_condition || 'Ready to Move',
+      facing: newCustomerForm.facing || '',
       status: 'PENDING',
       priority: newCustomerForm.priority || 'HOT',
       score: newCustomerForm.priority === 'HOT' ? 88 : 72,
@@ -9953,7 +10393,7 @@ export default function App() {
     const devName = v.developer || v.developerName || v.developer_name || 'Channel Partner Developer';
     const execName = v.assignedExecutive || v.salesPersonName || v.sales_executive || 'Field Executive';
     const devPhone = v.developerMobile || v.developer_whatsapp || v.developer_phone || '+91 98490 55443';
-    const visitIdStr = v.visitId || v.id || v.visitPlanId || 'SRM-VS-2026-000087';
+    const visitIdStr = v.visitId || v.id || v.visitPlanId || 'SRM-VS-2026-000001';
     const nowStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' at ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
     // Formulate official Developer WhatsApp confirmation message
@@ -10037,318 +10477,538 @@ export default function App() {
     return matchesQuery && matchesLocality && matchesBhk && matchesPriority;
   });
 
-  // Advanced 8-Criteria Real Estate Property Matching Algorithm (With Floor Preference)
-  // Advanced 8-Criteria Real Estate Property Matching Algorithm (With Floor Preference)
-  // Advanced 8-Criteria Real Estate Property Matching Algorithm (Strict Location, Budget & BHK Enforcement)
+  // Advanced 7-Strict-Criteria Real Estate Property Matching Engine (Weighted Matching Index - WMI)
   const calculatePropertyMatchScore = (customer: any, property: any) => {
     let breakdown = {
-      bud: 0,                  // 1. Min-Max Budget Range (25%)
-      loc: 0,                  // 2. Location & Locality Hub (20%)
-      bhk: 0,                  // 3. BHK Configuration (15%)
-      sqft: 8,                 // 4. Square Feet Area (15%)
-      possession_facing: 6,    // 5. Possession & Vastu Facing (10%)
-      floor_pref: 3,           // 6. Floor Preference (5%)
-      type: 3,                 // 7. Property Category Type (5%)
-      condition: 3             // 8. Property Condition & Furnishing (5%)
+      loc: 0,                  // 1. Location & Localities (25%: 25% Primary, 15% Secondary, 0% Outside)
+      bud: 0,                  // 2. Total Price (All Charges) (25%: strictly within budget)
+      bhk: 0,                  // 3. BHK Configuration (15%: Hard filter, exact BHK)
+      floor_pref: 0,           // 4. Floor Avoidance Exclusion (15%: unit on avoided floor drops to 0%)
+      parking: 0,              // 5. Parking Availability (10%: 10% if satisfied/not needed, 0% if missing)
+      sqft: 0,                 // 6. Super Built-up Area (5%: strictly within size range)
+      type: 0                  // 7. Property Category Type (5%: exact structural alignment)
     };
 
-    const parseSingleValToLakhs = (valStr: any): number => {
+    const parseCleanNum = (val: any): number => {
+      if (val === undefined || val === null || val === '') return 0;
+      if (typeof val === 'number') return isNaN(val) ? 0 : val;
+      const s = String(val).replace(/,/g, '').trim();
+      const num = parseFloat(s.replace(/[^0-9.]/g, ''));
+      return isNaN(num) ? 0 : num;
+    };
+
+    // Helper: Convert any customer budget string / value to numeric INR
+    const parseValToInr = (valStr: any, defaultUnit?: string): number => {
       if (valStr === undefined || valStr === null || valStr === '') return 0;
       if (typeof valStr === 'number') {
-        if (valStr >= 100000) return valStr / 100000;
-        return valStr;
+        if (valStr >= 100000) return valStr;
+        return valStr * 100000;
       }
       const s = String(valStr).trim().toLowerCase();
       if (!s) return 0;
-      
-      const cleanNum = parseFloat(s.replace(/[^0-9.]/g, ''));
+
+      const cleanNum = parseFloat(s.replace(/,/g, '').replace(/[^0-9.]/g, ''));
       if (isNaN(cleanNum) || cleanNum <= 0) return 0;
 
-      if (s.includes('crore') || s.includes('cr')) {
-        return cleanNum * 100;
+      if (s.includes('crore') || s.includes('cr') || (defaultUnit && (defaultUnit.toLowerCase().includes('cr') || defaultUnit.toLowerCase().includes('crore')))) {
+        return cleanNum * 10000000;
       }
-      if (cleanNum >= 100000) {
-        return cleanNum / 100000;
+      if (s.includes('lakh') || s.includes('lac') || s.includes('l') || (defaultUnit && (defaultUnit.toLowerCase().includes('lakh') || defaultUnit.toLowerCase().includes('lac')))) {
+        return cleanNum * 100000;
+      }
+      if (cleanNum < 1000) {
+        // e.g. "45" or "80" implies Lakhs in Indian real estate intake
+        return cleanNum * 100000;
       }
       return cleanNum;
     };
 
-    const parseBudgetRangeInLakhs = (customerObj: any): { min: number; max: number } => {
-      let minBud = parseSingleValToLakhs(customerObj?.budget_min);
-      let maxBud = parseSingleValToLakhs(customerObj?.budget_max);
+    // --- 1. LOCATION & LOCALITIES CONSTRAINTS (WMI: 25% Primary, 15% Secondary, 0% Outside) ---
+    // Strictly match properties within customer's specified location. Do not suggest properties outside primary/secondary.
+    const primaryLocRaw = String(customer?.preferredArea || customer?.primary_preferred_location || customer?.preferred_location || '').trim();
+    const secondaryLocRaw = String(customer?.secondary_areas || customer?.secondaryAreas || customer?.secondary_preferred_location || '').trim();
+    const fallbackLocRaw = String(customer?.locality || '').trim();
 
-      if (minBud > 0 && maxBud > 0 && minBud <= maxBud) {
-        return { min: minBud, max: maxBud };
-      }
+    const genericStopWords = new Set([
+      'kolkata', 'calcutta', 'hyderabad', 'bangalore', 'bengaluru', 'mumbai', 'delhi',
+      'west bengal', 'wb', 'india', 'radius:', 'near', 'road', 'street', 'city', 'hub', 'sector', 'ward'
+    ]);
 
-      const bStr = customerObj?.budget ? String(customerObj.budget).trim() : '';
-      if (!bStr) return { min: 0, max: 99999 };
-
-      const parts = bStr.split(/[-–—]|(?:\s+to\s+)|(?:\s*\/\s*)/i).map(s => s.trim()).filter(Boolean);
-
-      if (parts.length >= 2) {
-        let p1 = parseSingleValToLakhs(parts[0]);
-        let p2 = parseSingleValToLakhs(parts[1]);
-
-        const part2Raw = parts[1].toLowerCase();
-        if ((part2Raw.includes('crore') || part2Raw.includes('cr')) && p1 > 0 && p1 < 10) {
-          p1 = p1 * 100;
-        }
-
-        minBud = Math.min(p1, p2);
-        maxBud = Math.max(p1, p2);
-      } else if (parts.length === 1) {
-        const p1 = parseSingleValToLakhs(parts[0]);
-        if (p1 > 0) {
-          minBud = p1 * 0.7;
-          maxBud = p1 * 1.3;
-        }
-      }
-
-      return { min: minBud || 0, max: maxBud || 99999 };
+    // Robust phonetic & alias normalizer for Indian / Kolkata localities
+    // Handles: Barrackpur/Barackpur/Barrackpore, Madhyamgram/Madhamgram, Salt Lake/Saltlake, etc.
+    const normalizeLocalityKey = (str: string): string => {
+      if (!str) return '';
+      return str
+        .toLowerCase()
+        .replace(/\(.*?\)/g, '')
+        .replace(/[^a-z0-9]/g, '') // remove spaces, punctuation, hyphens
+        .replace(/pore\b/g, 'pur')
+        .replace(/pur\b/g, 'pur')
+        .replace(/ck/g, 'k')
+        .replace(/(.)\1+/g, '$1') // collapse double letters: rr -> r, dd -> d, tt -> t, etc.
+        .replace(/y/g, ''); // e.g. madhyamgram -> madhamgram
     };
 
-    // --- 1. STRICT BUDGET CHECK (25%) ---
-    // Evaluates "Total Base price with Others Charges" (Base Asking + Floor Rise + PLC + Clubhouse + Advance Maint + Infrastructure & Legal)
-    const totalBaseWithOthersStr = computeTotalBaseWithOtherCharges(property);
-    const propPriceLakhs = parseSingleValToLakhs(
-      totalBaseWithOthersStr && totalBaseWithOthersStr !== '₹0'
-        ? totalBaseWithOthersStr
-        : (property?.total_base_with_others || property?.final_price || property?.base_price || property?.AskingPrice || property?.price || '')
-    );
-    const { min: minBud, max: maxBud } = parseBudgetRangeInLakhs(customer);
+    const parseLocTokens = (raw: string): string[] => {
+      return raw
+        .split(/[\/,–—|;,]|\s+to\s+|\s*\n\s*/i)
+        .map(s => s.replace(/\(.*?\)/g, '').trim())
+        .filter(s => s.length >= 2 && !genericStopWords.has(s.toLowerCase()));
+    };
 
-    let isBudMatch = true;
-    if (propPriceLakhs > 0) {
-      if (minBud > 0 || maxBud < 99999) {
-        let flexPct = 0.10; // Default 10% flexible
-        const flexStr = (customer?.budget_flexibility || '').toLowerCase();
-        if (flexStr.includes('strict') || flexStr.includes('0%')) flexPct = 0.00;
-        else if (flexStr.includes('5%')) flexPct = 0.05;
-        else if (flexStr.includes('15%')) flexPct = 0.15;
-        else if (flexStr.includes('open') || flexStr.includes('no limit')) flexPct = 0.50;
+    let primaryTokens = parseLocTokens(primaryLocRaw);
+    let secondaryTokens = parseLocTokens(secondaryLocRaw);
 
-        const effectiveMin = minBud > 0 ? minBud * (1 - flexPct) : 0;
-        const effectiveMax = maxBud < 99999 ? maxBud * (1 + flexPct) : 99999;
-
-        if (propPriceLakhs >= minBud && propPriceLakhs <= maxBud) {
-          breakdown.bud = 25;
-        } else if (propPriceLakhs >= effectiveMin && propPriceLakhs <= effectiveMax) {
-          breakdown.bud = 18;
-        } else {
-          breakdown.bud = 0;
-          isBudMatch = false; // STRICT BUDGET MISMATCH
-        }
-      } else {
-        breakdown.bud = 25;
-      }
-    } else {
-      breakdown.bud = 15;
+    // If secondaryLocRaw is empty, but primaryLocRaw has multiple tokens (e.g. "Madhyamgram, Kolkata, New Barackpur")
+    // The 1st non-stopword token is Primary, and subsequent tokens are Secondary!
+    if (secondaryTokens.length === 0 && primaryTokens.length > 1) {
+      secondaryTokens = primaryTokens.slice(1);
+      primaryTokens = [primaryTokens[0]];
     }
 
-    // --- 2. STRICT LOCATION CHECK (20%) ---
-    const custLocStr = [
-      customer?.preferredArea, 
-      customer?.preferred_location, 
-      customer?.secondary_areas, 
-      customer?.locality, 
-      customer?.city
+    if (primaryTokens.length === 0 && secondaryTokens.length === 0 && fallbackLocRaw) {
+      primaryTokens = parseLocTokens(fallbackLocRaw);
+    }
+
+    const propLocStr = [
+      property?.locality,
+      property?.project,
+      property?.project_name,
+      property?.title,
+      property?.property_title,
+      property?.address,
+      property?.full_address,
+      property?.location,
+      property?.landmark
     ].filter(Boolean).join(' ').toLowerCase();
 
-    let isLocMatch = true;
-    if (custLocStr.trim().length > 0) {
-      const prefLocs = custLocStr
-        .split(/[\/,–—|,]\s*|\s+to\s+/)
-        .map((s: string) => s.replace(/\(.*?\)/g, '').trim().toLowerCase())
-        .filter(s => s.length >= 2 && s !== 'radius:');
+    const propLocNorm = normalizeLocalityKey(propLocStr);
 
-      const propLoc = (property?.locality || '').toLowerCase().trim();
-      const propAddress = (property?.full_address || property?.address || '').toLowerCase().trim();
-      const propCity = (property?.city || '').toLowerCase().trim();
-      const propTitle = (property?.title || '').toLowerCase().trim();
+    const matchesToken = (tok: string): boolean => {
+      const tokClean = tok.trim().toLowerCase();
+      if (!tokClean || tokClean.length < 2) return false;
 
-      const matches = prefLocs.some((loc: string) => 
-        propLoc.includes(loc) || loc.includes(propLoc) || 
-        propAddress.includes(loc) || loc.includes(propAddress) ||
-        propCity.includes(loc) || loc.includes(propCity) ||
-        propTitle.includes(loc)
-      );
+      // 1. Direct substring match
+      if (propLocStr.includes(tokClean) || tokClean.includes(propLocStr)) return true;
 
-      if (matches) {
-        breakdown.loc = 20;
-      } else {
-        breakdown.loc = 0;
-        isLocMatch = false; // STRICT LOCATION MISMATCH
-      }
-    } else {
-      breakdown.loc = 15;
-    }
-
-    // --- 3. STRICT BHK CONFIGURATION CHECK (15%) ---
-    const custBhkStr = (customer?.configuration || customer?.bhk || '').toUpperCase().replace(/\s+/g, '');
-    const propBhkStr = (property?.configuration || property?.bhk || '').toUpperCase().replace(/\s+/g, '');
-
-    let isBhkMatch = true;
-    if (custBhkStr.trim().length > 0 && propBhkStr.trim().length > 0) {
-      const requestedBhks = custBhkStr.split(/[\/,|]/).map(b => b.trim()).filter(Boolean);
-
-      const matchesBhk = requestedBhks.some(reqBhk => {
-        if (!reqBhk) return false;
-        return propBhkStr === reqBhk || 
-          propBhkStr.includes(reqBhk) || 
-          reqBhk.includes(propBhkStr) ||
-          (reqBhk.includes('VILLA') && propBhkStr.includes('VILLA')) ||
-          (reqBhk.includes('PLOT') && propBhkStr.includes('PLOT')) ||
-          (reqBhk.includes('COMMERCIAL') && propBhkStr.includes('COMMERCIAL'));
-      });
-
-      if (matchesBhk) {
-        breakdown.bhk = 15;
-      } else {
-        breakdown.bhk = 0;
-        isBhkMatch = false; // STRICT BHK MISMATCH
-      }
-    } else {
-      breakdown.bhk = 12;
-    }
-
-    // --- 3.5 STRICT PARKING REQUIREMENT CHECK ---
-    const isPropertyParkingAvailable = (propObj: any): boolean => {
-      if (!propObj) return false;
-      const pStr = String(
-        propObj.car_parking || 
-        propObj.parking || 
-        propObj.parkingSlot || 
-        propObj.parking_slot || 
-        propObj.parking_type || 
-        propObj.parking_slot_type || 
-        ''
-      ).trim().toLowerCase();
-
-      if (pStr) {
-        if (pStr === 'no' || pStr === 'not available' || pStr === 'none' || pStr === '0' || pStr.includes('no parking') || pStr.includes('not available')) {
-          return false;
-        }
-        if (pStr.includes('covered') || pStr.includes('open') || pStr.includes('ev') || pStr.includes('slot') || pStr.includes('available') || pStr.includes('yes') || pStr.includes('parking')) {
-          return true;
-        }
+      // 2. Normalized phonetic / spelling variation match
+      const tokNorm = normalizeLocalityKey(tokClean);
+      if (tokNorm.length >= 3) {
+        if (propLocNorm.includes(tokNorm) || tokNorm.includes(propLocNorm)) return true;
       }
 
-      const pReq = String(propObj.parkingRequired || propObj.parking_required || '').trim().toUpperCase();
-      if (pReq === 'YES' || pReq === 'REQUIRED' || pReq === 'AVAILABLE') return true;
-      if (pReq === 'NO' || pReq === 'NOT_REQUIRED' || pReq === 'NOT AVAILABLE') return false;
+      // 3. Word-by-word token matching for multi-word localities (e.g. "New Barackpur")
+      const words = tokClean.split(/\s+/).filter(w => w.length >= 3 && !genericStopWords.has(w));
+      if (words.length > 0) {
+        const allWordsMatched = words.every(w => {
+          const wNorm = normalizeLocalityKey(w);
+          return propLocStr.includes(w) || (wNorm.length >= 3 && propLocNorm.includes(wNorm));
+        });
+        if (allWordsMatched) return true;
+      }
 
-      const coveredCap = Number(propObj.total_covered_parking_capacity || 0);
-      const openCap = Number(propObj.total_open_parking_capacity || 0);
-      const evCap = Number(propObj.total_ev_parking_capacity || 0);
-      if (coveredCap > 0 || openCap > 0 || evCap > 0) return true;
-
-      const pPrice = parseFloat(String(propObj.parking_price || propObj.parking_charge || propObj.covered_parking_rate || 0).replace(/[^0-9.]/g, ''));
-      if (!isNaN(pPrice) && pPrice > 0) return true;
-
-      return true;
+      return false;
     };
 
-    const custParkingReq = String(
-      customer?.parking || 
-      customer?.parking_required || 
-      customer?.parkingType || 
-      customer?.parking_type || 
-      ''
-    ).trim().toLowerCase();
+    // Micro-market adjacent / contiguous secondary localities mapping (North 24 Parganas / Kolkata Hubs)
+    const adjacentLocalityMap: Record<string, string[]> = {
+      'madhyamgram': ['new barrackpur', 'new barackpur', 'barrackpur', 'barackpur', 'hridaypur', 'sodepur', 'doltala', 'birati'],
+      'new barrackpur': ['madhyamgram', 'barrackpur', 'birati', 'sodepur'],
+      'barasat': ['banamalipur', 'hridaypur', 'kazipara'],
+      'new town': ['action area 1', 'action area 2', 'action area 3', 'rajarhat', 'chinar park'],
+      'salt lake': ['sector v', 'new town', 'kestopur', 'ultadanga']
+    };
 
-    const isParkingStrictlyRequired = (
-      custParkingReq === 'required' || 
-      custParkingReq.includes('covered') || 
-      custParkingReq.includes('open') || 
-      custParkingReq.includes('ev') ||
-      custParkingReq.includes('yes')
-    ) && custParkingReq !== 'not required';
+    let isLocMatch = true;
+    let isPrimaryMatch = false;
+    let isSecondaryMatch = false;
 
-    let isParkingMatch = true;
-    if (isParkingStrictlyRequired) {
-      const propHasParking = isPropertyParkingAvailable(property);
-      if (!propHasParking) {
-        isParkingMatch = false; // STRICT PARKING MISMATCH
+    if (primaryTokens.length > 0 || secondaryTokens.length > 0) {
+      isPrimaryMatch = primaryTokens.some(tok => matchesToken(tok));
+      if (!isPrimaryMatch && secondaryTokens.length > 0) {
+        isSecondaryMatch = secondaryTokens.some(tok => matchesToken(tok));
+      }
+
+      // If no explicit secondary tokens matched, check adjacent micro-markets as Secondary Localities (15% WMI match)
+      if (!isPrimaryMatch && !isSecondaryMatch && primaryTokens.length > 0) {
+        for (const pTok of primaryTokens) {
+          const normKey = normalizeLocalityKey(pTok);
+          for (const [clusterKey, adjList] of Object.entries(adjacentLocalityMap)) {
+            const normCluster = normalizeLocalityKey(clusterKey);
+            if (normKey.includes(normCluster) || normCluster.includes(normKey)) {
+              if (adjList.some(adj => matchesToken(adj))) {
+                isSecondaryMatch = true;
+                break;
+              }
+            }
+          }
+          if (isSecondaryMatch) break;
+        }
+      }
+
+      if (isPrimaryMatch) {
+        breakdown.loc = 25; // 25% for Primary Locality Match
+        isLocMatch = true;
+      } else if (isSecondaryMatch) {
+        breakdown.loc = 15; // 15% for Secondary / Adjacent Locality Match
+        isLocMatch = true;
+      } else {
+        breakdown.loc = 0;  // 0% for outside boundaries
+        isLocMatch = false;
+      }
+    } else {
+      breakdown.loc = 25;
+      isLocMatch = true;
+    }
+
+    // --- 2. EXACT BUDGET COMPLIANCE ---
+    // Calculate using Total Base Price with Others Charges (INR):
+    // Base Property Asking Price + Floor Rise + PLC + Parking + Clubhouse + Maintenance + Legal Charges
+    const computePropertyTotalValuationINR = (prop: any): number => {
+      if (!prop) return 0;
+      const superSqft = parseCleanNum(prop.super_builtup_area || prop.superBuiltupArea || prop.built_up_area_sqft || prop.super_area || prop.carpet_area);
+      const rateSqft = parseCleanNum(prop.price_sqft || prop.priceSqft || prop.asking_rate_sqft || prop.askingRateSqft || prop.rate_sqft);
+      
+      let basePrice = 0;
+      if (superSqft > 0 && rateSqft > 0) {
+        basePrice = superSqft * rateSqft;
+      } else {
+        basePrice = parseCleanNum(prop.final_price || prop.base_price || prop.basePrice || prop.AskingPrice || prop.price);
+      }
+
+      const floorRise = parseCleanNum(prop.floor_rise_charge || prop.floorRiseCharge || prop.floorRise || prop.floor_rise);
+      const plc = parseCleanNum(prop.plc_charge || prop.plcCharge || prop.plc);
+      const parking = parseCleanNum(prop.parking_price || prop.car_parking_charge || prop.covered_parking_rate || prop.parkingCharge || prop.parking_charge);
+      const club = parseCleanNum(prop.amenity_charges || prop.amenityCharges || prop.clubhouse_charge || prop.clubhouseCharge || prop.clubhouse);
+      const maintenance = parseCleanNum(prop.advance_maintenance_charge || prop.advanceMaintenanceCharge || prop.maintenance_charge || prop.maintenance);
+      const infraLegal = parseCleanNum(prop.legal_doc_charge || prop.legalDocCharge || prop.infrastructure_charge || prop.lawyer_charge || prop.legal_charge);
+
+      const total = basePrice + floorRise + plc + parking + club + maintenance + infraLegal;
+      if (total > 0) return total;
+
+      const fromHelperStr = computeTotalBaseWithOtherCharges(prop);
+      const parsedHelper = parseCleanNum(fromHelperStr);
+      if (parsedHelper > 0) return parsedHelper;
+
+      return parseCleanNum(prop.final_price || prop.base_price || prop.price);
+    };
+
+    const propTotalValuation = computePropertyTotalValuationINR(property);
+
+    // Parse Customer Budget Range in INR
+    let minBudINR = 0;
+    let maxBudINR = 0;
+
+    const bUnit = customer?.budget_unit || 'Lakhs';
+    if (customer?.budget_min !== undefined && customer?.budget_min !== null && customer?.budget_min !== '') {
+      minBudINR = parseValToInr(customer.budget_min, bUnit);
+    }
+    if (customer?.budget_max !== undefined && customer?.budget_max !== null && customer?.budget_max !== '') {
+      maxBudINR = parseValToInr(customer.budget_max, bUnit);
+    }
+
+    // Fallback: parse range from customer.budget text string if min/max not explicitly populated
+    if (minBudINR === 0 && maxBudINR === 0 && customer?.budget) {
+      const bStr = String(customer.budget).trim();
+      const parts = bStr.split(/[-–—]|(?:\s+to\s+)|\s*\/\s*/i).map(s => s.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        minBudINR = parseValToInr(parts[0], bUnit);
+        maxBudINR = parseValToInr(parts[1], bUnit);
+        if (minBudINR > maxBudINR) {
+          const tmp = minBudINR;
+          minBudINR = maxBudINR;
+          maxBudINR = tmp;
+        }
+      } else if (parts.length === 1) {
+        const val = parseValToInr(parts[0], bUnit);
+        minBudINR = 0;
+        maxBudINR = val;
       }
     }
 
-    // STRICT MATCH FILTER RULE:
-    // If Location, Budget, BHK OR Parking Requirement fails to match customer preference, return total = 0
-    if (!isBudMatch || !isLocMatch || !isBhkMatch || !isParkingMatch) {
-      return { 
-        total: 0, 
-        breakdown: { ...breakdown, bud: isBudMatch ? breakdown.bud : 0, loc: isLocMatch ? breakdown.loc : 0, bhk: isBhkMatch ? breakdown.bhk : 0 }, 
-        isStrictMatch: false 
+    let isBudMatch = true;
+    if (propTotalValuation > 0) {
+      if (minBudINR > 0 && propTotalValuation < minBudINR) {
+        isBudMatch = false; // Strictly falls below customer minimum budget
+      }
+      if (maxBudINR > 0 && propTotalValuation > maxBudINR) {
+        isBudMatch = false; // Strictly exceeds customer maximum budget
+      }
+    }
+    breakdown.bud = isBudMatch ? 25 : 0;
+
+    // --- 3. BHK CONFIGURATION (Exact Match Only) ---
+    // If a customer asks for a 2 BHK, only match 2 BHK units; do not include 1 BHK or 3 BHK units.
+    const extractExactBhkKey = (raw: any): string => {
+      if (!raw) return '';
+      const s = String(raw).trim().toUpperCase();
+      if (s.includes('STUDIO')) return 'STUDIO';
+      if (s.includes('COMMERCIAL') || s.includes('OFFICE') || s.includes('SHOP') || s.includes('SHOWROOM')) return 'COMMERCIAL';
+      if (s.includes('4+') || (s.includes('4') && s.includes('DUPLEX')) || s.includes('5 BHK') || s.includes('6 BHK')) return '4+BHK';
+      const m = s.match(/([1-9](?:\.5)?)\s*BHK/i);
+      if (m) return `${m[1]}BHK`;
+      const singleDigit = s.match(/\b([1-9](?:\.5)?)\b/);
+      if (singleDigit && (s.includes('BHK') || s.includes('BED') || s.includes('ROOM') || s.length <= 4)) {
+        return `${singleDigit[1]}BHK`;
+      }
+      return s.replace(/\s+/g, '');
+    };
+
+    const custBhkRaw = customer?.configuration || customer?.bhk || '';
+    const propBhkRaw = property?.configuration || property?.bhk || '';
+
+    let isBhkMatch = true;
+    if (custBhkRaw && propBhkRaw) {
+      const custBhkItems = String(custBhkRaw).split(/[\/,|]/).map(b => extractExactBhkKey(b)).filter(Boolean);
+      const propBhkKey = extractExactBhkKey(propBhkRaw);
+
+      if (custBhkItems.length > 0 && propBhkKey) {
+        isBhkMatch = custBhkItems.includes(propBhkKey);
+      }
+    }
+    breakdown.bhk = isBhkMatch ? 15 : 0; // WMI: 15% (Hard filter, exact BHK)
+
+    // --- 4. PROPERTY CATEGORY TYPE ---
+    // Ensure the property type aligns perfectly with customer's choice.
+    const custTypeRaw = String(customer?.property_type || customer?.propertyType || customer?.propertyCategory || customer?.property_category || '').trim().toLowerCase();
+    const propTypeRaw = String(property?.property_type || property?.propertyType || property?.type || property?.category || property?.property_category || '').trim().toLowerCase();
+
+    let isTypeMatch = true;
+    if (custTypeRaw && propTypeRaw) {
+      const cleanType = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const custCategories = custTypeRaw.split(/[,|;]/).map(s => s.trim().toLowerCase()).filter(Boolean);
+
+      isTypeMatch = custCategories.some(custCat => {
+        const cClean = cleanType(custCat);
+        const pClean = cleanType(propTypeRaw);
+
+        if (cClean === pClean || pClean.includes(cClean) || cClean.includes(pClean)) return true;
+
+        // Semantic alignment for real-estate categories
+        const isApartmentGroup = (t: string) => t.includes('apartment') || t.includes('flat') || t.includes('builderfloor');
+        const isVillaGroup = (t: string) => t.includes('villa') || t.includes('independenthouse') || t.includes('rowhouse') || t.includes('townhouse');
+        const isCommercialGroup = (t: string) => t.includes('commercial') || t.includes('office') || t.includes('shop') || t.includes('godown') || t.includes('warehouse');
+        const isPlotGroup = (t: string) => t.includes('plot') || t.includes('land');
+        const isPenthouseGroup = (t: string) => t.includes('penthouse');
+        const isStudioGroup = (t: string) => t.includes('studio');
+
+        if (isApartmentGroup(cClean) && isApartmentGroup(pClean)) return true;
+        if (isVillaGroup(cClean) && isVillaGroup(pClean)) return true;
+        if (isCommercialGroup(cClean) && isCommercialGroup(pClean)) return true;
+        if (isPlotGroup(cClean) && isPlotGroup(pClean)) return true;
+        if (isPenthouseGroup(cClean) && isPenthouseGroup(pClean)) return true;
+        if (isStudioGroup(cClean) && isStudioGroup(pClean)) return true;
+
+        return false;
+      });
+    }
+    breakdown.type = isTypeMatch ? 5 : 0; // WMI: 5% (Exact alignment with structural type)
+
+    // --- 5. SUPER BUILT-UP AREA LIMITS ---
+    // The property's size must fall strictly within the minimum and maximum Super Built-up Area range requested.
+    const custAreaMin = parseCleanNum(customer?.carpet_area_min || customer?.super_builtup_area_min || customer?.area_min || customer?.min_area);
+    const custAreaMax = parseCleanNum(customer?.carpet_area_max || customer?.super_builtup_area_max || customer?.area_max || customer?.max_area);
+    const propArea = parseCleanNum(property?.super_builtup_area || property?.superBuiltupArea || property?.built_up_area_sqft || property?.super_area || property?.carpet_area || property?.area);
+
+    let isAreaMatch = true;
+    if (custAreaMin > 0 || custAreaMax > 0) {
+      if (propArea > 0) {
+        if (custAreaMin > 0 && propArea < custAreaMin) {
+          isAreaMatch = false;
+        }
+        if (custAreaMax > 0 && propArea > custAreaMax) {
+          isAreaMatch = false;
+        }
+      }
+    }
+    breakdown.sqft = isAreaMatch ? 5 : 0; // WMI: 5% (Must fall strictly within requested size range)
+
+    // --- 6. PARKING TYPE REQUIREMENTS ---
+    // If NOT Required: free to match any property regardless of parking availability.
+    // If IS Required: only match properties/projects where parking (or specified parking type) is strictly available.
+    const custParking = String(customer?.parking || customer?.parking_required || customer?.parkingType || customer?.parking_type || '').trim().toLowerCase();
+    const isParkingNotRequired = !custParking || custParking === 'not required' || custParking === 'not_required' || custParking === 'no' || custParking === 'none';
+
+    let isParkingMatch = true;
+    if (!isParkingNotRequired) {
+      const propParkingStr = String(property?.car_parking || property?.parking || property?.parking_type || property?.parking_slot || property?.parkingSlot || '').trim().toLowerCase();
+      const propParkingCap = Number(property?.total_covered_parking_capacity || 0) + Number(property?.total_open_parking_capacity || 0) + Number(property?.total_ev_parking_capacity || 0);
+      const propParkingCharge = parseCleanNum(property?.parking_price || property?.car_parking_charge || property?.covered_parking_rate || property?.parking_charge);
+
+      const propHasParking = (
+        (propParkingStr !== '' && propParkingStr !== 'no' && propParkingStr !== 'not available' && propParkingStr !== 'none' && propParkingStr !== '0' && !propParkingStr.includes('no parking')) ||
+        propParkingCap > 0 ||
+        propParkingCharge > 0
+      );
+
+      if (custParking.includes('covered')) {
+        isParkingMatch = propParkingStr.includes('covered') || Number(property?.total_covered_parking_capacity || 0) > 0 || Number(property?.covered_parking_rate || 0) > 0;
+      } else if (custParking.includes('open')) {
+        isParkingMatch = propParkingStr.includes('open') || Number(property?.total_open_parking_capacity || 0) > 0;
+      } else if (custParking.includes('ev')) {
+        isParkingMatch = propParkingStr.includes('ev') || Number(property?.total_ev_parking_capacity || 0) > 0;
+      } else {
+        isParkingMatch = propHasParking;
+      }
+    }
+    breakdown.parking = isParkingMatch ? 10 : 0; // WMI: 10% (10% if satisfied/not required, 0% if missing)
+
+    // --- 7. NON-PREFERRED / AVOIDED FLOORS (Unit Floor Exclusion) ---
+    // If customer explicitly states that they do not prefer or wish to avoid particular floors
+    // (e.g., top floor, ground floor, specific numbers), those units must be completely excluded.
+    const rawAvoided = customer?.avoided_floors || customer?.non_preferred_floor || customer?.excluded_floors || customer?.avoidedFloors || '';
+    const avoidedList = (Array.isArray(rawAvoided) ? rawAvoided : String(rawAvoided).split(',').map(s => s.trim()))
+      .map(s => String(s).trim())
+      .filter(s => s.length > 0 && s !== 'No Exclusions');
+
+    let isFloorAvoided = false;
+    if (avoidedList.length > 0) {
+      const propFloorRaw = String(property?.floor || property?.floor_num || property?.floor_number || property?.floor_no || property?.unit_floor || '').trim().toLowerCase();
+      const totalFloorsRaw = String(property?.total_floors || property?.totalFloors || '').trim().toLowerCase();
+      
+      const propFloorDigitsMatch = propFloorRaw.match(/\b(\d+)\b/);
+      const propFloorNum = propFloorDigitsMatch ? parseInt(propFloorDigitsMatch[1], 10) : (propFloorRaw === 'g' || propFloorRaw.includes('ground') ? 0 : null);
+      
+      const totalFloorsMatch = totalFloorsRaw.match(/\b(\d+)\b/);
+      const totalFloorsNum = totalFloorsMatch ? parseInt(totalFloorsMatch[1], 10) : null;
+
+      for (const avoidItem of avoidedList) {
+        const itemLower = avoidItem.toLowerCase();
+
+        // 1. Ground floor avoidance
+        if (itemLower.includes('ground') || itemLower === '0') {
+          if (propFloorNum === 0 || propFloorRaw.includes('ground') || propFloorRaw === 'g' || propFloorRaw.includes('0 out of')) {
+            isFloorAvoided = true;
+            break;
+          }
+        }
+
+        // 2. Top floor / Penthouse avoidance
+        if (itemLower.includes('top') || itemLower.includes('penthouse')) {
+          if (propFloorRaw.includes('top') || propFloorRaw.includes('penthouse')) {
+            isFloorAvoided = true;
+            break;
+          }
+          if (propFloorNum !== null && totalFloorsNum !== null && propFloorNum >= totalFloorsNum) {
+            isFloorAvoided = true;
+            break;
+          }
+        }
+
+        // 3. Basements
+        if (itemLower.includes('basement 1') || itemLower.includes('b1')) {
+          if (propFloorRaw.includes('b1') || propFloorRaw.includes('basement 1')) {
+            isFloorAvoided = true;
+            break;
+          }
+        }
+        if (itemLower.includes('basement 2') || itemLower.includes('b2')) {
+          if (propFloorRaw.includes('b2') || propFloorRaw.includes('basement 2')) {
+            isFloorAvoided = true;
+            break;
+          }
+        }
+
+        // 4. "12th Floor+"
+        if (itemLower.includes('12')) {
+          if (propFloorNum !== null && propFloorNum >= 12) {
+            isFloorAvoided = true;
+            break;
+          }
+        }
+
+        // 5. Specific numeric floors: "1st Floor", "2nd Floor", "3rd Floor", etc.
+        const digitMatch = itemLower.match(/\b(\d+)\b/);
+        if (digitMatch) {
+          const avoidNum = parseInt(digitMatch[1], 10);
+          if (propFloorNum !== null && propFloorNum === avoidNum) {
+            isFloorAvoided = true;
+            break;
+          }
+          if (propFloorRaw.includes(`${avoidNum}st`) || propFloorRaw.includes(`${avoidNum}nd`) || propFloorRaw.includes(`${avoidNum}rd`) || propFloorRaw.includes(`${avoidNum}th`)) {
+            isFloorAvoided = true;
+            break;
+          }
+        }
+      }
+    }
+    breakdown.floor_pref = !isFloorAvoided ? 15 : 0; // WMI: 15% (Mandatory filter: drops to 0% if unit on avoided floor)
+
+    // Detailed Mismatch Reasons Collection
+    const mismatchReasons: string[] = [];
+
+    if (!isLocMatch) {
+      const custLoc = [primaryLocRaw, secondaryLocRaw].filter(Boolean).join(', ') || fallbackLocRaw || 'Customer specified locality';
+      const pLoc = property?.locality || property?.project || property?.title || 'Unknown Locality';
+      mismatchReasons.push(`Location Mismatch: Customer requested "${custLoc}", but property is in "${pLoc}"`);
+    }
+
+    if (!isBudMatch) {
+      const bMinDisp = minBudINR > 0 ? `₹${(minBudINR / 100000).toFixed(2).replace(/\.00$/, '')} Lakhs` : '₹0';
+      const bMaxDisp = maxBudINR > 0 && maxBudINR < 900000000 ? `₹${(maxBudINR / 100000).toFixed(2).replace(/\.00$/, '')} Lakhs` : 'No Limit';
+      const pValDisp = propTotalValuation > 0 ? `₹${(propTotalValuation / 100000).toFixed(2).replace(/\.00$/, '')} Lakhs` : 'N/A';
+      if (minBudINR > 0 && propTotalValuation < minBudINR) {
+        mismatchReasons.push(`Budget Below Limit: Property valuation (${pValDisp}) is below customer minimum budget (${bMinDisp})`);
+      } else if (maxBudINR > 0 && propTotalValuation > maxBudINR) {
+        mismatchReasons.push(`Budget Exceeded: Property valuation (${pValDisp}) strictly exceeds customer maximum budget (${bMaxDisp})`);
+      } else {
+        mismatchReasons.push(`Budget Mismatch: Property valuation (${pValDisp}) is outside customer budget range (${bMinDisp} - ${bMaxDisp})`);
+      }
+    }
+
+    if (!isBhkMatch) {
+      const cBhk = custBhkRaw || 'Specified BHK';
+      const pBhk = propBhkRaw || 'Different BHK';
+      mismatchReasons.push(`BHK Mismatch: Customer requested "${cBhk}", but property unit is "${pBhk}"`);
+    }
+
+    if (!isTypeMatch) {
+      const cType = custTypeRaw || 'Specified Type';
+      const pType = propTypeRaw || 'Different Category';
+      mismatchReasons.push(`Property Type Mismatch: Customer requested "${cType}", but property type is "${pType}"`);
+    }
+
+    if (!isAreaMatch) {
+      const cAreaMin = custAreaMin > 0 ? `${custAreaMin} Sq.Ft.` : 'Min';
+      const cAreaMax = custAreaMax > 0 ? `${custAreaMax} Sq.Ft.` : 'Max';
+      const pArea = propArea > 0 ? `${propArea} Sq.Ft.` : 'N/A';
+      mismatchReasons.push(`Super Built-up Area Mismatch: Customer requested ${cAreaMin} to ${cAreaMax}, property size is ${pArea}`);
+    }
+
+    if (!isParkingMatch) {
+      const cPark = custParking || 'Required';
+      mismatchReasons.push(`Parking Mismatch: Customer requires parking (${cPark}), but property does not provide required parking`);
+    }
+
+    if (isFloorAvoided) {
+      const pFloor = property?.floor || property?.floor_num || property?.floor_no || property?.unit_floor || 'Avoided Floor';
+      const aList = avoidedList.join(', ');
+      mismatchReasons.push(`Avoided Floor Mismatch: Unit is on floor "${pFloor}" which customer explicitly requested to avoid (${aList})`);
+    }
+
+    // --- STRICT CRITERIA GATE ---
+    // If ANY of the 7 constraints fail, property must be COMPLETELY EXCLUDED (total = 0, isStrictMatch = false)
+    if (!isLocMatch || !isBudMatch || !isBhkMatch || !isTypeMatch || !isAreaMatch || !isParkingMatch || isFloorAvoided) {
+      return {
+        total: 0,
+        breakdown,
+        isStrictMatch: false,
+        mismatchReasons,
+        reason: mismatchReasons.join(' • ')
       };
     }
 
-    // --- 4. SQUARE FEET AREA MATCH (15%) ---
-    const parseSqft = (str: any) => {
-      if (!str) return 0;
-      const num = parseFloat(String(str).replace(/[^0-9.]/g, '')) || 0;
-      return num;
+    // All 7 Strict Constraints Passed!
+    const total = Math.min(100, breakdown.bud + breakdown.loc + breakdown.bhk + breakdown.sqft + breakdown.type + breakdown.parking + breakdown.floor_pref);
+    return {
+      total,
+      breakdown,
+      isStrictMatch: true,
+      mismatchReasons: [],
+      reason: isPrimaryMatch || breakdown.loc === 25
+        ? 'All qualification criteria matched strictly (Primary Locality: 100% WMI Match)'
+        : 'All qualification criteria matched strictly (Secondary Locality: 90% WMI Match)'
     };
-    const propSqft = parseSqft(property?.carpet_area || property?.super_builtup_area || property?.built_up_area_sqft || '');
-    if (propSqft > 0) {
-      if (propSqft >= 800 && propSqft <= 5000) {
-        breakdown.sqft = 15;
-      } else {
-        breakdown.sqft = 10;
-      }
-    } else {
-      breakdown.sqft = 12;
-    }
-
-    // --- 5. POSSESSION & VASTU FACING MATCH (10%) ---
-    const facingStr = (property?.facing || '').toLowerCase();
-    const posStr = (property?.possession_status || property?.status || '').toLowerCase();
-    if (facingStr.includes('east') || facingStr.includes('north') || posStr.includes('ready') || posStr.includes('available')) {
-      breakdown.possession_facing = 10;
-    } else {
-      breakdown.possession_facing = 6;
-    }
-
-    // --- 6. FLOOR PREFERENCE MATCH (5%) ---
-    const propFloor = property?.floor !== undefined ? Number(property.floor) : 5;
-    const floorPrefStr = (customer?.floor_preference || customer?.preferred_floor || customer?.floor_pref || '').toLowerCase();
-    if (floorPrefStr.includes('low') || floorPrefStr.includes('1-5')) {
-      breakdown.floor_pref = (propFloor >= 1 && propFloor <= 5) ? 5 : 2;
-    } else if (floorPrefStr.includes('mid') || floorPrefStr.includes('6-12')) {
-      breakdown.floor_pref = (propFloor >= 6 && propFloor <= 12) ? 5 : 2;
-    } else if (floorPrefStr.includes('high') || floorPrefStr.includes('sky') || floorPrefStr.includes('13+')) {
-      breakdown.floor_pref = (propFloor >= 13) ? 5 : 2;
-    } else {
-      breakdown.floor_pref = 5;
-    }
-
-    // --- 7. PROPERTY CATEGORY TYPE MATCH (5%) ---
-    if (customer?.property_type && property?.property_type) {
-      const cTypeRaw = customer.property_type.toLowerCase();
-      const pType = property.property_type.toLowerCase();
-      const selectedCats = cTypeRaw.split(',').map(s => s.trim());
-      
-      const isExactMatch = selectedCats.some(cat => cat === pType || pType.includes(cat) || cat.includes(pType));
-      if (isExactMatch) {
-        breakdown.type = 5;
-      } else if (
-        (cTypeRaw.includes('flat') && pType.includes('flat')) ||
-        (cTypeRaw.includes('apartment') && (pType.includes('apartment') || pType.includes('flat'))) ||
-        (cTypeRaw.includes('villa') && pType.includes('villa'))
-      ) {
-        breakdown.type = 5;
-      } else {
-        breakdown.type = 3;
-      }
-    } else {
-      breakdown.type = 5;
-    }
-
-    // --- 8. PROPERTY CONDITION & FURNISHING MATCH (5%) ---
-    breakdown.condition = property?.furnishing_status || property?.status === 'AVAILABLE' ? 5 : 3;
-
-    const total = Math.min(100, breakdown.bud + breakdown.loc + breakdown.bhk + breakdown.sqft + breakdown.possession_facing + breakdown.floor_pref + breakdown.type + breakdown.condition);
-    return { total, breakdown, isStrictMatch: true };
   };
 
   const isLight = themeMode === 'light';
@@ -10679,7 +11339,13 @@ export default function App() {
             <UserPlus size={18} /> <span>Lead Management</span>
           </button>
           {/* 3. Matching Management */}
-          <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('matching_management'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'matching_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'matching_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'matching_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
+          <button onClick={() => { 
+            if (isMobile) setIsMobileSidebarOpen(false); 
+            if (searchQuery && (searchQuery.toUpperCase().startsWith('COST-SHEET-') || searchQuery.toUpperCase().startsWith('SRM-CS-') || searchQuery.toUpperCase().startsWith('SRM-INV-') || searchQuery.toUpperCase().startsWith('SRM-AGR-') || searchQuery.toUpperCase().startsWith('INV-') || searchQuery.toUpperCase().startsWith('AGR-'))) {
+              setSearchQuery('');
+            }
+            setActiveTab('matching_management'); 
+          }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'matching_management' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'matching_management' ? '#38bdf8' : '#94a3b8', border: activeTab === 'matching_management' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <Target size={18} /> <span>Matching Management</span>
           </button>
           {/* 4. Customer Management */}
@@ -12874,6 +13540,7 @@ export default function App() {
               setMatchingRequestsQueue={setMatchingRequestsQueue}
               setScheduledVisits={setScheduledVisits}
               setIndividualCostSheets={setIndividualCostSheets}
+              visitFeedbacks={visitFeedbacks}
             />
           )}
 
@@ -13040,6 +13707,7 @@ export default function App() {
               setShowUpdateRequirementModal={setShowUpdateRequirementModal}
               setShowLiveRouteTrackingModal={setShowLiveRouteTrackingModal}
               setShowShiftToMatchingModal={setShowShiftToMatchingModal}
+              handleReturnVisitToCostSheet={handleReturnVisitToCostSheet}
               bookings={bookings}
               setBookings={setBookings}
               setScheduledVisits={setScheduledVisits}
@@ -13453,7 +14121,8 @@ export default function App() {
           ? `GPS / Locality Radius: ✓ ${(selectedAgreement.locality_hub || selectedAgreement.locality || 'LOCALITY HUB').toUpperCase()} VERIFIED`
           : 'GPS Status: ✓ GEOFENCE VERIFIED (14m (Within 100m Allowed Radius))';
         const otpStatusText = isDev ? 'Developer OTP: ✓ VERIFIED' : 'Customer OTP: ✓ VERIFIED';
-        const masterSchedText = isDev ? `Corporate Audit Code: ${agreementCode}` : `Master Schedule: ${selectedAgreement.visit_schedule_id || 'SRM-VS-2026-000087'}`;
+        const cleanVisitSchedId = selectedAgreement.visit_schedule_id || 'SRM-VS-2026-000001';
+        const masterSchedText = isDev ? `Corporate Audit Code: ${agreementCode}` : `Master Schedule: ${cleanVisitSchedId}`;
 
         const sigHeaderLeft = isDev ? 'DEVELOPER DIGITAL SIGNATURE:' : 'CUSTOMER DIGITAL SIGNATURE:';
 
@@ -13952,6 +14621,7 @@ export default function App() {
                         });
                       } else {
                         if (setSelectedMatchingId) setSelectedMatchingId(matchId);
+                        if (setSearchQuery) setSearchQuery('');
                         if (setActiveTab) setActiveTab('matching_management');
                       }
                     }}
@@ -14958,8 +15628,10 @@ export default function App() {
             properties={properties}
             visitPlans={visitPlans}
             setVisitPlans={setVisitPlans}
+            scheduledVisits={scheduledVisits}
             setScheduledVisits={setScheduledVisits}
             setIndividualCostSheets={setIndividualCostSheets}
+            setMatchingRequestsQueue={setMatchingRequestsQueue}
             setShowScheduleVisitModal={setShowScheduleVisitModal}
             setActiveTab={setActiveTab}
             setActiveVisitSubTab={setActiveVisitSubTab}
@@ -14996,7 +15668,7 @@ export default function App() {
         const officeAddress = plan.officeAddress || (headOffice ? headOffice.address : '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129');
         const custName = plan.customerName || plan.customer_name || 'Valued Customer';
         const custNum = plan.customerNumber || plan.customer_number || plan.customerId || 'SRM-CUS-2026-000185';
-        const planId = plan.visitPlanId || plan.visitScheduleId || plan.id || 'SRM-VS-2026-000087';
+        const planId = plan.visitPlanId || plan.visitScheduleId || plan.id || 'SRM-VS-2026-000001';
         const stops = plan.stops || [];
         const totalStopsCount = stops.length;
 
@@ -15850,7 +16522,7 @@ export default function App() {
 
         const bkgCode = (() => {
           const rawCode = bkg.booking_code || bkg.bookingCode;
-          if (!rawCode || rawCode.includes('000087')) {
+          if (!rawCode) {
             const idx = Array.isArray(bookings)
               ? bookings.findIndex((item: any) => item && (item.id === bkg.id || item.booking_code === bkg.booking_code || (item.customer_name === bkg.customer_name && item.project_name === bkg.project_name)))
               : -1;
@@ -17853,14 +18525,18 @@ export default function App() {
                         "🏰 Gated Villa (New / Builder)",
                         "🔄 Gated Villa (Resale)",
                         "🔑 Gated Villa (For Rent)",
-                        "🏡 Independent House (Resale)",
+                        "🏡 Independent House / Bungalow (New / Builder)",
+                        "🔄 Independent House (Resale)",
                         "🔑 Independent House (For Rent)",
                         "🏢 Commercial Space (New / Builder)",
                         "🔄 Commercial Space (Resale)",
                         "🔑 Commercial Space (For Lease / Rent)",
+                        "🏬 Commercial Shop / Showroom",
+                        "🏢 Commercial Office Space",
                         "🛌 PG / Co-Living Space (For Rent)",
                         "📐 Open Plot / Land (New / Builder)",
-                        "📐 Open Plot / Land (Resale)"
+                        "📐 Open Plot / Land (Resale)",
+                        "🏭 Industrial Land / Warehouse"
                       ];
                       const cleanCatName = (str: string) => str.replace(/^[^\s]+\s*/, '').trim();
                       const selectedList = (updateReqForm.propertyCategory || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -17909,7 +18585,7 @@ export default function App() {
 
               {/* STEP 4: BHK CONFIGURATION, FACING & CONDITION */}
               <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <span style={{ fontSize: '0.78rem', color: '#fbbf24', fontWeight: '900' }}>📐 STEP 4: BHK Configuration, Facing & Property Condition</span>
+                <span style={{ fontSize: '0.78rem', color: '#fbbf24', fontWeight: '900' }}>📐 STEP 4: BHK Configuration, Facing & Possession Status</span>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>BHK Configuration *</label>
@@ -17942,16 +18618,17 @@ export default function App() {
                     </select>
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Possession Condition</label>
+                    <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px' }}>Possession Status</label>
                     <select 
                       value={updateReqForm.possessionCondition} 
                       onChange={(e) => setUpdateReqForm({ ...updateReqForm, possessionCondition: e.target.value })} 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }}
                     >
                       <option value="Ready to Move">Ready to Move</option>
-                      <option value="Under Construction (Within 1 Year)">Under Construction (&lt;1 Year)</option>
-                      <option value="Under Construction (2+ Years)">Under Construction (2+ Years)</option>
+                      <option value="Under Construction">Under Construction</option>
+                      <option value="New Launch / Soft Launch">New Launch / Soft Launch</option>
                       <option value="Resale Property">Resale Property</option>
+                      <option value="Any Condition">Any Possession Status</option>
                     </select>
                   </div>
                 </div>
@@ -18338,7 +19015,7 @@ export default function App() {
                       { step: 1, label: '1. Lead Source' },
                       { step: 2, label: '2. Identity & Contact' },
                       { step: 3, label: '3. Purpose & Type' },
-                      { step: 4, label: '4. BHK & Condition' },
+                      { step: 4, label: '4. BHK & Possession' },
                       { step: 5, label: '5. Location & Radius' }
                     ].map(st => (
                       <button
@@ -18768,21 +19445,32 @@ export default function App() {
                             background: isLight ? '#ffffff' : '#0b1329',
                             border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b',
                             borderRadius: '10px',
-                            maxHeight: '220px',
+                            maxHeight: '260px',
                             overflowY: 'auto',
                             display: 'flex',
                             flexDirection: 'column'
                           }}>
                             {[
                               { label: 'Flat / Apartment (New / Builder)', icon: '🏢' },
-                              { label: 'Flat / Apartment (Resale)', icon: '🏢' },
+                              { label: 'Flat / Apartment (Resale)', icon: '🔄' },
                               { label: 'Flat / Apartment (For Rent)', icon: '🔑' },
+                              { label: 'Semi Complex (New / Builder)', icon: '🏙️' },
+                              { label: 'Semi Complex (Resale)', icon: '🔄' },
+                              { label: 'Semi Complex (For Rent)', icon: '🔑' },
                               { label: 'Gated Villa (New / Builder)', icon: '🏰' },
-                              { label: 'Gated Villa (Resale)', icon: '🏰' },
-                              { label: 'Independent House / Bungalow', icon: '🏡' },
-                              { label: 'Residential Plot / Land', icon: '📐' },
-                              { label: 'Commercial Shop / Showroom', icon: '🏢' },
+                              { label: 'Gated Villa (Resale)', icon: '🔄' },
+                              { label: 'Gated Villa (For Rent)', icon: '🔑' },
+                              { label: 'Independent House / Bungalow (New / Builder)', icon: '🏡' },
+                              { label: 'Independent House (Resale)', icon: '🔄' },
+                              { label: 'Independent House (For Rent)', icon: '🔑' },
+                              { label: 'Commercial Space (New / Builder)', icon: '🏢' },
+                              { label: 'Commercial Space (Resale)', icon: '🔄' },
+                              { label: 'Commercial Space (For Lease / Rent)', icon: '🔑' },
+                              { label: 'Commercial Shop / Showroom', icon: '🏬' },
                               { label: 'Commercial Office Space', icon: '🏢' },
+                              { label: 'PG / Co-Living Space (For Rent)', icon: '🛌' },
+                              { label: 'Open Plot / Land (New / Builder)', icon: '📐' },
+                              { label: 'Open Plot / Land (Resale)', icon: '📐' },
                               { label: 'Industrial Land / Warehouse', icon: '🏭' },
                             ].map((item, idx, arr) => {
                               const isChecked = currentSelected.includes(item.label);
@@ -18834,14 +19522,14 @@ export default function App() {
                 </div>
               )}
 
-              {/* STEP 4: BHK CONFIGURATION, CONDITION & FLOOR PREFERENCE */}
+              {/* STEP 4: BHK CONFIGURATION, POSSESSION STATUS & FLOOR PREFERENCE */}
               {leadIntakeStep === 4 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ color: isLight ? '#0284c7' : '#38bdf8', fontWeight: '900', fontSize: '0.92rem', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '6px' }}>
-                    Step 4: Required BHK Configuration, Condition & Floor Preference
+                    Step 4: Required BHK Configuration, Possession Status & Floor Preference
                   </div>
 
-                  {/* TOP ROW: BHK & CONDITION */}
+                  {/* TOP ROW: BHK & POSSESSION STATUS */}
                   <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '14px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
@@ -18873,11 +19561,11 @@ export default function App() {
 
                     <div>
                       <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', color: isLight ? '#475569' : '#94a3b8', marginBottom: '6px' }}>
-                        Property Condition *
+                        Possession Status *
                       </label>
                       <select
-                        value={newCustomerForm.property_condition || 'Ready to Move'}
-                        onChange={e => setNewCustomerForm({ ...newCustomerForm, property_condition: e.target.value })}
+                        value={newCustomerForm.possession_status || newCustomerForm.property_condition || 'Ready to Move'}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, property_condition: e.target.value, possession_status: e.target.value })}
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -19230,7 +19918,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* SECTION 2: CARPET / BUILT-UP AREA DIMENSIONS & MEASUREMENT UNIT */}
+                  {/* SECTION 2: SUPER BUILT-UP AREA */}
                   <div style={{
                     background: isLight ? '#f8fafc' : '#0b1329',
                     border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b',
@@ -19243,7 +19931,7 @@ export default function App() {
                     {/* CARD HEADER */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.8rem', fontWeight: '900', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        📐 CARPET / BUILT-UP AREA DIMENSIONS & MEASUREMENT UNIT
+                        📐 Super Built-up Area
                       </span>
                       <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38bdf8' }}>
                         Current: {newCustomerForm.carpet_area_min || '0'} to {newCustomerForm.carpet_area_max || '0'} {newCustomerForm.area_unit?.split(' ')[0] || 'Sq.Ft.'}
@@ -19758,7 +20446,7 @@ export default function App() {
                   { key: 'configuration', label: 'BHK Config', value: newCustomerForm.configuration || '2BHK', step: 4 },
                   { key: 'preferredArea', label: 'Preferred Locality', value: newCustomerForm.preferredArea, step: 5 },
                   { key: 'budget_min', label: 'Budget Limit', value: newCustomerForm.budget_min || newCustomerForm.budget_max, step: 6 },
-                  { key: 'possession_status', label: 'Possession Status', value: newCustomerForm.possession_status || 'Ready to Move', step: 8 },
+                  { key: 'possession_status', label: 'Possession Status', value: newCustomerForm.possession_status || newCustomerForm.property_condition || 'Ready to Move', step: 4 },
                   { key: 'facing', label: 'Vastu Facing', value: newCustomerForm.facing || 'East Facing', step: 5 },
                   { key: 'parking', label: 'Parking Facility', value: newCustomerForm.parking || 'Covered Slot', step: 7 },
                   { key: 'assigned_exec', label: 'Assigned Executive', value: newCustomerForm.assigned_employee_name || newCustomerForm.assigned_employee_id || 'Priya Nair (Sales Exec)', step: 9 }

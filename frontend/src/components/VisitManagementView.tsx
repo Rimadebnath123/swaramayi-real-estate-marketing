@@ -58,6 +58,7 @@ interface VisitManagementViewProps {
   setActiveBookingSubTab?: (tab: any) => void;
   syncAllToMongoDB?: (overrideData?: any) => Promise<void>;
   setShowShiftToMatchingModal?: (val: any) => void;
+  handleReturnVisitToCostSheet?: (visit: any) => void;
   onRecycleItem?: (itemData: any) => void;
   users?: any[];
 }
@@ -118,6 +119,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
   setActiveBookingSubTab,
   syncAllToMongoDB,
   setShowShiftToMatchingModal,
+  handleReturnVisitToCostSheet,
   onRecycleItem,
   users = [],
 }) => {
@@ -455,23 +457,65 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
   }, [ratingInvitesList, scheduledVisits]);
 
   const unifiedVisits = React.useMemo(() => {
-    let list: any[] = [...(scheduledVisits || [])].filter(v => {
+    let list: any[] = [...(scheduledVisits || [])].map((v: any) => {
+      let vId = v.visitId || v.id || v.site_visit_code || v.visitScheduleId || v.costSheetId;
+      if (typeof vId === 'string' && vId.includes('000087')) {
+        vId = vId.replace('000087', '000001');
+      }
+      return {
+        ...v,
+        visitId: vId || v.visitId
+      };
+    }).filter(v => {
       const vId = v.visitId || v.id || v.site_visit_code || v.visitScheduleId || v.costSheetId;
       const vMob = (v.mobile || v.customerMobile || '').replace(/\D/g, '');
       const vCustNo = v.customerNumber || v.customerId;
+      const vCustName = (v.customerName || v.name || '').toLowerCase().trim();
 
       const isSent = sentToFollowupVisitIds.some(id => 
         (vId && (id === vId || String(vId).includes(String(id)) || String(id).includes(String(vId)))) ||
         (vCustNo && (id === vCustNo || String(vCustNo).includes(String(id)) || String(id).includes(String(vCustNo)))) ||
         (vMob && vMob.length >= 7 && (id === vMob || String(id).includes(vMob) || vMob.includes(String(id))))
       );
-      return !isSent && v.status !== 'SENT_TO_FOLLOWUP' && v.visit_status !== 'SENT_TO_FOLLOWUP';
+      if (isSent || v.status === 'SENT_TO_FOLLOWUP' || v.visit_status === 'SENT_TO_FOLLOWUP' || v.status === 'SHIFTED_TO_MATCHING' || v.status === 'RETURNED_TO_COST_SHEET' || v.status === 'CANCELLED') return false;
+
+      // STRICT 1-PLACE CHECK: If customer is currently PENDING in Matching Management, remove from Visit
+      const isShiftedToMatching = (matchingRequestsQueue || []).some((r: any) => {
+        if (r.status !== 'PENDING') return false;
+        const rCustNo = (r.customerNumber || r.customerId || '').toLowerCase().trim();
+        const rMob = (r.mobile || '').replace(/\D/g, '');
+        const rName = (r.customerName || r.name || '').toLowerCase().trim();
+        const targetCustNo = (vCustNo || '').toLowerCase().trim();
+
+        if (targetCustNo && rCustNo && targetCustNo === rCustNo) return true;
+        if (vMob && rMob && vMob.length >= 7 && vMob === rMob) return true;
+        if (vCustName && rName && vCustName.length > 2 && vCustName === rName && (r.handoffNote || (r.notes && r.notes.includes('Shifted')))) return true;
+        return false;
+      });
+      if (isShiftedToMatching) return false;
+
+      // STRICT 1-PLACE CHECK: If customer's cost sheet is SHARED/ACTIVE (returned to Cost Sheet Sharing), remove from Visit
+      const isCostSheetActiveInSharing = (individualCostSheets || []).some((cs: any) => {
+        if (cs.status !== 'SHARED' && cs.status !== 'ACTIVE') return false;
+        const csCustNo = (cs.customerId || cs.customerNumber || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber || '').toLowerCase().trim();
+        const csMob = (cs.mobile || cs.customerSnapshot?.mobile || '').replace(/\D/g, '');
+        const targetCustNo = (vCustNo || '').toLowerCase().trim();
+
+        if (v.costSheetId && (cs.costSheetId === v.costSheetId || cs.id === v.costSheetId)) return true;
+        if (targetCustNo && csCustNo && targetCustNo === csCustNo) return true;
+        if (vMob && csMob && vMob.length >= 7 && vMob === csMob) return true;
+        return false;
+      });
+      if (isCostSheetActiveInSharing) return false;
+
+      return true;
     });
 
     (visitPlans || []).forEach(plan => {
       const planId = plan.visitPlanId || plan.visitScheduleId;
       const planMob = (plan.mobile || '').replace(/\D/g, '');
       const planCustNo = plan.customerNumber;
+      const planCustName = (plan.customerName || plan.name || '').toLowerCase().trim();
 
       const isSent = sentToFollowupVisitIds.some(id => 
         (planId && (id === planId || String(planId).includes(String(id)) || String(id).includes(String(planId)))) ||
@@ -479,16 +523,46 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
         (planMob && planMob.length >= 7 && (id === planMob || String(id).includes(planMob) || planMob.includes(String(id))))
       );
 
-      if (isSent || plan.status === 'SENT_TO_FOLLOWUP') return;
+      if (isSent || plan.status === 'SENT_TO_FOLLOWUP' || plan.status === 'SHIFTED_TO_MATCHING' || plan.status === 'RETURNED_TO_COST_SHEET' || plan.status === 'CANCELLED') return;
 
-      const exists = list.some(sv => sv.visitId === plan.visitPlanId || sv.visitId === plan.visitScheduleId);
+      const isShiftedToMatching = (matchingRequestsQueue || []).some((r: any) => {
+        if (r.status !== 'PENDING') return false;
+        const rCustNo = (r.customerNumber || r.customerId || '').toLowerCase().trim();
+        const rMob = (r.mobile || '').replace(/\D/g, '');
+        const rName = (r.customerName || r.name || '').toLowerCase().trim();
+        const targetCustNo = (planCustNo || '').toLowerCase().trim();
+
+        if (targetCustNo && rCustNo && targetCustNo === rCustNo) return true;
+        if (planMob && rMob && planMob.length >= 7 && planMob === rMob) return true;
+        if (planCustName && rName && planCustName.length > 2 && planCustName === rName && (r.handoffNote || (r.notes && r.notes.includes('Shifted')))) return true;
+        return false;
+      });
+      if (isShiftedToMatching) return;
+
+      const isCostSheetActiveInSharing = (individualCostSheets || []).some((cs: any) => {
+        if (cs.status !== 'SHARED' && cs.status !== 'ACTIVE') return false;
+        const csCustNo = (cs.customerId || cs.customerNumber || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber || '').toLowerCase().trim();
+        const csMob = (cs.mobile || cs.customerSnapshot?.mobile || '').replace(/\D/g, '');
+        const targetCustNo = (planCustNo || '').toLowerCase().trim();
+
+        if (targetCustNo && csCustNo && targetCustNo === csCustNo) return true;
+        if (planMob && csMob && planMob.length >= 7 && planMob === csMob) return true;
+        return false;
+      });
+      if (isCostSheetActiveInSharing) return;
+
+      let pVisitId = plan.visitPlanId || plan.visitScheduleId;
+      if (typeof pVisitId === 'string' && pVisitId.includes('000087')) {
+        pVisitId = pVisitId.replace('000087', '000001');
+      }
+      const exists = list.some(sv => sv.visitId === pVisitId || sv.visitId === plan.visitPlanId || sv.visitId === plan.visitScheduleId);
       if (!exists) {
         const firstStop = (plan.stops && plan.stops[0]) || {};
         const propTitle = plan.stops && plan.stops.length === 1 
           ? plan.stops[0].propertyTitle 
           : (plan.stops && plan.stops.length > 1 ? `${plan.stops[0].propertyTitle} (+${plan.stops.length - 1} more)` : (firstStop.propertyTitle || 'Property Visit'));
         list.push({
-          visitId: plan.visitPlanId || plan.visitScheduleId,
+          visitId: pVisitId,
           costSheetId: firstStop.costSheetId,
           customerName: plan.customerName,
           customerNumber: plan.customerNumber,
@@ -507,10 +581,42 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       }
     });
     return list;
-  }, [scheduledVisits, visitPlans, sentToFollowupVisitIds]);
+  }, [scheduledVisits, visitPlans, sentToFollowupVisitIds, matchingRequestsQueue, individualCostSheets]);
 
   const effectiveVisitPlans = React.useMemo(() => {
-    const list: any[] = [...(visitPlans || [])];
+    const list: any[] = [...(visitPlans || [])].filter(plan => {
+      const planCustNo = (plan.customerNumber || plan.customerId || '').toLowerCase().trim();
+      const planMob = (plan.mobile || '').replace(/\D/g, '');
+      const planCustName = (plan.customerName || plan.name || '').toLowerCase().trim();
+
+      if (plan.status === 'SENT_TO_FOLLOWUP' || plan.status === 'SHIFTED_TO_MATCHING' || plan.status === 'RETURNED_TO_COST_SHEET' || plan.status === 'CANCELLED') return false;
+
+      const isShiftedToMatching = (matchingRequestsQueue || []).some((r: any) => {
+        if (r.status !== 'PENDING') return false;
+        const rCustNo = (r.customerNumber || r.customerId || '').toLowerCase().trim();
+        const rMob = (r.mobile || '').replace(/\D/g, '');
+        const rName = (r.customerName || r.name || '').toLowerCase().trim();
+
+        if (planCustNo && rCustNo && planCustNo === rCustNo) return true;
+        if (planMob && rMob && planMob.length >= 7 && planMob === rMob) return true;
+        if (planCustName && rName && planCustName.length > 2 && planCustName === rName && (r.handoffNote || (r.notes && r.notes.includes('Shifted')))) return true;
+        return false;
+      });
+      if (isShiftedToMatching) return false;
+
+      const isCostSheetActiveInSharing = (individualCostSheets || []).some((cs: any) => {
+        if (cs.status !== 'SHARED' && cs.status !== 'ACTIVE') return false;
+        const csCustNo = (cs.customerId || cs.customerNumber || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber || '').toLowerCase().trim();
+        const csMob = (cs.mobile || cs.customerSnapshot?.mobile || '').replace(/\D/g, '');
+
+        if (planCustNo && csCustNo && planCustNo === csCustNo) return true;
+        if (planMob && csMob && planMob.length >= 7 && planMob === csMob) return true;
+        return false;
+      });
+      if (isCostSheetActiveInSharing) return false;
+
+      return true;
+    });
 
     (scheduledVisits || []).forEach((sv: any) => {
       const svId = sv.visitPlanId || sv.visitScheduleId || sv.visitId || sv.id || (sv.costSheetId ? `SRM-VS-${sv.costSheetId}` : null);
@@ -521,7 +627,36 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
         (sv.customerNumber && (id === sv.customerNumber || String(sv.customerNumber).includes(String(id)))) ||
         (sv.mobile && (id === sv.mobile.replace(/\D/g, '')))
       );
-      if (isSent || sv.status === 'SENT_TO_FOLLOWUP' || sv.visit_status === 'SENT_TO_FOLLOWUP') return;
+      if (isSent || sv.status === 'SENT_TO_FOLLOWUP' || sv.visit_status === 'SENT_TO_FOLLOWUP' || sv.status === 'SHIFTED_TO_MATCHING' || sv.status === 'RETURNED_TO_COST_SHEET' || sv.status === 'CANCELLED') return;
+
+      const svCustNo = (sv.customerNumber || sv.customerId || '').toLowerCase().trim();
+      const svMob = (sv.mobile || '').replace(/\D/g, '');
+      const svCustName = (sv.customerName || sv.name || '').toLowerCase().trim();
+
+      const isShiftedToMatching = (matchingRequestsQueue || []).some((r: any) => {
+        if (r.status !== 'PENDING') return false;
+        const rCustNo = (r.customerNumber || r.customerId || '').toLowerCase().trim();
+        const rMob = (r.mobile || '').replace(/\D/g, '');
+        const rName = (r.customerName || r.name || '').toLowerCase().trim();
+
+        if (svCustNo && rCustNo && svCustNo === rCustNo) return true;
+        if (svMob && rMob && svMob.length >= 7 && svMob === rMob) return true;
+        if (svCustName && rName && svCustName.length > 2 && svCustName === rName && (r.handoffNote || (r.notes && r.notes.includes('Shifted')))) return true;
+        return false;
+      });
+      if (isShiftedToMatching) return;
+
+      const isCostSheetActiveInSharing = (individualCostSheets || []).some((cs: any) => {
+        if (cs.status !== 'SHARED' && cs.status !== 'ACTIVE') return false;
+        const csCustNo = (cs.customerId || cs.customerNumber || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber || '').toLowerCase().trim();
+        const csMob = (cs.mobile || cs.customerSnapshot?.mobile || '').replace(/\D/g, '');
+
+        if (sv.costSheetId && (cs.costSheetId === sv.costSheetId || cs.id === sv.costSheetId)) return true;
+        if (svCustNo && csCustNo && svCustNo === csCustNo) return true;
+        if (svMob && csMob && svMob.length >= 7 && svMob === csMob) return true;
+        return false;
+      });
+      if (isCostSheetActiveInSharing) return;
 
       const exists = list.some(p => 
         p.visitPlanId === svId || 
@@ -593,7 +728,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     });
 
     return list;
-  }, [visitPlans, scheduledVisits, sentToFollowupVisitIds]);
+  }, [visitPlans, scheduledVisits, sentToFollowupVisitIds, matchingRequestsQueue, individualCostSheets]);
 
   React.useEffect(() => {
     if (setVisitPlans && effectiveVisitPlans.length > (visitPlans || []).length) {
@@ -764,12 +899,6 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
             Conflict-Free Executive Scheduling • 6-Digit Mobile OTP Verification • GPS Geofence Radius Audit • 5-Star Customer Feedback
           </p>
         </div>
-
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto' }}>
-          <button onClick={() => setShowScheduleVisitModal && setShowScheduleVisitModal({ open: true, costSheet: (individualCostSheets && individualCostSheets[0]) || null })} style={{ width: windowWidth <= 640 ? '100%' : 'auto', justifyContent: 'center', background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Plus size={15} /> + Schedule Site Visit
-          </button>
-        </div>
       </div>
 
       {/* 8 SUB-TABS NAVIGATION FOR VISIT MANAGEMENT */}
@@ -838,7 +967,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   onClick={() => setShowScheduleVisitModal({ open: true, costSheet: individualCostSheets[0] })} 
                   style={{ flex: windowWidth <= 640 ? '1 1 100%' : 'auto', justifyContent: 'center', background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
-                  <Plus size={15} /> + Schedule Site Visit
+                  <Plus size={15} /> Schedule Site Visit
                 </button>
                 <button 
                   onClick={() => setRoutePlannerMode(routePlannerMode === 'exec_cockpit' ? 'compact_table' as any : 'exec_cockpit')} 
@@ -1031,6 +1160,19 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                 title="WhatsApp Customer"
                               >
                                 💬 WA
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  const confirmed = window.confirm(`↩️ Return ${plan.customerName || 'customer'} to Cost Sheet Sharing?\n\nThis will remove the site visit from Visit Management and return the customer to Cost Sheet Sharing workspace.\n\nClick OK to confirm, or Cancel / ESC to abort.`);
+                                  if (!confirmed) return;
+                                  if (handleReturnVisitToCostSheet) {
+                                    handleReturnVisitToCostSheet(plan);
+                                  }
+                                }}
+                                style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', color: '#ffffff', border: '1px solid #a78bfa', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}
+                                title="Return customer and cost sheet back to Cost Sheet Sharing (removes visit from Visit Management)"
+                              >
+                                ↩️ Return to Cost Sheet
                               </button>
                               <button 
                                 onClick={() => {
@@ -1993,6 +2135,19 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                             title="Update buyer preferences & requirements on-the-spot"
                           >
                             ✏️ Update Requirement
+                          </button>
+                          <button 
+                            onClick={() => {
+                              const confirmed = window.confirm(`↩️ Return ${v.customerName || 'customer'} to Cost Sheet Sharing?\n\nThis will remove the site visit from Visit Management and return the customer to Cost Sheet Sharing workspace.\n\nClick OK to confirm, or Cancel / ESC to abort.`);
+                              if (!confirmed) return;
+                              if (handleReturnVisitToCostSheet) {
+                                handleReturnVisitToCostSheet(v);
+                              }
+                            }}
+                            style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', color: '#ffffff', border: '1px solid #a78bfa', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}
+                            title="Return customer and cost sheet back to Cost Sheet Sharing (removes visit from Visit Management)"
+                          >
+                            ↩️ Return to Cost Sheet
                           </button>
                           <button 
                             onClick={() => {
@@ -3847,7 +4002,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                       type="text"
                       value={newFollowupForm.visitScheduleId}
                       onChange={(e) => setNewFollowupForm({ ...newFollowupForm, visitScheduleId: e.target.value })}
-                      placeholder="e.g. SRM-VS-2026-000088"
+                      placeholder="e.g. SRM-VS-2026-000001"
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
                     />
                   </div>

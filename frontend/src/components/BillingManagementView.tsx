@@ -143,20 +143,20 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
     );
 
     // 3. Resolve property details
-    const propCodeLookup = inv.property_code || inv.propertyCode || 'SRM-PROP-2026-000426';
+    const propCodeLookup = inv.property_code || inv.propertyCode || '';
     const matchedProp = (properties || []).find((p: any) => 
       p.property_code === propCodeLookup || p.id === propCodeLookup || p.propertyCode === propCodeLookup || (p.title && inv.property_title && (p.title.toLowerCase().includes(inv.property_title.toLowerCase()) || inv.property_title.toLowerCase().includes(p.title.toLowerCase())))
     );
 
-    const custName = inv.customer_name || matchedCust?.name || 'Rishita sharma';
-    const custNum = inv.customer_number || matchedCust?.customer_number || 'SRM-CUS-2026-000188';
-    const custMobile = inv.customer_mobile || matchedCust?.mobile || '+91 88765 97975';
-    const custEmail = inv.customer_email || matchedCust?.email || 'rishita@gmail.com';
+    const custName = inv.customer_name || matchedCust?.name || 'Customer';
+    const custNum = inv.customer_number || matchedCust?.customer_number || '';
+    const custMobile = inv.customer_mobile || matchedCust?.mobile || '';
+    const custEmail = inv.customer_email || matchedCust?.email || '';
 
     const propTitle = inv.property_title || matchedProp?.title || '';
     const propLocality = inv.property_locality || matchedProp?.locality || 'Barasat, Kolkata';
-    const devName = inv.developer_name || matchedProp?.developer || 'Dhriti Builders & Developers';
-    const agreeVal = Number(inv.agreement_value || (inv.flat_price ? Number(inv.flat_price) + Number(inv.parking_price || 0) : inv.taxable_value ? Math.round(Number(inv.taxable_value) / 0.02) : 5114880));
+    const devName = inv.developer_name || matchedProp?.developer || '';
+    const agreeVal = Number(inv.agreement_value || (inv.flat_price ? Number(inv.flat_price) + Number(inv.parking_price || 0) : inv.taxable_value ? Math.round(Number(inv.taxable_value) / 0.02) : 0));
     const tokenVal = 100000;
     const brokAmt = Number(inv.taxable_value) || Math.round(agreeVal * 0.02);
 
@@ -588,7 +588,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                             GSTIN: {i.developer_gstin || '36AAACA1234F1Z5'}
                           </div>
                           <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
-                            👤 {i.developer_contact_person || 'Mr. S. K. Reddy'} • 📞 {i.developer_mobile || '+91 98490 99887'}
+                            👤 {i.developer_contact_person || 'Developer Contact'} • 📞 {i.developer_mobile || 'N/A'}
                           </div>
                           {i.customer_name && (
                             <div style={{ marginTop: '6px', paddingTop: '4px', borderTop: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -612,7 +612,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                         <div>
                           <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.9rem' }}>👤 {i.customer_name}</strong>
                           <div style={{ fontSize: '0.75rem', color: '#4ade80', fontFamily: 'monospace', marginTop: '2px' }}>
-                            {i.customer_mobile || '+91 98490 12345'}
+                            {i.customer_mobile || 'N/A'}
                           </div>
                           {i.customer_number && (
                             <div style={{ fontSize: '0.7rem', color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>
@@ -774,17 +774,17 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                               (i.customer_name && (c.name?.toLowerCase() === i.customer_name.toLowerCase() || c.customer_name?.toLowerCase() === i.customer_name.toLowerCase() || c.customerName?.toLowerCase() === i.customer_name.toLowerCase())) ||
                               (i.customer_mobile && (c.mobile === i.customer_mobile || c.phone === i.customer_mobile))
                             );
-                            const propCodeLookup = i.property_code || i.propertyCode || 'SRM-PROP-2026-000426';
+                            const propCodeLookup = i.property_code || i.propertyCode || '';
                             const matchedProp = (properties || []).find((p: any) => 
                               p.property_code === propCodeLookup || p.id === propCodeLookup || p.propertyCode === propCodeLookup || (p.title && i.property_title && (p.title.toLowerCase().includes(i.property_title.toLowerCase()) || i.property_title.toLowerCase().includes(p.title.toLowerCase())))
                             );
 
                             const custName = i.customer_name || matchedCust?.name || matchedCust?.customer_name || matchedCust?.customerName || 'Valued Customer';
-                            const custNum = i.customer_number || matchedCust?.customer_number || matchedCust?.customerNumber || matchedCust?.id || 'SRM-CUS-2026-000185';
-                            const custMobile = i.customer_mobile || matchedCust?.mobile || matchedCust?.phone || '+91 98765 43210';
+                            const custNum = i.customer_number || matchedCust?.customer_number || matchedCust?.customerNumber || matchedCust?.id || '';
+                            const custMobile = i.customer_mobile || matchedCust?.mobile || matchedCust?.phone || '';
                             const custEmail = (i.customer_email && !i.customer_email.includes('customcr') && i.customer_email !== 'customer@gmail.com')
                               ? i.customer_email
-                              : (matchedCust?.email || `${custName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@gmail.com`);
+                              : (matchedCust?.email || '');
 
                             const propLocality = (i.property_locality && i.property_locality !== 'Kondapur, Hyderabad')
                               ? i.property_locality
@@ -817,15 +817,15 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                               invoice_category: i.invoice_category || (billingInvoiceCategory === 'DEVELOPER' ? 'DEVELOPER' : 'CUSTOMER'),
                               branch_name: i.branch_name || 'Head Office (Kolkata)',
                               created_date: i.created_date || new Date().toISOString().split('T')[0],
-                              property_code: i.property_code || matchedProp?.property_code || 'SRM-PROP-2026-000426',
+                              property_code: i.property_code || matchedProp?.property_code || '',
                               property_title: i.property_title || matchedProp?.title || '',
-                              developer_name: i.developer_name || matchedProp?.developer || 'Dhriti Builders & Developers',
+                              developer_name: i.developer_name || matchedProp?.developer || '',
                               developer_gstin: devGstin,
-                              developer_rera_id: i.developer_rera_id || matchedProp?.rera_id || 'WBRERA/P/NOR/2024/000842',
-                              developer_contact_person: i.developer_contact_person || 'Mr. R. K. Sen (VP Sales)',
-                              developer_mobile: i.developer_mobile || '+91 98300 12345',
-                              developer_email: i.developer_email || 'billing@dhritibuilders.com',
-                              developer_address: i.developer_address || matchedProp?.developer_address || 'Dhriti Towers, Jessore Road, Barasat, Kolkata - 700124',
+                              developer_rera_id: i.developer_rera_id || matchedProp?.rera_id || '',
+                              developer_contact_person: i.developer_contact_person || '',
+                              developer_mobile: i.developer_mobile || '',
+                              developer_email: i.developer_email || '',
+                              developer_address: i.developer_address || matchedProp?.developer_address || '',
                               developer_place_of_supply: i.developer_place_of_supply || '19 - West Bengal',
                               property_locality: propLocality,
                               property_configuration: propConfig,
@@ -1179,7 +1179,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    const email = showPaymentLinkModal.customer_email || showPaymentLinkModal.developer_email || 'rohan.deshmukh@gmail.com';
+                    const email = showPaymentLinkModal.customer_email || showPaymentLinkModal.developer_email || '';
                     const payUrl = `${window.location.origin}/pay/invoice?inv=${showPaymentLinkModal.invoice_number}`;
                     const subject = encodeURIComponent(`Tax Invoice Payment Link - ${showPaymentLinkModal.invoice_number}`);
                     const body = encodeURIComponent(`Dear ${showPaymentLinkModal.customer_name || showPaymentLinkModal.developer_name},\n\nPlease find your official Swaramayi Real Estate GST Tax Invoice payment link below:\n\n• Invoice Number: ${showPaymentLinkModal.invoice_number}\n• Property Unit: ${showPaymentLinkModal.property_title}\n• Total Payable Amount: ₹${Number(showPaymentLinkModal.total_invoice_amount).toLocaleString('en-IN')}\n\n🌐 Secure Online Payment URL:\n${payUrl}\n\nRegards,\nSwaramayi Real Estate Marketing`);
@@ -1624,7 +1624,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                           setEditInvoiceForm({ ...editInvoiceForm, property_code: val });
                         }
                       }} 
-                      placeholder="SRM-PROP-2026-000421" 
+                      placeholder="Property Code" 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #22c55e', color: '#4ade80', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace', fontWeight: '800' }} 
                       required 
                     />
@@ -1684,7 +1684,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                         setEditInvoiceForm({
                           ...editInvoiceForm,
                           customer_name: selected.name || selected.customer_name || selected.customerName || editInvoiceForm.customer_name,
-                          customer_number: selected.customer_number || selected.customerNumber || selected.id || 'SRM-CUS-2026-000185',
+                          customer_number: selected.customer_number || selected.customerNumber || selected.id || '',
                           customer_mobile: selected.mobile || selected.phone || editInvoiceForm.customer_mobile,
                           customer_email: selected.email || `${(selected.name || 'customer').toLowerCase().replace(/[^a-z0-9]/g, '.')}@gmail.com`,
                           customer_address: selected.address || selected.full_address || (selected.preferredArea ? `Jessore Road, ${selected.preferredArea}, West Bengal - 700124` : 'Jessore Road, Barasat, Kolkata, West Bengal - 700124'),
@@ -1698,7 +1698,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                     <option value="">-- Choose Customer to Auto-Populate Details --</option>
                     {(customers || []).map((c: any, idx: number) => (
                       <option key={idx} value={c.customer_number || c.customerNumber || c.name}>
-                        🆔 {c.customer_number || c.customerNumber || 'SRM-CUS-2026-000185'} — {c.name || c.customer_name || c.customerName} ({c.mobile || c.phone})
+                        🆔 {c.customer_number || c.customerNumber || ''} — {c.name || c.customer_name || c.customerName} ({c.mobile || c.phone})
                       </option>
                     ))}
                   </select>
@@ -1733,7 +1733,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                           setEditInvoiceForm({ ...editInvoiceForm, customer_number: val });
                         }
                       }} 
-                      placeholder="SRM-CUS-2026-000185" 
+                      placeholder="Customer Number" 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', color: '#38bdf8', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace', fontWeight: '800' }} 
                       required 
                     />
@@ -1887,9 +1887,9 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                       <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>✉️ Official Billing Email *</label>
                       <input 
                         type="email" 
-                        value={editInvoiceForm.developer_email || 'billing@dhritibuilders.com'} 
+                        value={editInvoiceForm.developer_email || ''} 
                         onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, developer_email: e.target.value })} 
-                        placeholder="billing@dhritibuilders.com" 
+                        placeholder="e.g. billing@developer.com" 
                         style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} 
                       />
                     </div>
@@ -1912,9 +1912,9 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                       <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>🏢 Developer Registered Corporate Address *</label>
                       <input 
                         type="text" 
-                        value={editInvoiceForm.developer_address || 'Dhriti Towers, Jessore Road, Barasat, Kolkata - 700124'} 
+                        value={editInvoiceForm.developer_address || ''} 
                         onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, developer_address: e.target.value })} 
-                        placeholder="Dhriti Towers, Jessore Road, Barasat, Kolkata - 700124" 
+                        placeholder="Developer Registered Corporate Address" 
                         style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} 
                       />
                     </div>
@@ -2302,9 +2302,9 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                         <input 
                           type="text" 
                           disabled={!isUserSuperAdmin}
-                          value={editInvoiceForm.company_mobile || '+91 98490 12345'} 
+                          value={editInvoiceForm.company_mobile || ''} 
                           onChange={(e) => isUserSuperAdmin && setEditInvoiceForm({ ...editInvoiceForm, company_mobile: e.target.value })} 
-                          placeholder="+91 98490 12345" 
+                          placeholder="Company Mobile" 
                           style={{ width: '100%', background: !isUserSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', cursor: !isUserSuperAdmin ? 'not-allowed' : 'text', opacity: !isUserSuperAdmin ? 0.75 : 1 }} 
                         />
                       </div>

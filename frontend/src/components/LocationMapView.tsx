@@ -138,8 +138,8 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
       // Skip dummy / placeholder records
       if (
         cleanTitle.toLowerCase().includes('no properties available') ||
-        cleanTitle.toLowerCase().includes('prop-empty') ||
-        item.id === 'PROP-EMPTY' ||
+        
+        
         item.property_code === 'NO_PROPERTIES'
       ) {
         return;

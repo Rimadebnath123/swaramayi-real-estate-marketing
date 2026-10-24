@@ -60,7 +60,7 @@ export async function createProperty(req: AuthRequest, res: Response) {
 
   const newProperty: PropertyRecord = {
     id: uuidv4(),
-    property_code: propCode, // SRM-PROP-2026-000421
+    property_code: propCode,
     property_title,
     property_type: property_type || 'Apartment',
     transaction_type: transaction_type || 'Sale',
@@ -94,7 +94,7 @@ export async function createProperty(req: AuthRequest, res: Response) {
     verified_at: new Date().toISOString(),
     completeness_score: 96,
     assigned_employee_id: req.user?.id || undefined,
-    assigned_employee_name: assigned_employee_name || 'Avishek Das',
+    assigned_employee_name: assigned_employee_name || req.user?.username || '',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     is_deleted: false
@@ -196,7 +196,7 @@ export async function shareProperty(req: AuthRequest, res: Response) {
     property_id: property.property_code,
     customer_id: customer_id || '',
     employee_id: req.user?.id || 'USR-01',
-    employee_name: req.user?.username || 'Avishek Das',
+    employee_name: req.user?.username || '',
     channel: channel || 'WhatsApp',
     shared_at: new Date().toISOString()
   };

@@ -161,7 +161,7 @@ export async function createCustomer(req: AuthRequest, res: Response) {
   const newCustId = uuidv4();
   const newCustomer = {
     id: newCustId,
-    customer_number: customerNumber, // SRM-CUS-2026-000184
+    customer_number: customerNumber,
     full_name,
     mobile,
     alternate_mobile: alternate_mobile || null,
@@ -440,6 +440,10 @@ import {
 } from '../db/mongoPersistence.js';
 
 export async function getMongoDBSync(req: AuthRequest, res: Response) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
   await loadData();
   const mongoData = await loadDataFromMongoDB();
   return res.json({
@@ -495,15 +499,26 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
   });
 }
 
-function extractItemIdentifiers(item: any): { ids: string[]; cleanTitle: string } {
+function extractItemIdentifiers(item: any): { ids: string[]; cleanTitle: string; isPropertyUnit: boolean } {
   const idsSet = new Set<string>();
-  if (!item) return { ids: [], cleanTitle: '' };
+  if (!item) return { ids: [], cleanTitle: '', isPropertyUnit: false };
 
-  const fields = [
-    item.id, item._id, item.property_code, item.code, item.project_id, item.propertyId, item.projectId,
-    item.lead_number, item.customer_number, item.booking_code, item.agreement_code, item.invoice_number,
-    item.costSheetId, item.visitId, item.visitScheduleId, item.visitPlanId, item.record_id, item.itemId
-  ];
+  const rawItem = item.originalData || item;
+  const isPropertyUnit = Boolean(
+    rawItem.property_code ||
+    item.property_code ||
+    (typeof item.id === 'string' && item.id.startsWith('SRM-PROP-')) ||
+    (typeof rawItem.code === 'string' && rawItem.code.startsWith('SRM-PROP-')) ||
+    item.originalLocation === 'Property Master / Live Inventory'
+  );
+
+  const fields = isPropertyUnit
+    ? [item.id, item._id, rawItem.id, rawItem._id, rawItem.property_code, item.property_code, rawItem.code, item.code]
+    : [
+        item.id, item._id, item.property_code, item.code, item.project_id, item.propertyId, item.projectId,
+        item.lead_number, item.customer_number, item.booking_code, item.agreement_code, item.invoice_number,
+        item.costSheetId, item.visitId, item.visitScheduleId, item.visitPlanId, item.record_id, item.itemId
+      ];
 
   fields.forEach(f => {
     if (f !== undefined && f !== null) {
@@ -524,24 +539,29 @@ function extractItemIdentifiers(item: any): { ids: string[]; cleanTitle: string 
 
   return {
     ids: Array.from(idsSet),
-    cleanTitle
+    cleanTitle,
+    isPropertyUnit
   };
 }
 
 export async function purgeSingleItemFromDB(item: any) {
   if (!item) return;
-  const { ids, cleanTitle } = extractItemIdentifiers(item);
+  const { ids, cleanTitle, isPropertyUnit } = extractItemIdentifiers(item);
   const cat = String(item.category || item.record_category || '').toLowerCase();
 
-  const titleRegex = cleanTitle.length >= 3 ? new RegExp(cleanTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') : null;
+  const titleRegex = (!isPropertyUnit && cleanTitle.length >= 3)
+    ? new RegExp(cleanTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+    : null;
 
   const orConditions: any[] = [];
   ids.forEach(id => {
     orConditions.push({ id });
-    orConditions.push({ _id: id });
+    if (/^[0-9a-fA-F]{24}$/.test(String(id))) { orConditions.push({ _id: id }); }
     orConditions.push({ property_code: id });
     orConditions.push({ code: id });
-    orConditions.push({ project_id: id });
+    if (!isPropertyUnit) {
+      orConditions.push({ project_id: id });
+    }
     orConditions.push({ lead_number: id });
     orConditions.push({ customer_number: id });
     orConditions.push({ booking_code: id });
@@ -568,32 +588,37 @@ export async function purgeSingleItemFromDB(item: any) {
     if (cat.includes('project') || cat.includes('property') || !cat) {
       await PropertyModel.deleteMany(query);
 
-      // Permanently remove matching projects from DeveloperModel documents
-      await DeveloperModel.updateMany({}, {
-        $pull: {
-          projects: {
-            $or: [
-              ...ids.map(id => ({ id })),
-              ...ids.map(id => ({ property_code: id })),
-              ...ids.map(id => ({ code: id })),
-              ...ids.map(id => ({ project_id: id })),
-              ...(titleRegex ? [{ title: titleRegex }] : [])
-            ]
+      if (!isPropertyUnit) {
+        // Permanently remove matching projects from DeveloperModel documents ONLY if it's a full project delete
+        await DeveloperModel.updateMany({}, {
+          $pull: {
+            projects: {
+              $or: [
+                ...ids.map(id => ({ id })),
+                ...ids.map(id => ({ property_code: id })),
+                ...ids.map(id => ({ code: id })),
+                ...ids.map(id => ({ project_id: id })),
+                ...(titleRegex ? [{ title: titleRegex }] : [])
+              ]
+            }
           }
-        }
-      });
+        });
+      }
 
       if (Array.isArray((dbStore.data as any).properties)) {
         (dbStore.data as any).properties = (dbStore.data as any).properties.filter((p: any) => {
           const pIds = extractItemIdentifiers(p).ids;
-          const pTitle = extractItemIdentifiers(p).cleanTitle.toLowerCase();
           const matchId = pIds.some(id => ids.includes(id));
+          if (isPropertyUnit) {
+            return !matchId;
+          }
+          const pTitle = extractItemIdentifiers(p).cleanTitle.toLowerCase();
           const matchTitle = cleanTitle && pTitle && (pTitle.includes(cleanTitle.toLowerCase()) || cleanTitle.toLowerCase().includes(pTitle));
           return !matchId && !matchTitle;
         });
       }
 
-      if (Array.isArray((dbStore.data as any).developers)) {
+      if (!isPropertyUnit && Array.isArray((dbStore.data as any).developers)) {
         (dbStore.data as any).developers = (dbStore.data as any).developers.map((d: any) => ({
           ...d,
           projects: Array.isArray(d.projects)

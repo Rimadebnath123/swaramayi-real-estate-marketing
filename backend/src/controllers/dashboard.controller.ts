@@ -177,34 +177,25 @@ export async function getPropertyStockAnalytics(req: AuthRequest, res: Response)
     expiringSoon: 2
   };
 
+  const now = new Date().getTime();
   const agingMatrix = [
-    { range: '0–30 Days', count: 18, label: 'Fresh Inventory' },
-    { range: '31–60 Days', count: 12, label: 'Active Pipeline' },
-    { range: '61–90 Days', count: 8, label: 'Moderate Age' },
-    { range: '91–180 Days', count: 5, label: 'Slow Moving' },
-    { range: '180+ Days', count: 3, label: 'Dead Inventory / Stale' }
+    { range: '0–30 Days', count: 0, label: 'Fresh Inventory' },
+    { range: '31–60 Days', count: 0, label: 'Active Pipeline' },
+    { range: '61–90 Days', count: 0, label: 'Moderate Age' },
+    { range: '91–180 Days', count: 0, label: 'Slow Moving' },
+    { range: '180+ Days', count: 0, label: 'Dead Inventory / Stale' }
   ];
+  filtered.properties.forEach((p: any) => {
+    const ageDays = p.created_at ? Math.floor((now - new Date(p.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+    if (ageDays <= 30) agingMatrix[0].count++;
+    else if (ageDays <= 60) agingMatrix[1].count++;
+    else if (ageDays <= 90) agingMatrix[2].count++;
+    else if (ageDays <= 180) agingMatrix[3].count++;
+    else agingMatrix[4].count++;
+  });
 
-  const priceDropAlerts = [
-    {
-      property_code: 'SRM-PROP-2026-000421',
-      title: 'Aparna Zenon Premium 3BHK Residence',
-      previous_price: 8600000,
-      new_price: 8400000,
-      matched_customers_count: 6,
-      reason: 'Monsoon Offer Discount'
-    }
-  ];
-
-  const newPropertyMatchAlerts = [
-    {
-      property_code: 'SRM-PROP-2026-000422',
-      title: 'Financial Towers Sky Suite',
-      locality: 'Financial District',
-      potential_matches: 8,
-      hot_matches: 3
-    }
-  ];
+  const priceDropAlerts: any[] = [];
+  const newPropertyMatchAlerts: any[] = [];
 
   return res.json({
     status: 'SUCCESS',
@@ -238,7 +229,7 @@ export async function getFollowUpControlCenter(req: AuthRequest, res: Response) 
       requirement: `${c.configuration || '3BHK'} in ${c.preferred_location || 'Selected Area'}`,
       budget: `₹${((c.budget_max || 8500000) / 100000).toFixed(1)}L`,
       lead_score: c.lead_score || 90,
-      assigned_exec: c.assigned_employee_name || 'Avishek Das',
+      assigned_exec: c.assigned_employee_name || '',
       last_contact: '2026-08-15',
       next_action: 'Send Price Quote & Confirm Visit'
     }));
@@ -307,10 +298,18 @@ export async function getBookingAndBrokerageIntelligence(req: AuthRequest, res: 
   const developerBrokerage = data.brokerage_records.filter((b: any) => b.source_type === 'DEVELOPER').reduce((sum: number, b: any) => sum + (b.total_commission_amount || 0), 0);
   const customerBrokerage = data.brokerage_records.filter((b: any) => b.source_type === 'CUSTOMER').reduce((sum: number, b: any) => sum + (b.total_commission_amount || 0), 0);
 
-  const salespersonBrokerage = [
-    { salesperson: 'Amit Patel', bookings: 1, expected: 180000, received: 60000, pending: 120000 },
-    { salesperson: 'Avishek Das', bookings: 2, expected: 320000, received: 160000, pending: 160000 }
-  ];
+  const spMap: Record<string, { salesperson: string; bookings: number; expected: number; received: number; pending: number }> = {};
+  data.brokerage_records.forEach((b: any) => {
+    const sp = b.salesperson_name || b.created_by || 'Admin';
+    if (!spMap[sp]) {
+      spMap[sp] = { salesperson: sp, bookings: 0, expected: 0, received: 0, pending: 0 };
+    }
+    spMap[sp].bookings += 1;
+    spMap[sp].expected += (b.total_commission_amount || 0);
+    spMap[sp].received += (b.received_amount || 0);
+    spMap[sp].pending += (b.pending_amount || 0);
+  });
+  const salespersonBrokerage = Object.values(spMap);
 
   return res.json({
     status: 'SUCCESS',
@@ -336,15 +335,28 @@ export async function getTeamPerformanceAnalytics(req: AuthRequest, res: Respons
   await loadData();
   const data = dbStore.data;
 
-  const salespersonPerformance = [
-    { name: 'Avishek Das', leads: 42, qualified: 32, requirements: 28, property_matches: 24, site_visits: 8, bookings: 2, brokerage: 320000, conversion: '4.8%' },
-    { name: 'Amit Patel', leads: 38, qualified: 28, requirements: 24, property_matches: 20, site_visits: 6, bookings: 1, brokerage: 180000, conversion: '2.6%' },
-    { name: 'Srinivas Rao', leads: 25, qualified: 18, requirements: 15, property_matches: 12, site_visits: 4, bookings: 1, brokerage: 150000, conversion: '4.0%' }
-  ];
+  const salespersonPerformance = (data.users || []).map((u: any) => {
+    const spLeads = data.customers.filter((c: any) => c.assigned_employee_name === u.full_name || c.assigned_employee_name === u.username);
+    const spVisits = data.site_visits.filter((v: any) => v.assigned_executive === u.full_name || v.assigned_executive === u.username);
+    const spBookings = data.bookings.filter((b: any) => b.salesperson_name === u.full_name || b.salesperson_name === u.username);
+    const spBrokerage = data.brokerage_records.filter((br: any) => br.salesperson_name === u.full_name || br.salesperson_name === u.username).reduce((sum: number, br: any) => sum + (br.received_amount || 0), 0);
+    const conversion = spLeads.length > 0 ? `${((spBookings.length / spLeads.length) * 100).toFixed(1)}%` : '0.0%';
+    return {
+      name: u.full_name || u.username,
+      leads: spLeads.length,
+      qualified: spLeads.filter((c: any) => c.status === 'QUALIFIED' || c.priority === 'HOT').length,
+      requirements: spLeads.length,
+      property_matches: spLeads.length,
+      site_visits: spVisits.length,
+      bookings: spBookings.length,
+      brokerage: spBrokerage,
+      conversion
+    };
+  });
 
   const teamComparison = {
-    teamA: { name: 'Sales Team Alpha', leads: 85, site_visits: 18, bookings: 4, brokerage: 640000, avgDealValue: 8500000 },
-    teamB: { name: 'Sales Team Bravo', leads: 65, site_visits: 12, bookings: 2, brokerage: 330000, avgDealValue: 6200000 }
+    teamA: { name: (data.teams && data.teams[0]?.team_name) || 'Executive Team', leads: data.customers.length, site_visits: data.site_visits.length, bookings: data.bookings.length, brokerage: 0, avgDealValue: 0 },
+    teamB: { name: (data.teams && data.teams[1]?.team_name) || 'Field Operations', leads: 0, site_visits: 0, bookings: 0, brokerage: 0, avgDealValue: 0 }
   };
 
   return res.json({
@@ -361,12 +373,22 @@ export async function getDeveloperAndProjectPerformance(req: AuthRequest, res: R
   await loadData();
   const data = dbStore.data;
 
-  const developers = [
-    { developer: 'Aparna Constructions', properties: 12, matches: 45, site_visits: 14, bookings: 3, brokerage: 480000, conversion: '6.6%' },
-    { developer: 'My Home Group', properties: 8, matches: 32, site_visits: 9, bookings: 2, brokerage: 416000, conversion: '6.2%' },
-    { developer: 'Prestige Group', properties: 6, matches: 28, site_visits: 8, bookings: 1, brokerage: 180000, conversion: '3.5%' },
-    { developer: 'Jayabheri Group', properties: 4, matches: 15, site_visits: 3, bookings: 0, brokerage: 0, conversion: '0.0%' }
-  ];
+  const developers = ((data as any).developers || []).map((d: any) => {
+    const devProps = data.properties.filter((p: any) => p.developer_id === d.id || p.developer_name === d.developer_name);
+    const devVisits = data.site_visits.filter((v: any) => devProps.some((p: any) => p.property_code === v.property_code || p.id === v.property_id));
+    const devBookings = data.bookings.filter((b: any) => devProps.some((p: any) => p.property_code === b.property_code || p.id === b.property_id));
+    const devBrokerage = data.brokerage_records.filter((br: any) => br.source_type === 'DEVELOPER' && (br.developer_id === d.id || br.developer_name === d.developer_name)).reduce((sum: number, br: any) => sum + (br.received_amount || 0), 0);
+    const conversion = devVisits.length > 0 ? `${((devBookings.length / devVisits.length) * 100).toFixed(1)}%` : '0.0%';
+    return {
+      developer: d.developer_name,
+      properties: devProps.length,
+      matches: devProps.length * 2,
+      site_visits: devVisits.length,
+      bookings: devBookings.length,
+      brokerage: devBrokerage,
+      conversion
+    };
+  });
 
   return res.json({
     status: 'SUCCESS',

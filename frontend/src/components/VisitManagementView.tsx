@@ -183,14 +183,14 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
 
           if (matchedProps.length > 0) {
             advisorProps = matchedProps.map((p: any) => ({
-              code: p.property_code || p.id || 'SRM-PROP-001',
+              code: p.property_code || p.id || '',
               title: p.property_title || p.title || 'Property Site',
               location: p.locality || p.location || 'Kolkata',
             }));
-          } else if (uNameLower.includes('punita')) {
+          } else if (false) {
             advisorProps = [{
               code: 'SRM-PROP-2026-000001',
-              title: 'DHRITI APARTMENT',
+              title: '',
               location: 'BASUNAGARMADHAMGRAM'
             }];
           } else {
@@ -325,7 +325,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       payment_mode: 'UPI / Online Bank Transfer',
       payment_ref: `TXN-SRM-${Math.floor(100000 + Math.random() * 900000)}`,
       brokerage_rate: '2.0%',
-      brokerage_amount: 102297,
+      brokerage_amount: Math.round((pva.agreement_value_num || 0) * 0.02),
       approval_status: 'APPROVED_LOCKED',
       sales_executive: v.assignedExecutive || 'Unassigned'
     };
@@ -672,7 +672,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
               {
                 stopId: `SRM-VSTOP-${svId}-1`,
                 costSheetId: sv.costSheetId || 'N/A',
-                propertyId: sv.propertyId || 'PROP-01',
+                propertyId: sv.propertyId || '',
                 propertyCode: sv.propertyCode || 'N/A',
                 propertyTitle: sv.propertyTitle || 'Property Site',
                 locality: sv.locality || 'Property Location',
@@ -701,7 +701,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
           officeName: sv.officeName || 'Head Office (Kolkata)',
           officeAddress: sv.officeAddress || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129',
           assignedExecutive: sv.assignedExecutive || sv.assignedFieldExecutive || sv.salesExecutive || 'Unassigned',
-          assignedExecutivePhone: sv.assignedExecutivePhone || '+91 98490 00014',
+          assignedExecutivePhone: sv.assignedExecutivePhone || '',
           visitDate: sv.visitDate || new Date().toISOString().split('T')[0],
           startTime: sv.visitTime || sv.startTime || '10:00 AM',
           status: sv.status || 'ASSIGNED',
@@ -1371,8 +1371,8 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   }
 
                   const t = pTitle.toLowerCase();
-                  if (t.includes('gajapati') || t.includes('star mall') || t.includes('madhyamgram')) return { lat: '22.694318', lng: '88.400659' };
-                  if (t.includes('dhriti') || t.includes('colony') || t.includes('dakbangla')) return { lat: '22.715420', lng: '88.479150' };
+                  if (t.includes('star mall') || t.includes('madhyamgram')) return { lat: '22.694318', lng: '88.400659' };
+                  if (t.includes('colony') || t.includes('dakbangla')) return { lat: '22.715420', lng: '88.479150' };
                   if (t.includes('shibalay') || t.includes('chapadali')) return { lat: '22.722361', lng: '88.493403' };
                   if (t.includes('greenwood') || t.includes('vip road') || t.includes('airport')) return { lat: '22.645200', lng: '88.438500' };
 
@@ -1643,7 +1643,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                     ? firstStop.propertyTitle 
                     : (v.propertyTitle && !v.propertyTitle.includes('Properties (') ? v.propertyTitle : (firstStop?.propertyTitle || ''));
 
-                  const cleanPropCode = firstStop?.propertyCode || v.propertyCode || v.propCode || 'SRM-PROP-2026-000426';
+                  const cleanPropCode = firstStop?.propertyCode || v.propertyCode || v.propCode || '';
                   const cleanLocality = firstStop?.locality || v.locality || 'Barasat, Kolkata';
                   const totalStopsCount = (matchedPlan?.stops && matchedPlan.stops.length) || (v.stops && v.stops.length) || v.totalStops || 1;
 
@@ -2127,7 +2127,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                   custName: v.customerName || 'Customer', 
                                   custCode: v.customerNumber || v.mobile || 'SRM-CUS-2026', 
                                   mobile: v.mobile || v.customerNumber, 
-                                  propertyCode: v.propertyCode || v.propCode || 'SRM-PROP-2026-000426'
+                                  propertyCode: v.propertyCode || v.propCode || ''
                                 } 
                               });
                             }}
@@ -2389,7 +2389,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                   <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{v.propertyTitle}</strong>
                                   <div style={{ marginTop: '2px', marginBottom: '2px' }}>
                                     <span style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid #0284c7', color: '#38bdf8', fontSize: '0.72rem', fontWeight: '900', padding: '2px 6px', borderRadius: '4px', fontFamily: 'monospace', display: 'inline-block' }}>
-                                      🏢 Property Code: {v.propertyCode || v.propCode || 'SRM-PROP-2026-000426'}
+                                      🏢 Property Code: {v.propertyCode || v.propCode || 'N/A'}
                                     </span>
                                   </div>
                                   <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'monospace' }}>📍 GPS: {v.latitude || '22.722351° N'}, {v.longitude || '88.485484° E'}</span>
@@ -3969,7 +3969,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                       type="text"
                       value={newFollowupForm.customerName}
                       onChange={(e) => setNewFollowupForm({ ...newFollowupForm, customerName: e.target.value })}
-                      placeholder="e.g. Rahul Sharma"
+                      placeholder="e.g. Executive Name"
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
                     />
                   </div>
@@ -3991,7 +3991,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                       type="text"
                       value={newFollowupForm.propertyTitle}
                       onChange={(e) => setNewFollowupForm({ ...newFollowupForm, propertyTitle: e.target.value })}
-                      placeholder="e.g. SK Construction / DHRITI"
+                      placeholder="e.g. Developer or Property Title"
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
                     />
                   </div>

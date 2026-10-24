@@ -60,7 +60,7 @@ async function syncCollection(model: mongoose.Model<any>, records: any[]) {
     const recordConditions: any[] = [];
 
     records.forEach((r: any) => {
-      if (r._id) recordConditions.push({ _id: r._id });
+      if (r._id && mongoose.Types.ObjectId.isValid(String(r._id))) recordConditions.push({ _id: r._id });
       if (r.id) recordConditions.push({ id: String(r.id) });
       if (r.code) recordConditions.push({ code: String(r.code) });
       if (r.project_id) recordConditions.push({ project_id: String(r.project_id) });
@@ -116,6 +116,8 @@ async function syncCollection(model: mongoose.Model<any>, records: any[]) {
       }
       
       const toSet = { ...rec };
+      delete toSet._id;
+      delete toSet.__v;
       if (model.modelName === 'CostSheet' && !toSet.id && toSet.costSheetId) {
         toSet.id = String(toSet.costSheetId);
       }
@@ -130,7 +132,7 @@ async function syncCollection(model: mongoose.Model<any>, records: any[]) {
     });
 
     if (ops.length > 0) {
-      await model.bulkWrite(ops);
+      await model.bulkWrite(ops, { ordered: false });
     }
 
     if (model.modelName === 'Customer') {

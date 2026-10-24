@@ -24,7 +24,7 @@ export interface UserRecord {
 
 export interface CustomerRecord {
   id: string;
-  customer_number: string; // SRM-CUS-2026-000184
+  customer_number: string;
   full_name: string;
   mobile: string;
   alt_mobile?: string;
@@ -66,7 +66,7 @@ export interface CustomerRecord {
 
 export interface PropertyRecord {
   id: string;
-  property_code: string; // SRM-PROP-2026-000421
+  property_code: string;
   property_title: string;
   property_type: string;
   transaction_type: string;
@@ -235,7 +235,7 @@ export interface BrokerageRecord {
 // LEGAL AGREEMENTS SCHEMAS
 export interface AgreementRecord {
   id: string;
-  agreement_code: string; // SRM-AGR-CUS-2026-000301 or SRM-AGR-DEV-2026-000301
+  agreement_code: string;
   agreement_type: 'CUSTOMER_SITE_VISIT' | 'DEVELOPER_MANDATE';
   party_name: string;
   party_mobile_email: string;

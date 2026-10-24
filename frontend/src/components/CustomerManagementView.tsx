@@ -584,7 +584,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
         });
 
         if (!updated) {
-          const custNum = activeTargetCust?.customer_number || activeTargetCust?.customer_id || 'SRM-CUS-2026-000001';
+          const custNum = activeTargetCust?.customer_number || activeTargetCust?.customer_id || '';
           const newInv = {
             id: invIdOrNum || (custNum ? `SRM-INV-2026-${custNum.replace(/[^0-9]/g, '').slice(-6)}` : 'SRM-INV-NEW'),
             invoice_number: invIdOrNum || (custNum ? `SRM-INV-2026-${custNum.replace(/[^0-9]/g, '').slice(-6)}` : 'SRM-INV-NEW'),
@@ -592,7 +592,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
             customer_name: activeTargetCust?.name || activeTargetCust?.full_name || 'Customer',
             customer_mobile: activeTargetCust?.mobile || '',
             party_name: activeTargetCust?.name || activeTargetCust?.full_name || 'Customer',
-            total_invoice_amount: 590000,
+            total_invoice_amount: 0,
             settlement_status: newSettlementStatus,
             is_settled: newIsSettled,
             payment_status: 'PAID_SETTLED',
@@ -1104,20 +1104,20 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
     // Dynamic Lists for Items 5 through 17 (Clean & Deduplicated)
     const propList = allLinkedCostSheets.length > 0 
       ? allLinkedCostSheets.map((cs: any, i: number) => ({ 
-          id: cs.propertyCode || cs.propertyId || cs.propertySnapshot?.propertyCode || cs.propertySnapshot?.propertyId || `SRM-PROP-2026-00042${i + 1}`, 
+          id: cs.propertyCode || cs.propertyId || cs.propertySnapshot?.propertyCode || cs.propertySnapshot?.propertyId || '', 
           name: cs.propertySnapshot?.projectName || cs.propertySnapshot?.propertyTitle || cs.propertyName || 'Matched Property Unit', 
           status: 'SHORTLISTED' 
         }))
       : linkedVisits.length > 0
       ? linkedVisits.map((v: any, i: number) => ({ 
-          id: v.propertyCode || `SRM-PROP-2026-00042${i + 1}`, 
+          id: v.propertyCode || '', 
           name: v.propertyTitle || 'Visited Property', 
           status: 'VISITED' 
         }))
       : [];
 
     const csList = allLinkedCostSheets.map((cs: any, i: number) => ({
-      id: cs.costSheetId || cs.id || `COST-SHEET-2026-00000${i + 1}`,
+      id: cs.costSheetId || cs.id || '',
       name: cs.propertySnapshot?.projectName || cs.propertySnapshot?.propertyTitle || cs.propertyName || 'Property Unit',
       status: cs.version ? `${cs.version} ACTIVE` : 'CS-V1 ACTIVE'
     }));
@@ -1810,9 +1810,9 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                     details: idx === 0 ? 'Automated individual cost sheet emailed & whatsapped' : idx === 1 ? 'Lead score promoted (Ready to Move)' : 'Pre-visit non-circumvention mandate digitally signed via OTP verification',
                     status: idx === 0 ? 'SUCCESS' : idx === 1 ? 'COMPLETED' : 'VERIFIED'
                   })) : [
-                    { time: 'Today 11:30 AM', target: 'SRM-CUS-2026-000001 (Active Customer)', action: 'COST_SHEET_DISPATCHED', exec: 'Sales Executive', details: 'Automated individual cost sheet emailed & whatsapped', status: 'SUCCESS' },
-                    { time: 'Today 10:15 AM', target: 'SRM-LEAD-2026-001245 (Qualified Lead)', action: 'QUALIFIED_STAGE_UPGRADE', exec: 'Sales Executive', details: 'Lead score promoted (Ready to Move)', status: 'COMPLETED' },
-                    { time: 'Yesterday 04:45 PM', target: 'SRM-CUS-2026-000002 (Verified Client)', action: 'SITE_VISIT_PVA_LOCKED', exec: 'Sales Executive', details: 'Pre-visit non-circumvention mandate digitally signed via OTP verification', status: 'VERIFIED' }
+                    // Empty fallback
+
+
                   ]).map((evt, eIdx) => (
                     <tr key={eIdx} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
                       <td style={{ padding: '10px', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{evt.time}</td>
@@ -2610,7 +2610,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                           </td>
                           <td style={{ padding: '12px' }}>
                             {(() => {
-                              const displayCustNum = (c.customer_number || '').includes('000188') ? 'SRM-CUS-2026-000001' : (c.customer_number || 'SRM-CUS-2026-000001');
+                              const displayCustNum = c.customer_number || 'SRM-CUS-2026-000001';
                               return (
                                 <span 
                                   onClick={() => openIdDetailsModal(displayCustNum, 'CUSTOMER_ID')}
@@ -2809,7 +2809,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                 <span style={{ background: '#0284c7', color: '#ffffff', padding: '2px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '800', fontFamily: 'monospace' }}>{activeCust.customer_number}</span>
                 <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800' }}>● COMPANY OWNED ASSET</span>
               </div>
-              <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>Assigned Executive: <strong>{activeCust.assigned_salesperson || 'Abinash Roy (Admin)'}</strong> | Team Leader: <strong>Rahul Sharma</strong></p>
+              <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>Assigned Executive: <strong>{activeCust.assigned_salesperson || 'Abinash Roy (Admin)'}</strong> | Team Leader: <strong>{activeCust.team_leader || 'Management'}</strong></p>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -3008,8 +3008,8 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
               </thead>
               <tbody>
                 {[
-                  { risk: 'HIGH RISK', cust: 'SRM-CUS-2026-000001', emp: 'Amit Patel (Sales Exec)', rule: 'Rule 5: Booking detected with My Home Developer without recorded site visit.', action: 'Lock Record Access' },
-                  { risk: 'HIGH RISK', cust: 'SRM-CUS-2026-000142', emp: 'Punita Roy Chowdhury (Admin)', rule: 'Rule 1: Creation attempt of duplicate customer with existing phone +91 98490 11223.', action: 'Block & Audit' },
+                  
+                  
                   { risk: 'MEDIUM RISK', cust: 'SRM-CUS-2026-000098', emp: 'Kiran Kumar (Sales Exec)', rule: 'Rule 7: Attempted to edit primary mobile number of company customer record.', action: 'Review Change Log' }
                 ].map((item, idx) => (
                   <tr key={idx} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
@@ -3041,7 +3041,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
           <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <span style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: '800' }}>Pending Manager Transfer Request (1)</span>
-              <p style={{ fontSize: '0.8rem', color: isLight ? '#0f172a' : '#ffffff', margin: '2px 0 0 0' }}>Amit Patel requests transferring <strong>SRM-LEAD-2026-001891</strong> to Rahul Sharma.</p>
+              <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', margin: '2px 0 0 0' }}>No pending approval requests.</p>
               <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>Reason: Customer requested senior manager for price negotiation.</span>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>

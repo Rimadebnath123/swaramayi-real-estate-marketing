@@ -90,37 +90,7 @@ function extractPropertyImages(p: any, title: string, id: string): string[] {
   addCandidate(p.picture);
   addCandidate(p.media);
 
-  if (candidates.length > 0) {
-    return candidates;
-  }
-
-  const defaultImagesSet = [
-    [
-      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80'
-    ],
-    [
-      'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80'
-    ],
-    [
-      'https://images.unsplash.com/photo-1567496898669-ee935f5f647a?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=800&q=80'
-    ],
-    [
-      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=800&q=80'
-    ]
-  ];
-
-  let hash = 0;
-  const str = id || title || 'default';
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  const setIndex = Math.abs(hash) % defaultImagesSet.length;
-  return defaultImagesSet[setIndex];
+  return candidates;
 }
 
 // Normalize Property for Public Website Response
@@ -130,15 +100,15 @@ function formatPublicProperty(p: any) {
   const titleLower = title.toLowerCase();
 
   let crmCode = p.property_code || p.id;
-  let crmDev = p.developer_name || p.developer || 'Swaramayi Developers';
+  let crmDev = p.developer_name || p.developer || '';
   let crmPrice = parsePriceString(p.final_estimated_price) || parsePriceString(p.base_price) || parsePriceString(p.price);
   let crmSuperArea = parseAreaString(p.built_up_area_sqft) || parseAreaString(p.areaSqft) || parseAreaString(p.area);
   let crmCarpetArea = parseAreaString(p.carpet_area_sqft) || parseAreaString(p.carpetArea);
-  let crmBeds = p.bedrooms || (p.configuration ? parseInt(p.configuration) || 3 : 3);
-  let crmConfig = p.configuration || `${crmBeds}BHK`;
-  let crmLocality = p.locality || p.location || 'Barasat, Kolkata';
-  let crmAddress = p.location_address || p.full_address || 'Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124';
-  let crmCity = p.city || 'Kolkata';
+  let crmBeds = p.bedrooms || (p.configuration ? parseInt(p.configuration) || 0 : 0);
+  let crmConfig = p.configuration || (crmBeds > 0 ? `${crmBeds}BHK` : '');
+  let crmLocality = p.locality || p.location || '';
+  let crmAddress = p.location_address || p.full_address || '';
+  let crmCity = p.city || '';
 
   crmCode = p.property_code || p.code || p.id || crmCode;
   crmDev = p.developer || p.developer_name || p.builder_name || p.developer_company || crmDev;
@@ -152,8 +122,8 @@ function formatPublicProperty(p: any) {
   if (p.configuration) crmConfig = p.configuration;
   if (p.locality || p.location) crmLocality = p.locality || p.location;
 
-  const price = crmPrice > 0 ? crmPrice : 3000000;
-  const area = crmSuperArea > 0 ? crmSuperArea : (crmCarpetArea > 0 ? crmCarpetArea : 1200);
+  const price = crmPrice > 0 ? crmPrice : 0;
+  const area = crmSuperArea > 0 ? crmSuperArea : (crmCarpetArea > 0 ? crmCarpetArea : 0);
   const explicitSqftRate = parsePriceString(p.pricePerSqft) || parsePriceString(p.price_per_sqft);
   const pricePerSqft = explicitSqftRate > 0 ? explicitSqftRate : (area > 0 && price > 0 ? Math.round(price / area) : 0);
 
@@ -184,9 +154,9 @@ function formatPublicProperty(p: any) {
     title,
     property_title: title,
     slug,
-    description: (p.description && p.description.trim().length > 15 && p.description.trim().toLowerCase() !== title.toLowerCase()) 
-      ? p.description 
-      : `${crmConfig} ${p.property_type || p.propertyType || 'Apartment'} with modern amenities, excellent ventilation, and prime location connectivity in ${crmLocality}, ${crmCity}.`,
+    description: (p.description && p.description.trim().length > 0)
+      ? p.description
+      : (crmConfig ? `${crmConfig} ${p.property_type || p.propertyType || 'Property'}` : (p.title || '')),
     category: (String(p.category || p.transaction_type || 'Buy').toLowerCase().includes('rent')) ? 'Rent' : 'Buy',
     propertyType: p.propertyType || p.property_type || 'Apartment',
     property_type: p.property_type || p.propertyType || 'Apartment',
@@ -206,8 +176,8 @@ function formatPublicProperty(p: any) {
     project_name: p.project_name || title,
     bedrooms: crmBeds,
     configuration: crmConfig,
-    bathrooms: p.bathrooms || 2,
-    balconies: p.balconies || 1,
+    bathrooms: p.bathrooms || 0,
+    balconies: p.balconies || 0,
     areaSqft: area,
     superBuiltupArea: crmSuperArea,
     carpetArea: crmCarpetArea,
@@ -216,13 +186,13 @@ function formatPublicProperty(p: any) {
     floor: p.floor !== undefined && p.floor !== null && p.floor !== '' ? p.floor : (p.floor_number || p.unit_floor || ''),
     totalFloors: p.total_floors || p.total_floors_in_building || p.total_floor || '',
     possessionStatus: p.possession_status || p.possession_date || 'Ready to Move In',
-    facing: p.facing || 'East',
-    furnishing: p.furnishing || p.furnishing_status || 'Semi-Furnished',
-    parking: p.parking || (p.parking_spaces ? `${p.parking_spaces} Space` : 'Covered'),
+    facing: p.facing || '',
+    furnishing: p.furnishing || p.furnishing_status || '',
+    parking: p.parking || (p.parking_spaces ? `${p.parking_spaces} Space` : ''),
     constructionStatus,
-    reraApproved: p.reraApproved !== undefined ? p.reraApproved : true,
-    reraNumber: p.reraNumber || 'WBRERA/2026/00192',
-    amenities: p.amenities || ['24x7 Security', 'Power Backup', 'Car Parking', 'Gymnasium', 'Swimming Pool', 'Clubhouse'],
+    reraApproved: p.reraApproved !== undefined ? p.reraApproved : false,
+    reraNumber: p.reraNumber || p.rera_number || '',
+    amenities: p.amenities || [],
     images,
     image: images[0],
     building_photo: images[0],
@@ -246,38 +216,27 @@ function formatPublicProperty(p: any) {
         const userProps: any[] = usr.assigned_properties || usr.assignedProperties || [];
         if (Array.isArray(userProps)) {
           return userProps.some((ap: any) => {
-            const apStr = String(ap || '').toLowerCase();
+            const apStr = String(ap || '').toLowerCase().trim();
             return apStr && (
               apStr === pCodeLower ||
-              pTitleLower.includes(apStr) ||
-              apStr.includes(pTitleLower) ||
-              (pTitleLower.includes('shibalay') && apStr.includes('shibalay')) ||
-              (pTitleLower.includes('dhriti') && apStr.includes('dhriti')) ||
-              (pTitleLower.includes('gajapati') && apStr.includes('gajapati'))
+              (pTitleLower && (pTitleLower.includes(apStr) || apStr.includes(pTitleLower)))
             );
           });
         }
         return false;
       });
 
-      let name = u?.full_name || u?.username || p.assigned_employee_name;
-      let role = u?.role || (u as any)?.designation || 'Sales Management';
-      let phone = u?.mobile || (u as any)?.phone || '8668767887';
-      let email = u?.email || 'punita13.pr@gmail.com';
-      let img = (u as any)?.avatar || (u as any)?.profileImage || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
-      let rating = (u as any)?.rating || 4.8;
+      const name = u?.full_name || u?.username || p.assigned_employee_name || '';
+      if (!name) return null;
 
-      if (!name) {
-        name = 'punita Roy chowdhury';
-        role = 'TELECALLER';
-        phone = '8668767887';
-        email = 'punita13.pr@gmail.com';
-        img = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
-        rating = 4.8;
-      }
+      const role = u?.role || (u as any)?.designation || 'Property Advisor';
+      const phone = u?.mobile || (u as any)?.phone || '';
+      const email = u?.email || '';
+      const img = (u as any)?.avatar || (u as any)?.profileImage || '';
+      const rating = Number((u as any)?.rating) || 0;
 
       return {
-        id: u?.id || 'USR-02',
+        id: u?.id || '',
         name,
         full_name: name,
         role,
@@ -295,60 +254,19 @@ function formatPublicProperty(p: any) {
         (p.assigned_employee_id && (usr.id === p.assigned_employee_id || String(usr.id) === String(p.assigned_employee_id))) ||
         (p.assigned_employee_name && (usr.full_name === p.assigned_employee_name || usr.username === p.assigned_employee_name))
       );
-      let name = u?.full_name || p.assigned_employee_name;
-      let role = u?.role || 'Property Advisor';
-      let phone = '8902130791';
-      let email = 'avishek@swaramayi.info';
-      let img = (u as any)?.avatar || (u as any)?.profileImage;
-      let rating = (u as any)?.rating;
+      const name = u?.full_name || u?.username || p.assigned_employee_name || '';
+      if (!name) return null;
 
-      const tLower = title.toLowerCase();
-      const codeLower = String(p.property_code || p.id || '').toLowerCase();
-
-      if (!name) {
-        if (tLower.includes('shibalay') || codeLower.includes('425') || codeLower.includes('shibalay')) {
-          name = 'Abinash Roy';
-          role = 'Admin';
-          phone = '8902130791';
-          email = 'avishek@swaramayi.info';
-          img = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&q=80';
-          rating = rating || 4.7;
-        } else if (tLower.includes('dhriti') || codeLower.includes('427') || codeLower.includes('423') || codeLower.includes('dhriti')) {
-          name = 'Punita Roy';
-          role = 'Sales Management';
-          phone = '8902130791';
-          email = 'avishek@swaramayi.info';
-          img = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
-          rating = rating || 4.8;
-        } else if (tLower.includes('gajapati') || codeLower.includes('422')) {
-          name = 'Punita Roy';
-          role = 'Sales Management';
-          phone = '8902130791';
-          email = 'avishek@swaramayi.info';
-          img = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
-          rating = rating || 4.8;
-        } else {
-          name = 'Punita Roy';
-          role = 'Sales Management';
-          phone = '8902130791';
-          email = 'avishek@swaramayi.info';
-          img = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
-          rating = rating || 4.8;
-        }
-      }
-
-      if (!rating) {
-        rating = (name && name.toLowerCase().includes('abinash')) ? 4.7 : 4.8;
-      }
-
-      if (!img) {
-        img = (name && name.toLowerCase().includes('punita')) 
-          ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80'
-          : 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&q=80';
-      }
+      const role = u?.role || (u as any)?.designation || 'Property Advisor';
+      const phone = u?.mobile || (u as any)?.phone || '';
+      const email = u?.email || '';
+      const img = (u as any)?.avatar || (u as any)?.profileImage || '';
+      const rating = Number((u as any)?.rating) || 0;
 
       return {
+        id: u?.id || '',
         name,
+        full_name: name,
         role,
         designation: role,
         phone,
@@ -356,7 +274,7 @@ function formatPublicProperty(p: any) {
         email,
         profileImage: img,
         image: img,
-        rating: Number(rating) || 4.8
+        rating
       };
     })(),
   };
@@ -566,8 +484,8 @@ export async function getPublicSoldProperties(req: Request, res: Response) {
     success: true,
     count: result.length,
     stats: {
-      totalSold: totalSold > 0 ? totalSold : 150,
-      totalVolumeCr: totalVolumeCr > 0 ? totalVolumeCr : 250,
+      totalSold,
+      totalVolumeCr,
       verifiedPct: 100,
       satisfactionPct: 98
     },
@@ -618,7 +536,7 @@ export async function getPublicProjects(req: Request, res: Response) {
       if (!seenProjects.has(nameKey)) {
         seenProjects.add(nameKey);
         const images = extractPropertyImages(p, projName, p.property_code || p.id);
-        const priceMin = p.final_estimated_price || p.base_price || 2080000;
+        const priceMin = p.final_estimated_price || p.base_price || 0;
         const priceMax = Math.round(priceMin * 1.25);
         
         let crmLocality = p.locality || p.location || 'Kolkata';
@@ -630,20 +548,20 @@ export async function getPublicProjects(req: Request, res: Response) {
           title: projName,
           slug: slugify(projName),
           description: p.description || `${p.configuration || '3BHK'} residential apartment with modern amenities in ${crmLocality}, Kolkata.`,
-          developer: p.developer_name || p.developer || 'Swaramayi Real Estate Marketing',
+          developer: p.developer_name || p.developer || '',
           city: p.city || 'Kolkata',
           location: crmLocality,
           locality: crmLocality,
-          location_address: p.location_address || 'Jessore Road, Barasat, North 24 Parganas, Kolkata, West Bengal - 700124',
+          location_address: p.location_address || '',
           priceMin,
           priceMax,
           propertyTypes: [p.property_type || p.propertyType || 'Apartment'],
           bhkOptions: [p.configuration || '3BHK'],
           constructionStatus: p.constructionStatus || 'Under Construction',
           possessionStatus: p.possession_date || '2026 - 2028',
-          reraApproved: true,
-          reraNumber: 'WBRERA/2026/00192',
-          amenities: p.amenities || ['Club House', 'Swimming Pool', 'Gymnasium', '24x7 Security'],
+          reraApproved: Boolean(p.reraApproved),
+          reraNumber: p.reraNumber || p.rera_number || '',
+          amenities: p.amenities || [],
           images,
           image: images[0],
           featured: true,
@@ -701,13 +619,13 @@ async function getPublicProjectsData() {
           title: name,
           slug: slugify(name),
           description: p.description || `${p.configuration || '3BHK'} residential apartment with modern amenities in ${crmLocality}, Kolkata.`,
-          developer: p.developer_name || 'Swaramayi Real Estate',
+          developer: p.developer_name || '',
           city: p.city || 'Kolkata',
           location: crmLocality,
           locality: crmLocality,
-          priceMin: p.final_estimated_price || p.base_price || 2080000,
-          priceMax: Math.round((p.final_estimated_price || p.base_price || 2080000) * 1.25),
-          amenities: ['Security', 'Gym', 'Parking'],
+          priceMin: p.final_estimated_price || p.base_price || 0,
+          priceMax: p.final_estimated_price || p.base_price ? Math.round((p.final_estimated_price || p.base_price) * 1.25) : 0,
+          amenities: p.amenities || [],
           images,
           image: images[0]
         };
@@ -987,21 +905,10 @@ export async function getPublicPhases(req: Request, res: Response) {
   });
 }
 
-const demoResourceFiles = [
-  {
-    id: 'FILE-001',
-    title: 'Swarnamayi Corporate Portfolio & Services 2026',
-    category: 'Corporate Profile',
-    description: 'Complete overview of Swarnamayi Real Estate Marketing, verified project portfolios, property advisory protocols, and client track record across Kolkata.',
-    fileSize: 'PDF • 4.2 MB',
-    filePath: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/examples/learning/helloworld.pdf'
-  }
-];
-
 export async function getPublicFiles(req: Request, res: Response) {
   loadData();
   const dbFiles = (dbStore.data as any).files || [];
-  const filesList = dbFiles.length > 0 ? dbFiles : demoResourceFiles;
+  const filesList = dbFiles;
 
   return res.json({
     status: 'success',
@@ -1019,7 +926,7 @@ export async function getPublicAgents(req: Request, res: Response) {
     email: u.email,
     phone: u.mobile,
     role: u.role,
-    rating: (u as any)?.rating || (u.full_name?.toLowerCase().includes('abinash') || u.username?.toLowerCase().includes('abinash') ? 4.7 : 4.8)
+    rating: Number((u as any)?.rating) || 0
   }));
   return res.json({
     status: 'success',
@@ -1086,11 +993,11 @@ export async function createPublicAdvisorRatingInvite(req: Request, res: Respons
   const newInvite = {
     id: id || `SRM-RAT-INV-${Math.floor(1000 + Math.random() * 9000)}`,
     date: date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    customerName: customerName || 'Valued Customer',
-    customerMobile: customerMobile || '+91 90513 22932',
-    customerPhone: customerMobile || '+91 90513 22932',
-    advisorName: advisorName || 'Punita Roy',
-    propertyTitle: propertyTitle || 'GAJAPATI APARTMENT',
+    customerName: customerName || '',
+    customerMobile: customerMobile || '',
+    customerPhone: customerMobile || '',
+    advisorName: advisorName || '',
+    propertyTitle: propertyTitle || '',
     rating: null,
     feedbackText: customNote || null,
     comment: customNote || null,
@@ -1156,11 +1063,11 @@ export async function submitPublicAdvisorRating(req: Request, res: Response) {
   const newLogItem = {
     id: existingPending ? existingPending.id : uniqueId,
     date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    customerName: customerName || (existingPending ? existingPending.customerName : 'Website Home-Buyer'),
-    customerMobile: customerPhone || (existingPending ? (existingPending.customerMobile || existingPending.customerPhone) : '+91 98300 12345'),
-    customerPhone: customerPhone || (existingPending ? (existingPending.customerPhone || existingPending.customerMobile) : '+91 98300 12345'),
+    customerName: customerName || (existingPending ? existingPending.customerName : 'Customer'),
+    customerMobile: customerPhone || (existingPending ? (existingPending.customerMobile || existingPending.customerPhone) : ''),
+    customerPhone: customerPhone || (existingPending ? (existingPending.customerPhone || existingPending.customerMobile) : ''),
     advisorName: advisorName,
-    propertyTitle: propertyTitle || (existingPending ? existingPending.propertyTitle : 'GAJAPATI APARTMENT'),
+    propertyTitle: propertyTitle || (existingPending ? existingPending.propertyTitle : ''),
     rating: ratingNum,
     feedbackText: comment || 'Rated via Website Consultation Modal',
     comment: comment || 'Rated via Website Consultation Modal',
@@ -1201,7 +1108,7 @@ export async function submitPublicAdvisorRating(req: Request, res: Response) {
     id: uuidv4(),
     site_visit_code: `SRM-RATING-${Math.floor(100000 + Math.random() * 900000)}`,
     customer_name: customerName || 'Website Customer',
-    customer_number: customerPhone || '+91 98300 12345',
+    customer_number: customerPhone || '',
     sales_executive: advisorName,
     visit_status: 'RATED',
     feedback_notes: `Rating: ${ratingNum}/5 Stars. Feedback: ${comment || 'No comment'}`,
@@ -1300,8 +1207,7 @@ export async function deletePublicAdvisorRatingById(req: Request, res: Response)
         const avg = uReviews.reduce((sum: number, r: any) => sum + Number(r.rating), 0) / uReviews.length;
         u.rating = Number(avg.toFixed(1));
       } else {
-        if (uName.includes('punita')) u.rating = 5.0;
-        else if (uName.includes('abinash')) u.rating = 4.0;
+        u.rating = 0;
       }
     });
   }

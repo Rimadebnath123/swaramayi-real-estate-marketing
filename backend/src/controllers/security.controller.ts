@@ -47,7 +47,7 @@ export async function createBranch(req: AuthRequest, res: Response) {
     branch_name,
     city,
     address: address || `${city} Main Office`,
-    branch_manager_name: branch_manager_name || 'Avishek Das',
+    branch_manager_name: branch_manager_name || req.user?.username || '',
     created_at: new Date().toISOString().split('T')[0]
   };
 
@@ -72,7 +72,7 @@ export async function createTeam(req: AuthRequest, res: Response) {
     team_name,
     branch_id: 'BR-MAIN',
     branch_name: branch_name || 'Main Branch',
-    team_lead_name: team_lead_name || 'Rahul Sharma',
+    team_lead_name: team_lead_name || '',
     members_count: 1
   };
 
@@ -108,12 +108,12 @@ export async function createUser(req: AuthRequest, res: Response) {
     username,
     full_name: full_name || username,
     email,
-    mobile: mobile || '+91 98490 00000',
+    mobile: mobile || '',
     role: role || 'SALES_EXEC',
     branch_name: branch_name || 'Main Branch',
     department: department || 'Sales',
-    team_name: team_name || 'Sales Team Alpha',
-    manager_name: manager_name || 'Rahul Sharma',
+    team_name: team_name || '',
+    manager_name: manager_name || '',
     is_active: true,
     user_status: 'ACTIVE',
     created_at: new Date().toISOString().split('T')[0]
@@ -167,7 +167,7 @@ export async function reassignEmployeeExit(req: AuthRequest, res: Response) {
   dbStore.data.customers.forEach(c => {
     if (c.assigned_employee_id === resigning_user_id || c.assigned_employee_name === user?.full_name || c.assigned_employee_name === user?.username) {
       c.assigned_employee_id = new_assigned_agent_id || 'USR-01';
-      c.assigned_employee_name = new_assigned_agent_name || 'Avishek Das (Super Admin)';
+      c.assigned_employee_name = new_assigned_agent_name || req.user?.username || '';
       reassignedCustomersCount++;
     }
   });

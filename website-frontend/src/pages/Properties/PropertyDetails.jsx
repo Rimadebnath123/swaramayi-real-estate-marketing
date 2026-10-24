@@ -492,7 +492,7 @@ export default function PropertyDetails() {
                     customerName: ratingCustomerName,
                     customerPhone: ratingCustomerPhone,
                     comment: ratingComment,
-                    propertyTitle: property?.title || 'GAJAPATI APARTMENT'
+                    propertyTitle: property?.title || ''
                   };
 
                   try {

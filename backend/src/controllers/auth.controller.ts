@@ -63,7 +63,9 @@ export async function verifyMFA(req: Request, res: Response) {
     return res.status(400).json({ status: 'ERROR', message: 'Code and user_id are required.' });
   }
 
-  if (code === '123456' || code === '482901') {
+  loadData();
+  const user = dbStore.data.users.find(u => u.id === user_id || u.username === user_id);
+  if (user && (!user.is_mfa_enabled || ((user as any).mfa_code && String((user as any).mfa_code) === String(code)))) {
     return res.json({ status: 'SUCCESS', message: 'MFA Verification successful.' });
   }
 

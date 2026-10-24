@@ -162,7 +162,7 @@ export async function sendPropertyRecommendations(req: AuthRequest, res: Respons
     share_code: recCode, // SRM-REC-2026-000101
     customer_number: customer.customer_number,
     customer_name: customer.full_name,
-    employee_name: req.user?.username || 'Avishek Das (Super Admin)',
+    employee_name: req.user?.username || '',
     property_codes,
     channel: channel || 'WhatsApp',
     view_token: viewToken,

@@ -2003,34 +2003,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             </div>
 
             {(() => {
-              const fallbackInventory = [
-                {
-                  id: 'PROP-BARASAT-001',
-                  property_code: 'SRM-PROP-2026-000426',
-                  title: '1 Properties (BARASAT, BANAMALIPUR, BARASAT NEAR ECO HOSPITAL)',
-                  locality: 'Barasat / Banamalipur',
-                  project: 'TILOTTAMA APPARTMENT',
-                  developer: 'Swaramayi Partner Developer',
-                  configuration: '3BHK',
-                  type: 'Flat / Apartment (New / Builder)',
-                  facing: 'East Facing (Poorva)',
-                  possession_status: 'Ready to Move',
-                  final_price: '₹51,14,880',
-                  base_price: '₹48,00,000',
-                  area_sqft: '1450 SqFt',
-                  super_builtup_area: 1450,
-                  car_parking: '1 Covered Parking Slot',
-                  floor: '2nd Floor',
-                  floor_num: '2nd Floor',
-                  total_floors: 'G+4 Floors (5 Storey)'
-                }
-              ];
-
               let displayProps = [...(properties || [])];
-              if (displayProps.length === 0) displayProps = fallbackInventory;
-              if (!displayProps.some(p => p.property_code === 'SRM-PROP-2026-000426')) {
-                displayProps.unshift(fallbackInventory[0]);
-              }
 
               const activeCustUsedProps = activeMatchingReq
                 ? getCustomerUsedPropertyCodes(

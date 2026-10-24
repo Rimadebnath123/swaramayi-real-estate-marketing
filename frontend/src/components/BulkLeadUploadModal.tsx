@@ -82,7 +82,7 @@ export const BulkLeadUploadModal: React.FC<BulkLeadUploadModalProps> = ({
         'ananya.r@example.com',
         'Website Inquiry',
         'Gachibowli',
-        'My Home Bhooja',
+        'Project Name',
         'Gated Community Flat',
         '2BHK',
         '5000000',

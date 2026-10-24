@@ -57,7 +57,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
     if (e) e.preventDefault();
     if (!editBookingForm || !setBookings) return;
 
-    const agrValNum = Number(editBookingForm.agreement_value_input || editBookingForm.agreement_value_num || 5114880);
+    const agrValNum = Number(editBookingForm.agreement_value_input || editBookingForm.agreement_value_num || 0);
     const tokAmt = Number(editBookingForm.token_amount_input !== undefined ? editBookingForm.token_amount_input : (editBookingForm.token_amount || 100000));
     const brokPct = Number(editBookingForm.brokerage_percent || 2.0);
     const brokAmt = Math.round(agrValNum * (brokPct / 100));
@@ -100,7 +100,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
       ? rawBookingCode.replace('SRM-BKG-', 'SRM-DEV-INV-')
       : `SRM-DEV-INV-2026-${String((invoices?.length || 0) + 1).padStart(6, '0')}`;
 
-    const brokerageAmt = Number(b.brokerage_amount) || 102297;
+    const brokerageAmt = Number(b.brokerage_amount) || 0;
     const taxableVal = brokerageAmt;
     const cgst = Math.round(taxableVal * 0.09);
     const sgst = Math.round(taxableVal * 0.09);
@@ -113,35 +113,35 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
       (b.customer_mobile && (c.mobile === b.customer_mobile || c.phone === b.customer_mobile))
     );
 
-    const propCodeLookup = b.property_code || b.propertyCode || 'SRM-PROP-2026-000426';
+    const propCodeLookup = b.property_code || b.propertyCode || '';
     const matchedProp = (properties || []).find((p: any) => 
       p.property_code === propCodeLookup || p.id === propCodeLookup || p.propertyCode === propCodeLookup || (p.title && b.project_name && (p.title.toLowerCase().includes(b.project_name.toLowerCase()) || b.project_name.toLowerCase().includes(p.title.toLowerCase())))
     );
 
     const custName = b.customer_name || matchedCust?.name || matchedCust?.customer_name || matchedCust?.customerName || 'Valued Customer';
-    const custNum = b.customer_number || matchedCust?.customer_number || matchedCust?.customerNumber || matchedCust?.id || 'SRM-CUS-2026-000185';
-    const custMobile = b.customer_mobile || matchedCust?.mobile || matchedCust?.phone || '+91 98765 43210';
+    const custNum = b.customer_number || matchedCust?.customer_number || matchedCust?.customerNumber || matchedCust?.id || '';
+    const custMobile = b.customer_mobile || matchedCust?.mobile || matchedCust?.phone || '';
     const custEmail = (b.customer_email && !b.customer_email.includes('customcr') && b.customer_email !== 'customer@gmail.com')
       ? b.customer_email
-      : (matchedCust?.email || `${custName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@gmail.com`);
+      : (matchedCust?.email || '');
 
     const propTitle = b.project_name || matchedProp?.title || '';
     const propLocality = matchedProp?.locality || b.locality || (b.project_name?.includes('Barasat') || b.project_name?.includes('Kolkata') ? 'Barasat, Kolkata' : 'Barasat, Kolkata');
     const custAddress = b.customer_address || matchedCust?.address || matchedCust?.full_address || matchedProp?.full_address || (matchedCust?.preferredArea ? `Jessore Road, ${matchedCust.preferredArea}, West Bengal - 700124` : 'Jessore Road, Barasat, Kolkata, West Bengal - 700124');
     const placeOfSupply = b.place_of_supply || matchedCust?.place_of_supply || matchedCust?.state || (propLocality.includes('Kolkata') || propTitle.includes('Kolkata') || (matchedCust?.preferredArea && matchedCust.preferredArea.includes('Kolkata')) ? '19 - West Bengal' : '19 - West Bengal');
-    const gstinPan = b.customer_gstin_pan || matchedCust?.gstin || matchedCust?.pan || '19ABCDE1234F1Z5';
+    const gstinPan = b.customer_gstin_pan || matchedCust?.gstin || matchedCust?.pan || '';
 
     const propConfig = matchedProp?.configuration || b.configuration || b.property_configuration || '2BHK Luxury Apartment';
-    const devName = b.developer_name || matchedProp?.developer || matchedProp?.builder || 'Dhriti Builders & Developers';
-    const devGstin = b.developer_gstin || matchedProp?.developer_gstin || '19AAACD4567E1Z2';
-    const devRera = matchedProp?.rera_id || b.developer_rera_id || 'WBRERA/P/NOR/2024/000842';
-    const devContact = b.developer_contact_person || 'Mr. Animesh Sen';
-    const devMobile = b.developer_mobile || '+91 98300 12345';
-    const devEmail = matchedProp?.developer_email || 'billing@dhritibuilders.com';
-    const devAddress = matchedProp?.developer_address || 'Dhriti Towers, Jessore Road, Barasat, Kolkata - 700124';
+    const devName = b.developer_name || matchedProp?.developer || matchedProp?.builder || '';
+    const devGstin = b.developer_gstin || matchedProp?.developer_gstin || '';
+    const devRera = matchedProp?.rera_id || b.developer_rera_id || '';
+    const devContact = b.developer_contact_person || '';
+    const devMobile = b.developer_mobile || '';
+    const devEmail = matchedProp?.developer_email || b.developer_email || '';
+    const devAddress = matchedProp?.developer_address || b.developer_address || '';
     const devPos = placeOfSupply || '19 - West Bengal';
     const branchName = b.branch_name || (propLocality.includes('Kolkata') ? 'Kolkata Branch' : 'Head Office (Kolkata)');
-    const agreeVal = String(b.agreement_value_num || 5114880);
+    const agreeVal = String(b.agreement_value_num || 0);
     const flatVal = String(b.flat_price || Math.round(Number(agreeVal) * 0.95));
     const parkVal = String(b.parking_price || Math.round(Number(agreeVal) * 0.05));
     const brokPct = String(b.brokerage_percent || 2.0);
@@ -362,23 +362,23 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
         list.push({
           id: `BKG-PVA-${pva.projectVisitAgreementId || Date.now()}`,
           booking_code: bkgCode,
-          agreement_code: pva.projectVisitAgreementId || `SRM-PVA-2026-000001`,
+          agreement_code: pva.projectVisitAgreementId || '',
           customer_name: custName,
           customer_number: pva.customerId || pva.customerNumber || '',
           customer_mobile: pva.customerMobile || '',
           project_name: projName,
-          developer_name: pva.developerName || 'Dhriti Builders & Developers',
+          developer_name: pva.developerName || '',
           property_title: projName,
-          tower_unit: pva.unitNumber || 'Tower A - Unit 302 (3BHK)',
-          agreement_value: '₹51,14,880',
-          agreement_value_num: 5114880,
-          token_amount: 100000,
+          tower_unit: pva.unitNumber || '',
+          agreement_value: pva.agreement_value || '₹0',
+          agreement_value_num: pva.agreement_value_num || 0,
+          token_amount: pva.token_amount || 0,
           payment_mode: 'Bank Transfer / NEFT',
           payment_ref: `PVA-SIG-${pva.otpHashRef?.slice(-6) || '849201'}`,
           booking_date: pva.visitDate || new Date().toISOString().split('T')[0],
           sales_executive: pva.executiveName || 'Ramesh Pawar',
           brokerage_rate: '2.0%',
-          brokerage_amount: 102297,
+          brokerage_amount: Math.round((pva.agreement_value_num || 0) * 0.02),
           approval_status: 'APPROVED_LOCKED',
           status: 'CONFIRMED'
         });
@@ -520,7 +520,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
                       <strong style={{ color: '#fbbf24', fontSize: '0.88rem' }}>🏢 {b.project_name}</strong>
                       <div style={{ marginTop: '3px', marginBottom: '3px' }}>
                         <span style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid #0284c7', color: '#38bdf8', fontSize: '0.72rem', fontWeight: '900', padding: '2px 7px', borderRadius: '4px', fontFamily: 'monospace', display: 'inline-block' }}>
-                          🏢 Property Code: {b.property_code || b.propertyCode || 'SRM-PROP-2026-000426'}
+                          🏢 Property Code: {b.property_code || b.propertyCode || 'N/A'}
                         </span>
                       </div>
                       <div style={{ fontSize: '0.78rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', marginTop: '2px' }}>
@@ -569,7 +569,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
                           onClick={() => {
                             setEditBookingForm({
                               ...b,
-                              agreement_value_input: b.agreement_value_num || String(b.agreement_value || '').replace(/\D/g, '') || 5114880,
+                              agreement_value_input: b.agreement_value_num || String(b.agreement_value || '').replace(/\D/g, '') || '',
                               token_amount_input: b.token_amount || 100000
                             });
                             setShowEditBookingModal(b);
@@ -697,7 +697,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
               <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Total Agreement Value (₹) *</label>
-                  <input type="number" value={editBookingForm.agreement_value_input || ''} onChange={(e) => setEditBookingForm({ ...editBookingForm, agreement_value_input: e.target.value })} placeholder="5114880" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
+                  <input type="number" value={editBookingForm.agreement_value_input || ''} onChange={(e) => setEditBookingForm({ ...editBookingForm, agreement_value_input: e.target.value })} placeholder="Agreement Value" style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px', borderRadius: '6px', fontSize: '0.85rem' }} required />
                 </div>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Advance Token Amount Paid (₹) *</label>

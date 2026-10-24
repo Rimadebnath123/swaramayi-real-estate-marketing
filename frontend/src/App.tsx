@@ -1,3 +1,12 @@
+// SAFEGUARD: Wipe any legacy localStorage caches for properties and developers
+try {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    localStorage.removeItem('swaramayi_properties_v5_clean');
+    localStorage.removeItem('swaramayi_developers_v1');
+    localStorage.removeItem('swaramayi_properties_master');
+  }
+} catch (e) {}
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   LayoutDashboard, UserCog, Building, Users, CreditCard, User, FileCheck,
@@ -21,14 +30,21 @@ export const extractAllIdentifiers = (item: any): Set<string> => {
 
   const data = item.originalData || item;
 
+  // Check if item is a single Property Inventory Unit
+  const isPropertyUnit = Boolean(
+    data.property_code ||
+    item.property_code ||
+    (typeof item.id === 'string' && item.id.startsWith('SRM-PROP-')) ||
+    (typeof data.code === 'string' && data.code.startsWith('SRM-PROP-')) ||
+    item.originalLocation === 'Property Master / Live Inventory'
+  );
+
   [
     item.id,
     data.id,
     data._id,
     data.property_code,
     data.code,
-    data.project_id,
-    data.project_code,
     data.lead_number,
     data.customer_number,
     data.name
@@ -41,28 +57,41 @@ export const extractAllIdentifiers = (item: any): Set<string> => {
     }
   });
 
-  const titlesToProcess = [
-    item.title,
-    data.title,
-    data.property_title,
-    data.project_title,
-    data.project_name,
-    data.name
-  ];
-
-  titlesToProcess.forEach(rawTitle => {
-    if (rawTitle && typeof rawTitle === 'string' && rawTitle.trim()) {
-      const t = rawTitle.trim();
-      ids.add(t.toLowerCase());
-      const cleanT = t.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
-      if (cleanT) ids.add(cleanT);
-      const match = t.match(/\(([^)]+)\)/);
-      if (match && match[1]) {
-        ids.add(match[1].trim().toLowerCase());
-        ids.add(match[1].trim().toUpperCase());
-      }
+  // For property units, NEVER add project-level identifiers or title,
+  // so sibling units sharing the same project/building name are never falsely matched!
+  if (!isPropertyUnit) {
+    if (data.project_id && typeof data.project_id === 'string') {
+      ids.add(data.project_id.trim());
+      ids.add(data.project_id.trim().toLowerCase());
     }
-  });
+    if (data.project_code && typeof data.project_code === 'string') {
+      ids.add(data.project_code.trim());
+      ids.add(data.project_code.trim().toLowerCase());
+    }
+
+    const titlesToProcess = [
+      item.title,
+      data.title,
+      data.property_title,
+      data.project_title,
+      data.project_name,
+      data.name
+    ];
+
+    titlesToProcess.forEach(rawTitle => {
+      if (rawTitle && typeof rawTitle === 'string' && rawTitle.trim()) {
+        const t = rawTitle.trim();
+        ids.add(t.toLowerCase());
+        const cleanT = t.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+        if (cleanT) ids.add(cleanT);
+        const match = t.match(/\(([^)]+)\)/);
+        if (match && match[1]) {
+          ids.add(match[1].trim().toLowerCase());
+          ids.add(match[1].trim().toUpperCase());
+        }
+      }
+    });
+  }
 
   return ids;
 };
@@ -298,7 +327,7 @@ function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false, bra
 
     // Node 3..N: Dynamic Project / Property Locations
     const stops = Array.isArray(plan.stops) && plan.stops.length > 0 ? plan.stops : [
-      { stopId: 'stop-1', propertyTitle: 'DHRITI APARTMENT', propertyCode: 'SRM-PROP-101', address: 'Barasat Champadali, Kolkata - 700124', latitude: 22.7230, longitude: 88.4910 }
+      { stopId: 'stop-1', propertyTitle: '', propertyCode: '', address: 'Barasat Champadali, Kolkata - 700124', latitude: 22.7230, longitude: 88.4910 }
     ];
 
     const projectNodes = stops.map((s: any, idx: number) => {
@@ -1288,8 +1317,8 @@ function ScheduleVisitModalContent({
       return {
         stopNum: idx + 1,
         costSheetId: cs.costSheetId || cs.id || `CS-0${idx + 1}`,
-        propertyId: cs.propertyId || matchedProp?.id || `PROP-0${idx + 1}`,
-        propertyCode: pCode || matchedProp?.property_code || `PROP-0${idx + 1}`,
+        propertyId: cs.propertyId || matchedProp?.id || (properties && properties[0]?.id) || '',
+        propertyCode: pCode || matchedProp?.property_code || (properties && properties[0]?.property_code) || '',
         propertyTitle: cs.propertySnapshot?.propertyTitle || matchedProp?.title || 'Property Site',
         locality: cs.propertySnapshot?.locality || matchedProp?.locality || 'Barasat, Kolkata',
         developer: matchedProp?.developer || 'Swaramayi Partner Developer',
@@ -1377,8 +1406,8 @@ function ScheduleVisitModalContent({
           stopsToUse = [{
             stopNum: 1,
             costSheetId: initialCS.costSheetId || initialCS.id || 'CS-GEN-01',
-            propertyId: initialCS.propertyId || 'PROP-01',
-            propertyCode: initialCS.propertyCode || initialCS.propertySnapshot?.propertyCode || 'PROP-01',
+            propertyId: initialCS.propertyId || (properties && properties[0]?.id) || '',
+            propertyCode: initialCS.propertyCode || initialCS.propertySnapshot?.propertyCode || (properties && properties[0]?.property_code) || '',
             propertyTitle: initialCS.propertySnapshot?.propertyTitle || 'Property Site',
             locality: initialCS.propertySnapshot?.locality || 'Barasat, Kolkata',
             developer: 'Swaramayi Partner Developer',
@@ -1390,8 +1419,8 @@ function ScheduleVisitModalContent({
           stopsToUse = [{
             stopNum: 1,
             costSheetId: firstCs.costSheetId || firstCs.id || 'CS-GEN-01',
-            propertyId: firstCs.propertyId || 'PROP-01',
-            propertyCode: firstCs.propertyCode || firstCs.propertySnapshot?.propertyCode || 'PROP-01',
+            propertyId: firstCs.propertyId || (properties && properties[0]?.id) || '',
+            propertyCode: firstCs.propertyCode || firstCs.propertySnapshot?.propertyCode || (properties && properties[0]?.property_code) || '',
             propertyTitle: firstCs.propertySnapshot?.propertyTitle || 'Property Site',
             locality: firstCs.propertySnapshot?.locality || 'Barasat, Kolkata',
             developer: 'Swaramayi Partner Developer',
@@ -1439,8 +1468,8 @@ function ScheduleVisitModalContent({
       const stopsData = stopsToUse.map((stop: any, idx: number) => ({
         stopId: `SRM-VSTOP-2026-${String(idx + 1).padStart(6, '0')}`,
         costSheetId: stop?.costSheetId || `CS-${idx + 1}`,
-        propertyId: stop?.propertyId || `PROP-0${idx + 1}`,
-        propertyCode: stop?.propertyCode || `PROP-0${idx + 1}`,
+        propertyId: stop?.propertyId || '',
+        propertyCode: stop?.propertyCode || '',
         propertyTitle: stop?.propertyTitle || 'Property Site',
         locality: stop?.locality || 'Barasat, Kolkata',
         developer: stop?.developer || 'Swaramayi Partner Developer',
@@ -1478,7 +1507,7 @@ function ScheduleVisitModalContent({
         officeName: targetOffice?.branch_name || 'Head Office (Kolkata)',
         officeAddress: targetOffice?.address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129',
         assignedExecutive: assignedExec || 'Avishek Das (Super Admin)',
-        assignedExecutivePhone: '+91 98490 00014',
+        assignedExecutivePhone: '',
         visitDate: visitDate || new Date().toISOString().split('T')[0],
         startTime: startTime || '10:00 AM',
         status: 'ASSIGNED',
@@ -2385,7 +2414,7 @@ function VisitDetailModalContent({
           {openSections.feedback && (
             <div style={{ padding: '16px', fontSize: '0.82rem', color: isLight ? '#0f172a' : '#e2e8f0', background: isLight ? '#ffffff' : '#0f172a' }}>
               <p style={{ fontWeight: '800', color: isLight ? '#b45309' : '#fbbf24' }}>Rating: ⭐⭐⭐⭐⭐ (5/5 Stars)</p>
-              <p style={{ marginTop: '4px', color: isLight ? '#0f172a' : '#e2e8f0' }}>Remarks: "Customer showed high interest in flat 1402 at Aparna Zenon. Requested revised cost sheet with floor rise discount."</p>
+              <p style={{ marginTop: '4px', color: isLight ? '#0f172a' : '#e2e8f0' }}>Remarks: "Customer completed scheduled site visit."</p>
             </div>
           )}
         </div>
@@ -2558,15 +2587,15 @@ function PvaVerificationModalContent({
     visitPlanId: 'SRM-VP-2026-000001',
     visitScheduleId: 'SRM-VS-2026-000001',
     customerName: 'Customer',
-    customerNumber: 'SRM-CUS-2026-000184',
-    mobile: '+91 98490 12345',
+    customerNumber: '',
+    mobile: '',
     assignedExecutive: 'Ramesh Pawar (Field Exec)',
     stops: []
   };
   const safeStop = stop || {
     stopId: 'SRM-VSTOP-2026-000001',
     propertyTitle: 'Property Site',
-    propertyCode: 'SRM-PROP-2026-000421',
+    propertyCode: '',
     costSheetId: 'SRM-CS-2026-000145',
     developer: 'Partner Developer',
     locality: 'Barasat',
@@ -2574,15 +2603,15 @@ function PvaVerificationModalContent({
     longitude: '88.493403° E'
   };
 
-  const [otpInput, setOtpInput] = useState<string>('849201');
+  const [otpInput, setOtpInput] = useState<string>('');
   const [otpSent, setOtpSent] = useState<boolean>(true);
   const [otpVerified, setOtpVerified] = useState<boolean>(false);
   const [otpAttempts, setOtpAttempts] = useState<number>(0);
   const [isLocked, setIsLocked] = useState<boolean>(false);
   const [acceptedTerms, setAcceptedTerms] = useState<boolean>(true);
   const [signatureData, setSignatureData] = useState<string>('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="50"><path d="M10 35 Q 45 10 90 35 T 180 25 T 210 30" stroke="%230284c7" fill="none" stroke-width="3"/></svg>');
-  const [devRepName, setDevRepName] = useState<string>('Srinivas Rao (Site Lead)');
-  const [devRepMobile, setDevRepMobile] = useState<string>('+91 98490 99887');
+  const [devRepName, setDevRepName] = useState<string>('');
+  const [devRepMobile, setDevRepMobile] = useState<string>('');
   const [otpTimerSeconds, setOtpTimerSeconds] = useState<number>(300);
 
   useEffect(() => {
@@ -2595,7 +2624,7 @@ function PvaVerificationModalContent({
   const handleSendOtp = () => {
     setOtpSent(true);
     setOtpTimerSeconds(300);
-    alert(`📱 OTP SENT!\n\n6-Digit Verification OTP (849201) has been sent to customer mobile ${safePlan.mobile || safeStop.mobile || '+91 98490 12345'}.`);
+    alert(`📱 OTP SENT!\n\n6-Digit Verification OTP (849201) has been sent to customer mobile ${safePlan.mobile || safeStop.mobile || ''}.`);
   };
 
   const handleVerifyOtp = () => {
@@ -2639,12 +2668,12 @@ function PvaVerificationModalContent({
       projectVisitAgreementId: pvaId,
       visitScheduleId: safePlan.visitPlanId || safePlan.visitScheduleId || 'SRM-VS-2026-000001',
       visitStopId: safeStop.stopId || 'SRM-VSTOP-2026-000001',
-      customerId: safePlan.customerNumber || 'SRM-CUS-2026-000184',
+      customerId: safePlan.customerNumber || '',
       customerName: safePlan.customerName || 'Customer',
-      customerMobile: safePlan.mobile || '+91 98490 12345',
+      customerMobile: safePlan.mobile || '',
       leadId: 'SRM-LEAD-2026-000001',
       matchId: safePlan.matchingId || 'SRM-MAT-2026-000421',
-      propertyId: safeStop.propertyCode || safeStop.propertyId || 'SRM-PROP-2026-000421',
+      propertyId: safeStop.propertyCode || safeStop.propertyId || '',
       costSheetId: safeStop.costSheetId || 'SRM-CS-2026-000145',
       projectId: `SRM-PROJ-2026-0000${20 + nextPvaNum}`,
       projectTitle: (safeStop.propertyTitle || 'Project Property').split(/\s*\(\+/)[0].trim(),
@@ -2693,8 +2722,8 @@ function PvaVerificationModalContent({
       agreement_type: 'CUSTOMER_SITE_VISIT',
       title: `Customer Site Visit Agreement — ${safeStop.propertyTitle || 'Site Visit'}`,
       party_name: safePlan.customerName || 'Customer',
-      party_contact: safePlan.mobile || '+91 98490 12345',
-      property_details: `${safeStop.propertyCode || 'SRM-PROP-2026-000421'} (${safeStop.propertyTitle || 'Site Visit'})`,
+      party_contact: safePlan.mobile || '',
+      property_details: `${safeStop.propertyCode || ''} (${safeStop.propertyTitle || 'Site Visit'})`,
       signed_status: 'EXECUTED_SIGNED',
       signature_hash: `OTP-VERIFIED-#${otpInput}-DIGITAL-SIG`,
       signed_at: `${todayStr} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
@@ -2778,7 +2807,7 @@ function PvaVerificationModalContent({
             <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', textTransform: 'uppercase' }}>TARGET PROJECT & PROPERTY</span>
             <h4 style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '900', fontSize: '0.98rem', marginTop: '2px' }}>🏢 {safeStop.propertyTitle || 'Property Site'}</h4>
             <span style={{ color: '#fbbf24', fontSize: '0.75rem', fontWeight: '800' }}>Developer: {safeStop.developer || 'Partner Developer'}</span>
-            <br /><span style={{ color: '#38bdf8', fontSize: '0.72rem', fontFamily: 'monospace' }}>Property Code: {safeStop.propertyCode || 'PROP-01'} | Cost Sheet: {safeStop.costSheetId || 'N/A'}</span>
+            <br /><span style={{ color: '#38bdf8', fontSize: '0.72rem', fontFamily: 'monospace' }}>Property Code: {safeStop.propertyCode || 'N/A'} | Cost Sheet: {safeStop.costSheetId || 'N/A'}</span>
           </div>
           <div>
             <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', textTransform: 'uppercase' }}>CUSTOMER & SALES EXECUTIVE</span>
@@ -3426,7 +3455,7 @@ function ShiftToMatchingModal({
 }) {
   const item = modalData?.item || {};
   const custName = modalData?.customerName || item.customerName || item.customerSnapshot?.customerName || 'Valued Customer';
-  const custNum = modalData?.customerNumber || item.customerNumber || item.customerId || item.customerSnapshot?.customerNumber || 'SRM-CUS-2026-000188';
+  const custNum = modalData?.customerNumber || item.customerNumber || item.customerId || item.customerSnapshot?.customerNumber || '';
   const custMobile = modalData?.mobile || item.mobile || item.customerSnapshot?.mobile || 'N/A';
   const cleanMob = custMobile.replace(/\D/g, '');
   const matchId = modalData?.matchId || item.matchId || item.matchingId || item.parentMatchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
@@ -3729,7 +3758,7 @@ export default function App() {
   const [csVersion, setCsVersion] = useState<string>('CS-2026-000145-V2');
   const [csVersionHistory, setCsVersionHistory] = useState<any[]>([
     { version: 'CS-2026-000145-V1', date: '17 Aug 2026 11:30 AM', user: 'Avishek Das (Super Admin)', amount: '₹1,56,80,000', reason: 'Initial Auto-Generated Cost Sheet' },
-    { version: 'CS-2026-000145-V2', date: '17 Aug 2026 03:15 PM', user: 'Rahul Sharma (Team Lead)', amount: '₹1,54,80,000', reason: 'Negotiated ₹2,00,000 Special Discount Applied' }
+    { version: 'CS-2026-000145-V2', date: '17 Aug 2026 03:15 PM', user: 'Sales Team', amount: '₹1,54,80,000', reason: 'Negotiated Special Discount Applied' }
   ]);
 
   // Site Visit OTP & Check-In State
@@ -3915,11 +3944,7 @@ export default function App() {
             const name = (r.customerName || r.name || '').toString().toLowerCase();
             const custNum = (r.customerNumber || '').toString().toUpperCase();
             const reqId = (r.requestId || r.id || '').toString().toUpperCase();
-            if (
-              name.includes('rohan deshmukh') || custNum === 'SRM-CUS-2026-000184' || reqId === 'SRM-MAT-2026-000184' ||
-              name.includes('sumanth varma') || custNum === 'SRM-CUS-2026-000186' || reqId === 'SRM-MAT-2026-000186' ||
-              name.includes('honey sing') || custNum.includes('000188') || custNum.includes('000189') || reqId.includes('781224')
-            ) {
+            if (name.includes('demo') || name.includes('test')) {
               return false;
             }
             return true;
@@ -4236,14 +4261,14 @@ export default function App() {
     dropAddress: 'Barasat Chapadali Bus Terminus Hub, Kolkata, West Bengal - 700124',
     dropLat: '22.725000° N',
     dropLng: '88.498000° E',
-    selectedPropertyIds: ['PROP-01', 'PROP-05', 'PROP-03', 'PROP-02'],
+    selectedPropertyIds: [],
     autoNavigateNext: true
   });
 
   const [showSkipStopModal, setShowSkipStopModal] = useState<{ open: boolean; planId: string; stopId: string; propertyTitle: string } | null>(null);
   const [skipReasonInput, setSkipReasonInput] = useState<string>('Customer Not Interested');
   const [showAddPropertyRouteModal, setShowAddPropertyRouteModal] = useState<{ open: boolean; planId: string } | null>(null);
-  const [addPropertySelectCode, setAddPropertySelectCode] = useState<string>('SRM-PROP-2026-000424');
+  const [addPropertySelectCode, setAddPropertySelectCode] = useState<string>('');
   const [showLiveRouteTrackingModal, setShowLiveRouteTrackingModal] = useState<{ open: boolean; plan: any } | null>(null);
   const [showVisitDetailModal, setShowVisitDetailModal] = useState<{ open: boolean; plan: any } | null>(null);
   const [showIndividualStopModal, setShowIndividualStopModal] = useState<{ open: boolean; stop: any; plan: any } | null>(null);
@@ -4765,7 +4790,7 @@ export default function App() {
         leadId: cleanId || 'SRM-LEAD-2026-000184',
         customerName: newCustomerForm.name || 'Valued Customer',
         customerNumber: newCustomerForm.customer_number || 'SRM-CUS-2026-000001',
-        mobile: newCustomerForm.mobile || '+91 98490 88888',
+        mobile: newCustomerForm.mobile || '',
         source: newCustomerForm.lead_source || 'Meta Ads / Google Ads',
         campaign: newCustomerForm.campaign_id || 'CMP-2026-8802',
         score: 92,
@@ -5135,7 +5160,7 @@ export default function App() {
     if (!p) return true;
     if (p.is_dummy === true || p.is_demo === true || p.is_test === true) return true;
     const code = (p.property_code || p.id || '').toString().toUpperCase();
-    if (code === 'PROP-01' || code === 'PROP-02' || code === 'PROP-03' || code === 'PROP-04' || code === 'PROP-05' || code === 'PROP-EMPTY') return true;
+    if (code === 'PROP-EMPTY') return true;
     return false;
   };
 
@@ -5144,22 +5169,12 @@ export default function App() {
     return list.filter(p => !isDemoProperty(p));
   };
 
-  // 4. BULK PROPERTIES MASTER STOCK (Direct MongoDB Source)
-  const [properties, setProperties] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_properties_v5_clean');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return sanitizePropertyRecords(parsed);
-        }
-      }
-    } catch (e) {}
-    return [];
-  });
+  // 4. BULK PROPERTIES MASTER STOCK (Direct MongoDB Source - Live Atlas)
+  const [properties, setProperties] = useState<any[]>([]);
 
   const [rawSelectedProperty, setSelectedProperty] = useState<any>(null);
-  const selectedProperty = rawSelectedProperty || properties[0] || {
+  const selectedProperty = rawSelectedProperty || properties[0] || null;
+  const _unusedFallbackProp = {
     id: 'PROP-EMPTY',
     property_code: 'NO_PROPERTIES',
     title: 'No Properties Available in Master Inventory',
@@ -5216,13 +5231,7 @@ export default function App() {
         if (!name && !mob && !num) return false;
         return true;
       })
-      .map((c: any, idx: number) => {
-        const custNum = c.customer_number || '';
-        if (custNum.includes('000188') || custNum === 'SRM-CUS-2026-000188') {
-          return { ...c, customer_number: `SRM-CUS-2026-${String(idx + 1).padStart(6, '0')}` };
-        }
-        return c;
-      });
+      .map((c: any) => c);
   };
 
   // 6. CUSTOMERS MASTER VAULT (Direct MongoDB & Local Storage Source)
@@ -5316,11 +5325,7 @@ export default function App() {
 
   const handleRestoreRecycledItem = (item: any) => {
     const data = item.originalData || {};
-    let nextDevs: any[] = [];
-    try {
-      const savedDevs = localStorage.getItem('swaramayi_developers_v1');
-      if (savedDevs) nextDevs = JSON.parse(savedDevs);
-    } catch (e) {}
+    let nextDevs: any[] = developers;
 
     switch (item.category) {
       case 'Lead':
@@ -5341,7 +5346,7 @@ export default function App() {
         if (data.projects || data.projectsCount !== undefined) {
           const updatedDevs = [data, ...nextDevs.filter(d => d.id !== data.id && d.name !== data.name)];
           setDevelopers(updatedDevs);
-          try { localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs)); } catch (e) {}
+
           syncAllToMongoDB({ developers: updatedDevs });
         } else {
           setProperties(prev => {
@@ -5419,13 +5424,6 @@ export default function App() {
     setProperties(nextProps);
 
     let currentDevs: any[] = developers;
-    try {
-      const savedDevs = localStorage.getItem('swaramayi_developers_v1');
-      if (savedDevs) {
-        const parsed = JSON.parse(savedDevs);
-        if (Array.isArray(parsed) && parsed.length > 0) currentDevs = parsed;
-      }
-    } catch (e) {}
 
     const nextDevs = currentDevs
       .map((d: any) => ({
@@ -5436,10 +5434,7 @@ export default function App() {
 
     setDevelopers(nextDevs);
 
-    try {
-      localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(nextProps));
-      localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevs));
-    } catch (e) {}
+
 
     const purgeUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? 'http://localhost:5000/api/v1/crm/purge'
@@ -6140,7 +6135,7 @@ export default function App() {
     const cleanMob = custMob.replace(/\D/g, '');
     const custId = matchingReq?.customerNumber || selectedCust?.customer_number || (cleanMob ? `SRM-CUS-2026-${cleanMob.slice(-6)}` : `SRM-CUS-2026-000999`);
     const matchId = matchingReq?.requestId || selectedMatchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : `SRM-MAT-2026-000999`);
-    const propCode = prop.property_code || prop.id || 'SRM-PROP-2026-000421';
+    const propCode = prop.property_code || prop.id || '';
 
     const rawBhkVal = matchingReq?.configuration || prop?.configuration || prop?.bhk || selectedCust?.configuration || '2BHK';
     const bhkMatch = String(rawBhkVal).match(/\d+\s*BHK/i);
@@ -6201,7 +6196,7 @@ export default function App() {
         customerId: custId,
         customerName: matchingReq?.customerName || selectedCust?.name || selectedCust?.full_name || 'Customer',
         mobile: matchingReq?.mobile || selectedCust?.mobile || '',
-        alternateMobile: matchingReq?.alternateMobile || '+91 98490 88888',
+        alternateMobile: matchingReq?.alternateMobile || '',
         email: matchingReq?.email || selectedCust?.email || `${(matchingReq?.customerName || selectedCust?.name || 'customer').toLowerCase().replace(/\s+/g, '.')}@gmail.com`,
         address: matchingReq?.preferredArea ? `${matchingReq.preferredArea}, Kolkata` : 'Kolkata, West Bengal',
         preferredLocation: matchingReq?.preferredArea || prop?.locality || 'Barasat, Kolkata',
@@ -6664,12 +6659,12 @@ export default function App() {
         registrationStr: `${formatIndianRupees(liveCalc.reg)} (${form.revRegPct}%)`,
         totalEstimatedCostStr: formatIndianRupees(liveCalc.grandTotal)
       },
-      updatedBy: 'Rahul Sharma (Team Lead)',
+      updatedBy: 'Team Lead',
       updatedAt: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       auditLogs: [
         {
           timestamp: new Date().toISOString(),
-          user: 'Rahul Sharma (Team Lead)',
+          user: 'Team Lead',
           action: inPlace ? 'COST_SHEET_EDITED' : 'COST_SHEET_REVISED',
           details: `${inPlace ? 'Edited' : 'Created Revision ' + newVerCode}. Modified: ${changedFields.join(', ') || 'Pricing'}. New Total: ${formatIndianRupees(liveCalc.grandTotal)}. Reason: ${form.reason || 'N/A'}`,
           ip: '127.0.0.1',
@@ -6826,7 +6821,7 @@ export default function App() {
     if (!targetCust && (custName || custId)) {
       targetCust = {
         id: custId || `CUS-${Date.now()}`,
-        customer_number: custId || (cleanMob ? `SRM-CUS-2026-${cleanMob.slice(-6)}` : 'SRM-CUS-2026-000188'),
+        customer_number: custId || (cleanMob ? `SRM-CUS-2026-${cleanMob.slice(-6)}` : 'SRM-CUS-2026-000001'),
         full_name: custName,
         name: custName,
         mobile: mob,
@@ -7667,13 +7662,13 @@ export default function App() {
   const [agreementCategory, setAgreementCategory] = useState<'customer' | 'developer'>('customer');
   const [showCreateDevAgreementModal, setShowCreateDevAgreementModal] = useState<boolean>(false);
   const [newDevAgreementForm, setNewDevAgreementForm] = useState({
-    developer_name: 'My Home Constructions',
-    project_name: 'My Home Bhooja',
-    locality_hub: 'HITEC City Sector',
+    developer_name: '',
+    project_name: '',
+    locality_hub: '',
     commission_rate: '2.0%',
     protection_period: '12 Months',
     agreement_title: 'Channel Partner Agreement',
-    developer_contact: '+91 98490 88776'
+    developer_contact: ''
   });
 
   const [agreements, setAgreements] = useState<any[]>(() => {
@@ -7707,9 +7702,9 @@ export default function App() {
 
   // DEVELOPER PROJECT-LEVEL OTP VERIFICATION STATE
   const [devProjectOtpSent, setDevProjectOtpSent] = useState<boolean>(false);
-  const [devProjectOtpInput, setDevProjectOtpInput] = useState<string>('749201');
+  const [devProjectOtpInput, setDevProjectOtpInput] = useState<string>('');
   const [devProjectOtpVerified, setDevProjectOtpVerified] = useState<boolean>(false);
-  const [devProjectMobile, setDevProjectMobile] = useState<string>('+91 98490 88776');
+  const [devProjectMobile, setDevProjectMobile] = useState<string>('');
   const [devProjectAltMobile, setDevProjectAltMobile] = useState<string>('');
   const [verifiedDevProjectsList, setVerifiedDevProjectsList] = useState<any[]>(() => {
     try {
@@ -7793,43 +7788,9 @@ export default function App() {
     }
   }, [sourcingRequests]);
 
-  const [developers, setDevelopers] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_developers_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          let projSeq = 0;
-          return parsed.map((d: any, idx: number) => {
-            let dId = d.id || '';
-            if (dId.includes('655434') || dId.includes('640480') || dId.includes('688790') || dId.includes('000105') || /\bSRM-DEV-\d+-[1-9]\d{4,}\b/.test(dId)) {
-              dId = `SRM-DEV-2026-${String(idx + 1).padStart(6, '0')}`;
-            }
-            const cleanProjects = (d.projects || []).map((p: any) => {
-              projSeq++;
-              let pCode = p.code || p.id || '';
-              if (pCode.includes('000088') || pCode.includes('000089') || pCode.includes('000090')) {
-                pCode = `SRM-PROJ-2026-${String(projSeq).padStart(6, '0')}`;
-              }
-              return { ...p, id: pCode, code: pCode };
-            });
-            return { ...d, id: dId, projects: cleanProjects };
-          });
-        }
-      }
-    } catch (e) {
-      console.error('Error loading developers from localStorage:', e);
-    }
-    return [];
-  });
+  const [developers, setDevelopers] = useState<any[]>([]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_developers_v1', JSON.stringify(developers));
-    } catch (e) {
-      console.error('Error saving developers to localStorage:', e);
-    }
-  }, [developers]);
+  // Developer persistence in localStorage REMOVED - live from Atlas only
 
   // CENTRAL MONGODB ATLAS LIVE SYNC ENGINE
   const getBackendApiUrl = (endpoint: string) => {
@@ -7844,71 +7805,57 @@ export default function App() {
 
   const syncAllToMongoDB = React.useCallback(async (overrideData?: any) => {
     try {
+      // SAFEGUARD: Only sync when explicit updates are provided by a user action
+      if (!overrideData || typeof overrideData !== 'object' || Object.keys(overrideData).length === 0) {
+        console.warn('⚠️ syncAllToMongoDB called with no explicit changes. Sync skipped to preserve database integrity.');
+        return;
+      }
+
       const apiUrl = getBackendApiUrl('/api/v1/crm/sync');
+      const payload: any = {};
 
-      let devList: any[] = [];
-      try {
-        const savedDevs = localStorage.getItem('swaramayi_developers_v1');
-        if (savedDevs) devList = JSON.parse(savedDevs);
-      } catch (e) {}
+      if (Array.isArray(overrideData.properties)) payload.properties = sanitizePropertyRecords(overrideData.properties);
+      if (Array.isArray(overrideData.developers)) payload.developers = overrideData.developers;
+      if (Array.isArray(overrideData.customers)) payload.customers = overrideData.customers;
+      if (Array.isArray(overrideData.leads)) payload.leads = overrideData.leads;
+      if (Array.isArray(overrideData.bookings)) payload.bookings = overrideData.bookings;
+      if (Array.isArray(overrideData.invoices)) payload.invoices = overrideData.invoices;
+      if (Array.isArray(overrideData.agreements)) payload.agreements = overrideData.agreements;
+      if (Array.isArray(overrideData.cost_sheets)) payload.cost_sheets = overrideData.cost_sheets;
+      if (Array.isArray(overrideData.matching_requests)) payload.matching_requests = overrideData.matching_requests;
+      if (Array.isArray(overrideData.site_visits)) payload.site_visits = overrideData.site_visits;
+      if (Array.isArray(overrideData.users)) payload.users = overrideData.users;
+      if (Array.isArray(overrideData.teams)) payload.teams = overrideData.teams;
+      if (Array.isArray(overrideData.branches)) payload.branches = overrideData.branches;
+      if (Array.isArray(overrideData.rating_invites)) payload.rating_invites = overrideData.rating_invites;
 
-      let activeRecycled: any[] = [];
-      try {
-        const savedRec = localStorage.getItem('swaramayi_recycled_items');
-        if (savedRec) activeRecycled = JSON.parse(savedRec);
-      } catch (e) {}
-
-      const recycledSet = new Set<string>();
-      (activeRecycled || []).forEach((r: any) => {
-        extractAllIdentifiers(r).forEach(id => recycledSet.add(id));
-      });
-
-      const currentProps = (overrideData?.properties || properties);
-      const activeProps = sanitizePropertyRecords(
-        currentProps.filter((p: any) => !isItemInRecycledSet(p, recycledSet))
-      );
-
-      const activeDevs = (overrideData?.developers || devList)
-        .filter((d: any) => !isItemInRecycledSet(d, recycledSet))
-        .map((d: any) => ({
-          ...d,
-          projects: (d.projects || []).filter((proj: any) => !isItemInRecycledSet(proj, recycledSet))
-        }));
-
-      const payload = {
-        users: overrideData?.users || users,
-        teams: overrideData?.teams || teams,
-        branches: overrideData?.branches || branches,
-        properties: activeProps,
-        developers: activeDevs,
-        customers: (overrideData?.customers || customers).filter((c: any) => !isItemInRecycledSet(c, recycledSet)),
-        leads: (overrideData?.leads || leadsList).filter((l: any) => !isItemInRecycledSet(l, recycledSet)),
-        bookings: overrideData?.bookings !== undefined ? overrideData.bookings : bookings,
-        invoices: overrideData?.invoices !== undefined ? overrideData.invoices : invoices,
-        agreements: overrideData?.agreements || agreements,
-        cost_sheets: overrideData?.cost_sheets || individualCostSheets,
-        matching_requests: overrideData?.matching_requests || matchingRequestsQueue,
-        site_visits: overrideData?.site_visits || scheduledVisits,
-        ...(overrideData?.rating_invites ? { rating_invites: overrideData.rating_invites } : {})
-      };
+      if (Object.keys(payload).length === 0) {
+        return;
+      }
 
       await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      console.log('⚡ All CRM master data successfully synced to MongoDB Atlas Cluster!');
+      console.log('⚡ Explicit user change successfully committed to MongoDB Atlas!');
     } catch (err) {
       console.warn('MongoDB Live Sync Warning:', err);
     }
-  }, [users, teams, branches, properties, customers, leadsList, bookings, invoices, agreements, individualCostSheets, matchingRequestsQueue, scheduledVisits]);
+  }, []);
 
   // Load live records from MongoDB Atlas Cluster on launch
   useEffect(() => {
     const loadFromMongoDB = async () => {
       try {
-        const apiUrl = getBackendApiUrl('/api/v1/crm/sync');
-        const res = await fetch(apiUrl);
+        const apiUrl = getBackendApiUrl(`/api/v1/crm/sync?_t=${Date.now()}`);
+        const res = await fetch(apiUrl, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
         if (res.ok) {
           const result = await res.json();
           if (result.status === 'SUCCESS' && result.data) {
@@ -7944,7 +7891,7 @@ export default function App() {
             }
             if (Array.isArray(mData.properties)) {
               const sanitizedProps = sanitizePropertyRecords(
-                mData.properties.filter((p: any) => !isItemInRecycledSet(p, recycledSet))
+                mData.properties
               ).map((p: any) => {
                   let updated = { ...p };
                   const titleVal = p.title || p.property_title || p.project_name || p.property_name || p.name || '';
@@ -7970,7 +7917,7 @@ export default function App() {
                   // Normalize price_sqft string representation
                   const rawSqftVal = p.price_sqft || p.price_per_sqft || p.rate_sqft;
                   if (!updated.price_sqft || updated.price_sqft === '₹0 / sq.ft.' || updated.price_sqft === '0') {
-                    const numSqft = typeof rawSqftVal === 'number' ? rawSqft : parseFloat(String(rawSqft || '').replace(/[^0-9.]/g, ''));
+                    const numSqft = typeof rawSqftVal === 'number' ? rawSqftVal : parseFloat(String(rawSqftVal || '').replace(/[^0-9.]/g, ''));
                     if (!isNaN(numSqft) && numSqft > 0) {
                       updated.price_sqft = `₹${Math.round(numSqft).toLocaleString('en-IN')}/Sq.Ft.`;
                     } else if (updated.final_price && updated.final_price !== '₹0') {
@@ -7989,9 +7936,7 @@ export default function App() {
                   return updated;
                 });
               setProperties(sanitizedProps);
-              try {
-                localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(sanitizedProps));
-              } catch (e) {}
+
             }
             if (Array.isArray(mData.customers)) {
               const cleanMongo = sanitizeCustomerRecords(mData.customers);
@@ -8046,7 +7991,7 @@ export default function App() {
                 const name = (r.customerName || r.name || '').toString().toLowerCase();
                 const custNum = (r.customerNumber || '').toString().toUpperCase();
                 const reqId = (r.requestId || r.id || '').toString().toUpperCase();
-                return !(name.includes('rohan deshmukh') || custNum === 'SRM-CUS-2026-000184' || reqId === 'SRM-MAT-2026-000184' || name.includes('sumanth varma') || custNum === 'SRM-CUS-2026-000186' || reqId === 'SRM-MAT-2026-000186' || name.includes('honey sing') || custNum.includes('000188') || custNum.includes('000189') || reqId.includes('781224'));
+                return !(name.includes('demo') || name.includes('test'));
               });
               setMatchingRequestsQueue(cleanMatching);
               try {
@@ -8069,13 +8014,12 @@ export default function App() {
             if (Array.isArray(mData.developers)) {
               try {
                 const cleanDevs = mData.developers
-                  .filter((d: any) => !isItemInRecycledSet(d, recycledSet))
+                  .filter((d: any) => true)
                   .map((d: any) => ({
                     ...d,
-                    projects: (d.projects || []).filter((proj: any) => !isItemInRecycledSet(proj, recycledSet))
+                    projects: (d.projects || []).filter((proj: any) => true)
                   }));
                 setDevelopers(cleanDevs);
-                localStorage.setItem('swaramayi_developers_v1', JSON.stringify(cleanDevs));
               } catch (e) {}
             }
             if (Array.isArray(mData.users) && mData.users.length > 0) {
@@ -8102,14 +8046,9 @@ export default function App() {
     loadFromMongoDB();
   }, []);
 
-  // Sync to MongoDB Atlas whenever core states change (ONLY AFTER initial load completes)
-  useEffect(() => {
-    if (isMongoLoadedRef.current) {
-      syncAllToMongoDB();
-    }
-  }, [users, properties, customers, leadsList, bookings, invoices, agreements, developers, matchingRequestsQueue]);
+  // Note: All writes to MongoDB Atlas are dispatched explicitly on user actions (Create/Update/Delete)
   const [rawSelectedAgreement, setSelectedAgreement] = useState<any>(null);
-  const selectedAgreement = rawSelectedAgreement || agreements[0] || { id: 'AGR-01', agreement_code: 'SRM-AGR-CUS-2026-000301', agreement_type: 'CUSTOMER_SITE_VISIT', title: 'Customer Site Visit Agreement', party_name: 'Customer', party_contact: '-', property_details: '-', signed_status: 'EXECUTED_SIGNED', signature_hash: 'DIGITAL-VERIFIED', signed_at: '16 Aug 2026 11:35 AM' };
+  const selectedAgreement = rawSelectedAgreement || agreements[0] || null;
 
   // DYNAMIC UNIVERSAL SEARCH ENGINE MATCHES ACROSS ALL CRM DATA VAULTS
   const universalSearchResults = useMemo(() => {
@@ -8511,7 +8450,7 @@ export default function App() {
     const nowStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     if (visitItem) {
       const propTitle = visitItem.propertyTitle || visitItem.propertySnapshot?.propertyTitle || (visitItem.properties && visitItem.properties[0]?.propertyTitle) || 'Property Site Visit';
-      const propCode = visitItem.propertyCode || visitItem.propertySnapshot?.propertyCode || (visitItem.properties && visitItem.properties[0]?.propertyCode) || 'SRM-PROP-01';
+      const propCode = visitItem.propertyCode || visitItem.propertySnapshot?.propertyCode || (visitItem.properties && visitItem.properties[0]?.propertyCode) || '';
       const locality = visitItem.locality || visitItem.location || visitItem.propertySnapshot?.locality || 'Barasat, Kolkata';
       const custName = visitItem.customerName || visitItem.customerSnapshot?.customerName || 'Customer';
       const custMobile = visitItem.mobile || visitItem.customerSnapshot?.mobile || '';
@@ -8547,7 +8486,7 @@ export default function App() {
       const custMobile = defaultVisit?.mobile || customers[0]?.mobile || '';
       const custCode = defaultVisit?.customerNumber || customers[0]?.customer_number || 'SRM-CUS-2026-000001';
       const propTitle = defaultVisit?.propertyTitle || (properties[0]?.title || properties[0]?.name) || 'Residential Flat';
-      const propCode = defaultVisit?.propertyCode || properties[0]?.property_code || properties[0]?.id || 'SRM-PROP-01';
+      const propCode = defaultVisit?.propertyCode || properties[0]?.property_code || properties[0]?.id || '';
       const locality = defaultVisit?.locality || properties[0]?.locality || 'Barasat, Kolkata';
       const visitId = defaultVisit?.visitId || 'SRM-VS-2026-000001';
       const numPart = (visitId || '').replace(/[^0-9]/g, '').slice(-6) || '000001';
@@ -8601,7 +8540,7 @@ export default function App() {
       custMobile: salesFeedbackForm.custMobile,
       custCode: salesFeedbackForm.custCode || (salesFeedbackForm.custMobile ? `SRM-CUS-2026-${salesFeedbackForm.custMobile.replace(/\D/g, '').slice(-6)}` : 'SRM-CUS-2026-000001'),
       propTitle: salesFeedbackForm.propTitle || (salesFeedbackForm as any).propertyTitle || '',
-      propCode: salesFeedbackForm.propCode || 'SRM-PROP-2026-000426',
+      propCode: salesFeedbackForm.propCode || (properties && properties[0]?.property_code) || '',
       locality: salesFeedbackForm.locality || 'Barasat, Kolkata',
       rating: ratingNum,
       satisfaction: salesFeedbackForm.satisfaction || (ratingNum >= 4 ? '😍 Highly Satisfied (Ready for Booking)' : (ratingNum === 3 ? '😐 Neutral / Follow-up Needed' : '😕 Not Satisfied')),
@@ -8969,46 +8908,38 @@ export default function App() {
 
   const handleDeleteProperty = (id: string, code: string) => {
     if (window.confirm(`Are you sure you want to move Property Master Record ${code} to Recycle Bin?`)) {
-      const prop = properties.find(p => p.id === id || p.property_code === code || p.code === code || p.project_id === code);
+      const prop = properties.find(p => (id && (p.id === id || p._id === id)) || (code && (p.property_code === code || p.code === code)));
       const delItem = prop || { id, property_code: code, code };
+      const propCode = code || delItem.property_code || delItem.code || delItem.id || id;
       handleRecycleItem({
-        id: delItem.id || code || `PROP-${Date.now()}`,
-        title: `${delItem.title || 'Property'} (${code})`,
+        id: propCode,
+        title: `${delItem.title || 'Property'} (${propCode})`,
         category: 'Project',
         originalLocation: 'Property Master / Live Inventory',
         details: `${delItem.configuration || ''} ${delItem.property_type || ''} at ${delItem.locality || ''}`,
         originalData: delItem
       });
 
-      const targetSet = extractAllIdentifiers(delItem);
-      targetSet.add(id);
-      targetSet.add(code);
+      // Filter out ONLY the specific property unit matching targetCode or targetId
+      const targetCode = String(code || delItem.property_code || delItem.code || '').trim().toLowerCase();
+      const targetId = String(id || delItem.id || delItem._id || '').trim().toLowerCase();
 
-      const nextProps = properties.filter(p => !isItemInRecycledSet(p, targetSet));
+      const nextProps = properties.filter(p => {
+        const pCode = String(p.property_code || p.code || '').trim().toLowerCase();
+        const pId = String(p.id || p._id || '').trim().toLowerCase();
+
+        if (targetCode && pCode && pCode === targetCode) return false;
+        if (targetId && pId && pId === targetId) return false;
+        return true;
+      });
+
       setProperties(nextProps);
 
-      let currentDevs: any[] = developers;
       try {
-        const savedDevs = localStorage.getItem('swaramayi_developers_v1');
-        if (savedDevs) {
-          const parsed = JSON.parse(savedDevs);
-          if (Array.isArray(parsed) && parsed.length > 0) currentDevs = parsed;
-        }
+        
       } catch (e) {}
 
-      const nextDevs = currentDevs.map((d: any) => ({
-        ...d,
-        projects: (d.projects || []).filter((proj: any) => !isItemInRecycledSet(proj, targetSet))
-      }));
-
-      setDevelopers(nextDevs);
-
-      try {
-        localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(nextProps));
-        localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevs));
-      } catch (e) {}
-
-      syncAllToMongoDB({ properties: nextProps, developers: nextDevs });
+      syncAllToMongoDB({ properties: nextProps });
       alert(`🗑️ Property ${code} moved to Recycle Bin!`);
     }
   };
@@ -9920,7 +9851,7 @@ export default function App() {
         full_name: newUserForm.full_name || newUserForm.username, 
         email: newUserForm.email, 
         password: newUserForm.password || 'Swaramayi@2026',
-        mobile: newUserForm.mobile || '+91 98490 00000', 
+        mobile: newUserForm.mobile || '', 
         role: newUserForm.role, 
         designation: newUserForm.designation || '',
         branch_name: newUserForm.branch_name, 
@@ -9954,9 +9885,9 @@ export default function App() {
       customer_number: newCustNumber,
       name: custName,
       full_name: custName,
-      phone: newCustomerForm.mobile || newCustomerForm.phone || '+91 98490 12345',
-      mobile: newCustomerForm.mobile || newCustomerForm.phone || '+91 98490 12345',
-      whatsapp: newCustomerForm.whatsapp || newCustomerForm.mobile || '+91 98490 12345',
+      phone: newCustomerForm.mobile || newCustomerForm.phone || '',
+      mobile: newCustomerForm.mobile || newCustomerForm.phone || '',
+      whatsapp: newCustomerForm.whatsapp || newCustomerForm.mobile || '',
       email: newCustomerForm.email || 'customer@example.com',
       city: newCustomerForm.city || 'Kolkata',
       locality: newCustomerForm.locality || newCustomerForm.preferredArea || 'Kolkata',
@@ -10031,7 +9962,7 @@ export default function App() {
       matchingId: matchingId,
       customerName: custName,
       customerNumber: newCustNumber,
-      mobile: newCustomerForm.mobile || newCustomerForm.phone || '+91 98490 12345',
+      mobile: newCustomerForm.mobile || newCustomerForm.phone || '',
       email: newCustomerForm.email || '',
       configuration: newCustomerForm.configuration || '2BHK',
       bhk: newCustomerForm.configuration || '2BHK',
@@ -10181,7 +10112,7 @@ export default function App() {
 
       setProperties(updatedProps);
       try {
-        localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(updatedProps));
+        
       } catch (e) {}
       await syncAllToMongoDB({ properties: updatedProps });
 
@@ -10199,27 +10130,27 @@ export default function App() {
       ...newPropertyForm,
       id: `PROP-${Date.now()}`,
       property_code: newPropCode,
-      title: newPropertyForm.title || 'New Luxury Project',
-      developer: newPropertyForm.developer || 'Swaramayi Developer Partner',
-      developer_id: newPropertyForm.developer_id || 'SRM-DEV-2026-000001',
-      developer_mobile: devProjectMobile || newPropertyForm.developer_mobile || '9883395102',
-      developer_alt_mobile: devProjectAltMobile || newPropertyForm.developer_alt_mobile || '7044293951',
+      title: newPropertyForm.title || '',
+      developer: newPropertyForm.developer || '',
+      developer_id: newPropertyForm.developer_id || '',
+      developer_mobile: devProjectMobile || newPropertyForm.developer_mobile || '',
+      developer_alt_mobile: devProjectAltMobile || newPropertyForm.developer_alt_mobile || '',
       locality: newPropertyForm.locality || '',
-      full_address: newPropertyForm.full_address || newPropertyForm.locality || 'Chapadali Bus Terminus Hub, Jessore Road, Barasat, North 24 Parganas, West Bengal - 700124, India',
-      configuration: newPropertyForm.configuration || '3BHK',
-      carpet_area: newPropertyForm.carpet_area || '898.1 Sq.Ft.',
-      super_builtup_area: newPropertyForm.super_builtup_area || '1,283 Sq.Ft.',
-      final_price: newPropertyForm.final_price || '₹46,08,000',
-      price_sqft: newPropertyForm.price_sqft || '₹5,131/Sq.Ft.',
+      full_address: newPropertyForm.full_address || newPropertyForm.locality || '',
+      configuration: newPropertyForm.configuration || '',
+      carpet_area: newPropertyForm.carpet_area || '',
+      super_builtup_area: newPropertyForm.super_builtup_area || '',
+      final_price: newPropertyForm.final_price || '',
+      price_sqft: newPropertyForm.price_sqft || '',
       status: newPropertyForm.status || 'AVAILABLE',
       property_type: newPropertyForm.property_type || 'Flat / Apartment',
-      tower_block: newPropertyForm.tower_block || 'Tower A',
-      number_of_towers: newPropertyForm.number_of_towers || '1 Standalone Tower',
-      floor_num: newPropertyForm.floor_num || newPropertyForm.floor_no || '2nd Floor',
-      floor_number: newPropertyForm.floor_num || newPropertyForm.floor_no || '2nd Floor',
-      total_floors: newPropertyForm.total_floors || 'G+4 Floors',
-      facing: newPropertyForm.facing || 'South Facing',
-      furnishing: newPropertyForm.furnishing || 'Semi-Furnished',
+      tower_block: newPropertyForm.tower_block || '',
+      number_of_towers: newPropertyForm.number_of_towers || '',
+      floor_num: newPropertyForm.floor_num || newPropertyForm.floor_no || '',
+      floor_number: newPropertyForm.floor_num || newPropertyForm.floor_no || '',
+      total_floors: newPropertyForm.total_floors || '',
+      facing: newPropertyForm.facing || '',
+      furnishing: newPropertyForm.furnishing || '',
       parking_required: newPropertyForm.parking_required || 'YES',
       car_parking: newPropertyForm.car_parking || '1 Covered Parking Slot',
       parking_price: newPropertyForm.parking_required === 'NO' ? '0' : (newPropertyForm.parking_price !== undefined ? newPropertyForm.parking_price : ''),
@@ -10251,14 +10182,14 @@ export default function App() {
       key_custody: newPropertyForm.key_custody || 'Builder Site Office',
       description: newPropertyForm.description || 'Pool facing Vastu East, 3 balconies',
       site_person_name: newPropertyForm.site_person_name || 'Avishek Das (Super Admin)',
-      site_person_contact: newPropertyForm.site_person_contact || '+91 98490 77665',
+      site_person_contact: newPropertyForm.site_person_contact || '',
       map_x: 35 + Math.random() * 30,
       map_y: 35 + Math.random() * 30
     };
     const updatedProps = [newP, ...properties];
     setProperties(updatedProps);
     try {
-      localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(updatedProps));
+      
     } catch (e) {}
 
     // Ensure newly created property is removed from any stale recycle set
@@ -10288,7 +10219,7 @@ export default function App() {
     e.preventDefault();
     const newCustNumber = newCustomerForm.customer_number || generateNextCustomerCode();
     const custName = newLeadForm.customer_name || newCustomerForm.name || 'Ingested Lead Customer';
-    const mob = newLeadForm.mobile || newCustomerForm.mobile || '+91 98490 99999';
+    const mob = newLeadForm.mobile || newCustomerForm.mobile || '';
     const em = newLeadForm.email || newCustomerForm.email || 'lead@swaramayi.com';
     const loc = newLeadForm.preferred_location || newCustomerForm.preferredArea || '';
     const bhkConf = newLeadForm.bhk || newCustomerForm.configuration || '3BHK';
@@ -10386,13 +10317,13 @@ export default function App() {
 
   const handleMarkVisitDoneAndNotifyDeveloper = (v: any) => {
     const custName = v.customerName || v.name || v.customer_name || 'Valued Customer';
-    const fullCustNo = v.customerNumber || v.customer_number || v.customerId || 'SRM-CUS-2026-000186';
+    const fullCustNo = v.customerNumber || v.customer_number || v.customerId || '';
     const sevenDigitCustNo = getSevenDigitCustomerNumber(fullCustNo, v.mobile);
     const rawPropTitle = v.propertyTitle || v.title || 'Visited Property';
     const propTitle = rawPropTitle.split(/\s*\(\+/)[0].trim();
     const devName = v.developer || v.developerName || v.developer_name || 'Channel Partner Developer';
     const execName = v.assignedExecutive || v.salesPersonName || v.sales_executive || 'Field Executive';
-    const devPhone = v.developerMobile || v.developer_whatsapp || v.developer_phone || '+91 98490 55443';
+    const devPhone = v.developerMobile || v.developer_whatsapp || v.developer_phone || '';
     const visitIdStr = v.visitId || v.id || v.visitPlanId || 'SRM-VS-2026-000001';
     const nowStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' at ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
@@ -11404,7 +11335,7 @@ export default function App() {
           <button 
             onClick={() => { 
               if (isMobile) setIsMobileSidebarOpen(false); 
-              const websiteUrl = import.meta.env.VITE_WEBSITE_URL || 'https://www.swaramayi.com';
+              const websiteUrl = import.meta.env.VITE_WEBSITE_URL || 'https://web.swaramayi.info';
               if (typeof window !== 'undefined') {
                 window.open(websiteUrl, '_blank', 'noopener,noreferrer');
               }
@@ -13976,7 +13907,7 @@ export default function App() {
                     type="text" 
                     value={newDevAgreementForm.project_name} 
                     onChange={(e) => setNewDevAgreementForm({ ...newDevAgreementForm, project_name: e.target.value })}
-                    placeholder="e.g. My Home Bhooja / Dhriti Apartments"
+                    placeholder="e.g. Project Name"
                     style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800' }}
                     required 
                   />
@@ -13988,7 +13919,7 @@ export default function App() {
                     type="text" 
                     value={newDevAgreementForm.developer_name} 
                     onChange={(e) => setNewDevAgreementForm({ ...newDevAgreementForm, developer_name: e.target.value })}
-                    placeholder="e.g. My Home Constructions / Dhriti Builders"
+                    placeholder="e.g. Developer Name"
                     style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800' }}
                     required 
                   />
@@ -14061,9 +13992,9 @@ export default function App() {
       {showFullContractModal && selectedAgreement && (() => {
         const isDev = selectedAgreement.category === 'DEVELOPER' || selectedAgreement.agreement_type === 'DEVELOPER_PROJECT_TIEUP';
         const partyName = selectedAgreement.party_name || selectedAgreement.developer_name || 'Party';
-        const partyContact = selectedAgreement.party_contact || selectedAgreement.mobile || '+91 98490 12345';
+        const partyContact = selectedAgreement.party_contact || selectedAgreement.mobile || '';
         const projectTitle = selectedAgreement.project_name || selectedAgreement.title || selectedAgreement.property_details || 'Master Project';
-        const developerName = selectedAgreement.developer_name || selectedAgreement.party_name || 'Dhriti Builders';
+        const developerName = selectedAgreement.developer_name || selectedAgreement.party_name || '';
         const localityHub = selectedAgreement.locality_hub || selectedAgreement.locality || 'Locality Hub Sector';
         const rawAgreementCode = selectedAgreement.agreement_code || selectedAgreement.id || 'SRM-AGR-2026-000001';
         const agreementCode = (() => {
@@ -15667,7 +15598,7 @@ export default function App() {
         const officeName = plan.officeName || (headOffice ? headOffice.branch_name : 'HQ Office');
         const officeAddress = plan.officeAddress || (headOffice ? headOffice.address : '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129');
         const custName = plan.customerName || plan.customer_name || 'Valued Customer';
-        const custNum = plan.customerNumber || plan.customer_number || plan.customerId || 'SRM-CUS-2026-000185';
+        const custNum = plan.customerNumber || plan.customer_number || plan.customerId || '';
         const planId = plan.visitPlanId || plan.visitScheduleId || plan.id || 'SRM-VS-2026-000001';
         const stops = plan.stops || [];
         const totalStopsCount = stops.length;
@@ -15989,7 +15920,7 @@ export default function App() {
                   ✏️ UPDATE CUSTOMER REQUIREMENT & RE-RUN AI MATCHING
                 </h3>
                 <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
-                  Customer: <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{showUpdateRequirementModal.customer.custName}</strong> ({showUpdateRequirementModal.customer.custCode || 'SRM-CUS-2026-000184'})
+                  Customer: <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{showUpdateRequirementModal.customer.custName}</strong> ({showUpdateRequirementModal.customer.custCode || 'N/A'})
                 </p>
               </div>
               <X size={22} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowUpdateRequirementModal(null)} />
@@ -16217,7 +16148,7 @@ export default function App() {
                     type="text" 
                     value={salesFeedbackForm.customerName} 
                     onChange={(e) => setSalesFeedbackForm({ ...salesFeedbackForm, customerName: e.target.value })} 
-                    placeholder="e.g. Rishita Sharma" 
+                    placeholder="e.g. Customer Name" 
                     style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
                     required 
                   />
@@ -16230,7 +16161,7 @@ export default function App() {
                     type="text" 
                     value={salesFeedbackForm.custMobile} 
                     onChange={(e) => setSalesFeedbackForm({ ...salesFeedbackForm, custMobile: e.target.value })} 
-                    placeholder="+91 98765 43210" 
+                    placeholder="+91 00000 00000" 
                     style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
                   />
                 </div>
@@ -16246,7 +16177,7 @@ export default function App() {
                     type="text" 
                     value={salesFeedbackForm.propTitle} 
                     onChange={(e) => setSalesFeedbackForm({ ...salesFeedbackForm, propTitle: e.target.value })} 
-                    placeholder="e.g. SRM-PROP-2026-000426 / Dhriti Green Vista" 
+                    placeholder="e.g. Property Title / Project Name" 
                     style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
                     required 
                   />
@@ -16418,7 +16349,7 @@ export default function App() {
                 id: `BKG-${Date.now()}`,
                 booking_code: newBkgCode,
                 customer_name: newBookingForm.customer_name,
-                customer_number: newBookingForm.customer_number || 'SRM-CUS-2026-000184',
+                customer_number: newBookingForm.customer_number || '',
                 customer_mobile: newBookingForm.customer_mobile,
                 project_name: newBookingForm.project_name,
                 developer_name: newBookingForm.developer_name,
@@ -16515,7 +16446,7 @@ export default function App() {
           return isNaN(parsed) ? fallback : parsed;
         };
 
-        const agreeValNum = parseNum(bkg.agreement_value_num || bkg.agreement_value || bkg.agreementValue, 5114880);
+        const agreeValNum = parseNum(bkg.agreement_value_num || bkg.agreement_value || bkg.agreementValue, 0);
         const tokenValNum = parseNum(bkg.token_amount || bkg.tokenAmount, 100000);
         const balanceValNum = Math.max(0, agreeValNum - tokenValNum);
         const tokenInWordsStr = numberToWordsIndian(tokenValNum);
@@ -16686,7 +16617,7 @@ export default function App() {
                   <span>🆔 WBRERA: WBRERA/A/NOR/2025/000737</span>
                   <span>📧 Email: avishek@swaramayi.info</span>
                   <span>📱 Phone: +91 88021 30791</span>
-                  <span>🌐 Web: https://www.swaramayi.com</span>
+                  <span>🌐 Web: https://web.swaramayi.info</span>
                 </div>
               </div>
 
@@ -16712,17 +16643,17 @@ export default function App() {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Customer ID:</span>
-                    <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{bkg.customer_number || 'SRM-CUS-2026-000185'}</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{bkg.customer_number || 'N/A'}</span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Contact Phone:</span>
-                    <strong>{bkg.customer_mobile || '+91 98765 43210'}</strong>
+                    <strong>{bkg.customer_mobile || ''}</strong>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Email Address:</span>
-                    <span>{bkg.customer_email || 'customer@gmail.com'}</span>
+                    <span>{bkg.customer_email || ''}</span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -16745,7 +16676,7 @@ export default function App() {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Property Code:</span>
-                    <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{bkg.property_code || 'SRM-PROP-2026-000426'}</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{bkg.property_code || 'N/A'}</span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -16755,12 +16686,12 @@ export default function App() {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Developer / Builder:</span>
-                    <strong>{bkg.developer_name || 'Dhriti Builders & Developers'}</strong>
+                    <strong>{bkg.developer_name || ''}</strong>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Allotted Unit / Tower:</span>
-                    <strong style={{ color: activeT.cardTitle, fontSize: '0.85rem' }}>{bkg.tower_unit || 'Block A - Unit 302'}</strong>
+                    <strong style={{ color: activeT.cardTitle, fontSize: '0.85rem' }}>{bkg.tower_unit || ''}</strong>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -16934,11 +16865,11 @@ export default function App() {
                 invoice_number: invNum,
                 invoice_category: createInvoiceForm.invoice_category,
                 branch_name: createInvoiceForm.branch_name || 'Kolkata Branch',
-                property_code: createInvoiceForm.property_code || 'SRM-PROP-2026-000421',
+                property_code: createInvoiceForm.property_code || '',
                 property_locality: createInvoiceForm.property_locality,
                 property_configuration: createInvoiceForm.property_configuration,
                 customer_name: createInvoiceForm.customer_name,
-                customer_number: createInvoiceForm.customer_number || 'SRM-CUS-2026-000184',
+                customer_number: createInvoiceForm.customer_number || '',
                 customer_mobile: createInvoiceForm.customer_mobile,
                 customer_email: createInvoiceForm.customer_email,
                 customer_address: createInvoiceForm.customer_address,
@@ -16989,7 +16920,7 @@ export default function App() {
                 });
                 setProperties(updatedProps);
                 try {
-                  localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(updatedProps));
+                  
                 } catch (err) {}
                 if (syncAllToMongoDB) {
                   syncAllToMongoDB({ invoices: updatedInvs, properties: updatedProps });
@@ -17144,7 +17075,7 @@ export default function App() {
                           setCreateInvoiceForm({ ...createInvoiceForm, property_code: val });
                         }
                       }} 
-                      placeholder="SRM-PROP-2026-000421" 
+                      placeholder="Property Code" 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #22c55e', color: '#4ade80', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace', fontWeight: '800' }} 
                       required 
                     />
@@ -17204,7 +17135,7 @@ export default function App() {
                           setCreateInvoiceForm({
                             ...createInvoiceForm,
                             customer_name: selected.name || selected.customer_name || createInvoiceForm.customer_name,
-                            customer_number: selected.customer_number || selected.id || 'SRM-CUS-2026-000184',
+                            customer_number: selected.customer_number || selected.id || '',
                             customer_mobile: selected.mobile || selected.phone || createInvoiceForm.customer_mobile,
                             customer_email: selected.email || `${(selected.name || 'customer').toLowerCase().replace(/[^a-z0-9]/g, '.')}@gmail.com`,
                             customer_address: selected.address || (selected.preferred_location ? `Plot 42, ${selected.preferred_location}, Hyderabad - 500033` : 'Flat 402, Jubilee Hills, Hyderabad - 500033'),
@@ -17218,7 +17149,7 @@ export default function App() {
                       <option value="">-- Choose Customer to Auto-Populate Details --</option>
                       {customers.map((c, idx) => (
                         <option key={idx} value={c.customer_number || c.name}>
-                          🆔 {c.customer_number || 'SRM-CUS-2026-000184'} — {c.name || c.customer_name} ({c.mobile || c.phone})
+                          🆔 {c.customer_number || ''} — {c.name || c.customer_name} ({c.mobile || c.phone})
                         </option>
                       ))}
                     </select>
@@ -17252,7 +17183,7 @@ export default function App() {
                             setCreateInvoiceForm({ ...createInvoiceForm, customer_number: val });
                           }
                         }} 
-                        placeholder="SRM-CUS-2026-000184" 
+                        placeholder="Customer Number" 
                         style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', color: '#38bdf8', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace', fontWeight: '800' }} 
                         required 
                       />
@@ -17348,7 +17279,7 @@ export default function App() {
                         type="text" 
                         value={createInvoiceForm.developer_name || ''} 
                         onChange={(e) => setCreateInvoiceForm({ ...createInvoiceForm, developer_name: e.target.value })} 
-                        placeholder="Aparna Constructions" 
+                        placeholder="Developer Name" 
                         style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} 
                         required 
                       />
@@ -17395,9 +17326,9 @@ export default function App() {
                       <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>📞 Developer Phone / Mobile *</label>
                       <input 
                         type="text" 
-                        value={createInvoiceForm.developer_mobile || '+91 98490 99887'} 
+                        value={createInvoiceForm.developer_mobile || ''} 
                         onChange={(e) => setCreateInvoiceForm({ ...createInvoiceForm, developer_mobile: e.target.value })} 
-                        placeholder="+91 98490 99887" 
+                        placeholder="Developer Phone" 
                         style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} 
                       />
                     </div>
@@ -17406,9 +17337,9 @@ export default function App() {
                       <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>✉️ Official Billing Email *</label>
                       <input 
                         type="email" 
-                        value={createInvoiceForm.developer_email || 'billing@aparnaconstructions.com'} 
+                        value={createInvoiceForm.developer_email || ''} 
                         onChange={(e) => setCreateInvoiceForm({ ...createInvoiceForm, developer_email: e.target.value })} 
-                        placeholder="billing@aparnaconstructions.com" 
+                        placeholder="Developer Email" 
                         style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} 
                       />
                     </div>
@@ -17431,9 +17362,9 @@ export default function App() {
                       <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>🏢 Developer Registered Corporate Address *</label>
                       <input 
                         type="text" 
-                        value={createInvoiceForm.developer_address || 'Aparna Infra Towers, Road No 12, Banjara Hills, Hyderabad - 500034'} 
+                        value={createInvoiceForm.developer_address || ''} 
                         onChange={(e) => setCreateInvoiceForm({ ...createInvoiceForm, developer_address: e.target.value })} 
-                        placeholder="Aparna Infra Towers, Road No 12, Banjara Hills, Hyderabad - 500034" 
+                        placeholder="Developer Address" 
                         style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem' }} 
                       />
                     </div>
@@ -17826,9 +17757,9 @@ export default function App() {
                         <input 
                           type="text" 
                           disabled={!isSuperAdmin}
-                          value={createInvoiceForm.company_mobile || '+91 98490 12345'} 
+                          value={createInvoiceForm.company_mobile || ''} 
                           onChange={(e) => isSuperAdmin && setCreateInvoiceForm({ ...createInvoiceForm, company_mobile: e.target.value })} 
-                          placeholder="+91 98490 12345" 
+                          placeholder="Company Mobile" 
                           style={{ width: '100%', background: !isSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', cursor: !isSuperAdmin ? 'not-allowed' : 'text', opacity: !isSuperAdmin ? 0.75 : 1 }} 
                         />
                       </div>
@@ -17838,9 +17769,9 @@ export default function App() {
                         <input 
                           type="text" 
                           disabled={!isSuperAdmin}
-                          value={createInvoiceForm.company_website || 'https://www.swaramayi.com'} 
+                          value={createInvoiceForm.company_website || 'https://web.swaramayi.info'} 
                           onChange={(e) => isSuperAdmin && setCreateInvoiceForm({ ...createInvoiceForm, company_website: e.target.value })} 
-                          placeholder="https://www.swaramayi.com" 
+                          placeholder="https://web.swaramayi.info" 
                           style={{ width: '100%', background: !isSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', cursor: !isSuperAdmin ? 'not-allowed' : 'text', opacity: !isSuperAdmin ? 0.75 : 1 }} 
                         />
                       </div>
@@ -18175,7 +18106,7 @@ export default function App() {
                   <span>🆔 WBRERA: {showPrintInvoiceModal.invoice.company_rera_no || 'WBRERA/A/NOR/2025/000737'}</span>
                   <span>📧 Email: {showPrintInvoiceModal.invoice.company_email || 'avishek@swaramayi.info'}</span>
                   <span>📱 Phone: {showPrintInvoiceModal.invoice.company_mobile || '+91 88021 30791'}</span>
-                  <span>🌐 Web: {showPrintInvoiceModal.invoice.company_website || 'https://www.swaramayi.com'}</span>
+                  <span>🌐 Web: {showPrintInvoiceModal.invoice.company_website || 'https://web.swaramayi.info'}</span>
                 </div>
               </div>
 
@@ -18201,7 +18132,7 @@ export default function App() {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Customer ID:</span>
-                    <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{showPrintInvoiceModal.invoice.customer_number || 'SRM-CUS-2026-000184'}</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{showPrintInvoiceModal.invoice.customer_number || 'N/A'}</span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -18211,7 +18142,7 @@ export default function App() {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Email Address:</span>
-                    <span>{showPrintInvoiceModal.invoice.customer_email || 'rohan.deshmukh@gmail.com'}</span>
+                    <span>{showPrintInvoiceModal.invoice.customer_email || ''}</span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -18239,7 +18170,7 @@ export default function App() {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Property Code:</span>
-                    <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{showPrintInvoiceModal.invoice.property_code || 'SRM-PROP-2026-000421'}</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{showPrintInvoiceModal.invoice.property_code || 'N/A'}</span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -18249,7 +18180,7 @@ export default function App() {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Developer / Builder:</span>
-                    <strong>{showPrintInvoiceModal.invoice.developer_name || 'Aparna Constructions'}</strong>
+                    <strong>{showPrintInvoiceModal.invoice.developer_name || ''}</strong>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -19125,7 +19056,7 @@ export default function App() {
                           setNewCustomerForm({ ...newCustomerForm, searched_property_code: e.target.value });
                           setNewLeadForm({ ...newLeadForm, searched_property_code: e.target.value });
                         }}
-                        placeholder="e.g. SRM-PROP-2026-000426"
+                        placeholder="e.g. Property Code"
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: '#38bdf8', fontWeight: '800', fontSize: '0.86rem', fontFamily: 'monospace' }}
                       />
                     </div>
@@ -19301,7 +19232,7 @@ export default function App() {
                         required
                         value={newCustomerForm.mobile || ''}
                         onChange={e => setNewCustomerForm({ ...newCustomerForm, mobile: e.target.value, phone: e.target.value })}
-                        placeholder="+91 98490 88888"
+                        placeholder="+91 00000 00000"
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: '#38bdf8', fontWeight: '800', fontSize: '0.86rem', fontFamily: 'monospace' }}
                       />
                     </div>
@@ -19332,7 +19263,7 @@ export default function App() {
                         type="text"
                         value={newCustomerForm.whatsapp || ''}
                         onChange={e => setNewCustomerForm({ ...newCustomerForm, whatsapp: e.target.value })}
-                        placeholder="+91 98490 88888"
+                        placeholder="+91 00000 00000"
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: '#22c55e', fontWeight: '800', fontSize: '0.86rem', fontFamily: 'monospace' }}
                       />
                     </div>
@@ -19343,7 +19274,7 @@ export default function App() {
                         type="email"
                         value={newCustomerForm.email || ''}
                         onChange={e => setNewCustomerForm({ ...newCustomerForm, email: e.target.value })}
-                        placeholder="e.g. sumanth@gmail.com"
+                        placeholder="e.g. user@example.com"
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}
                       />
                     </div>
@@ -20924,11 +20855,11 @@ export default function App() {
 
 const PublicInvoiceCheckoutView: React.FC<{ invoice: any; onSettlePayment: (invNo: string, txnId: string) => void }> = ({ invoice, onSettlePayment }) => {
   const [selectedPayMethod, setSelectedPayMethod] = useState<'UPI' | 'CARD' | 'INSTANT'>('UPI');
-  const [upiIdInput, setUpiIdInput] = useState<string>('rohan.deshmukh@okaxis');
+  const [upiIdInput, setUpiIdInput] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [paymentSuccess, setPaymentSuccess] = useState<any>(null);
 
-  const totalAmount = Number(invoice.total_invoice_amount || 198240);
+  const totalAmount = Number(invoice.total_invoice_amount || 0);
 
   return (
     <div style={{ minHeight: '100vh', width: '100vw', background: '#0f172a', color: '#ffffff', fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '36px 16px' }}>
@@ -21024,7 +20955,7 @@ const PublicInvoiceCheckoutView: React.FC<{ invoice: any; onSettlePayment: (invN
             <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#94a3b8' }}>Property Unit:</span>
-                <strong>{invoice.property_title || 'Aparna Zenon Premium 3BHK Residence'}</strong>
+                <strong>{invoice.property_title || 'Property Unit'}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#94a3b8' }}>Total Payable Amount:</span>

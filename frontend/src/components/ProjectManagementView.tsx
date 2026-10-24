@@ -95,7 +95,7 @@ export const computeTotalBaseWithOtherCharges = (form: any): string => {
 
   const floorRise = parseNum(form.floor_rise_charge || form.floorRiseCharge || form.floorRise);
   const plc = parseNum(form.plc_charge || form.plcCharge || form.plc);
-  const parking = parseNum(form.parking_price || form.car_parking_charge || form.covered_parking_rate || form.parkingCharge);
+  const parking = parseNum(form.parking_price || form.car_parking_charge || form.parkingCharge);
   const club = parseNum(form.amenity_charges || form.amenityCharges || form.clubhouse_charge || form.clubhouseCharge);
   const maintenance = parseNum(form.advance_maintenance_charge || form.advanceMaintenanceCharge);
   const infraLegal = parseNum(form.legal_doc_charge || form.legalDocCharge || form.infrastructure_charge);
@@ -211,19 +211,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     }
   };
 
-  const [developerMasterList, setDeveloperMasterList] = React.useState<any[]>(() => {
-    if (developers && Array.isArray(developers) && developers.length > 0) return developers;
-    try {
-      const saved = localStorage.getItem('swaramayi_developers_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-      console.error('Error reading developers from localStorage');
-    }
-    return [];
-  });
+  const [developerMasterList, setDeveloperMasterList] = React.useState<any[]>(developers || []);
 
   const [editingDevId, setEditingDevId] = React.useState<string | null>(null);
   const [editDevForm, setEditDevForm] = React.useState<{ id: string; name: string; mobile: string; email: string }>({ id: '', name: '', mobile: '', email: '' });
@@ -263,7 +251,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     const cleanDev = devName.trim();
     const cleanProj = projectName.trim();
     const cleanLoc = localityHub || 'Master Project Hub';
-    const cleanContact = devContact || '+91 98490 88776';
+    const cleanContact = devContact || '';
 
     const newId = `AGR-DEV-${Date.now().toString().slice(-6)}`;
     const currentAgrList = Array.isArray(agreements) ? agreements : [];
@@ -364,19 +352,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     }
   };
 
-  // SYNC DEVELOPER MASTER LIST WITH DEVELOPERS PROP AND LOCALSTORAGE
+  // SYNC DEVELOPER MASTER LIST DIRECTLY WITH LIVE DEVELOPERS PROP FROM MONGODB
   React.useEffect(() => {
-    if (developers && Array.isArray(developers) && developers.length > 0) {
-      setDeveloperMasterList(developers);
-    } else {
-      try {
-        const saved = localStorage.getItem('swaramayi_developers_v1');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) setDeveloperMasterList(parsed);
-        }
-      } catch (e) {}
-    }
+    setDeveloperMasterList(developers || []);
   }, [developers]);
 
   // AUTOMATIC DEVELOPER AGREEMENT SYNC: Ensure every registered/verified developer project has a Project-Wise Developer Agreement
@@ -485,7 +463,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     // 1. From developerMasterList
     (developerMasterList || []).forEach((dev: any) => {
       (dev.projects || []).forEach((proj: any) => {
-        if (isItemInRecycledSet(proj, recycledSet)) {
+        if (false && isItemInRecycledSet(proj, recycledSet)) {
           return;
         }
 
@@ -504,6 +482,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             longitude: proj.lng || proj.longitude || '',
             rera_id: proj.rera_id || proj.reraId || proj.rera || dev.rera_id || dev.reraId || dev.rera || dev.developer_rera_id || '',
             hera_no: proj.hera_no || proj.heraId || proj.hera || dev.hera_no || dev.heraId || dev.hera || dev.developer_hera_no || '',
+            total_floors: proj.total_floors || 'G+4 Floors (5 Storey)',
+            number_of_towers: proj.number_of_towers || '',
             amenities: proj.amenities || [],
             building_photos: proj.building_photos || [],
             total_covered_parking_capacity: proj.total_covered_parking_capacity !== undefined ? proj.total_covered_parking_capacity : 0,
@@ -546,6 +526,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           longitude: prop.longitude || '',
           rera_id: prop.rera_id || prop.reraId || prop.rera || '',
           hera_no: prop.hera_no || prop.heraId || prop.hera || '',
+          total_floors: prop.total_floors || 'G+4 Floors (5 Storey)',
+          number_of_towers: prop.number_of_towers || '',
           amenities: prop.selected_amenities || [],
           building_photos: prop.building_photos || [],
           total_covered_parking_capacity: prop.total_covered_parking_capacity !== undefined ? prop.total_covered_parking_capacity : 0,
@@ -564,6 +546,181 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
     return Array.from(masterProjectsMap.values());
   }, [developerMasterList, properties]);
+
+  const lastLoadedEditIdRef = React.useRef<string | null>(null);
+
+  const populateFormForProperty = React.useCallback((p: any) => {
+    if (!p) return;
+    const allMasterProjects = getAllMasterProjects();
+    const pProjId = p.project_id || p.projectId;
+    const pTitle = p.title || p.project_title || p.project_name || '';
+    const matchedProj = allMasterProjects.find((mp: any) => 
+      (pProjId && (String(mp.id || '').toLowerCase() === String(pProjId).toLowerCase() || String(mp.code || '').toLowerCase() === String(pProjId).toLowerCase())) ||
+      (pTitle && String(mp.title || '').toLowerCase() === String(pTitle).toLowerCase())
+    );
+
+    const cleanUnitFloor = (() => {
+      if (p.unit_floor) return p.unit_floor;
+      if (p.floor_no && typeof p.floor_no === 'string' && p.floor_no.includes(' out of ')) {
+        return p.floor_no.split(' out of ')[0].trim();
+      }
+      if (p.floor_num) return p.floor_num;
+      if (p.floor) return p.floor;
+      return '2nd Floor';
+    })();
+
+    const cleanTotalFloors = (() => {
+      if (p.total_floors) return p.total_floors;
+      if (p.floor_no && typeof p.floor_no === 'string' && p.floor_no.includes(' out of ')) {
+        return p.floor_no.split(' out of ')[1].trim();
+      }
+      if (matchedProj?.total_floors) return matchedProj.total_floors;
+      return 'G+4 Floors (5 Storey)';
+    })();
+
+    const cleanSuperBuiltup = p.super_builtup_area || p.superBuiltupArea || p.super_built_up_area || p.super_area || p.builtup_area || p.built_up_area || '';
+    const cleanCarpetArea = p.carpet_area || p.carpetArea || p.carpet || '';
+    const cleanDeductionPct = p.deduction_pct 
+      ? `${parseDeductionPct(p.deduction_pct)}%` 
+      : (cleanSuperBuiltup && cleanCarpetArea ? `${parseDeductionPct(null, cleanSuperBuiltup, cleanCarpetArea)}%` : '35%');
+
+    const cleanPriceSqft = p.price_sqft || p.price_per_sqft || p.rate_sqft || p.asking_rate_sqft || '';
+    const cleanFinalPrice = p.final_price || p.base_price || p.price || p.asking_price || '';
+
+    const cleanProjectId = p.project_id || p.projectId || matchedProj?.code || matchedProj?.id || '';
+    const cleanPropertyCode = p.property_code || p.code || p.id || '';
+
+    const cleanUnitParkingCharge = p.parking_price !== undefined && p.parking_price !== null && p.parking_price !== '' 
+      ? String(p.parking_price) 
+      : (p.car_parking_charge !== undefined && p.car_parking_charge !== null && p.car_parking_charge !== '' ? String(p.car_parking_charge) : '');
+    const cleanCoveredRate = p.covered_parking_rate !== undefined && p.covered_parking_rate !== '' ? p.covered_parking_rate : (matchedProj?.covered_parking_rate || '');
+    const cleanCoveredCap = p.total_covered_parking_capacity !== undefined && p.total_covered_parking_capacity !== null ? p.total_covered_parking_capacity : (matchedProj?.total_covered_parking_capacity !== undefined ? matchedProj.total_covered_parking_capacity : 0);
+
+    const cleanEvRate = p.ev_parking_rate !== undefined && p.ev_parking_rate !== '' ? p.ev_parking_rate : (matchedProj?.ev_parking_rate || '');
+    const cleanEvCap = p.total_ev_parking_capacity !== undefined && p.total_ev_parking_capacity !== null ? p.total_ev_parking_capacity : (matchedProj?.total_ev_parking_capacity !== undefined ? matchedProj.total_ev_parking_capacity : 0);
+
+    const cleanOpenRate = p.open_parking_rate !== undefined && p.open_parking_rate !== '' ? p.open_parking_rate : (matchedProj?.open_parking_rate || '');
+    const cleanOpenCap = p.total_open_parking_capacity !== undefined && p.total_open_parking_capacity !== null ? p.total_open_parking_capacity : (matchedProj?.total_open_parking_capacity !== undefined ? matchedProj.total_open_parking_capacity : 0);
+
+    const fullFormData = {
+      ...p,
+      id: p.id,
+      project_id: cleanProjectId,
+      property_code: cleanPropertyCode,
+      title: pTitle || matchedProj?.title || 'Selected Project',
+      developer: p.developer || p.developer_name || matchedProj?.developer || 'Developer',
+      developer_id: p.developer_id || matchedProj?.developer_id || 'SRM-DEV-2026-000001',
+      developer_mobile: p.developer_mobile || p.mobile || matchedProj?.mobile || '',
+      developer_alt_mobile: p.developer_alt_mobile || matchedProj?.altMobile || '',
+      locality: p.locality || matchedProj?.locality || '',
+      full_address: p.full_address || matchedProj?.full_address || p.locality || matchedProj?.locality || '',
+      latitude: p.latitude || matchedProj?.latitude || '22.722361',
+      longitude: p.longitude || matchedProj?.longitude || '88.493403',
+      project_posting_id: p.project_posting_id || p.campaign_id || 'PRJ-POST-2026-8802',
+      rera_id: p.rera_id || p.reraId || p.rera || matchedProj?.rera_id || matchedProj?.reraId || '',
+      hera_no: p.hera_no || p.hera_id || p.heraId || p.hera || matchedProj?.hera_no || matchedProj?.heraId || '',
+      property_type: p.property_type || p.type || 'Flat / Apartment (New / Builder)',
+      configuration: p.configuration || p.bhk || '3BHK Flat',
+      super_builtup_area: cleanSuperBuiltup,
+      carpet_area: cleanCarpetArea,
+      deduction_pct: cleanDeductionPct,
+      facing: p.facing || p.vastu_facing || 'East Facing',
+      possession_status: p.possession_status || p.possessionStatus || p.possession || 'Ready to Move',
+      handover_month: p.handover_month || 'December',
+      handover_year: p.handover_year || '2026',
+      handover_month_year: p.handover_month_year || `${p.handover_month || 'December'} ${p.handover_year || '2026'}`,
+      unit_floor: cleanUnitFloor,
+      total_floors: cleanTotalFloors,
+      floor_num: cleanUnitFloor,
+      floor_number: cleanUnitFloor,
+      floor_no: `${cleanUnitFloor} out of ${cleanTotalFloors}`,
+      tower_block: p.tower_block || p.tower || p.block || '',
+      number_of_towers: p.number_of_towers || matchedProj?.number_of_towers || '',
+      price_sqft: cleanPriceSqft,
+      final_price: cleanFinalPrice,
+      gst_pct: p.gst_pct || '5%',
+      stamp_duty_pct: p.stamp_duty_pct || '5.0%',
+      registration_fee_pct: p.registration_fee_pct || '1.0%',
+      floor_rise_charge: p.floor_rise_charge !== undefined ? p.floor_rise_charge : (p.floorRise || ''),
+      floorRise: p.floor_rise_charge !== undefined ? p.floor_rise_charge : (p.floorRise || ''),
+      plc_charge: p.plc_charge !== undefined ? p.plc_charge : (p.plc || ''),
+      plc: p.plc_charge !== undefined ? p.plc_charge : (p.plc || ''),
+      parking_price: cleanUnitParkingCharge,
+      car_parking_charge: cleanUnitParkingCharge,
+      covered_parking_rate: cleanCoveredRate,
+      total_covered_parking_capacity: cleanCoveredCap,
+      total_ev_parking_capacity: cleanEvCap,
+      ev_parking_rate: cleanEvRate,
+      total_open_parking_capacity: cleanOpenCap,
+      open_parking_rate: cleanOpenRate,
+      amenity_charges: p.amenity_charges !== undefined ? p.amenity_charges : (p.clubhouse_charge || ''),
+      clubhouse_charge: p.amenity_charges !== undefined ? p.amenity_charges : (p.clubhouse_charge || ''),
+      advance_maintenance_charge: p.advance_maintenance_charge !== undefined ? p.advance_maintenance_charge : '',
+      legal_doc_charge: p.legal_doc_charge !== undefined ? p.legal_doc_charge : (p.infrastructure_charge || p.lawyer_charge || ''),
+      infrastructure_charge: p.legal_doc_charge !== undefined ? p.legal_doc_charge : (p.infrastructure_charge || p.lawyer_charge || ''),
+      lawyer_charge: p.legal_doc_charge !== undefined ? p.legal_doc_charge : (p.infrastructure_charge || p.lawyer_charge || ''),
+      total_all_inclusive_price: p.total_all_inclusive_price || '',
+      maintenance_monthly: p.maintenance_monthly || '',
+      status: p.status || 'AVAILABLE',
+      commission_pct: p.commission_pct || '2%',
+      key_custody: p.key_custody || p.keys_custody || matchedProj?.key_custody || '',
+      keys_custody: p.key_custody || p.keys_custody || matchedProj?.keys_custody || '',
+      description: p.description || p.architectural_description || matchedProj?.architectural_description || '',
+      architectural_description: p.architectural_description || p.description || matchedProj?.architectural_description || '',
+      unit_photos: Array.isArray(p.unit_photos) ? p.unit_photos : (p.unit_photo ? [p.unit_photo] : []),
+      unit_photo: p.unit_photo || (Array.isArray(p.unit_photos) && p.unit_photos[0]) || '',
+      layout_photos: Array.isArray(p.layout_photos) ? p.layout_photos : (p.layout_photo ? [p.layout_photo] : []),
+      layout_photo: p.layout_photo || (Array.isArray(p.layout_photos) && p.layout_photos[0]) || '',
+      floor_plan_photos: Array.isArray(p.floor_plan_photos) ? p.floor_plan_photos : (p.floor_plan_photo ? [p.floor_plan_photo] : []),
+      floor_plan_photo: p.floor_plan_photo || (Array.isArray(p.floor_plan_photos) && p.floor_plan_photos[0]) || '',
+      unit_videos: Array.isArray(p.unit_videos) ? p.unit_videos : (p.unit_video ? [p.unit_video] : []),
+      building_photos: Array.isArray(p.building_photos) && p.building_photos.length > 0 ? p.building_photos : (matchedProj?.building_photos || []),
+      building_photo: p.building_photo || (matchedProj?.building_photos && matchedProj.building_photos[0]) || '',
+      selected_amenities: p.selected_amenities && p.selected_amenities.length > 0 ? p.selected_amenities : (matchedProj?.amenities || []),
+      site_person_name: p.site_person_name || matchedProj?.site_person_name || '',
+      site_person_contact: p.site_person_contact || matchedProj?.site_person_contact || ''
+    };
+
+    setNewPropertyForm(fullFormData);
+
+    if (p.developer_mobile || matchedProj?.mobile) {
+      setDevProjectMobile(p.developer_mobile || matchedProj?.mobile);
+    }
+    if ((p.developer_alt_mobile || matchedProj?.altMobile) && setDevProjectAltMobile) {
+      setDevProjectAltMobile(p.developer_alt_mobile || matchedProj?.altMobile);
+    }
+  }, [getAllMasterProjects, setNewPropertyForm, setDevProjectMobile, setDevProjectAltMobile]);
+
+  React.useEffect(() => {
+    if (editingProperty && (editingProperty.id || editingProperty.property_code)) {
+      const editKey = `${editingProperty.id || ''}_${editingProperty.property_code || ''}`;
+      if (lastLoadedEditIdRef.current !== editKey) {
+        lastLoadedEditIdRef.current = editKey;
+        populateFormForProperty(editingProperty);
+      }
+    } else if (!editingProperty) {
+      lastLoadedEditIdRef.current = null;
+    }
+  }, [editingProperty, populateFormForProperty]);
+
+  const handleStartEditPropertyFull = React.useCallback((propToEdit: any) => {
+    if (!propToEdit) return;
+    const editKey = `${propToEdit.id || ''}_${propToEdit.property_code || ''}`;
+    lastLoadedEditIdRef.current = editKey;
+    populateFormForProperty(propToEdit);
+    handleStartEditProperty(propToEdit);
+    setTimeout(() => {
+      populateFormForProperty(propToEdit);
+    }, 20);
+  }, [populateFormForProperty, handleStartEditProperty]);
+
+  const handleCancelOrBackToRegistry = React.useCallback(() => {
+    if (handleOpenAddPropertyModal) {
+      handleOpenAddPropertyModal();
+    }
+    lastLoadedEditIdRef.current = null;
+    setActiveProjectSubTab('property_master');
+  }, [handleOpenAddPropertyModal, setActiveProjectSubTab]);
 
   const [selectedDevId, setSelectedDevId] = React.useState<string>('');
   const [selectedProjectId, setSelectedProjectId] = React.useState<string>('');
@@ -736,6 +893,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       building_photo: p.building_photo || '',
       rera_id: p.rera_id || '',
       hera_no: p.hera_no || '',
+      total_floors: p.total_floors || 'G+4 Floors (5 Storey)',
+      number_of_towers: p.number_of_towers || '',
       key_custody: p.key_custody || p.keys_custody || p.keysCustody || '',
       keys_custody: p.key_custody || p.keys_custody || p.keysCustody || '',
       architectural_description: p.architectural_description || p.architecturalDescription || p.description || '',
@@ -773,23 +932,23 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   }, [projectUnitsList]);
 
   const [sliderUnitForm, setSliderUnitForm] = React.useState<any>({
-    unitNumber: 'Flat 301',
-    bhk: '2BHK',
-    floor: '3rd Floor',
-    tower: 'Tower A',
-    superBuiltupArea: '1,283 Sq.Ft.',
+    unitNumber: '',
+    bhk: '',
+    floor: '',
+    tower: '',
+    superBuiltupArea: '',
     deductionPct: '35%',
-    carpetArea: '898.1 Sq.Ft.',
+    carpetArea: '',
     facing: 'East Facing',
     furnishing: 'Semi-Furnished',
-    priceSqft: '5131',
-    basePrice: '₹65,83,073',
+    priceSqft: '',
+    basePrice: '',
     parkingRequired: 'YES',
-    parking: '1 Covered Car Parking Slot',
+    parking: '',
     parkingPrice: '300000',
     amenityCharges: '150000',
     gstPct: '5%',
-    totalAllInclusivePrice: '₹73,84,727',
+    totalAllInclusivePrice: '',
     selectedAmenities: [
       '24/7 Power Backup',
       'Water Supply',
@@ -877,7 +1036,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     return candidate;
   }, [properties, developerMasterList]);
 
-  // AUTOMATED SEQUENTIAL INDIVIDUAL PROPERTY CODE GENERATOR FOR EVERY ADDITION (SRM-PROP-2026-000428, SRM-PROP-2026-000429...)
+  // AUTOMATED SEQUENTIAL INDIVIDUAL PROPERTY CODE GENERATOR FOR EVERY ADDITION
   const generateDynamicPropertyCode = React.useCallback((offset = 0) => {
     const year = new Date().getFullYear();
     let maxNum = 0;
@@ -1085,12 +1244,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       super_builtup_area: foundProp.super_builtup_area || '',
       floor_num: foundProp.floor_num || foundProp.floor_number || '',
       total_floors: foundProp.total_floors || '',
+      number_of_towers: foundProp.number_of_towers || '',
       facing: foundProp.facing || '',
       furnishing: foundProp.furnishing || '',
       final_price: foundProp.final_price || '',
       price_sqft: foundProp.price_sqft || '',
       car_parking: foundProp.car_parking || '',
-      parking_price: foundProp.parking_price || '0',
+      parking_price: foundProp.parking_price !== undefined && foundProp.parking_price !== null && foundProp.parking_price !== '' ? foundProp.parking_price : (foundProp.car_parking_charge || ''),
+      car_parking_charge: foundProp.parking_price !== undefined && foundProp.parking_price !== null && foundProp.parking_price !== '' ? foundProp.parking_price : (foundProp.car_parking_charge || ''),
       latitude: gps.lat,
       longitude: gps.lng,
       building_photos: foundProp.building_photos || [],
@@ -1149,6 +1310,74 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     if (setDevProjectAltMobile) setDevProjectAltMobile(secondaryMob);
   };
 
+  // Auto-sync / healing: If properties is empty, check developerMasterList and auto-populate property stock
+  const handleSyncStockFromProjects = React.useCallback(() => {
+    let nextProps = [...properties];
+    let createdCount = 0;
+
+    developerMasterList.forEach(dev => {
+      (dev.projects || []).forEach((proj: any, idx: number) => {
+        const projId = proj.id || proj.code;
+        const projTitle = proj.title;
+        const exists = nextProps.some(p => 
+          (projId && (p.project_id === projId || p.project_code === projId)) ||
+          (p.title && projTitle && p.title.toLowerCase().trim() === projTitle.toLowerCase().trim())
+        );
+
+        if (!exists) {
+          createdCount++;
+          const newCode = 'SRM-PROP-2026-' + String(nextProps.length + createdCount).padStart(6, '0');
+          const newUnit = {
+            id: 'PROP-' + Date.now() + '-' + idx + '-' + Math.random().toString(36).substr(2, 5),
+            property_code: newCode,
+            code: newCode,
+            project_id: projId,
+            project_code: projId,
+            title: projTitle,
+            property_title: projTitle,
+            project_name: projTitle,
+            developer: dev.name,
+            developer_name: dev.name,
+            developer_id: dev.id,
+            developer_mobile: dev.mobile || '',
+            developer_email: dev.email || '',
+            locality: proj.locality || 'Kolkata',
+            full_address: projTitle + ', ' + (proj.locality || 'Kolkata'),
+            configuration: proj.configuration || '',
+            super_builtup_area: proj.super_builtup_area || proj.superBuiltupArea || '',
+            carpet_area: proj.carpet_area || proj.carpetArea || '',
+            floor_num: proj.floor_num || proj.unit_floor || '',
+            floor_number: proj.floor_num || proj.unit_floor || '',
+            total_floors: proj.total_floors || '',
+            facing: proj.facing || '',
+            furnishing: proj.furnishing || '',
+            final_price: proj.final_price || proj.base_price || '',
+            base_price: proj.final_price || proj.base_price || '',
+            price_sqft: proj.price_sqft || '',
+            status: 'LIVE / AVAILABLE',
+            availability_status: 'AVAILABLE',
+            property_type: 'Flat / Apartment',
+            rera_id: proj.rera_id || '',
+            hera_no: proj.hera_no || '',
+            created_at: new Date().toISOString()
+          };
+          nextProps.push(newUnit);
+        }
+      });
+    });
+
+    if (createdCount > 0) {
+      if (setProperties) setProperties(nextProps);
+      try {
+        localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(nextProps));
+      } catch (e) {}
+      if (syncAllToMongoDB) syncAllToMongoDB({ properties: nextProps });
+    }
+    return createdCount;
+  }, [properties, developerMasterList, setProperties, syncAllToMongoDB]);
+
+  // Auto-heal on mount disabled: units are strictly loaded live from MongoDB Atlas
+
   const handleSaveProjectMaster = React.useCallback(() => {
     if (!newPropertyForm.developer || !newPropertyForm.title) {
       return alert('Please enter Developer/Builder Name & Project Title!');
@@ -1167,6 +1396,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       lng: newPropertyForm.longitude || '',
       rera_id: newPropertyForm.rera_id || '',
       hera_no: newPropertyForm.hera_no || '',
+      total_floors: newPropertyForm.total_floors || 'G+4 Floors (5 Storey)',
+      number_of_towers: newPropertyForm.number_of_towers || '',
       key_custody: newPropertyForm.key_custody || newPropertyForm.keys_custody || '',
       keys_custody: newPropertyForm.key_custody || newPropertyForm.keys_custody || '',
       architectural_description: newPropertyForm.architectural_description || newPropertyForm.description || '',
@@ -1190,6 +1421,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       const projList = devObj.projects || [];
       if (!projList.some((p: any) => (p.id === assignedProjCode || p.code === assignedProjCode || p.title.toLowerCase().trim() === newPropertyForm.title.toLowerCase().trim()))) {
         devObj.projects = [newProjEntry, ...projList];
+      } else {
+        devObj.projects = projList.map((p: any) => (p.id === assignedProjCode || p.code === assignedProjCode || p.title.toLowerCase().trim() === newPropertyForm.title.toLowerCase().trim()) ? { ...p, ...newProjEntry } : p);
       }
     } else {
       let maxDevSeq = 0;
@@ -1203,7 +1436,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       const newDevObj = {
         id: `SRM-DEV-2026-${String(maxDevSeq + 1).padStart(6, '0')}`,
         name: newPropertyForm.developer,
-        mobile: devProjectMobile || '+91 98490 88776',
+        mobile: devProjectMobile || '',
         email: newPropertyForm.developer_email || '',
         projects: [newProjEntry]
       };
@@ -1225,10 +1458,56 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       Boolean(devProjectOtpVerified)
     );
 
+    // ALSO AUTO-CREATE INITIAL ACTIVE PROPERTY STOCK IN PROPERTIES REGISTRY
+    const newStockUnit = {
+      id: 'PROP-' + Date.now(),
+      property_code: assignedPropCode,
+      code: assignedPropCode,
+      project_id: assignedProjCode,
+      project_code: assignedProjCode,
+      title: newPropertyForm.title,
+      property_title: newPropertyForm.title,
+      project_name: newPropertyForm.title,
+      developer: newPropertyForm.developer,
+      developer_name: newPropertyForm.developer,
+      developer_id: (existingDevIdx >= 0 ? updatedDevs[existingDevIdx]?.id : updatedDevs[0]?.id) || 'SRM-DEV-001',
+      developer_mobile: devProjectMobile || newPropertyForm.developer_mobile || '',
+      developer_alt_mobile: devProjectAltMobile || newPropertyForm.developer_alt_mobile || '',
+      developer_email: newPropertyForm.developer_email || '',
+      locality: newPropertyForm.locality || '',
+      full_address: newPropertyForm.full_address || (newPropertyForm.title + ', ' + (newPropertyForm.locality || 'Kolkata')),
+      configuration: newPropertyForm.configuration || '',
+      super_builtup_area: newPropertyForm.super_builtup_area || '',
+      carpet_area: newPropertyForm.carpet_area || '',
+      floor_num: newPropertyForm.floor_num || newPropertyForm.floor_no || '',
+      floor_number: newPropertyForm.floor_num || newPropertyForm.floor_no || '',
+      total_floors: newPropertyForm.total_floors || '',
+      facing: newPropertyForm.facing || '',
+      furnishing: newPropertyForm.furnishing || '',
+      final_price: newPropertyForm.final_price || '',
+      base_price: newPropertyForm.final_price || '',
+      price_sqft: newPropertyForm.price_sqft || '',
+      status: 'LIVE / AVAILABLE',
+      availability_status: 'AVAILABLE',
+      property_type: newPropertyForm.property_type || 'Flat / Apartment',
+      rera_id: newPropertyForm.rera_id || '',
+      hera_no: newPropertyForm.hera_no || '',
+      created_at: new Date().toISOString()
+    };
+
+    let nextPropsList = [...properties];
+    if (!nextPropsList.some(p => p.property_code === assignedPropCode || (p.project_id === assignedProjCode && p.title.toLowerCase().trim() === newPropertyForm.title.toLowerCase().trim()))) {
+      nextPropsList = [newStockUnit, ...nextPropsList];
+      if (setProperties) setProperties(nextPropsList);
+      try {
+        localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(nextPropsList));
+      } catch (e) {}
+    }
+
     // ALSO IMMEDIATELY SYNC RECORD TO MONGODB ATLAS CLUSTER
     try {
       if (syncAllToMongoDB) {
-        syncAllToMongoDB({ developers: updatedDevs, properties: properties });
+        syncAllToMongoDB({ developers: updatedDevs, properties: nextPropsList });
       }
     } catch (e) {}
 
@@ -1242,6 +1521,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       locality: newPropertyForm.locality,
       latitude: newPropertyForm.latitude,
       longitude: newPropertyForm.longitude,
+      rera_id: newPropertyForm.rera_id || prev.rera_id || '',
+      hera_no: newPropertyForm.hera_no || prev.hera_no || '',
+      total_floors: newPropertyForm.total_floors || prev.total_floors || 'G+4 Floors (5 Storey)',
+      number_of_towers: newPropertyForm.number_of_towers || prev.number_of_towers || '',
+      floor_no: `${prev.unit_floor || '2nd Floor'} out of ${newPropertyForm.total_floors || prev.total_floors || 'G+4 Floors (5 Storey)'}`,
       key_custody: newPropertyForm.key_custody || newPropertyForm.keys_custody || prev.key_custody || '',
       keys_custody: newPropertyForm.key_custody || newPropertyForm.keys_custody || prev.keys_custody || '',
       architectural_description: newPropertyForm.architectural_description || prev.architectural_description || '',
@@ -1348,8 +1632,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       ev_parking_rate: foundProj.ev_parking_rate || prev.ev_parking_rate || '',
       total_open_parking_capacity: foundProj.total_open_parking_capacity !== undefined ? foundProj.total_open_parking_capacity : (prev.total_open_parking_capacity || 0),
       open_parking_rate: foundProj.open_parking_rate || prev.open_parking_rate || '',
-      parking_price: foundProj.covered_parking_rate || prev.parking_price || '',
-      car_parking_charge: foundProj.covered_parking_rate || prev.car_parking_charge || '',
+      parking_price: prev.parking_price || '',
+      car_parking_charge: prev.car_parking_charge || '',
       key_custody: foundProj.key_custody || prev.key_custody || '',
       keys_custody: foundProj.key_custody || prev.keys_custody || '',
       architectural_description: foundProj.architectural_description || prev.architectural_description || '',
@@ -1393,6 +1677,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       longitude: '',
       rera_id: '',
       hera_no: '',
+      total_floors: 'G+4 Floors (5 Storey)',
+      number_of_towers: '',
       total_covered_parking_capacity: 0,
       covered_parking_rate: '',
       total_ev_parking_capacity: 0,
@@ -1430,6 +1716,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   }, [setNewPropertyForm, setDevProjectMobile, setDevProjectAltMobile, setDevProjectOtpVerified, setDevProjectOtpSent, setDevProjectOtpInput, setActiveProjectSubTab]);
 
   const handleOpenNewPropertyForm = React.useCallback(() => {
+    if (handleOpenAddPropertyModal) handleOpenAddPropertyModal();
+    lastLoadedEditIdRef.current = null;
     setNewPropertyForm({
       project_id: '',
       property_code: '',
@@ -1444,7 +1732,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       super_builtup_area: '',
       carpet_area: '',
       floor_num: '',
-      total_floors: '',
+      unit_floor: '2nd Floor',
+      total_floors: 'G+4 Floors (5 Storey)',
+      floor_no: '2nd Floor out of G+4 Floors (5 Storey)',
+      tower_block: '',
+      number_of_towers: '',
       facing: '',
       furnishing: '',
       final_price: '',
@@ -1871,6 +2163,56 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     onChange={(e) => setNewPropertyForm({ ...newPropertyForm, hera_no: e.target.value })} 
                     placeholder="Enter HERA Registration No. (Optional)" 
                     style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#a855f7', fontFamily: 'monospace', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
+                    🏢 Total Floors in Building *
+                  </label>
+                  <select 
+                    value={newPropertyForm.total_floors || 'G+4 Floors (5 Storey)'} 
+                    onChange={(e) => {
+                      const tFloors = e.target.value;
+                      const uFloor = newPropertyForm.unit_floor || '2nd Floor';
+                      setNewPropertyForm((prev: any) => ({
+                        ...prev,
+                        total_floors: tFloors,
+                        floor_no: `${uFloor} out of ${tFloors}`
+                      }));
+                    }} 
+                    style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '800' }} 
+                  >
+                    <option value="Ground Floor Only (G)">Ground Floor Only (G)</option>
+                    {Array.from({ length: 30 }, (_, i) => {
+                      const num = i + 1;
+                      const storey = num + 1;
+                      return (
+                        <option key={`proj_master_tot_fl_${num}`} value={`G+${num} Floors (${storey} Storey)`}>
+                          G+{num} Floors ({storey} Storey)
+                        </option>
+                      );
+                    })}
+                    <option value="B+G (Basement + Ground)">B+G (Basement + Ground)</option>
+                    <option value="B+G+4 Floors (Midrise)">B+G+4 Floors (Midrise)</option>
+                    <option value="B+G+14 Floors (Highrise)">B+G+14 Floors (Highrise)</option>
+                    <option value="B+G+30 Floors (Ultra Highrise)">B+G+30 Floors (Ultra Highrise)</option>
+                    <option value="2B+G+30 Floors (Mega Highrise)">2B+G+30 Floors (Mega Highrise)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', color: '#fbbf24', fontWeight: '900', display: 'block', marginBottom: '6px' }}>
+                    🏗️ Number Of Towers in Project / Complex *
+                  </label>
+                  <input 
+                    type="text" 
+                    value={newPropertyForm.number_of_towers || ''} 
+                    onChange={(e) => setNewPropertyForm((prev: any) => ({ ...prev, number_of_towers: e.target.value }))} 
+                    placeholder="e.g. 1 Standalone Tower / 4 Towers Complex" 
+                    style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #fbbf24', color: '#fbbf24', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
                   />
                 </div>
               </div>
@@ -2504,7 +2846,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             <div>
               <button 
                 type="button" 
-                onClick={() => setActiveProjectSubTab('property_master')}
+                onClick={handleCancelOrBackToRegistry}
                 style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: '#0284c7', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}
               >
                 <ArrowRightLeft size={16} /> ⬅️ Back to Property Inventory Registry
@@ -2523,7 +2865,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                 onClick={(e) => handleCreatePropertySubmit(e as any)}
                 style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: '900', fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(22, 163, 74, 0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                💾 SAVE & COMPLETE REGISTRATION
+                {editingProperty ? `💾 SAVE & UPDATE PROPERTY (${editingProperty.property_code})` : '💾 SAVE & COMPLETE REGISTRATION'}
               </button>
 
               <div style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1.5px solid #38bdf8', borderRadius: '10px', padding: '8px 14px', textAlign: 'right' }}>
@@ -2594,6 +2936,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             longitude: found.longitude || prev.longitude,
                             rera_id: found.rera_id || found.reraId || found.rera || '',
                             hera_no: found.hera_no || found.heraId || found.hera || '',
+                            total_floors: found.total_floors || prev.total_floors || 'G+4 Floors (5 Storey)',
+                            number_of_towers: found.number_of_towers || prev.number_of_towers || '',
+                            floor_no: `${prev.unit_floor || '2nd Floor'} out of ${found.total_floors || prev.total_floors || 'G+4 Floors (5 Storey)'}`,
                             selected_amenities: found.amenities && found.amenities.length > 0 ? found.amenities : prev.selected_amenities,
                             building_photos: found.building_photos && found.building_photos.length > 0 ? found.building_photos : prev.building_photos,
                             total_covered_parking_capacity: found.total_covered_parking_capacity !== undefined ? found.total_covered_parking_capacity : (prev.total_covered_parking_capacity || 0),
@@ -2602,8 +2947,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             ev_parking_rate: found.ev_parking_rate || prev.ev_parking_rate || '',
                             total_open_parking_capacity: found.total_open_parking_capacity !== undefined ? found.total_open_parking_capacity : (prev.total_open_parking_capacity || 0),
                             open_parking_rate: found.open_parking_rate || prev.open_parking_rate || '',
-                            parking_price: found.covered_parking_rate || prev.parking_price || '',
-                            car_parking_charge: found.covered_parking_rate || prev.car_parking_charge || '',
+                            parking_price: prev.parking_price || '',
+                            car_parking_charge: prev.car_parking_charge || '',
                             key_custody: found.key_custody || prev.key_custody || '',
                             keys_custody: found.key_custody || prev.keys_custody || '',
                             architectural_description: found.architectural_description || prev.architectural_description || '',
@@ -2758,6 +3103,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                       longitude: proj.longitude || prev.longitude,
                                       rera_id: proj.rera_id || prev.rera_id || '',
                                       hera_no: proj.hera_no || prev.hera_no || '',
+                                      total_floors: proj.total_floors || prev.total_floors || 'G+4 Floors (5 Storey)',
+                                      number_of_towers: proj.number_of_towers || prev.number_of_towers || '',
+                                      floor_no: `${prev.unit_floor || '2nd Floor'} out of ${proj.total_floors || prev.total_floors || 'G+4 Floors (5 Storey)'}`,
                                       selected_amenities: proj.amenities && proj.amenities.length > 0 ? proj.amenities : prev.selected_amenities,
                                       building_photos: proj.building_photos && proj.building_photos.length > 0 ? proj.building_photos : prev.building_photos,
                                       total_covered_parking_capacity: proj.total_covered_parking_capacity !== undefined ? proj.total_covered_parking_capacity : (prev.total_covered_parking_capacity || 0),
@@ -2766,8 +3114,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                       ev_parking_rate: proj.ev_parking_rate || prev.ev_parking_rate || '',
                                       total_open_parking_capacity: proj.total_open_parking_capacity !== undefined ? proj.total_open_parking_capacity : (prev.total_open_parking_capacity || 0),
                                       open_parking_rate: proj.open_parking_rate || prev.open_parking_rate || '',
-                                      parking_price: proj.covered_parking_rate || prev.parking_price || '',
-                                      car_parking_charge: proj.covered_parking_rate || prev.car_parking_charge || '',
+                                      parking_price: prev.parking_price || '',
+                                      car_parking_charge: prev.car_parking_charge || '',
                                       key_custody: proj.key_custody || prev.key_custody || '',
                                       keys_custody: proj.key_custody || prev.keys_custody || '',
                                       architectural_description: proj.architectural_description || prev.architectural_description || '',
@@ -2933,9 +3281,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           const val = e.target.value;
                           setNewPropertyForm({ 
                             ...newPropertyForm, 
-                            covered_parking_rate: val,
-                            parking_price: val,
-                            car_parking_charge: val 
+                            covered_parking_rate: val
                           });
                         }}
                         placeholder="e.g. 300000"
@@ -3069,40 +3415,77 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                 <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '14px' }}>
                   <div>
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Property Category Type</label>
-                    <select value={newPropertyForm.property_type} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, property_type: e.target.value })} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }}>
-                      <option value="Flat / Apartment (New / Builder)">🏢 Flat / Apartment (New / Builder)</option>
-                      <option value="Flat / Apartment (Resale)">🔄 Flat / Apartment (Resale)</option>
-                      <option value="Flat / Apartment (For Rent)">🔑 Flat / Apartment (For Rent)</option>
-                      <option value="Semi Complex (New / Builder)">🏙️ Semi Complex (New / Builder)</option>
-                      <option value="Semi Complex (Resale)">🔄 Semi Complex (Resale)</option>
-                      <option value="Semi Complex (For Rent)">🔑 Semi Complex (For Rent)</option>
-                      <option value="Gated Villa (New / Builder)">🏰 Gated Villa (New / Builder)</option>
-                      <option value="Gated Villa (Resale)">🔄 Gated Villa (Resale)</option>
-                      <option value="Gated Villa (For Rent)">🔑 Gated Villa (For Rent)</option>
-                      <option value="Independent House / Bungalow (New / Builder)">🏡 Independent House / Bungalow (New / Builder)</option>
-                      <option value="Independent House (Resale)">🔄 Independent House (Resale)</option>
-                      <option value="Independent House (For Rent)">🔑 Independent House (For Rent)</option>
-                      <option value="Commercial Space (New / Builder)">🏢 Commercial Space (New / Builder)</option>
-                      <option value="Commercial Space (Resale)">🔄 Commercial Space (Resale)</option>
-                      <option value="Commercial Space (For Lease / Rent)">🔑 Commercial Space (For Lease / Rent)</option>
-                      <option value="Commercial Shop / Showroom">🏬 Commercial Shop / Showroom</option>
-                      <option value="Commercial Office Space">🏢 Commercial Office Space</option>
-                      <option value="PG / Co-Living Space (For Rent)">🛌 PG / Co-Living Space (For Rent)</option>
-                      <option value="Open Plot / Land (New / Builder)">📐 Open Plot / Land (New / Builder)</option>
-                      <option value="Open Plot / Land (Resale)">📐 Open Plot / Land (Resale)</option>
-                      <option value="Industrial Land / Warehouse">🏭 Industrial Land / Warehouse</option>
-                    </select>
+                    {(() => {
+                      const currentType = String(newPropertyForm.property_type || 'Flat / Apartment (New / Builder)').trim();
+                      const standardTypes = [
+                        "Flat / Apartment (New / Builder)",
+                        "Flat / Apartment (Resale)",
+                        "Flat / Apartment (For Rent)",
+                        "Semi Complex (New / Builder)",
+                        "Semi Complex (Resale)",
+                        "Semi Complex (For Rent)",
+                        "Gated Villa (New / Builder)",
+                        "Gated Villa (Resale)",
+                        "Gated Villa (For Rent)",
+                        "Independent House / Bungalow (New / Builder)",
+                        "Independent House (Resale)",
+                        "Independent House (For Rent)",
+                        "Commercial Space (New / Builder)",
+                        "Commercial Space (Resale)",
+                        "Commercial Space (For Lease / Rent)",
+                        "Commercial Shop / Showroom",
+                        "Commercial Office Space",
+                        "PG / Co-Living Space (For Rent)",
+                        "Open Plot / Land (New / Builder)",
+                        "Open Plot / Land (Resale)",
+                        "Industrial Land / Warehouse"
+                      ];
+                      let matchedType = currentType;
+                      if (!standardTypes.includes(matchedType)) {
+                        if (matchedType === 'Flat / Apartment' || matchedType === 'Flat' || matchedType === 'Apartment') matchedType = "Flat / Apartment (New / Builder)";
+                        else if (matchedType.includes('Semi Complex')) matchedType = "Semi Complex (New / Builder)";
+                        else if (matchedType.includes('Villa')) matchedType = "Gated Villa (New / Builder)";
+                        else if (matchedType.includes('Independent House') || matchedType.includes('Bungalow')) matchedType = "Independent House / Bungalow (New / Builder)";
+                        else if (matchedType.includes('Commercial')) matchedType = "Commercial Space (New / Builder)";
+                      }
+                      const isCustomType = !standardTypes.includes(matchedType);
+
+                      return (
+                        <select value={matchedType} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, property_type: e.target.value })} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }}>
+                          {standardTypes.map(st => <option key={st} value={st}>{st}</option>)}
+                          {isCustomType && <option value={matchedType}>{matchedType}</option>}
+                        </select>
+                      );
+                    })()}
                   </div>
                   <div>
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>BHK Configuration</label>
-                    <select value={newPropertyForm.configuration} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, configuration: e.target.value })} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }}>
-                      <option value="1BHK">1BHK Studio</option>
-                      <option value="2BHK">2BHK Flat</option>
-                      <option value="3BHK">3BHK Flat</option>
-                      <option value="4BHK">4BHK Luxury Apartment</option>
-                      <option value="Villa">Gated Villa</option>
-                      <option value="Commercial">Commercial</option>
-                    </select>
+                    {(() => {
+                      const currentBhk = String(newPropertyForm.configuration || '3BHK').trim();
+                      const matchedVal = (() => {
+                        if (currentBhk === '1BHK' || currentBhk.includes('1BHK') || currentBhk.includes('1 BHK')) return '1BHK';
+                        if (currentBhk === '2BHK' || currentBhk.includes('2BHK') || currentBhk.includes('2 BHK')) return '2BHK';
+                        if (currentBhk === '3BHK' || currentBhk.includes('3BHK') || currentBhk.includes('3 BHK')) return '3BHK';
+                        if (currentBhk === '4BHK' || currentBhk.includes('4BHK') || currentBhk.includes('4 BHK')) return '4BHK';
+                        if (currentBhk.toLowerCase().includes('villa')) return 'Villa';
+                        if (currentBhk.toLowerCase().includes('commercial')) return 'Commercial';
+                        return currentBhk;
+                      })();
+                      const standardBhks = ['1BHK', '2BHK', '3BHK', '4BHK', 'Villa', 'Commercial'];
+                      const isCustomBhk = !standardBhks.includes(matchedVal);
+
+                      return (
+                        <select value={matchedVal} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, configuration: e.target.value })} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: '#38bdf8', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }}>
+                          <option value="1BHK">1BHK Studio</option>
+                          <option value="2BHK">2BHK Flat</option>
+                          <option value="3BHK">3BHK Flat</option>
+                          <option value="4BHK">4BHK Luxury Apartment</option>
+                          <option value="Villa">Gated Villa</option>
+                          <option value="Commercial">Commercial</option>
+                          {isCustomBhk && <option value={matchedVal}>{matchedVal}</option>}
+                        </select>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -3111,7 +3494,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Super Built-up Area (Sq.Ft.)</label>
                     <input 
                       type="text" 
-                      value={newPropertyForm.super_builtup_area} 
+                      value={newPropertyForm.super_builtup_area || ''} 
                       onChange={(e) => {
                         const superVal = e.target.value;
                         const superNum = parseSqftValue(superVal);
@@ -3179,7 +3562,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Carpet Area (Sq.Ft.) *</label>
                     <input 
                       type="text" 
-                      value={newPropertyForm.carpet_area} 
+                      value={newPropertyForm.carpet_area || ''} 
                       onChange={(e) => {
                         const carpetVal = e.target.value;
                         const carpetNum = parseSqftValue(carpetVal);
@@ -3202,41 +3585,93 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
                   <div>
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Vastu Facing</label>
-                    <select value={newPropertyForm.facing} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, facing: e.target.value })} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }}>
-                      <option value="East Facing">East Facing (Poorva)</option>
-                      <option value="North-East Facing">North-East Facing (NE / Ishanya)</option>
-                      <option value="North Facing">North Facing (Uttara)</option>
-                      <option value="North-West Facing">North-West Facing (NW / Vayavya)</option>
-                      <option value="West Facing">West Facing (Paschima)</option>
-                      <option value="South-West Facing">South-West Facing (SW / Nairutya)</option>
-                      <option value="South Facing">South Facing (Dakshina)</option>
-                      <option value="South-East Facing">South-East Facing (SE / Agneya)</option>
-                    </select>
+                    {(() => {
+                      const currentFacing = String(newPropertyForm.facing || 'East Facing').trim();
+                      const standardFacings = [
+                        "East Facing",
+                        "North-East Facing",
+                        "North Facing",
+                        "North-West Facing",
+                        "West Facing",
+                        "South-West Facing",
+                        "South Facing",
+                        "South-East Facing"
+                      ];
+                      let matchedFacing = currentFacing;
+                      if (!standardFacings.includes(matchedFacing)) {
+                        const fLower = matchedFacing.toLowerCase();
+                        if (fLower.includes('north-east') || fLower.includes('northeast') || fLower.includes('ishanya')) matchedFacing = "North-East Facing";
+                        else if (fLower.includes('north-west') || fLower.includes('northwest') || fLower.includes('vayavya')) matchedFacing = "North-West Facing";
+                        else if (fLower.includes('south-east') || fLower.includes('southeast') || fLower.includes('agneya')) matchedFacing = "South-East Facing";
+                        else if (fLower.includes('south-west') || fLower.includes('southwest') || fLower.includes('nairutya')) matchedFacing = "South-West Facing";
+                        else if (fLower.includes('east') || fLower.includes('poorva')) matchedFacing = "East Facing";
+                        else if (fLower.includes('west') || fLower.includes('paschima')) matchedFacing = "West Facing";
+                        else if (fLower.includes('north') || fLower.includes('uttara')) matchedFacing = "North Facing";
+                        else if (fLower.includes('south') || fLower.includes('dakshina')) matchedFacing = "South Facing";
+                      }
+                      const isCustomFacing = !standardFacings.includes(matchedFacing);
+
+                      return (
+                        <select value={matchedFacing} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, facing: e.target.value })} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }}>
+                          <option value="East Facing">East Facing (Poorva)</option>
+                          <option value="North-East Facing">North-East Facing (NE / Ishanya)</option>
+                          <option value="North Facing">North Facing (Uttara)</option>
+                          <option value="North-West Facing">North-West Facing (NW / Vayavya)</option>
+                          <option value="West Facing">West Facing (Paschima)</option>
+                          <option value="South-West Facing">South-West Facing (SW / Nairutya)</option>
+                          <option value="South Facing">South Facing (Dakshina)</option>
+                          <option value="South-East Facing">South-East Facing (SE / Agneya)</option>
+                          {isCustomFacing && <option value={matchedFacing}>{matchedFacing}</option>}
+                        </select>
+                      );
+                    })()}
                   </div>
 
                   <div>
                     <label style={{ fontSize: '0.78rem', color: '#22c55e', fontWeight: '900', display: 'block', marginBottom: '6px' }}>Possession Status *</label>
-                    <select 
-                      value={(newPropertyForm.possession_status === 'Ready to Move In (Immediate)' ? 'Ready to Move' : (newPropertyForm.possession_status === 'Newly Launched Project' ? 'New Launch / Soft Launch' : newPropertyForm.possession_status)) || 'Ready to Move'} 
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const isUnderConst = val.toLowerCase().includes('under construction') || val.toLowerCase().includes('construction');
-                        setNewPropertyForm({ 
-                          ...newPropertyForm, 
-                          possession_status: val, 
-                          possession: val,
-                          status: isUnderConst ? 'UNDER_CONSTRUCTION' : 'LIVE',
-                          ...(isUnderConst && !newPropertyForm.handover_month_year ? { handover_month: 'December', handover_year: '2026', handover_month_year: 'December 2026' } : {})
-                        });
-                      }} 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #22c55e', color: '#22c55e', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }}
-                    >
-                      <option value="Ready to Move">🔑 Ready to Move</option>
-                      <option value="Under Construction">🏗️ Under Construction</option>
-                      <option value="New Launch / Soft Launch">🌟 New Launch / Soft Launch</option>
-                      <option value="Resale Property">🔄 Resale Property</option>
-                      <option value="Any Condition">🌐 Any Condition</option>
-                    </select>
+                    {(() => {
+                      const currentPoss = String(newPropertyForm.possession_status || 'Ready to Move').trim();
+                      const standardPoss = [
+                        "Ready to Move",
+                        "Under Construction",
+                        "New Launch / Soft Launch",
+                        "Resale Property",
+                        "Any Condition"
+                      ];
+                      let matchedPoss = currentPoss;
+                      if (!standardPoss.includes(matchedPoss)) {
+                        if (matchedPoss.toLowerCase().includes('ready')) matchedPoss = "Ready to Move";
+                        else if (matchedPoss.toLowerCase().includes('construction')) matchedPoss = "Under Construction";
+                        else if (matchedPoss.toLowerCase().includes('launch')) matchedPoss = "New Launch / Soft Launch";
+                        else if (matchedPoss.toLowerCase().includes('resale')) matchedPoss = "Resale Property";
+                      }
+                      const isCustomPoss = !standardPoss.includes(matchedPoss);
+
+                      return (
+                        <select 
+                          value={matchedPoss} 
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const isUnderConst = val.toLowerCase().includes('under construction') || val.toLowerCase().includes('construction');
+                            setNewPropertyForm({ 
+                              ...newPropertyForm, 
+                              possession_status: val, 
+                              possession: val,
+                              status: isUnderConst ? 'UNDER_CONSTRUCTION' : 'LIVE',
+                              ...(isUnderConst && !newPropertyForm.handover_month_year ? { handover_month: 'December', handover_year: '2026', handover_month_year: 'December 2026' } : {})
+                            });
+                          }} 
+                          style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #22c55e', color: '#22c55e', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }}
+                        >
+                          <option value="Ready to Move">🔑 Ready to Move</option>
+                          <option value="Under Construction">🏗️ Under Construction</option>
+                          <option value="New Launch / Soft Launch">🌟 New Launch / Soft Launch</option>
+                          <option value="Resale Property">🔄 Resale Property</option>
+                          <option value="Any Condition">🌐 Any Condition</option>
+                          {isCustomPoss && <option value={matchedPoss}>{matchedPoss}</option>}
+                        </select>
+                      );
+                    })()}
                   </div>
 
                   {/* 📅 HANDOVER MONTH AND YEAR (OPENED WHEN UNDER CONSTRUCTION IS SELECTED) */}
@@ -3302,70 +3737,136 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                 <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(1, 1fr)' : windowWidth <= 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '14px' }}>
                   <div>
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Floor Number (Unit Floor) *</label>
-                    <select 
-                      value={newPropertyForm.unit_floor || '2nd Floor'} 
-                      onChange={(e) => {
-                        const uFloor = e.target.value;
-                        const tFloors = newPropertyForm.total_floors || 'G+4 Floors (5 Storey)';
-                        setNewPropertyForm({
-                          ...newPropertyForm,
-                          unit_floor: uFloor,
-                          floor_no: `${uFloor} out of ${tFloors}`
-                        });
-                      }} 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '800' }} 
-                    >
-                      <option value="Basement 2 (B2)">Basement 2 (B2)</option>
-                      <option value="Basement 1 (B1 / B)">Basement 1 (B1 / B)</option>
-                      <option value="Ground Floor (G)">Ground Floor (G)</option>
-                      {Array.from({ length: 30 }, (_, i) => {
-                        const num = i + 1;
-                        let suffix = 'th';
-                        if (num === 1 || (num > 20 && num % 10 === 1)) suffix = 'st';
-                        else if (num === 2 || (num > 20 && num % 10 === 2)) suffix = 'nd';
-                        else if (num === 3 || (num > 20 && num % 10 === 3)) suffix = 'rd';
-                        return (
-                          <option key={`unit_fl_${num}`} value={`${num}${suffix} Floor`}>
-                            {num}{suffix} Floor
-                          </option>
-                        );
-                      })}
-                      <option value="31st Floor / Sky Suite">31st Floor / Sky Suite</option>
-                      <option value="Penthouse / Top Floor">Penthouse / Top Floor</option>
-                    </select>
+                    {(() => {
+                      const currentUnit = String(newPropertyForm.unit_floor || '2nd Floor').trim();
+                      const standardUnits = [
+                        "Basement 2 (B2)",
+                        "Basement 1 (B1 / B)",
+                        "Ground Floor (G)",
+                        ...Array.from({ length: 30 }, (_, i) => {
+                          const num = i + 1;
+                          let suffix = 'th';
+                          if (num === 1 || (num > 20 && num % 10 === 1)) suffix = 'st';
+                          else if (num === 2 || (num > 20 && num % 10 === 2)) suffix = 'nd';
+                          else if (num === 3 || (num > 20 && num % 10 === 3)) suffix = 'rd';
+                          return `${num}${suffix} Floor`;
+                        }),
+                        "31st Floor / Sky Suite",
+                        "Penthouse / Top Floor"
+                      ];
+                      let matchedUnit = currentUnit;
+                      if (!standardUnits.includes(matchedUnit)) {
+                        const numMatch = matchedUnit.match(/(\d+)/);
+                        if (numMatch) {
+                          const num = parseInt(numMatch[1], 10);
+                          let suffix = 'th';
+                          if (num === 1 || (num > 20 && num % 10 === 1)) suffix = 'st';
+                          else if (num === 2 || (num > 20 && num % 10 === 2)) suffix = 'nd';
+                          else if (num === 3 || (num > 20 && num % 10 === 3)) suffix = 'rd';
+                          const candidate = `${num}${suffix} Floor`;
+                          if (standardUnits.includes(candidate)) matchedUnit = candidate;
+                        }
+                      }
+                      const isCustomUnit = !standardUnits.includes(matchedUnit);
+
+                      return (
+                        <select 
+                          value={matchedUnit} 
+                          onChange={(e) => {
+                            const uFloor = e.target.value;
+                            const tFloors = newPropertyForm.total_floors || 'G+4 Floors (5 Storey)';
+                            setNewPropertyForm({
+                              ...newPropertyForm,
+                              unit_floor: uFloor,
+                              floor_no: `${uFloor} out of ${tFloors}`
+                            });
+                          }} 
+                          style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '800' }} 
+                        >
+                          <option value="Basement 2 (B2)">Basement 2 (B2)</option>
+                          <option value="Basement 1 (B1 / B)">Basement 1 (B1 / B)</option>
+                          <option value="Ground Floor (G)">Ground Floor (G)</option>
+                          {Array.from({ length: 30 }, (_, i) => {
+                            const num = i + 1;
+                            let suffix = 'th';
+                            if (num === 1 || (num > 20 && num % 10 === 1)) suffix = 'st';
+                            else if (num === 2 || (num > 20 && num % 10 === 2)) suffix = 'nd';
+                            else if (num === 3 || (num > 20 && num % 10 === 3)) suffix = 'rd';
+                            return (
+                              <option key={`unit_fl_${num}`} value={`${num}${suffix} Floor`}>
+                                {num}{suffix} Floor
+                              </option>
+                            );
+                          })}
+                          <option value="31st Floor / Sky Suite">31st Floor / Sky Suite</option>
+                          <option value="Penthouse / Top Floor">Penthouse / Top Floor</option>
+                          {isCustomUnit && <option value={matchedUnit}>{matchedUnit}</option>}
+                        </select>
+                      );
+                    })()}
                   </div>
 
                   <div>
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Total Floors in Building *</label>
-                    <select 
-                      value={newPropertyForm.total_floors || 'G+4 Floors (5 Storey)'} 
-                      onChange={(e) => {
-                        const tFloors = e.target.value;
-                        const uFloor = newPropertyForm.unit_floor || '2nd Floor';
-                        setNewPropertyForm({
-                          ...newPropertyForm,
-                          total_floors: tFloors,
-                          floor_no: `${uFloor} out of ${tFloors}`
-                        });
-                      }} 
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '800' }} 
-                    >
-                      <option value="Ground Floor Only (G)">Ground Floor Only (G)</option>
-                      {Array.from({ length: 30 }, (_, i) => {
-                        const num = i + 1;
-                        const storey = num + 1;
-                        return (
-                          <option key={`tot_fl_${num}`} value={`G+${num} Floors (${storey} Storey)`}>
-                            G+{num} Floors ({storey} Storey)
-                          </option>
-                        );
-                      })}
-                      <option value="B+G (Basement + Ground)">B+G (Basement + Ground)</option>
-                      <option value="B+G+4 Floors (Midrise)">B+G+4 Floors (Midrise)</option>
-                      <option value="B+G+14 Floors (Highrise)">B+G+14 Floors (Highrise)</option>
-                      <option value="B+G+30 Floors (Ultra Highrise)">B+G+30 Floors (Ultra Highrise)</option>
-                      <option value="2B+G+30 Floors (Mega Highrise)">2B+G+30 Floors (Mega Highrise)</option>
-                    </select>
+                    {(() => {
+                      const currentTotal = String(newPropertyForm.total_floors || 'G+4 Floors (5 Storey)').trim();
+                      const standardTotals = [
+                        "Ground Floor Only (G)",
+                        ...Array.from({ length: 30 }, (_, i) => {
+                          const num = i + 1;
+                          const storey = num + 1;
+                          return `G+${num} Floors (${storey} Storey)`;
+                        }),
+                        "B+G (Basement + Ground)",
+                        "B+G+4 Floors (Midrise)",
+                        "B+G+14 Floors (Highrise)",
+                        "B+G+30 Floors (Ultra Highrise)",
+                        "2B+G+30 Floors (Mega Highrise)"
+                      ];
+                      let matchedTotal = currentTotal;
+                      if (!standardTotals.includes(matchedTotal)) {
+                        const m = matchedTotal.match(/G\+(\d+)/i);
+                        if (m) {
+                          const num = parseInt(m[1], 10);
+                          const standardMatch = `G+${num} Floors (${num + 1} Storey)`;
+                          if (standardTotals.includes(standardMatch)) matchedTotal = standardMatch;
+                        }
+                      }
+                      const isCustomTotal = !standardTotals.includes(matchedTotal);
+
+                      return (
+                        <select 
+                          value={matchedTotal} 
+                          onChange={(e) => {
+                            const tFloors = e.target.value;
+                            const uFloor = newPropertyForm.unit_floor || '2nd Floor';
+                            setNewPropertyForm({
+                              ...newPropertyForm,
+                              total_floors: tFloors,
+                              floor_no: `${uFloor} out of ${tFloors}`
+                            });
+                          }} 
+                          style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '800' }} 
+                        >
+                          <option value="Ground Floor Only (G)">Ground Floor Only (G)</option>
+                          {Array.from({ length: 30 }, (_, i) => {
+                            const num = i + 1;
+                            const storey = num + 1;
+                            return (
+                              <option key={`tot_fl_${num}`} value={`G+${num} Floors (${storey} Storey)`}>
+                                G+{num} Floors ({storey} Storey)
+                              </option>
+                            );
+                          })}
+                          <option value="B+G (Basement + Ground)">B+G (Basement + Ground)</option>
+                          <option value="B+G+4 Floors (Midrise)">B+G+4 Floors (Midrise)</option>
+                          <option value="B+G+14 Floors (Highrise)">B+G+14 Floors (Highrise)</option>
+                          <option value="B+G+30 Floors (Ultra Highrise)">B+G+30 Floors (Ultra Highrise)</option>
+                          <option value="2B+G+30 Floors (Mega Highrise)">2B+G+30 Floors (Mega Highrise)</option>
+                          {isCustomTotal && <option value={matchedTotal}>{matchedTotal}</option>}
+                        </select>
+                      );
+                    })()}
                   </div>
 
                   <div>
@@ -3714,25 +4215,53 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   {/* STAMP DUTY CHARGES RATE (%) */}
                   <div>
                     <label style={{ fontSize: '0.78rem', color: '#0284c7', fontWeight: '900', display: 'block', marginBottom: '6px' }}>Stamp Duty Charges Rate (%) *</label>
-                    <input 
-                      type="text" 
-                      value={newPropertyForm.stamp_duty_pct !== undefined ? newPropertyForm.stamp_duty_pct : '5.0%'} 
+                    <select 
+                      value={(() => {
+                        const s = String(newPropertyForm.stamp_duty_pct || '5.0%').trim();
+                        if (s === '5%') return '5.0%';
+                        if (s === '6%') return '6.0%';
+                        if (s === '7%') return '7.0%';
+                        if (s === '4%') return '4.0%';
+                        if (s === '3%') return '3.0%';
+                        if (s === '2%') return '2.0%';
+                        if (s === '1%') return '1.0%';
+                        if (s === '0%') return '0.0%';
+                        return s;
+                      })()} 
                       onChange={(e) => setNewPropertyForm({ ...newPropertyForm, stamp_duty_pct: e.target.value })} 
-                      placeholder="e.g. 5.0%"
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', color: '#0284c7', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
-                    />
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', color: '#0284c7', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    >
+                      <option value="5.0%">5.0% (Standard Urban / Municipality)</option>
+                      <option value="6.0%">6.0% (Standard State / Above ₹1 Cr)</option>
+                      <option value="7.0%">7.0% (Regular State Stamp Duty)</option>
+                      <option value="4.0%">4.0% (Women Buyer / Concession)</option>
+                      <option value="3.0%">3.0% (Affordable / Subsidized Scheme)</option>
+                      <option value="2.0%">2.0% (Special Rebate / Promotional)</option>
+                      <option value="1.0%">1.0% (Minimal / Special Exemption)</option>
+                      <option value="0.0%">0.0% (Exempt / Nil)</option>
+                    </select>
                   </div>
 
                   {/* REGISTRATION & PROPERTY TRANSFER FEE RATE (%) */}
                   <div>
                     <label style={{ fontSize: '0.78rem', color: '#0284c7', fontWeight: '900', display: 'block', marginBottom: '6px' }}>Registration & Property Transfer Fee Rate (%) *</label>
-                    <input 
-                      type="text" 
-                      value={newPropertyForm.registration_fee_pct !== undefined ? newPropertyForm.registration_fee_pct : '1.0%'} 
+                    <select 
+                      value={(() => {
+                        const r = String(newPropertyForm.registration_fee_pct || '1.0%').trim();
+                        if (r === '1%') return '1.0%';
+                        if (r === '2%') return '2.0%';
+                        if (r === '0%') return '0.0%';
+                        return r;
+                      })()} 
                       onChange={(e) => setNewPropertyForm({ ...newPropertyForm, registration_fee_pct: e.target.value })} 
-                      placeholder="e.g. 1.0%"
-                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', color: '#0284c7', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
-                    />
+                      style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #0284c7', color: '#0284c7', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
+                    >
+                      <option value="1.0%">1.0% (Standard Govt Registration Fee)</option>
+                      <option value="1.1%">1.1% (Standard with Surcharge)</option>
+                      <option value="2.0%">2.0% (Commercial / Non-Residential)</option>
+                      <option value="0.5%">0.5% (Affordable Housing Rate)</option>
+                      <option value="0.0%">0.0% (Exempt / Nil)</option>
+                    </select>
                   </div>
                 </div>
 
@@ -3780,8 +4309,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </label>
                     <input 
                       type="text" 
-                      value={newPropertyForm.parking_price !== undefined && newPropertyForm.parking_price !== '' ? newPropertyForm.parking_price : (newPropertyForm.covered_parking_rate || '')}
-                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, parking_price: e.target.value, car_parking_charge: e.target.value, covered_parking_rate: e.target.value })}
+                      value={newPropertyForm.parking_price !== undefined && newPropertyForm.parking_price !== null ? newPropertyForm.parking_price : ''}
+                      onChange={(e) => setNewPropertyForm({ ...newPropertyForm, parking_price: e.target.value, car_parking_charge: e.target.value })}
                       placeholder="e.g. 350000 (0 if N/A)"
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
                     />
@@ -3941,7 +4470,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
               <div style={{ display: 'flex', gap: '16px', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '20px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                 <button 
                   type="button" 
-                  onClick={() => setActiveProjectSubTab('property_master')} 
+                  onClick={handleCancelOrBackToRegistry} 
                   style={{ background: isLight ? '#f1f5f9' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer' }}
                 >
                   Cancel & Return to Registry
@@ -4279,7 +4808,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                         <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '6px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '10px' }}>
                           <button onClick={() => setShowMultipleUnitsSlider({ open: true, project: p })} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>🏢 Units</button>
                           <button onClick={() => setViewPropertyModal(p)} style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>👁️ View</button>
-                          <button onClick={() => handleStartEditProperty(p)} style={{ background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', textAlign: 'center' }}>Edit</button>
+                          <button onClick={() => handleStartEditPropertyFull(p)} style={{ background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', textAlign: 'center' }}>Edit</button>
                           {isStrictSuperAdmin && (
                             <button onClick={() => handleDeleteProperty(p.id, p.property_code)} style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', textAlign: 'center' }}>Delete</button>
                           )}
@@ -4316,6 +4845,31 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   </tr>
                 </thead>
                 <tbody>
+                  {properties.filter(p => matchesSearchQuery(p, searchQuery)).length === 0 && (
+                    <tr>
+                      <td colSpan={11} style={{ textAlign: 'center', padding: '36px 16px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '1.8rem' }}>🏢</span>
+                          <strong style={{ fontSize: '0.95rem', color: isLight ? '#0f172a' : '#ffffff' }}>
+                            No property stock items currently displayed in inventory.
+                          </strong>
+                          <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', margin: 0 }}>
+                            {allGlobalProjects.length > 0
+                              ? ('Found ' + allGlobalProjects.length + ' registered project(s) in your Developer Vault.')
+                              : 'You can add property stock units or restore items from Recycle Bin.'}
+                          </p>
+                          {allGlobalProjects.length > 0 && (
+                            <button
+                              onClick={handleSyncStockFromProjects}
+                              style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer', marginTop: '6px' }}
+                            >
+                              {'🔄 Sync & Populate Stock from Registered Projects (' + allGlobalProjects.length + ')'}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   {properties
                     .filter(p => matchesSearchQuery(p, searchQuery))
                     .map(p => {
@@ -4547,7 +5101,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                               <button onClick={() => setShowMultipleUnitsSlider({ open: true, project: p })} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }} title="Open Multiple Property Units Builder Slider for this project">🏢 Units Slider</button>
                               <button onClick={() => setViewPropertyModal(p)} style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>👁️ View</button>
-                              <button onClick={() => handleStartEditProperty(p)} style={{ background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }}>Edit</button>
+                              <button onClick={() => handleStartEditPropertyFull(p)} style={{ background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }}>Edit</button>
                               {isStrictSuperAdmin && (
                                 <button onClick={() => handleDeleteProperty(p.id, p.property_code)} style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }}>Delete</button>
                               )}
@@ -4888,6 +5442,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           latitude: rawMatchedProp?.latitude || matchedMaster?.latitude || '22.722361',
                           longitude: rawMatchedProp?.longitude || matchedMaster?.longitude || '88.493403',
                           configuration: rawMatchedProp?.configuration || '2BHK',
+                          total_floors: p.total_floors || rawMatchedProp?.total_floors || 'G+4 Floors (5 Storey)',
+                          number_of_towers: p.number_of_towers || rawMatchedProp?.number_of_towers || '',
                           carpet_area: rawMatchedProp?.carpet_area || '700 Sq.Ft.',
                           super_builtup_area: rawMatchedProp?.super_builtup_area || '950 Sq.Ft.',
                           final_price: rawMatchedProp?.final_price || '₹35,00,000',
@@ -5901,7 +6457,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     onClick={() => {
                       const pToEdit = viewPropertyModal;
                       setViewPropertyModal(null);
-                      handleStartEditProperty(pToEdit);
+                      handleStartEditPropertyFull(pToEdit);
                     }} 
                     style={{ background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '10px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
@@ -6855,6 +7411,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                 longitude: p.longitude || prev.longitude,
                                 rera_id: p.rera_id || prev.rera_id || '',
                                 hera_no: p.hera_no || prev.hera_no || '',
+                                total_floors: p.total_floors || prev.total_floors || 'G+4 Floors (5 Storey)',
+                                number_of_towers: p.number_of_towers || prev.number_of_towers || '',
+                                floor_no: `${prev.unit_floor || '2nd Floor'} out of ${p.total_floors || prev.total_floors || 'G+4 Floors (5 Storey)'}`,
                                 selected_amenities: p.amenities && p.amenities.length > 0 ? p.amenities : prev.selected_amenities,
                                 building_photos: p.building_photos && p.building_photos.length > 0 ? p.building_photos : prev.building_photos,
                                 total_covered_parking_capacity: p.total_covered_parking_capacity !== undefined ? p.total_covered_parking_capacity : (prev.total_covered_parking_capacity || 0),
@@ -6863,8 +7422,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                 ev_parking_rate: p.ev_parking_rate || prev.ev_parking_rate || '',
                                 total_open_parking_capacity: p.total_open_parking_capacity !== undefined ? p.total_open_parking_capacity : (prev.total_open_parking_capacity || 0),
                                 open_parking_rate: p.open_parking_rate || prev.open_parking_rate || '',
-                                parking_price: p.covered_parking_rate || prev.parking_price || '',
-                                car_parking_charge: p.covered_parking_rate || prev.car_parking_charge || '',
+                                parking_price: prev.parking_price || '',
+                                car_parking_charge: prev.car_parking_charge || '',
                                 key_custody: p.key_custody || prev.key_custody || '',
                                 keys_custody: p.key_custody || prev.keys_custody || '',
                                 architectural_description: p.architectural_description || prev.architectural_description || '',

@@ -780,18 +780,18 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                     const matchId = item.matchId || item.matchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
                     const matchScore = item.matchSnapshot?.matchScore || item.matchScore || (matchedCust?.quality_score) || 88;
 
-                    const propCodeStr = itemPropCode || matchedProp?.property_code || 'SRM-PROP-2026-000426';
+                    const propCodeStr = itemPropCode || matchedProp?.property_code || '';
                     const rawPropTitle = item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name;
                     const propTitleStr = rawPropTitle && !rawPropTitle.startsWith('1 Properties') 
                       ? rawPropTitle 
-                      : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'BARASAT ECO RESIDENCY');
+                      : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'Property Site');
 
-                    const devNameStr = item.propertySnapshot?.developerName || matchedProp?.developer || matchedProp?.developer_name || matchedProp?.builder_name || 'Swaramayi Partner Developer';
+                    const devNameStr = item.propertySnapshot?.developerName || matchedProp?.developer || matchedProp?.developer_name || matchedProp?.builder_name || '';
                     const localityStr = item.propertySnapshot?.locality || matchedProp?.locality || 'Barasat / Banamalipur';
                     const bhkStr = item.propertySnapshot?.bhk || item.propertySnapshot?.configuration || matchedProp?.configuration || matchedProp?.bhk || '3BHK';
                     const propTypeStr = item.propertySnapshot?.property_type || item.propertySnapshot?.propertyType || item.propertyType || matchedProp?.property_type || 'Flat / Apartment';
 
-                    const basePriceNum = item.pricingSnapshot?.basePrice || item.base_price || matchedProp?.base_price || 5114880;
+                    const basePriceNum = item.pricingSnapshot?.basePrice || item.base_price || matchedProp?.base_price || 0;
                     const basePriceStr = item.formattedPriceBreakup?.basePriceStr || (basePriceNum ? `₹${Number(basePriceNum).toLocaleString('en-IN')}` : '₹51,14,880');
                     const totalEstNum = item.pricingSnapshot?.totalEstimatedCost || item.final_estimated_price || matchedProp?.final_estimated_price || 5677517;
                     const totalEstStr = item.formattedPriceBreakup?.totalEstimatedCostStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : '₹56,77,517');
@@ -1201,7 +1201,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                             (p.property_code && it.propertyId && p.property_code === it.propertyId) ||
                             (p.id && it.propertyId && p.id === it.propertyId)
                           );
-                          const pCode = itPropCode || matchedP?.property_code || 'SRM-PROP-2026-000426';
+                          const pCode = itPropCode || matchedP?.property_code || '';
                           const rawTitle = it.propertySnapshot?.propertyTitle || it.propertySnapshot?.projectName || matchedP?.title || matchedP?.property_title || matchedP?.project_name;
                           const pTitle = rawTitle && !rawTitle.startsWith('1 Properties') 
                             ? rawTitle 
@@ -1456,18 +1456,18 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                         const matchId = item.matchId || item.matchingId || (cleanMob ? `SRM-MAT-2026-${cleanMob.slice(-6)}` : 'SRM-MAT-2026-988588');
                         const matchScore = item.matchSnapshot?.matchScore || item.matchScore || (matchedCust?.quality_score) || 88;
 
-                        const propCodeStr = itemPropCode || matchedProp?.property_code || 'SRM-PROP-2026-000426';
+                        const propCodeStr = itemPropCode || matchedProp?.property_code || '';
                         const rawPropTitle = item.propertySnapshot?.propertyTitle || item.propertySnapshot?.projectName || matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name;
                         const propTitleStr = rawPropTitle && !rawPropTitle.startsWith('1 Properties') 
                           ? rawPropTitle 
-                          : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'BARASAT ECO RESIDENCY');
+                          : (matchedProp?.title || matchedProp?.property_title || matchedProp?.project_name || 'Property Site');
 
-                        const devNameStr = item.propertySnapshot?.developerName || matchedProp?.developer || matchedProp?.developer_name || matchedProp?.developer_name || matchedProp?.builder_name || 'Swaramayi Partner Developer';
+                        const devNameStr = item.propertySnapshot?.developerName || matchedProp?.developer || matchedProp?.developer_name || matchedProp?.developer_name || matchedProp?.builder_name || '';
                         const localityStr = item.propertySnapshot?.locality || matchedProp?.locality || 'Barasat / Banamalipur';
                         const bhkStr = item.propertySnapshot?.bhk || item.propertySnapshot?.configuration || matchedProp?.configuration || matchedProp?.bhk || '3BHK';
                         const propTypeStr = item.propertySnapshot?.property_type || item.propertySnapshot?.propertyType || item.propertyType || matchedProp?.property_type || 'Flat / Apartment';
 
-                        const basePriceNum = item.pricingSnapshot?.basePrice || item.base_price || matchedProp?.base_price || 5114880;
+                        const basePriceNum = item.pricingSnapshot?.basePrice || item.base_price || matchedProp?.base_price || 0;
                         const basePriceStr = item.formattedPriceBreakup?.basePriceStr || (basePriceNum ? `₹${Number(basePriceNum).toLocaleString('en-IN')}` : '₹51,14,880');
                         const totalEstNum = item.pricingSnapshot?.totalEstimatedCost || item.final_estimated_price || matchedProp?.final_estimated_price || 5677517;
                         const totalEstStr = item.formattedPriceBreakup?.totalEstimatedCostStr || (totalEstNum ? `₹${Number(totalEstNum).toLocaleString('en-IN')}` : '₹56,77,517');
@@ -1869,7 +1869,7 @@ export const CostSheetSharingView: React.FC<CostSheetSharingViewProps> = ({
                                     (p.property_code && it.propertyId && p.property_code === it.propertyId) ||
                                     (p.id && it.propertyId && p.id === it.propertyId)
                                   );
-                                  const pCode = itPropCode || matchedP?.property_code || 'SRM-PROP-2026-000426';
+                                  const pCode = itPropCode || matchedP?.property_code || '';
                                   const rawTitle = it.propertySnapshot?.propertyTitle || it.propertySnapshot?.projectName || matchedP?.title || matchedP?.property_title || matchedP?.project_name;
                                   const pTitle = rawTitle && !rawTitle.startsWith('1 Properties') 
                                     ? rawTitle 

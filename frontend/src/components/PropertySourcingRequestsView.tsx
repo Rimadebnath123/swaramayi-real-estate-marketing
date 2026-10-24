@@ -113,8 +113,8 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
       return;
     }
 
-    const nextId = `SRM-SRC-2026-000${sourcingRequests.length + 104}`;
-    const nextCustCode = `SRM-CUS-2026-000${customers.length + 192}`;
+    const nextId = `SRM-SRC-2026-${String(sourcingRequests.length + 1).padStart(6, '0')}`;
+    const nextCustCode = `SRM-CUS-2026-${String(customers.length + 1).padStart(6, '0')}`;
 
     const newReqObj = {
       id: nextId,

@@ -268,7 +268,7 @@ export const BulkLeadUploadModal: React.FC<BulkLeadUploadModalProps> = ({
 
     try {
       const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const apiUrl = `http://${host}:5000/api/v1/leads/bulk-upload`;
+      const apiUrl = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? 'http://localhost:5000/api/v1/leads/bulk-upload' : '/api/v1/leads/bulk-upload';
 
       const payload = {
         leads: rowsToImport,

@@ -9,8 +9,6 @@ import CallButton from './components/Common/CallButton';
 import Home from './pages/Home/Home';
 import Properties from './pages/Properties/Properties';
 import PropertyDetails from './pages/Properties/PropertyDetails';
-import Projects from './pages/Projects/Projects';
-import ProjectDetails from './pages/Projects/ProjectDetails';
 import Locations from './pages/Locations/Locations';
 import LocationDetails from './pages/Locations/LocationDetails';
 import Services from './pages/Services/Services';

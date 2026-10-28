@@ -9889,7 +9889,7 @@ export default function App() {
       }
 
       const host = window.location.hostname || 'localhost';
-      fetch(`http://${host}:5000/api/v1/security/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
+      fetch((typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? `http://localhost:5000/api/v1/security/users/${encodeURIComponent(id)}` : `/api/v1/security/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
         .catch(() => fetch(`/api/v1/security/users/${encodeURIComponent(id)}`, { method: 'DELETE' }))
         .catch(err => console.error('Delete User DB Sync Error:', err));
 
@@ -10078,7 +10078,7 @@ export default function App() {
     }
 
     const host = window.location.hostname || 'localhost';
-    fetch(`http://${host}:5000/api/v1/security/branches/${encodeURIComponent(branchId)}`, { method: 'DELETE' })
+    fetch((typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? `http://localhost:5000/api/v1/security/branches/${encodeURIComponent(branchId)}` : `/api/v1/security/branches/${encodeURIComponent(branchId)}`, { method: 'DELETE' })
       .catch(() => fetch(`/api/v1/security/branches/${encodeURIComponent(branchId)}`, { method: 'DELETE' }))
       .catch(err => console.error('Delete Branch DB Sync Error:', err));
 
@@ -10152,7 +10152,7 @@ export default function App() {
       setBranches(updatedBranches);
 
       const host = window.location.hostname || 'localhost';
-      fetch(`http://${host}:5000/api/v1/security/teams/${encodeURIComponent(teamId)}`, { method: 'DELETE' })
+      fetch((typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? `http://localhost:5000/api/v1/security/teams/${encodeURIComponent(teamId)}` : `/api/v1/security/teams/${encodeURIComponent(teamId)}`, { method: 'DELETE' })
         .catch(() => fetch(`/api/v1/security/teams/${encodeURIComponent(teamId)}`, { method: 'DELETE' }))
         .catch(err => console.error('Delete Team DB Sync Error:', err));
 

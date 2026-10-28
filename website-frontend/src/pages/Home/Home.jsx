@@ -6,7 +6,6 @@ import PropertyCard from '../../components/PropertyCard/PropertyCard';
 import LoadingSkeleton from '../../components/Common/LoadingSkeleton';
 import SEO from '../../components/Common/SEO';
 import { propertyService } from '../../services/propertyService';
-import { projectService } from '../../services/projectService';
 
 import {
   Home as HomeIcon,
@@ -30,18 +29,16 @@ export default function Home() {
   const [recentProperties, setRecentProperties] = useState([]);
   const [soldProperties, setSoldProperties] = useState([]);
   const [soldStats, setSoldStats] = useState({ totalSold: 150, totalVolumeCr: 250, verifiedPct: 100, satisfactionPct: 98 });
-  const [newProjects, setNewProjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [featRes, recRes, soldRes, projRes] = await Promise.all([
+        const [featRes, recRes, soldRes] = await Promise.all([
           propertyService.getFeaturedProperties(),
           propertyService.getRecentProperties(),
           propertyService.getSoldProperties(),
-          projectService.getProjects({ featured: 'true' }),
         ]);
 
         setFeaturedProperties(featRes.data || []);
@@ -53,7 +50,6 @@ export default function Home() {
         if (statsData.totalSold) {
           setSoldStats(statsData);
         }
-        setNewProjects(projRes.data || []);
       } catch (error) {
         console.error('Error loading homepage data:', error);
       } finally {

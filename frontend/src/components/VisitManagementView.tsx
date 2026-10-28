@@ -386,7 +386,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     const fetchAdvisorRatings = async () => {
       try {
         const host = window.location.hostname || 'localhost';
-        const res = await fetch(`http://${host}:5000/api/public/advisor-rating`);
+        const res = await fetch(typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000/api/public/advisor-rating' : '/api/public/advisor-rating');
         const json = await res.json();
         if (json && json.success && Array.isArray(json.data)) {
           setRatingInvitesList(json.data);
@@ -3589,7 +3589,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                 if (window.confirm(`Delete rating invite record (${item.id}) for customer "${item.customerName}"?`)) {
                                   const host = window.location.hostname || 'localhost';
                                   try {
-                                    await fetch(`http://${host}:5000/api/public/advisor-rating/${item.id}`, { method: 'DELETE' });
+                                    await fetch((typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? `http://localhost:5000/api/public/advisor-rating/${item.id}` : `/api/public/advisor-rating/${item.id}`, { method: 'DELETE' });
                                   } catch (e) {
                                     try {
                                       await fetch(`/api/public/advisor-rating/${item.id}`, { method: 'DELETE' });
@@ -4294,7 +4294,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   customNote: ratingCustomNote || null
                 };
 
-                fetch(`http://${host}:5000/api/public/advisor-rating/invite`, {
+                fetch((typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? 'http://localhost:5000/api/public/advisor-rating/invite' : '/api/public/advisor-rating/invite', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(newInvitePayload)

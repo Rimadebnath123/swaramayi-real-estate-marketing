@@ -5255,7 +5255,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                               try {
                                 localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextList));
                                 const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-                                fetch(`http://${host}:5000/api/v1/crm/sync`, {
+                                fetch((typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? 'http://localhost:5000/api/v1/crm/sync' : '/api/v1/crm/sync', {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ developers: nextList })
@@ -5319,7 +5319,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                     try {
                                       localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextList));
                                       const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-                                      fetch(`http://${host}:5000/api/v1/crm/sync`, {
+                                      fetch((typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? 'http://localhost:5000/api/v1/crm/sync' : '/api/v1/crm/sync', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({ developers: nextList })

@@ -173,6 +173,8 @@ export default function PropertySearchBox() {
                 className="w-full bg-navy-800 text-white text-xs sm:text-sm rounded-xl pl-9 pr-4 py-2.5 border border-gray-700 focus:border-gold-500 focus:outline-none"
               >
                 <option value="">Any Budget</option>
+                <option value="2000000">Up to ₹20 Lakhs</option>
+                <option value="3000000">Up to ₹30 Lakhs</option>
                 <option value="4000000">Up to ₹40 Lakhs</option>
                 <option value="6000000">Up to ₹60 Lakhs</option>
                 <option value="10000000">Up to ₹1 Crore</option>

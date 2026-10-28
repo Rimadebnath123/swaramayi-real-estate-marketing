@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { dbStore, loadData, saveData, generateID, PropertyRecord, CustomerRecord } from '../db/database.js';
-import { syncToMongoDB } from '../db/mongoPersistence.js';
+import { syncToMongoDB, LeadModel, SiteVisitModel } from '../db/mongoPersistence.js';
 
 // Helper to generate a URL-friendly slug
 function slugify(text: string): string {
@@ -207,36 +207,47 @@ function formatPublicProperty(p: any) {
     assignedAdvisor: (() => {
       const pTitleLower = (title || p.title || p.property_title || p.project_name || '').toLowerCase();
       const pCodeLower = String(p.property_code || p.id || '').toLowerCase();
+      const allUsers = Array.isArray(dbStore.data.users) ? dbStore.data.users : [];
 
-      // Find user who has this property assigned in CRM (or assigned_employee_id/name)
-      const u = (dbStore.data.users || []).find((usr: any) => {
+      // 1. Direct match by assigned employee ID or name
+      let u = allUsers.find((usr) => {
         if (p.assigned_employee_id && (usr.id === p.assigned_employee_id || String(usr.id) === String(p.assigned_employee_id))) return true;
-        if (p.assigned_employee_name && (usr.full_name === p.assigned_employee_name || usr.username === p.assigned_employee_name)) return true;
-        
-        const userProps: any[] = usr.assigned_properties || usr.assignedProperties || [];
-        if (Array.isArray(userProps)) {
-          return userProps.some((ap: any) => {
-            const apStr = String(ap || '').toLowerCase().trim();
-            return apStr && (
-              apStr === pCodeLower ||
-              (pTitleLower && (pTitleLower.includes(apStr) || apStr.includes(pTitleLower)))
-            );
-          });
+        if (p.assigned_employee_name) {
+          const empLower = String(p.assigned_employee_name).toLowerCase().trim();
+          const uFull = String(usr.full_name || '').toLowerCase().trim();
+          const uName = String(usr.username || '').toLowerCase().trim();
+          if (uFull === empLower || uName === empLower || (empLower && uFull && (uFull.includes(empLower) || empLower.includes(uFull)))) return true;
         }
         return false;
       });
 
-      const name = u?.full_name || u?.username || p.assigned_employee_name || '';
-      if (!name) return null;
+      // 2. Match from user's assigned_properties in CRM Role & Management
+      if (!u) {
+        u = allUsers.find((usr) => {
+          const userProps = (usr as any).assigned_properties || (usr as any).assignedProperties || [];
+          if (!Array.isArray(userProps)) return false;
+          return userProps.some((ap) => {
+            const apCode = String(typeof ap === 'string' ? ap : (ap?.code || ap?.property_code || ap?.id || '')).toLowerCase().trim();
+            const apTitle = String(typeof ap === 'object' ? (ap?.title || ap?.project_name || '') : '').toLowerCase().trim();
+            return (apCode && (apCode === pCodeLower || (pCodeLower && pCodeLower.includes(apCode)))) ||
+                   (apTitle && pTitleLower && (pTitleLower.includes(apTitle) || apTitle.includes(pTitleLower)));
+          });
+        });
+      }
 
-      const role = u?.role || (u as any)?.designation || 'Property Advisor';
-      const phone = u?.mobile || (u as any)?.phone || '';
-      const email = u?.email || '';
-      const img = (u as any)?.avatar || (u as any)?.profileImage || '';
-      const rating = Number((u as any)?.rating) || 0;
+      const isAssigned = Boolean(u);
+      const name = isAssigned ? (u?.full_name || u?.username || p.assigned_employee_name) : 'Official Swaramayi Advisor';
+      const role = isAssigned ? (u?.designation || u?.role || 'Property Advisor') : 'Property Consultation Desk';
+      const phone = '+91 89021 30791';
+      const email = isAssigned ? (u?.email || 'support@swaramayi.info') : 'support@swaramayi.info';
+      const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0b192c&color=e5a93c&size=200&bold=true`;
+      const img = (u as any)?.avatar || (u as any)?.profileImage || defaultAvatar;
+      const rating = (isAssigned && u && !isNaN(Number((u as any).rating)) && Number((u as any).rating) > 0)
+        ? Number((u as any).rating)
+        : 4.8;
 
       return {
-        id: u?.id || '',
+        id: u?.id || p.assigned_employee_id || '',
         name,
         full_name: name,
         role,
@@ -250,21 +261,47 @@ function formatPublicProperty(p: any) {
       };
     })(),
     agent: (() => {
-      const u = (dbStore.data.users || []).find((usr: any) => 
-        (p.assigned_employee_id && (usr.id === p.assigned_employee_id || String(usr.id) === String(p.assigned_employee_id))) ||
-        (p.assigned_employee_name && (usr.full_name === p.assigned_employee_name || usr.username === p.assigned_employee_name))
-      );
-      const name = u?.full_name || u?.username || p.assigned_employee_name || '';
-      if (!name) return null;
+      const pTitleLower = (title || p.title || p.property_title || p.project_name || '').toLowerCase();
+      const pCodeLower = String(p.property_code || p.id || '').toLowerCase();
+      const allUsers = Array.isArray(dbStore.data.users) ? dbStore.data.users : [];
 
-      const role = u?.role || (u as any)?.designation || 'Property Advisor';
-      const phone = u?.mobile || (u as any)?.phone || '';
-      const email = u?.email || '';
-      const img = (u as any)?.avatar || (u as any)?.profileImage || '';
-      const rating = Number((u as any)?.rating) || 0;
+      let u = allUsers.find((usr) => {
+        if (p.assigned_employee_id && (usr.id === p.assigned_employee_id || String(usr.id) === String(p.assigned_employee_id))) return true;
+        if (p.assigned_employee_name) {
+          const empLower = String(p.assigned_employee_name).toLowerCase().trim();
+          const uFull = String(usr.full_name || '').toLowerCase().trim();
+          const uName = String(usr.username || '').toLowerCase().trim();
+          if (uFull === empLower || uName === empLower || (empLower && uFull && (uFull.includes(empLower) || empLower.includes(uFull)))) return true;
+        }
+        return false;
+      });
+
+      if (!u) {
+        u = allUsers.find((usr) => {
+          const userProps = (usr as any).assigned_properties || (usr as any).assignedProperties || [];
+          if (!Array.isArray(userProps)) return false;
+          return userProps.some((ap) => {
+            const apCode = String(typeof ap === 'string' ? ap : (ap?.code || ap?.property_code || ap?.id || '')).toLowerCase().trim();
+            const apTitle = String(typeof ap === 'object' ? (ap?.title || ap?.project_name || '') : '').toLowerCase().trim();
+            return (apCode && (apCode === pCodeLower || (pCodeLower && pCodeLower.includes(apCode)))) ||
+                   (apTitle && pTitleLower && (pTitleLower.includes(apTitle) || apTitle.includes(pTitleLower)));
+          });
+        });
+      }
+
+      const isAssigned = Boolean(u);
+      const name = isAssigned ? (u?.full_name || u?.username || p.assigned_employee_name) : 'Official Swaramayi Advisor';
+      const role = isAssigned ? (u?.designation || u?.role || 'Property Advisor') : 'Property Consultation Desk';
+      const phone = '+91 89021 30791';
+      const email = isAssigned ? (u?.email || 'support@swaramayi.info') : 'support@swaramayi.info';
+      const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0b192c&color=e5a93c&size=200&bold=true`;
+      const img = (u as any)?.avatar || (u as any)?.profileImage || defaultAvatar;
+      const rating = (isAssigned && u && !isNaN(Number((u as any).rating)) && Number((u as any).rating) > 0)
+        ? Number((u as any).rating)
+        : 4.8;
 
       return {
-        id: u?.id || '',
+        id: u?.id || p.assigned_employee_id || '',
         name,
         full_name: name,
         role,
@@ -499,12 +536,17 @@ export async function getPublicPropertyBySlug(req: Request, res: Response) {
   const { slug } = req.params;
 
   const properties = dbStore.data.properties.filter(p => !p.is_deleted).map(formatPublicProperty);
-  const property = properties.find(p => 
+  let property = properties.find(p => 
     p.slug === slug || 
     p.id === slug || 
     p.property_code === slug || 
     slugify(p.title) === slug
   );
+
+  // Resilient fallback for rating links or generic slugs
+  if (!property && properties.length > 0) {
+    property = properties[0];
+  }
 
   if (!property) {
     return res.status(404).json({
@@ -647,47 +689,41 @@ export async function submitPublicEnquiry(req: Request, res: Response) {
     });
   }
 
-  loadData();
+  await loadData();
 
-  const customerNum = generateID('SRM-CUS');
-  const leadNum = generateID('SRM-LEAD');
+  // Dynamically compute highest lead sequence from memory and database
+  let maxSeq = dbStore.data.sequences?.lead_seq || 0;
+  if (Array.isArray(dbStore.data.leads)) {
+    dbStore.data.leads.forEach((l: any) => {
+      const match = String(l.lead_number || '').match(/SRM-LEAD-\d+-(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxSeq) maxSeq = num;
+      }
+    });
+  }
+  maxSeq += 1;
+  if (!dbStore.data.sequences) (dbStore.data as any).sequences = {};
+  dbStore.data.sequences.lead_seq = maxSeq;
+  const leadNum = `SRM-LEAD-2026-${String(maxSeq).padStart(6, '0')}`;
+
   const reqSubject = subject || 'Property Consultation';
   const reqBhk = bhk || '3 BHK';
   const reqType = propertyType || 'Apartment';
   const reqSource = propertyTitle ? 'Website Property Enquiry Form' : 'Website Contact Form';
 
-  const newCustomer: CustomerRecord = {
-    id: uuidv4(),
-    customer_number: customerNum,
-    full_name: name,
-    email: email || '',
-    mobile: phone,
-    city: 'Kolkata',
-    bhk: reqBhk,
-    bhk_preference: reqBhk,
-    propertyType: reqType,
-    property_type: reqType,
-    source: reqSource,
-    priority: 'HOT',
-    status: 'New',
-    customer_status: 'NEW_LEAD',
-    quality_score: 90,
-    remarks: message ? `[Subject: ${reqSubject} | Requirement: ${reqBhk} | ${reqType}] ${message}` : `Website Enquiry [Subject: ${reqSubject} | ${reqBhk} ${reqType}]`,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    is_deleted: false
-  };
-
-  dbStore.data.customers.unshift(newCustomer);
-
-  // Lead record in CRM leads table
+  // Lead record in CRM leads table (ONLY saved in Leads, not in Customers or Matching)
   const newLead = {
     id: uuidv4(),
     lead_number: leadNum,
-    customer_number: customerNum,
+    customer_number: '',
+    customer_name: name,
     full_name: name,
+    name: name,
     phone,
-    email,
+    mobile: phone,
+    customer_mobile: phone,
+    email: email || '',
     subject: reqSubject,
     bhk: reqBhk,
     bhk_preference: reqBhk,
@@ -699,11 +735,26 @@ export async function submitPublicEnquiry(req: Request, res: Response) {
     preferred_visit_date: preferredVisitDate || '',
     preferred_visit_time: preferredVisitTime || '',
     source: reqSource,
+    priority: 'HOT',
     status: 'NEW_INQUIRY',
+    lead_status: 'NEW_INQUIRY',
     assigned_employee_name: 'Unassigned (Web Lead)',
     created_at: new Date().toISOString()
   };
 
+  // 1. Immediately and directly persist to MongoDB Atlas
+  try {
+    await LeadModel.findOneAndUpdate(
+      { lead_number: newLead.lead_number },
+      { $set: newLead },
+      { upsert: true, new: true }
+    );
+    console.log(`✅ [PUBLIC ENQUIRY] Lead ${leadNum} (${name}) saved directly to MongoDB Atlas leads collection!`);
+  } catch (dbErr: any) {
+    console.error(`❌ [PUBLIC ENQUIRY] MongoDB Lead direct save note:`, dbErr.message);
+  }
+
+  // 2. Also unshift into in-memory store so immediate queries return it
   if (!dbStore.data.leads) dbStore.data.leads = [];
   dbStore.data.leads.unshift(newLead);
 
@@ -714,7 +765,6 @@ export async function submitPublicEnquiry(req: Request, res: Response) {
     success: true,
     message: 'Thank you for your enquiry! Our real estate specialist will contact you shortly.',
     data: {
-      customer_number: customerNum,
       lead_number: leadNum
     }
   });
@@ -732,38 +782,43 @@ export async function schedulePublicSiteVisit(req: Request, res: Response) {
     });
   }
 
-  loadData();
+  await loadData();
 
-  const customerNum = generateID('SRM-CUS');
-  const siteVisitCode = generateID('SRM-SV');
-  const leadNum = generateID('SRM-LEAD');
+  // Compute sequences dynamically
+  let maxLeadSeq = dbStore.data.sequences?.lead_seq || 0;
+  if (Array.isArray(dbStore.data.leads)) {
+    dbStore.data.leads.forEach((l: any) => {
+      const match = String(l.lead_number || '').match(/SRM-LEAD-\d+-(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxLeadSeq) maxLeadSeq = num;
+      }
+    });
+  }
+  maxLeadSeq += 1;
+  if (!dbStore.data.sequences) (dbStore.data as any).sequences = {};
+  dbStore.data.sequences.lead_seq = maxLeadSeq;
+  const leadNum = `SRM-LEAD-2026-${String(maxLeadSeq).padStart(6, '0')}`;
 
-  // Customer Master
-  const newCustomer: CustomerRecord = {
-    id: uuidv4(),
-    customer_number: customerNum,
-    full_name: name,
-    email: email || '',
-    mobile: phone,
-    city: 'Kolkata',
-    source: 'Website Site Visit Request',
-    priority: 'HOT',
-    status: 'Site Visit Scheduled',
-    customer_status: 'SCHEDULED_VISIT',
-    quality_score: 95,
-    remarks: `Site Visit requested for ${propertyTitle || 'Property'} on ${preferredVisitDate} ${preferredVisitTime || ''}`,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    is_deleted: false
-  };
-
-  dbStore.data.customers.unshift(newCustomer);
+  let maxSvSeq = dbStore.data.sequences?.site_visit_seq || 0;
+  if (Array.isArray(dbStore.data.site_visits)) {
+    dbStore.data.site_visits.forEach((v: any) => {
+      const match = String(v.site_visit_code || '').match(/SRM-SV-\d+-(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxSvSeq) maxSvSeq = num;
+      }
+    });
+  }
+  maxSvSeq += 1;
+  dbStore.data.sequences.site_visit_seq = maxSvSeq;
+  const siteVisitCode = `SRM-SV-2026-${String(maxSvSeq).padStart(6, '0')}`;
 
   // Site Visit Record
   const newSiteVisit = {
     id: uuidv4(),
     site_visit_code: siteVisitCode,
-    customer_number: customerNum,
+    customer_number: '',
     customer_name: name,
     property_title: propertyTitle || 'Property Visit',
     sales_executive: 'Unassigned (Web Booking)',
@@ -774,20 +829,49 @@ export async function schedulePublicSiteVisit(req: Request, res: Response) {
     created_at: new Date().toISOString()
   };
 
-  dbStore.data.site_visits.unshift(newSiteVisit);
-
-  // Lead Record
+  // Lead Record (saved in Leads only, not Customers or Matching)
   const newLead = {
     id: uuidv4(),
     lead_number: leadNum,
-    customer_number: customerNum,
+    customer_number: '',
+    customer_name: name,
     full_name: name,
+    name: name,
     phone,
-    email,
+    mobile: phone,
+    customer_mobile: phone,
+    email: email || '',
     source: 'Website Site Visit Request',
+    property_title: propertyTitle || 'Property Visit',
+    property_id: propertyId || '',
+    preferred_visit_date: preferredVisitDate,
+    preferred_visit_time: preferredVisitTime || '11:00 AM',
+    priority: 'HOT',
     status: 'SITE_VISIT_SCHEDULED',
+    lead_status: 'SITE_VISIT_SCHEDULED',
+    assigned_employee_name: 'Unassigned (Web Lead)',
     created_at: new Date().toISOString()
   };
+
+  // Directly persist to MongoDB
+  try {
+    await SiteVisitModel.findOneAndUpdate(
+      { site_visit_code: newSiteVisit.site_visit_code },
+      { $set: newSiteVisit },
+      { upsert: true, new: true }
+    );
+    await LeadModel.findOneAndUpdate(
+      { lead_number: newLead.lead_number },
+      { $set: newLead },
+      { upsert: true, new: true }
+    );
+    console.log(`✅ [SITE VISIT] Booking ${siteVisitCode} & Lead ${leadNum} saved directly to MongoDB Atlas!`);
+  } catch (dbErr: any) {
+    console.error(`❌ [SITE VISIT] MongoDB direct save note:`, dbErr.message);
+  }
+
+  if (!dbStore.data.site_visits) dbStore.data.site_visits = [];
+  dbStore.data.site_visits.unshift(newSiteVisit);
 
   if (!dbStore.data.leads) dbStore.data.leads = [];
   dbStore.data.leads.unshift(newLead);
@@ -800,8 +884,7 @@ export async function schedulePublicSiteVisit(req: Request, res: Response) {
     message: 'Site visit scheduled successfully! We look forward to showing you the property.',
     data: {
       site_visit_code: siteVisitCode,
-      customer_number: customerNum,
-      scheduled_date: preferredVisitDate
+      lead_number: leadNum
     }
   });
 }

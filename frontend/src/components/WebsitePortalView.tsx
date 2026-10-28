@@ -31,7 +31,12 @@ export const WebsitePortalView: React.FC<WebsitePortalViewProps> = ({ isLight, w
     }
   }, [properties]);
 
-  const websiteUrl = import.meta.env.VITE_WEBSITE_URL || 'https://www.swaramayi.com';
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const websiteUrl = isLocal
+    ? (import.meta.env.VITE_WEBSITE_URL || 'http://localhost:5001')
+    : (import.meta.env.VITE_WEBSITE_URL && !import.meta.env.VITE_WEBSITE_URL.includes('localhost')
+        ? import.meta.env.VITE_WEBSITE_URL
+        : 'https://web.swaramayi.info');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minHeight: '80vh' }}>

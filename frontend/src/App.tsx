@@ -13,7 +13,7 @@ import {
   Building2, ShieldAlert, Sparkles, MapPin, Search, Plus, ShieldCheck, 
   Lock, Unlock, PhoneCall, Award, TrendingUp, Calendar, AlertTriangle, 
   ArrowUpRight, DollarSign, CheckCircle2, FileText, Bot, RefreshCw, Send, 
-  Check, Phone, MessageSquare, UserCheck, ChevronRight, Layers, FileSpreadsheet,
+  Check, Phone, MessageSquare, UserCheck, ChevronRight, ChevronDown, Layers, FileSpreadsheet,
   Download, Printer, Filter, Star, Clock, AlertOctagon, UserX, Radio, Cpu, 
   CheckSquare, XCircle, RotateCw, Play, MessageCircle, Tag, UserPlus, 
   CheckCircle, Sliders, Zap, Shield, AlertCircle, Briefcase, Key, Repeat, 
@@ -4517,7 +4517,8 @@ export default function App() {
       assigned_employee_name: 'Avishek Das',
       team_leader_id: 'USR-06',
       priority: 'HOT',
-      score: 85
+      score: 85,
+      notes: ''
     });
     setNewLeadForm({
       call_disposition: 'CONNECTED_INTERESTED',
@@ -4585,7 +4586,8 @@ export default function App() {
       assigned_employee_name: 'Avishek Das',
       team_leader_id: 'USR-06',
       priority: 'HOT',
-      score: 85
+      score: 85,
+      notes: ''
     });
     setShowAddCustomerModal(true);
   };
@@ -5258,10 +5260,22 @@ export default function App() {
       if (!l || typeof l !== 'object') return false;
       if (l.is_test === true || l.is_demo === true || l.is_dummy === true || l.test_record === true) return false;
       const name = (l.name || l.customer_name || l.full_name || '').toString().trim();
-      const mob = (l.mobile || l.phone || '').toString().trim();
+      const mob = (l.mobile || l.phone || l.customer_mobile || '').toString().trim();
       const num = (l.customer_number || l.lead_number || l.id || '').toString().trim();
       if (!name && !mob && !num) return false;
       return true;
+    }).map((l: any) => {
+      const bestName = (l.customer_name || l.full_name || l.name || '').toString().trim();
+      const bestMobile = (l.mobile || l.phone || l.customer_mobile || '').toString().trim();
+      return {
+        ...l,
+        customer_name: bestName || l.customer_name,
+        full_name: bestName || l.full_name,
+        name: bestName || l.name,
+        mobile: bestMobile || l.mobile,
+        phone: bestMobile || l.phone,
+        customer_mobile: bestMobile || l.customer_mobile
+      };
     });
   };
 
@@ -5485,6 +5499,22 @@ export default function App() {
   const [leadPriorityFilter, setLeadPriorityFilter] = useState<string>('ALL');
   const [leadStatusFilter, setLeadStatusFilter] = useState<string>('ALL');
   const [leadViewMode, setLeadViewMode] = useState<'inbox' | 'calendar' | 'analytics'>('inbox');
+  const [showExportCsvMenu, setShowExportCsvMenu] = useState<boolean>(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setShowExportCsvMenu(false);
+      }
+    };
+    if (showExportCsvMenu) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [showExportCsvMenu]);
 
   // Modals for Lead Management
   const [showCallDispositionModal, setShowCallDispositionModal] = useState<{ open: boolean; lead: any } | null>(null);
@@ -7161,7 +7191,8 @@ export default function App() {
       amenities: foundRecord.amenities || newCustomerForm.amenities,
       brokerage_rate: foundRecord.brokerage_rate || newCustomerForm.brokerage_rate || '2.0%',
       brokerage_payer: foundRecord.brokerage_payer || newCustomerForm.brokerage_payer || 'CUSTOMER',
-      assigned_employee_id: foundRecord.assigned_employee_id || foundRecord.assigned_salesperson || newCustomerForm.assigned_employee_id
+      assigned_employee_id: foundRecord.assigned_employee_id || foundRecord.assigned_salesperson || newCustomerForm.assigned_employee_id,
+      notes: foundRecord.notes || foundRecord.remarks || newCustomerForm.notes || ''
     });
 
     if (targetLeadId) {
@@ -7637,7 +7668,8 @@ export default function App() {
       brokerage_rate: lead.brokerage_rate !== undefined && lead.brokerage_rate !== null ? lead.brokerage_rate : '',
       brokerage_payer: lead.brokerage_payer !== undefined && lead.brokerage_payer !== null ? lead.brokerage_payer : '',
       assigned_employee_id: lead.assigned_employee_id || lead.assigned_employee_name || 'Avishek Das (Super Admin)',
-      assigned_employee_name: lead.assigned_employee_name || 'Avishek Das (Super Admin)'
+      assigned_employee_name: lead.assigned_employee_name || 'Avishek Das (Super Admin)',
+      notes: lead.notes || lead.remarks || lead.special_instructions || ''
     });
 
     setNewLeadForm({
@@ -8859,11 +8891,26 @@ export default function App() {
     setDrillDownRecords(records);
   };
 
-  const exportToCSV = (dataList: any[], filenamePrefix: string) => {
-    if (!dataList || dataList.length === 0) return alert('No records available to export.');
-    const headers = Object.keys(dataList[0]);
-    const csvRows = [headers.join(','), ...dataList.map(row => headers.map(field => `"${String(row[field] || '').replace(/"/g, '""')}"`).join(','))];
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  // Core Formatted CSV File Downloader (UTF-8 with BOM for clean Excel/WPS compatibility & zero MongoDB _id)
+  const downloadFormattedCSV = (rows: Array<Record<string, any>>, filenamePrefix: string) => {
+    if (!rows || rows.length === 0) {
+      alert(`No records available to export for ${filenamePrefix.replace(/_/g, ' ')}.`);
+      return;
+    }
+    const headers = Object.keys(rows[0]);
+    const csvRows = [
+      headers.join(','),
+      ...rows.map(row => headers.map(field => {
+        let val = row[field];
+        if (val === null || val === undefined) val = '';
+        if (typeof val === 'object') {
+          try { val = JSON.stringify(val); } catch (e) { val = String(val); }
+        }
+        return `"${String(val).replace(/"/g, '""')}"`;
+      }).join(','))
+    ];
+    // UTF-8 BOM (\uFEFF) ensures Excel / WPS properly displays currency symbols (₹), commas, quotes & special characters
+    const blob = new Blob(['\uFEFF' + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -8872,6 +8919,299 @@ export default function App() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  // 1. Matching Management CSV Export
+  const exportMatchingCSV = () => {
+    const rows = (matchingRequestsQueue || []).map((r: any) => ({
+      'Matching ID': r.requestId || r.matchingId || r.id || '',
+      'Date': r.requestDate ? new Date(r.requestDate).toLocaleDateString('en-IN') : (r.createdAt || r.date || ''),
+      'Customer Name': r.customerName || r.name || '',
+      'Contact Mobile': r.mobile || r.phone || '',
+      'Customer Tracking ID': r.customerNumber || r.customerId || '',
+      'Property Type': r.property_type || r.propertyType || 'Flat / Apartment',
+      'Configuration (BHK)': r.configuration || r.bhk || '',
+      'Preferred Area': r.preferredArea || r.locality || '',
+      'Secondary Areas': r.secondary_areas || r.secondaryAreas || '',
+      'Radius (KM)': (r.radiusKm !== undefined && r.radiusKm !== null) ? r.radiusKm : ((r.radius_km !== undefined && r.radius_km !== null) ? r.radius_km : 2),
+      'Target Budget': r.budget || '',
+      'Carpet Area Range (Sq.Ft.)': (r.carpet_area_min || r.carpet_area_max) ? `${r.carpet_area_min || 'Any'} - ${r.carpet_area_max || 'Any'}` : '',
+      'Parking Required': r.parking || r.parking_type || 'Required',
+      'Possession Status': r.possessionStatus || r.possession_status || '',
+      'Facing': r.facing || '',
+      'Matching Status': r.status || 'PENDING',
+      'Priority': r.priority || 'HOT',
+      'Score': r.score || 85,
+      'Assigned Sales Executive': r.assignedExecutive || r.assigned_employee_name || '',
+      'Notes / Special Instructions': r.notes || r.remarks || r.handoffNote || '',
+      'Source Channel': r.source || 'Direct Intake'
+    }));
+    downloadFormattedCSV(rows, 'Matching_Management_Export');
+  };
+
+  // 2. Customer Management CSV Export
+  const exportCustomerCSV = () => {
+    const rows = (customers || []).map((c: any) => ({
+      'Customer Tracking ID': c.customer_number || c.customer_id || c.id || '',
+      'Full Name': c.name || c.full_name || '',
+      'Mobile Number': c.mobile || c.phone || '',
+      'WhatsApp Number': c.whatsapp || c.mobile || '',
+      'Email Address': (c.email && c.email !== 'N/A') ? c.email : '',
+      'City': c.city || 'Kolkata',
+      'Locality / Address': c.locality || c.address || '',
+      'Pincode': c.pincode || '',
+      'Lead Source': c.lead_source || c.source || '',
+      'Investment Purpose': c.investment_purpose || 'BUY / OUTRIGHT PURCHASE',
+      'Property Type': c.property_type || '',
+      'Configuration (BHK)': c.configuration || c.bhk || '',
+      'Preferred Locality': c.preferredArea || c.locality || '',
+      'Target Budget': c.budget || '',
+      'Agreed Brokerage Rate': c.brokerage_rate || '2.0%',
+      'Brokerage Payer': c.brokerage_payer || 'CUSTOMER',
+      'Priority': c.priority || 'HOT',
+      'Score': c.score || c.completeness_score || 85,
+      'Assigned Executive': c.assigned_employee_name || c.assigned_employee_id || '',
+      'Notes / Consultation Remarks': c.notes || c.remarks || '',
+      'Created At': c.created_at || c.createdAt || ''
+    }));
+    downloadFormattedCSV(rows, 'Customer_Management_Export');
+  };
+
+  // 3. Property Management / Inventory CSV Export
+  const exportPropertyCSV = () => {
+    const rows = (properties || []).map((p: any) => ({
+      'Property Code': p.property_code || p.id || '',
+      'Property Title': p.title || p.property_name || p.name || '',
+      'Developer / Promoter': p.developer || p.developer_name || '',
+      'Developer Contact': p.developer_mobile || p.developer_phone || '',
+      'Locality': p.locality || p.city || '',
+      'Address / Landmark': p.address || p.landmark || '',
+      'Property Type': p.property_type || 'Flat / Apartment',
+      'Configuration (BHK)': p.bhk || p.configuration || '',
+      'Floor Number': p.floor_no !== undefined ? p.floor_no : (p.floor || ''),
+      'Total Floors': p.total_floors || '',
+      'Carpet Area (Sq.Ft.)': p.carpet_area || '',
+      'Super Built-up Area (Sq.Ft.)': p.super_builtup_area || '',
+      'Total Price / Budget (₹)': p.price || p.total_cost || p.budget || '',
+      'Price per Sq.Ft. (₹)': p.price_per_sqft || '',
+      'Brokerage / Commission Rate': p.commission_rate || p.brokerage_rate || '2.0%',
+      'Possession Status': p.possession_status || '',
+      'Facing Direction': p.facing || '',
+      'Car Parking Type': p.car_parking || p.parking || '',
+      'RERA Registration No': p.rera_id || p.hera_no || '',
+      'Inventory Status': p.status || p.listing_status || 'AVAILABLE',
+      'Assigned Property Advisor': p.assigned_advisor_name || p.site_person_name || 'Official Swaramayi Advisor',
+      'Advisor Contact': '+91 89021 30791',
+      'Verification Status': p.is_verified ? 'VERIFIED' : 'PENDING',
+      'Created Date': p.created_at || p.createdAt || ''
+    }));
+    downloadFormattedCSV(rows, 'Property_Inventory_Export');
+  };
+
+  // 4. Lead Management CSV Export
+  const exportLeadCSV = () => {
+    const rows = (leadsList || []).map((l: any) => ({
+      'Lead Tracking ID': l.lead_number || l.leadId || l.id || '',
+      'Customer ID': l.customer_number || l.customer_id || '',
+      'Customer Name': l.customer_name || l.name || l.full_name || '',
+      'Mobile Number': l.mobile || l.phone || '',
+      'Email Address': l.email || '',
+      'Source Channel': l.source || l.lead_source || '',
+      'Campaign ID': l.campaign_id || l.campaign || '',
+      'Preferred Location': l.preferred_location || l.preferredArea || '',
+      'Configuration (BHK)': l.bhk || l.configuration || '',
+      'Target Budget': l.budget || '',
+      'Priority': l.priority || 'HOT',
+      'Quality Score': l.quality_score || l.score || 80,
+      'Call Disposition': l.call_disposition || l.lead_status || 'NEW',
+      'Next Action Planned': l.next_action || '',
+      'Next Follow-Up Date & Time': l.next_followup || '',
+      'Assigned Sales Executive': l.assigned_employee_name || l.assigned_employee_id || '',
+      'Consultation Notes / Remarks': l.notes || l.remarks || '',
+      'Qualification Step Completed': l.last_completed_step || 1,
+      'Created Date': l.created_at || l.createdAt || ''
+    }));
+    downloadFormattedCSV(rows, 'Lead_Management_Export');
+  };
+
+  // 5. Cost Sheet Sharing CSV Export
+  const exportCostSheetCSV = () => {
+    const sourceList = (individualCostSheets && individualCostSheets.length > 0) ? individualCostSheets : costSheetShares;
+    const rows = (sourceList || []).map((cs: any) => {
+      const snap = cs.customerSnapshot || {};
+      return {
+        'Cost Sheet ID': cs.costSheetId || cs.id || '',
+        'Customer Tracking ID': cs.customerNumber || cs.customerId || snap.customerNumber || snap.customerId || '',
+        'Customer Name': cs.customerName || cs.name || snap.name || '',
+        'Customer Mobile': cs.mobile || cs.customerMobile || snap.mobile || '',
+        'Property Code': cs.propertyCode || cs.property_code || '',
+        'Property Title': cs.propertyName || cs.propertyTitle || '',
+        'Unit / Flat No': cs.unitNumber || cs.flat_no || '',
+        'Floor Number': cs.floor || '',
+        'Carpet Area (Sq.Ft.)': cs.carpetArea || '',
+        'Base Price (₹)': cs.basePrice || cs.basicCost || '',
+        'Total All-Inclusive Cost (₹)': cs.totalCost || cs.grandTotal || cs.finalPrice || '',
+        'Brokerage Payable (₹)': cs.brokerageAmount || '',
+        'Share Status': cs.status || 'SHARED',
+        'Shared By Executive': cs.sharedBy || cs.executive || '',
+        'Date Shared': cs.date || cs.createdAt || ''
+      };
+    });
+    downloadFormattedCSV(rows, 'Cost_Sheet_Sharing_Export');
+  };
+
+  // 6. Visit Management CSV Export
+  const exportVisitCSV = () => {
+    const rows = (scheduledVisits || []).map((v: any) => ({
+      'Visit Tracking ID': v.visitId || v.id || '',
+      'PVA Agreement Code': v.pvaCode || v.projectVisitAgreementId || '',
+      'Customer Tracking ID': v.customerNumber || v.customerId || '',
+      'Customer Name': v.customerName || v.client_name || '',
+      'Customer Contact': v.mobile || v.phone || '',
+      'Property Code': v.propertyCode || v.property_code || '',
+      'Property Title': v.propertyName || v.propertyTitle || '',
+      'Visit Scheduled Date': v.scheduledDate || v.visitDate || '',
+      'Assigned Property Advisor': v.assignedSalesperson || v.advisorName || '',
+      'Pickup Location': v.pickupLocation || '',
+      'Visit Status': v.status || 'SCHEDULED',
+      'OTP Verified Status': (v.otpVerified || v.status === 'OTP_VERIFIED' || v.status === 'COMPLETED' || v.status === 'VISIT_DONE') ? 'YES' : 'NO',
+      'Client Feedback & Rating': v.feedback || v.rating || '',
+      'Visit Notes / Instructions': v.notes || v.remarks || ''
+    }));
+    downloadFormattedCSV(rows, 'Visit_Management_Export');
+  };
+
+  // 7. Property Sourcing CSV Export
+  const exportSourcingCSV = () => {
+    const rows = (sourcingRequests || []).map((s: any) => ({
+      'Sourcing Request ID': s.sourcingId || s.id || s.requestId || '',
+      'Linked Matching ID': s.matchingId || '',
+      'Customer Tracking ID': s.customerNumber || s.customerId || '',
+      'Customer Name': s.customerName || s.client_name || '',
+      'Customer Mobile': s.mobile || s.phone || '',
+      'Required BHK': s.configuration || s.bhk || '',
+      'Target Locality': s.preferredArea || s.locality || '',
+      'Budget Range': s.budget || '',
+      'Sourcing Status': s.status || 'OPEN',
+      'Assigned Sourcing Manager': s.assignedManager || s.assignedExecutive || '',
+      'Sourcing Notes / Remarks': s.notes || s.remarks || '',
+      'Created Date': s.createdAt || s.created_at || ''
+    }));
+    downloadFormattedCSV(rows, 'Property_Sourcing_Export');
+  };
+
+  // 8. Booking Management CSV Export
+  const exportBookingCSV = () => {
+    const rows = (bookings || []).map((b: any) => ({
+      'Booking ID': b.booking_code || b.bookingId || b.id || '',
+      'Customer Tracking ID': b.customer_number || b.customerNumber || '',
+      'Customer Name': b.customer_name || b.customerName || '',
+      'Property Code': b.property_code || b.propertyCode || '',
+      'Property Title': b.property_name || b.propertyTitle || '',
+      'Unit / Flat No': b.flat_no || b.unit_number || '',
+      'Agreement Cost (₹)': b.agreement_cost || b.booking_amount || '',
+      'Token / Booking Amount Paid (₹)': b.token_amount || '',
+      'Commission Earned (₹)': b.commission_amount || '',
+      'Booking Status': b.status || 'CONFIRMED',
+      'Booking Date': b.booking_date || b.created_at || '',
+      'Handled By Executive': b.executive_name || ''
+    }));
+    downloadFormattedCSV(rows, 'Booking_Management_Export');
+  };
+
+  // 9. Agreement Management CSV Export
+  const exportAgreementCSV = () => {
+    const rows = (agreements || []).map((a: any) => ({
+      'Agreement Code': a.agreement_code || a.id || '',
+      'Agreement Type': a.agreement_type || a.type || 'CUSTOMER_PVA',
+      'Party / Client Name': a.party_name || a.customer_name || '',
+      'Party Contact': a.party_contact || a.mobile || '',
+      'Associated Project / Property': a.project_name || a.property_code || '',
+      'Commission Rate': a.commission_rate || '2.0%',
+      'Status': a.status || 'ACTIVE',
+      'Signed Date': a.signed_date || a.created_at || ''
+    }));
+    downloadFormattedCSV(rows, 'Agreement_Management_Export');
+  };
+
+  // 10. Billing Management CSV Export
+  const exportBillingCSV = () => {
+    const rows = (invoices || []).map((inv: any) => ({
+      'Invoice Number': inv.invoice_number || inv.invoiceNumber || inv.id || '',
+      'Invoice Date': inv.invoice_date || inv.date || '',
+      'Billed Party': inv.party_name || inv.client_name || '',
+      'GSTIN': inv.gstin || '',
+      'Property Associated': inv.property_name || inv.propertyCode || '',
+      'Taxable Value (₹)': inv.taxable_value || inv.subtotal || '',
+      'GST Amount (18%) (₹)': inv.gst_amount || inv.tax || '',
+      'Total Amount (₹)': inv.total_amount || inv.grand_total || '',
+      'Payment Status': inv.status || 'PENDING',
+      'Due Date': inv.due_date || ''
+    }));
+    downloadFormattedCSV(rows, 'Billing_Management_Export');
+  };
+
+  // Universal Fallback / Raw Sanitized Export (Strictly eliminates MongoDB internal _id, __v, password)
+  const exportToCSV = (dataList: any[], filenamePrefix: string) => {
+    if (!dataList || dataList.length === 0) return alert('No records available to export.');
+    const headers = Object.keys(dataList[0]).filter(k => !k.startsWith('_') && k !== '__v' && k !== 'password');
+    const sanitizedRows = dataList.map(item => {
+      const row: any = {};
+      headers.forEach(h => { row[h] = item[h]; });
+      return row;
+    });
+    downloadFormattedCSV(sanitizedRows, filenamePrefix);
+  };
+
+  // Module Label Resolver for UI Button
+  const getCurrentModuleLabel = () => {
+    switch (activeTab) {
+      case 'matching_management': return 'Matching';
+      case 'customer_management': return 'Customer';
+      case 'lead_management': return 'Lead';
+      case 'cost_sheet_share': return 'Cost Sheet';
+      case 'visit_management': return 'Visit';
+      case 'property_sourcing_requests': return 'Sourcing';
+      case 'booking_management': return 'Booking';
+      case 'agreement_management': return 'Agreement';
+      case 'billing_management': return 'Billing';
+      case 'properties':
+      case 'project_management':
+      case 'main_dashboard':
+      default:
+        return 'Property';
+    }
+  };
+
+  // Route export to corresponding module
+  const handleExportCurrentViewCSV = (specificModule?: string) => {
+    setShowExportCsvMenu(false);
+    const target = specificModule || activeTab;
+    switch (target) {
+      case 'matching_management':
+        return exportMatchingCSV();
+      case 'customer_management':
+        return exportCustomerCSV();
+      case 'lead_management':
+        return exportLeadCSV();
+      case 'cost_sheet_share':
+        return exportCostSheetCSV();
+      case 'visit_management':
+        return exportVisitCSV();
+      case 'property_sourcing_requests':
+        return exportSourcingCSV();
+      case 'booking_management':
+        return exportBookingCSV();
+      case 'agreement_management':
+        return exportAgreementCSV();
+      case 'billing_management':
+        return exportBillingCSV();
+      case 'properties':
+      case 'project_management':
+      case 'main_dashboard':
+      default:
+        return exportPropertyCSV();
+    }
   };
 
   const handleToggleSelectAllProperties = () => {
@@ -9923,6 +10263,7 @@ export default function App() {
       score: newCustomerForm.priority === 'HOT' ? 88 : 72,
       assigned_employee_id: newCustomerForm.assigned_employee_id || 'Avishek Das',
       assigned_employee_name: newCustomerForm.assigned_employee_id || 'Avishek Das',
+      notes: newCustomerForm.notes || '',
       created_at: new Date().toLocaleString(),
       updated_at: new Date().toLocaleString()
     };
@@ -9995,7 +10336,9 @@ export default function App() {
       assigned_employee_name: newCustomerForm.assigned_employee_name || newCustomerForm.assigned_employee_id || 'Avishek Das (Super Admin)',
       requestDate: new Date().toISOString(),
       createdAt: new Date().toLocaleString(),
-      source: newCustomerForm.lead_source || 'Direct Intake'
+      source: newCustomerForm.lead_source || 'Direct Intake',
+      notes: newCustomerForm.notes || '',
+      remarks: newCustomerForm.notes || ''
     };
 
     setMatchingRequestsQueue((prev: any[]) => {
@@ -10021,7 +10364,8 @@ export default function App() {
               ...l,
               lead_status: 'MATCHING_INITIATED',
               matchingId: matchingId,
-              customer_number: newCustNumber
+              customer_number: newCustNumber,
+              notes: newCustomerForm.notes || l.notes || ''
             };
           }
           return l;
@@ -11335,7 +11679,12 @@ export default function App() {
           <button 
             onClick={() => { 
               if (isMobile) setIsMobileSidebarOpen(false); 
-              const websiteUrl = import.meta.env.VITE_WEBSITE_URL || 'https://web.swaramayi.info';
+              const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+              const websiteUrl = isLocal
+                ? (import.meta.env.VITE_WEBSITE_URL || 'http://localhost:5001')
+                : (import.meta.env.VITE_WEBSITE_URL && !import.meta.env.VITE_WEBSITE_URL.includes('localhost')
+                    ? import.meta.env.VITE_WEBSITE_URL
+                    : 'https://web.swaramayi.info');
               if (typeof window !== 'undefined') {
                 window.open(websiteUrl, '_blank', 'noopener,noreferrer');
               }
@@ -11732,9 +12081,119 @@ export default function App() {
               )}
             </div>
 
-            <button onClick={() => exportToCSV(properties, 'CRM_Export')} style={{ flex: isMobile ? 1 : 'none', justifyContent: 'center', background: isLight ? '#f1f5f9' : '#1e293b', color: isLight ? '#0284c7' : '#fbbf24', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: isMobile ? '8px 10px' : '8px 14px', borderRadius: '6px', fontWeight: '700', fontSize: isMobile ? '0.78rem' : '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
-              <FileDown size={14} /> {isMobile ? 'Export' : 'Export CSV Report'}
-            </button>
+            {/* DYNAMIC MANAGEMENT-AWARE EXPORT CSV SPLIT BUTTON */}
+            <div ref={exportMenuRef} style={{ position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <button
+                  onClick={() => handleExportCurrentViewCSV()}
+                  title={`Export CSV for ${getCurrentModuleLabel()} Management`}
+                  style={{
+                    flex: isMobile ? 1 : 'none',
+                    justifyContent: 'center',
+                    background: isLight ? '#f1f5f9' : '#1e293b',
+                    color: isLight ? '#0284c7' : '#fbbf24',
+                    border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                    borderTopRightRadius: 0,
+                    borderBottomRightRadius: 0,
+                    borderTopLeftRadius: '6px',
+                    borderBottomLeftRadius: '6px',
+                    padding: isMobile ? '8px 8px' : '8px 12px',
+                    fontWeight: '700',
+                    fontSize: isMobile ? '0.74rem' : '0.8rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <FileDown size={14} /> {isMobile ? 'Export' : `Export ${getCurrentModuleLabel()} CSV`}
+                </button>
+                <button
+                  onClick={() => setShowExportCsvMenu(prev => !prev)}
+                  title="Select specific management module to export CSV"
+                  style={{
+                    background: isLight ? '#e2e8f0' : '#334155',
+                    color: isLight ? '#0284c7' : '#fbbf24',
+                    border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                    borderLeft: 'none',
+                    borderTopRightRadius: '6px',
+                    borderBottomRightRadius: '6px',
+                    borderTopLeftRadius: 0,
+                    borderBottomLeftRadius: 0,
+                    padding: isMobile ? '8px 6px' : '8px 8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <ChevronDown size={14} />
+                </button>
+              </div>
+
+              {/* DROPDOWN MENU FOR ALL MODULES */}
+              {showExportCsvMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '6px',
+                  background: isLight ? '#ffffff' : '#0f172a',
+                  border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                  borderRadius: '10px',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                  padding: '6px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px',
+                  zIndex: 99999,
+                  minWidth: '240px'
+                }}>
+                  <div style={{ padding: '6px 10px', fontSize: '0.72rem', fontWeight: '900', color: isLight ? '#64748b' : '#94a3b8', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b', marginBottom: '2px' }}>
+                    SELECT MODULE TO EXPORT CSV
+                  </div>
+                  {[
+                    { id: 'matching_management', label: '🎯 Matching Management', count: matchingRequestsQueue?.length },
+                    { id: 'customer_management', label: '👥 Customer Management', count: customers?.length },
+                    { id: 'properties', label: '🏢 Property Inventory', count: properties?.length },
+                    { id: 'lead_management', label: '📋 Lead Management', count: leadsList?.length },
+                    { id: 'cost_sheet_share', label: '📄 Cost Sheet Sharing', count: individualCostSheets?.length },
+                    { id: 'visit_management', label: '🚗 Visit Management', count: scheduledVisits?.length },
+                    { id: 'property_sourcing_requests', label: '🔍 Property Sourcing', count: sourcingRequests?.length },
+                    { id: 'booking_management', label: '🏆 Booking Management', count: bookings?.length },
+                    { id: 'agreement_management', label: '📜 Agreement Management', count: agreements?.length },
+                    { id: 'billing_management', label: '💳 Billing & Invoices', count: invoices?.length },
+                  ].map(mod => (
+                    <button
+                      key={mod.id}
+                      onClick={() => handleExportCurrentViewCSV(mod.id)}
+                      style={{
+                        background: activeTab === mod.id ? (isLight ? '#e0f2fe' : 'rgba(56, 189, 248, 0.15)') : 'transparent',
+                        color: activeTab === mod.id ? '#0284c7' : (isLight ? '#1e293b' : '#f8fafc'),
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '8px 10px',
+                        fontSize: '0.78rem',
+                        fontWeight: activeTab === mod.id ? '800' : '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        textAlign: 'left'
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = isLight ? '#f1f5f9' : '#1e293b')}
+                      onMouseLeave={e => (e.currentTarget.style.background = activeTab === mod.id ? (isLight ? '#e0f2fe' : 'rgba(56, 189, 248, 0.15)') : 'transparent')}
+                    >
+                      <span>{mod.label}</span>
+                      <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', background: isLight ? '#e2e8f0' : '#1e293b', padding: '1px 6px', borderRadius: '4px' }}>
+                        {mod.count || 0}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button 
               onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')} 
               title={themeMode === 'dark' ? 'Switch background display to Light Mode' : 'Switch background display to Dark Mode'} 
@@ -13307,6 +13766,7 @@ export default function App() {
               handleDeleteTeam={handleDeleteTeam}
               handleOpenSecurityAuditModal={handleOpenSecurityAuditModal}
               properties={properties}
+              setProperties={setProperties}
               customers={customers}
               setCustomers={setCustomers}
               setUsers={setUsers}
@@ -20671,6 +21131,50 @@ export default function App() {
                       </select>
                       <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
                         📌 Assign the designated Sales Executive / CRM for property matching hand-off and client relationship management.
+                      </div>
+                    </div>
+
+                    {/* 5. NOTES / SPECIAL INSTRUCTIONS */}
+                    <div style={{
+                      background: isLight ? '#f8fafc' : '#0b1329',
+                      border: isLight ? '1.5px solid #cbd5e1' : '1.5px solid #334155',
+                      borderRadius: '10px',
+                      padding: windowWidth <= 640 ? '10px 12px' : '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      width: '100%',
+                      maxWidth: '100%',
+                      minWidth: 0,
+                      boxSizing: 'border-box'
+                    }}>
+                      <label style={{ fontSize: windowWidth <= 640 ? '0.74rem' : '0.78rem', fontWeight: '900', color: isLight ? '#334155' : '#e2e8f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        📝 NOTES / SPECIAL INSTRUCTIONS (OPTIONAL)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={newCustomerForm.notes || ''}
+                        onChange={e => setNewCustomerForm({ ...newCustomerForm, notes: e.target.value })}
+                        placeholder="Enter key consultation notes, specific customer requirements, site visit timings, or instructions for the sales executive..."
+                        style={{
+                          width: '100%',
+                          maxWidth: '100%',
+                          boxSizing: 'border-box',
+                          padding: windowWidth <= 640 ? '8px 10px' : '10px 14px',
+                          borderRadius: '8px',
+                          border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                          background: isLight ? '#ffffff' : '#0f172a',
+                          color: isLight ? '#0f172a' : '#f8fafc',
+                          fontSize: windowWidth <= 640 ? '0.8rem' : '0.85rem',
+                          fontFamily: 'inherit',
+                          lineHeight: '1.4',
+                          outline: 'none',
+                          resize: 'vertical',
+                          minHeight: '75px'
+                        }}
+                      />
+                      <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                        📌 These notes will be saved with the lead profile and matching request for CRM tracking and executive briefing.
                       </div>
                     </div>
 

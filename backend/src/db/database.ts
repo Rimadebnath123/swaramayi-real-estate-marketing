@@ -20,6 +20,11 @@ export interface UserRecord {
   designation?: string;
   company_id?: string;
   is_mfa_enabled?: boolean;
+  assigned_properties?: any[];
+  assignedProperties?: any[];
+  avatar?: string;
+  profileImage?: string;
+  rating?: number | string;
 }
 
 export interface CustomerRecord {
@@ -555,8 +560,20 @@ export function generateID(type: 'SRM-CUS' | 'SRM-PROP' | 'SRM-UNIT' | 'SRM-LEAD
     saveData();
     return `SRM-UNIT-${year}-${String(nextSeq).padStart(6, '0')}`;
   } else if (type === 'SRM-LEAD') {
-    dbStore.data.sequences.lead_seq += 1;
-    nextSeq = dbStore.data.sequences.lead_seq;
+    let maxSeq = dbStore.data.sequences?.lead_seq || 0;
+    if (Array.isArray(dbStore.data.leads)) {
+      dbStore.data.leads.forEach((l: any) => {
+        const match = String(l.lead_number || '').match(/SRM-LEAD-\d+-(\d+)/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxSeq) maxSeq = num;
+        }
+      });
+    }
+    maxSeq += 1;
+    if (!dbStore.data.sequences) (dbStore.data as any).sequences = {};
+    dbStore.data.sequences.lead_seq = maxSeq;
+    nextSeq = maxSeq;
     saveData();
     return `SRM-LEAD-${year}-${String(nextSeq).padStart(6, '0')}`;
   } else if (type === 'SRM-FLP') {

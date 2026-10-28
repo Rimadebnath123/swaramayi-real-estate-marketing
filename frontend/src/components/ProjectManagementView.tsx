@@ -1458,56 +1458,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       Boolean(devProjectOtpVerified)
     );
 
-    // ALSO AUTO-CREATE INITIAL ACTIVE PROPERTY STOCK IN PROPERTIES REGISTRY
-    const newStockUnit = {
-      id: 'PROP-' + Date.now(),
-      property_code: assignedPropCode,
-      code: assignedPropCode,
-      project_id: assignedProjCode,
-      project_code: assignedProjCode,
-      title: newPropertyForm.title,
-      property_title: newPropertyForm.title,
-      project_name: newPropertyForm.title,
-      developer: newPropertyForm.developer,
-      developer_name: newPropertyForm.developer,
-      developer_id: (existingDevIdx >= 0 ? updatedDevs[existingDevIdx]?.id : updatedDevs[0]?.id) || 'SRM-DEV-001',
-      developer_mobile: devProjectMobile || newPropertyForm.developer_mobile || '',
-      developer_alt_mobile: devProjectAltMobile || newPropertyForm.developer_alt_mobile || '',
-      developer_email: newPropertyForm.developer_email || '',
-      locality: newPropertyForm.locality || '',
-      full_address: newPropertyForm.full_address || (newPropertyForm.title + ', ' + (newPropertyForm.locality || 'Kolkata')),
-      configuration: newPropertyForm.configuration || '',
-      super_builtup_area: newPropertyForm.super_builtup_area || '',
-      carpet_area: newPropertyForm.carpet_area || '',
-      floor_num: newPropertyForm.floor_num || newPropertyForm.floor_no || '',
-      floor_number: newPropertyForm.floor_num || newPropertyForm.floor_no || '',
-      total_floors: newPropertyForm.total_floors || '',
-      facing: newPropertyForm.facing || '',
-      furnishing: newPropertyForm.furnishing || '',
-      final_price: newPropertyForm.final_price || '',
-      base_price: newPropertyForm.final_price || '',
-      price_sqft: newPropertyForm.price_sqft || '',
-      status: 'LIVE / AVAILABLE',
-      availability_status: 'AVAILABLE',
-      property_type: newPropertyForm.property_type || 'Flat / Apartment',
-      rera_id: newPropertyForm.rera_id || '',
-      hera_no: newPropertyForm.hera_no || '',
-      created_at: new Date().toISOString()
-    };
-
-    let nextPropsList = [...properties];
-    if (!nextPropsList.some(p => p.property_code === assignedPropCode || (p.project_id === assignedProjCode && p.title.toLowerCase().trim() === newPropertyForm.title.toLowerCase().trim()))) {
-      nextPropsList = [newStockUnit, ...nextPropsList];
-      if (setProperties) setProperties(nextPropsList);
-      try {
-        localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(nextPropsList));
-      } catch (e) {}
-    }
-
-    // ALSO IMMEDIATELY SYNC RECORD TO MONGODB ATLAS CLUSTER
+    // Sync updated developers & project to MongoDB Atlas
     try {
       if (syncAllToMongoDB) {
-        syncAllToMongoDB({ developers: updatedDevs, properties: nextPropsList });
+        syncAllToMongoDB({ developers: updatedDevs });
       }
     } catch (e) {}
 

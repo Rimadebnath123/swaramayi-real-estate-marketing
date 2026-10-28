@@ -106,8 +106,16 @@ export default function PropertyDetails() {
   const fetchDetails = async () => {
     try {
       setLoading(true);
-      const res = await propertyService.getPropertyBySlug(slug);
-      if (res.data) {
+      let res;
+      try {
+        res = await propertyService.getPropertyBySlug(slug);
+      } catch (err) {
+        res = await propertyService.getProperties({ limit: 1 });
+        if (res && res.data && res.data.length > 0) {
+          res.data = res.data[0];
+        }
+      }
+      if (res && res.data) {
         setProperty(res.data);
         setActiveImage(res.data.images?.[0] || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80');
 
@@ -347,14 +355,20 @@ export default function PropertyDetails() {
                 <div className="text-xs font-bold text-gold-600 uppercase tracking-wider mb-3">Assigned Property Advisor</div>
                 {(() => {
                   const advisor = property.assignedAdvisor || property.agent || {};
-                  const advisorName = advisor.name || 'Punita Roy';
-                  const advisorRole = advisor.role || advisor.designation || 'Sales Management';
+                  const advisorName = advisor.name || advisor.full_name || property.assigned_employee_name || property.site_person_name || 'Official Swaramayi Advisor';
+                  const advisorRole = advisor.role || advisor.designation || 'Property Consultation Desk';
                   const advisorPhone = '+91 89021 30791';
-                  const advisorImage = advisor.profileImage || advisor.image || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80';
-                  const advisorRating = advisor.rating || advisor.advisor_rating || (advisorName.toLowerCase().includes('abinash') ? '4.7' : '4.8');
+                  const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(advisorName)}&background=0b192c&color=e5a93c&size=200&bold=true`;
+                  const advisorImage = advisor.profileImage || advisor.image || advisor.avatar || defaultAvatar;
+                  const advisorRating = (advisor.rating && Number(advisor.rating) > 0)
+                    ? Number(advisor.rating).toFixed(1)
+                    : (advisor.advisor_rating || '4.8');
 
                   const cleanPhone = advisorPhone.replace(/[^0-9]/g, '');
-                  const waLink = `https://wa.me/${cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone}?text=${encodeURIComponent(`Hi ${advisorName}, I am interested in ${property.title} (${property.location}). Please share more details.`)}`;
+                  const waPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+                  const waLink = waPhone
+                    ? `https://wa.me/${waPhone}?text=${encodeURIComponent(`Hi ${advisorName}, I am interested in ${property.title || 'this property'} (${property.location || 'Kolkata'}). Please share more details.`)}`
+                    : '#';
 
                   return (
                     <>
@@ -464,7 +478,7 @@ export default function PropertyDetails() {
                 </div>
                 <h3 className="text-xl font-bold text-navy-900">Rating Received!</h3>
                 <p className="text-xs text-gray-600 font-medium">
-                  Thank you <strong className="text-navy-900">{ratingCustomerName || 'Valued Customer'}</strong>! Your <strong className="text-amber-600">{ratingStars}-Star Rating</strong> for <strong className="text-navy-900">{ratingAdvisorName || property?.assignedAdvisor?.name || property?.agent?.name || 'Punita Roy'}</strong> has been successfully recorded.
+                  Thank you <strong className="text-navy-900">{ratingCustomerName || 'Valued Customer'}</strong>! Your <strong className="text-amber-600">{ratingStars}-Star Rating</strong> for <strong className="text-navy-900">{ratingAdvisorName || property?.assignedAdvisor?.name || property?.agent?.name || property?.assigned_employee_name || property?.site_person_name || 'Property Advisor'}</strong> has been successfully recorded.
                 </p>
                 <button
                   onClick={() => {
@@ -484,7 +498,7 @@ export default function PropertyDetails() {
                     alert('Please enter your full name to submit the rating.');
                     return;
                   }
-                  const advName = ratingAdvisorName || property?.assignedAdvisor?.name || property?.agent?.name || 'Punita Roy';
+                  const advName = ratingAdvisorName || property?.assignedAdvisor?.name || property?.agent?.name || property?.assigned_employee_name || property?.site_person_name || 'Property Advisor';
                   const host = window.location.hostname || 'localhost';
                   const ratingPayload = {
                     advisorName: advName,
@@ -536,20 +550,20 @@ export default function PropertyDetails() {
                   </span>
                   <h3 className="text-lg font-bold text-navy-900">Rate Your Property Advisor</h3>
                   <p className="text-xs text-gray-500">
-                    Share your consultation experience with {ratingAdvisorName || property?.assignedAdvisor?.name || property?.agent?.name || 'Punita Roy'}
+                    Share your consultation experience with {ratingAdvisorName || property?.assignedAdvisor?.name || property?.agent?.name || property?.assigned_employee_name || property?.site_person_name || 'Property Advisor'}
                   </p>
                 </div>
 
                 {/* Advisor Banner */}
                 <div className="flex items-center space-x-3 p-3 bg-amber-50/70 rounded-xl border border-amber-200/80">
                   <img
-                    src={property?.assignedAdvisor?.profileImage || property?.agent?.profileImage || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80'}
+                    src={property?.assignedAdvisor?.profileImage || property?.agent?.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(ratingAdvisorName || property?.assignedAdvisor?.name || property?.agent?.name || 'Swaramayi Advisor')}&background=0b192c&color=e5a93c&size=200&bold=true`}
                     alt="Advisor"
                     className="w-12 h-12 rounded-full object-cover border-2 border-gold-500 shadow-xs"
                   />
                   <div>
-                    <h4 className="font-bold text-navy-900 text-sm">{ratingAdvisorName || property?.assignedAdvisor?.name || property?.agent?.name || 'Punita Roy'}</h4>
-                    <p className="text-xs text-gray-500 font-medium">{property?.assignedAdvisor?.role || property?.agent?.role || 'Sales Management'}</p>
+                    <h4 className="font-bold text-navy-900 text-sm">{ratingAdvisorName || property?.assignedAdvisor?.name || property?.agent?.name || property?.assigned_employee_name || property?.site_person_name || 'Property Advisor'}</h4>
+                    <p className="text-xs text-gray-500 font-medium">{property?.assignedAdvisor?.role || property?.agent?.role || 'Property Advisor'}</p>
                     <div className="text-[10px] text-amber-800 font-bold mt-0.5">Official Swaramayi Property Advisor</div>
                   </div>
                 </div>

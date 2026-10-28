@@ -40,6 +40,8 @@ interface RoleManagementViewProps {
   handleOpenSecurityAuditModal: (user: any) => void;
   setShowExitHandoverModal?: (user: any) => void;
   properties?: any[];
+  setProperties?: React.Dispatch<React.SetStateAction<any[]>>;
+
   customers?: any[];
   setCustomers?: React.Dispatch<React.SetStateAction<any[]>>;
   leadsList?: any[];
@@ -86,6 +88,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
   handleDeleteTeam,
   handleOpenSecurityAuditModal,
   properties = [],
+  setProperties,
   customers = [],
   setCustomers,
   leadsList = [],
@@ -1285,7 +1288,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       alert('Please select an Advisor and enter a Property Title.');
       return;
     }
-    const currentAdvisor = propertyAdvisorsList.find(a => a.id === assignForm.advisorId);
+    const currentAdvisor = propertyAdvisorsList.find(a => a.id === assignForm.advisorId) || safeUsers.find((u: any) => u.id === assignForm.advisorId);
     const existingProps = currentAdvisor?.assigned_properties || [];
 
     const selectedPropInCRM = (properties || []).find((p: any) => (p.id || p.property_code) === assignForm.propertyCode);
@@ -1300,25 +1303,105 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       price: Number(propPrice) || 0
     };
 
-    updateAdvisorProperties(assignForm.advisorId, [...existingProps, newPropObj]);
+    const nextPropsList = [...existingProps.filter((p: any) => p.code !== propCode), newPropObj];
 
-    alert(`✅ Successfully assigned "${assignForm.propertyTitle}" (${propCode}) to ${currentAdvisor?.full_name || 'Property Advisor'}!`);
+    updateAdvisorProperties(assignForm.advisorId, nextPropsList);
+
+    // 1. Update user record in users state & persistence
+    let updatedUsers = (users || []).map((u: any) => {
+      if (u.id === assignForm.advisorId) {
+        return {
+          ...u,
+          assigned_properties: nextPropsList
+        };
+      }
+      return u;
+    });
+    if (setUsers) setUsers(updatedUsers);
+    try { localStorage.setItem('swaramayi_users_v7', JSON.stringify(updatedUsers)); } catch (e) {}
+
+    // 2. Update matching property in properties state & persistence
+    let updatedProperties = (properties || []).map((p: any) => {
+      const isMatch = (propCode && (p.id === propCode || p.property_code === propCode)) ||
+                      (p.property_code && p.property_code === propCode) ||
+                      (p.title && assignForm.propertyTitle && p.title.toLowerCase().trim() === assignForm.propertyTitle.toLowerCase().trim()) ||
+                      (p.property_title && assignForm.propertyTitle && p.property_title.toLowerCase().trim() === assignForm.propertyTitle.toLowerCase().trim());
+      if (isMatch) {
+        return {
+          ...p,
+          assigned_employee_id: currentAdvisor?.id || assignForm.advisorId,
+          assigned_employee_name: currentAdvisor?.full_name || currentAdvisor?.username || 'Property Advisor',
+          site_person_name: currentAdvisor?.full_name || currentAdvisor?.username || 'Property Advisor',
+          site_person_contact: currentAdvisor?.mobile || p.site_person_contact || ''
+        };
+      }
+      return p;
+    });
+    if (setProperties) setProperties(updatedProperties);
+
+    // 3. Dispatch to MongoDB Atlas Live Sync immediately
+    if (syncAllToMongoDB) {
+      syncAllToMongoDB({
+        users: updatedUsers,
+        properties: updatedProperties
+      });
+    }
+
+    alert(`✅ Successfully assigned "${assignForm.propertyTitle}" (${propCode}) to ${currentAdvisor?.full_name || 'Property Advisor'}!\n\nThis assignment has been synced directly to the website.`);
     setShowAssignPropertyModal(false);
     setAssignForm({ advisorId: '', propertyTitle: '', propertyCode: '', location: '', propertyType: 'Residential Flat' });
   };
 
   const handleRemovePropertyFromAdvisor = (advisorId: string, propCode: string) => {
     if (window.confirm(`Unassign property (${propCode}) from this Advisor?`)) {
-      const currentAdvisor = propertyAdvisorsList.find(a => a.id === advisorId);
+      const currentAdvisor = propertyAdvisorsList.find(a => a.id === advisorId) || safeUsers.find((u: any) => u.id === advisorId);
       const existingProps = currentAdvisor?.assigned_properties || [];
       const updatedProps = existingProps.filter((p: any) => p.code !== propCode);
 
       updateAdvisorProperties(advisorId, updatedProps);
+
+      // 1. Update user record
+      let updatedUsers = (users || []).map((u: any) => {
+        if (u.id === advisorId) {
+          return {
+            ...u,
+            assigned_properties: updatedProps
+          };
+        }
+        return u;
+      });
+      if (setUsers) setUsers(updatedUsers);
+      try { localStorage.setItem('swaramayi_users_v7', JSON.stringify(updatedUsers)); } catch (e) {}
+
+      // 2. Clear property advisor fields
+      let updatedProperties = (properties || []).map((p: any) => {
+        const isMatch = (propCode && (p.id === propCode || p.property_code === propCode));
+        if (isMatch && p.assigned_employee_id === advisorId) {
+          return {
+            ...p,
+            assigned_employee_id: '',
+            assigned_employee_name: '',
+            site_person_name: '',
+            site_person_contact: ''
+          };
+        }
+        return p;
+      });
+      if (setProperties) setProperties(updatedProperties);
+
+      // 3. Dispatch to MongoDB Atlas Live Sync
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({
+          users: updatedUsers,
+          properties: updatedProperties
+        });
+      }
+
       alert(`🗑️ Property (${propCode}) unassigned successfully.`);
     }
   };
 
-  const searchQuery = userRoleScopeSearchQuery ?? internalSearchQuery;
+    const searchQuery = userRoleScopeSearchQuery ?? internalSearchQuery;
   const setSearchQuery = setUserRoleScopeSearchQuery ?? setInternalSearchQuery;
 
   const filterCategory = userRoleFilterCategory ?? internalFilterCategory;

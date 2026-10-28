@@ -717,9 +717,11 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
       }
     });
 
-    // 3. Auto-incorporate leads
+    // 3. Auto-incorporate leads (Skip unassigned web inquiries)
     (leadsList || []).forEach(l => {
       if (!l) return;
+      const isWebLead = l.source && (l.source.includes('Website') || l.source.includes('Web'));
+      if (isWebLead) return;
       const custNum = l.customer_number || `SRM-CUS-2026-000${String(l.id).slice(-3)}`;
       const cleanMob = l.mobile ? l.mobile.replace(/\D/g, '') : '';
       const { keys } = getKeys({ customer_number: custNum, mobile: cleanMob, name: l.customer_name, id: l.customer_id || `CUS-${l.id}` });
@@ -2458,6 +2460,11 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                           <div style={{ color: isLight ? '#475569' : '#cbd5e1', fontWeight: '700' }}>
                             📍 Locality: {c.preferredArea || matchingLead?.preferred_location || 'N/A'} • <span style={{ color: '#4ade80' }}>💰 Budget: {c.budget || '70L - 85L'}</span>
                           </div>
+                          {(c.notes || matchingLead?.notes) && (
+                            <div style={{ marginTop: '4px', background: isLight ? '#fefce8' : 'rgba(251, 191, 36, 0.12)', border: isLight ? '1px solid #fef08a' : '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '4px', padding: '3px 6px', fontSize: '0.72rem', color: isLight ? '#b45309' : '#fbbf24', fontWeight: '700' }}>
+                              📝 Notes: {c.notes || matchingLead?.notes}
+                            </div>
+                          )}
                         </div>
 
                         {/* STAGE PROGRESSION LIST */}
@@ -2646,6 +2653,11 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                             {matchingLead && (
                               <div style={{ fontSize: '0.72rem', color: '#fbbf24', marginTop: '2px', fontWeight: '700' }}>
                                 Status: {matchingLead.lead_status || matchingLead.call_disposition || 'CONNECTED'}
+                              </div>
+                            )}
+                            {(c.notes || matchingLead?.notes) && (
+                              <div style={{ fontSize: '0.72rem', color: isLight ? '#b45309' : '#fbbf24', marginTop: '3px', fontWeight: '700' }} title={c.notes || matchingLead?.notes}>
+                                📝 Notes: {c.notes || matchingLead?.notes}
                               </div>
                             )}
                           </td>

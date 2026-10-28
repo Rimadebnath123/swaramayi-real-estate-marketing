@@ -765,6 +765,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
           });
 
           (customers || []).forEach((c, idx) => {
+            if (c.source && (c.source.includes('Website') || c.source.includes('Web'))) return;
             const custNum = (c.customer_number || c.customer_id || c.id || '').toString().trim();
             const custMob = (c.mobile || c.phone || '').toString().trim();
             const cleanMob = custMob.replace(/\D/g, '');
@@ -1307,10 +1308,10 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                           </div>
                         </div>
 
-                        {/* SHIFT NOTE BANNER */}
-                        {(req.handoffNote || (req.notes && req.notes.includes('[Shifted'))) && (
+                        {/* NOTES & REMARKS BANNER */}
+                        {(req.handoffNote || req.notes || req.remarks) && (
                           <div style={{ background: 'rgba(251, 191, 36, 0.15)', border: '1px solid #fbbf24', borderRadius: '4px', padding: '4px 8px', fontSize: '0.72rem', color: '#fbbf24', fontWeight: '800' }}>
-                            📌 Shift Note: {req.handoffNote || (req.notes?.split('\n').pop() || '')}
+                            📝 {req.handoffNote ? `Shift Note: ${req.handoffNote}` : `Note: ${req.notes || req.remarks}`}
                           </div>
                         )}
 
@@ -1439,9 +1440,9 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                             <td style={{ padding: '10px' }}>
                               <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{req.customerName}</strong>
                               <br /><span style={{ fontSize: '0.72rem', color: '#4ade80' }}>{req.mobile}</span>
-                              {(req.handoffNote || (req.notes && req.notes.includes('[Shifted'))) && (
+                              {(req.handoffNote || req.notes || req.remarks) && (
                                 <div style={{ marginTop: '4px', background: 'rgba(251, 191, 36, 0.15)', border: '1px solid #fbbf24', borderRadius: '4px', padding: '3px 6px', fontSize: '0.7rem', color: '#fbbf24', fontWeight: '800', width: 'fit-content' }}>
-                                  📌 Shift Note: {req.handoffNote || (req.notes?.split('\n').pop() || '')}
+                                  📝 {req.handoffNote ? `Shift Note: ${req.handoffNote}` : `Note: ${req.notes || req.remarks}`}
                                 </div>
                               )}
                             </td>

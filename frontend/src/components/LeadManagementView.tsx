@@ -278,9 +278,16 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                     .filter(l => leadPriorityFilter === 'ALL' || l.priority === leadPriorityFilter)
                     .filter(l => matchesSearchQuery(l, searchQuery))
                     .map((lead) => {
-                      const matchedCust = customers.find(c => (c.customer_number && c.customer_number === lead.customer_number) || (c.name && c.name === lead.customer_name) || (c.phone && c.phone === lead.mobile));
+                      const matchedCust = customers.find(c => 
+                        (c.customer_number && lead.customer_number && c.customer_number === lead.customer_number) || 
+                        (c.name && c.name === (lead.customer_name || lead.full_name || lead.name)) || 
+                        (c.full_name && c.full_name === (lead.customer_name || lead.full_name || lead.name)) || 
+                        (c.phone && (c.phone === lead.mobile || c.phone === lead.phone)) ||
+                        (c.mobile && (c.mobile === lead.mobile || c.mobile === lead.phone))
+                      );
                       const rawPhone = lead.mobile || lead.phone || lead.customer_mobile || matchedCust?.mobile || matchedCust?.phone || 'N/A';
-                      const custNum = lead.customer_number || lead.customer_id || matchedCust?.customer_number || 'N/A';
+                      const custNum = lead.customer_number || lead.customer_id || matchedCust?.customer_number || '';
+                      const displayCustName = lead.customer_name || lead.full_name || lead.name || matchedCust?.full_name || matchedCust?.name || 'Website Inquirer';
 
                       const isOverdue = lead.next_followup && new Date(lead.next_followup) < new Date() && !lead.next_followup.startsWith(new Date().toISOString().split('T')[0]);
                       const isToday = lead.next_followup && lead.next_followup.startsWith(new Date().toISOString().split('T')[0]);
@@ -295,17 +302,21 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                             >
                               🆔 {lead.lead_number}
                             </span>
-                            <br />
-                            <span
-                              onClick={() => openIdDetailsModal(custNum, 'CUSTOMER_ID')}
-                              style={{ fontSize: '0.72rem', color: '#4ade80', fontFamily: 'monospace', textDecoration: 'underline', cursor: 'pointer' }}
-                            >
-                              👤 {custNum}
-                            </span>
+                            {custNum && custNum !== 'N/A' && (
+                              <>
+                                <br />
+                                <span
+                                  onClick={() => openIdDetailsModal(custNum, 'CUSTOMER_ID')}
+                                  style={{ fontSize: '0.72rem', color: '#4ade80', fontFamily: 'monospace', textDecoration: 'underline', cursor: 'pointer' }}
+                                >
+                                  👤 {custNum}
+                                </span>
+                              </>
+                            )}
                           </td>
 
                           <td style={{ padding: '12px' }}>
-                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.88rem' }}>{lead.customer_name}</strong>
+                            <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.88rem' }}>{displayCustName}</strong>
                             <br />
                             {rawPhone !== 'N/A' ? (
                               <span style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: '800', fontFamily: 'monospace', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
@@ -313,6 +324,11 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
                               </span>
                             ) : (
                               <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace' }}>N/A</span>
+                            )}
+                            {(lead.notes || matchedCust?.notes) && (
+                              <div style={{ marginTop: '4px', background: isLight ? '#fefce8' : 'rgba(251, 191, 36, 0.12)', border: isLight ? '1px solid #fef08a' : '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '4px', padding: '3px 6px', fontSize: '0.72rem', color: isLight ? '#b45309' : '#fbbf24', fontWeight: '700', maxWidth: '280px', wordBreak: 'break-word' }} title={lead.notes || matchedCust?.notes}>
+                                📝 Notes: {lead.notes || matchedCust?.notes}
+                              </div>
                             )}
                           </td>
 

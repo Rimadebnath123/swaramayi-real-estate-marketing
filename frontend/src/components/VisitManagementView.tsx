@@ -4202,30 +4202,67 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
               </div>
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', marginBottom: '6px' }}>
-                🔗 Generated Live Rating Submission Link
-              </label>
-              <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '10px 14px', fontFamily: 'monospace', fontSize: '0.75rem', color: '#38bdf8', wordBreak: 'break-all', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                <span>
-                  https://www.swaramayi.com/properties/property-srm-prop-2026?rate=true&advisor={encodeURIComponent(ratingAdvisorName)}&customer={encodeURIComponent(ratingCustomerName || 'Customer')}#rate-advisor
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const link = `https://www.swaramayi.com/properties/property-srm-prop-2026?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(ratingCustomerName || 'Customer')}#rate-advisor`;
-                    if (navigator.clipboard) {
-                      navigator.clipboard.writeText(link);
-                      setCopiedRatingLinkSuccess(true);
-                      setTimeout(() => setCopiedRatingLinkSuccess(false), 3000);
-                    }
-                  }}
-                  style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem', flexShrink: 0 }}
-                >
-                  {copiedRatingLinkSuccess ? '✓ Copied!' : 'Copy Link'}
-                </button>
-              </div>
-            </div>
+            {(() => {
+              const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+              const websiteBaseUrl = isLocal
+                ? (import.meta.env.VITE_WEBSITE_URL || 'http://localhost:5001')
+                : (import.meta.env.VITE_WEBSITE_URL && !import.meta.env.VITE_WEBSITE_URL.includes('localhost')
+                    ? import.meta.env.VITE_WEBSITE_URL
+                    : 'https://web.swaramayi.info');
+              const cleanBase = (websiteBaseUrl || 'https://web.swaramayi.info').replace(/\/+$/, '');
+
+              const matchedAdvisor = assignedAdvisors.find(a => a.name === ratingAdvisorName || a.id === ratingAdvisorName);
+              const advFirstProp = (matchedAdvisor?.assigned_properties && matchedAdvisor.assigned_properties[0]) || null;
+              const targetProperty = (properties || []).find((p: any) => 
+                (advFirstProp && (p.property_code === advFirstProp.code || p.id === advFirstProp.code || p.title === advFirstProp.title)) ||
+                (p.assigned_employee_name && p.assigned_employee_name.toLowerCase().includes((ratingAdvisorName || '').toLowerCase())) ||
+                (p.assignedAdvisor?.name && p.assignedAdvisor.name.toLowerCase().includes((ratingAdvisorName || '').toLowerCase()))
+              ) || (properties && properties[0]) || null;
+
+              const propSlug = targetProperty?.slug || 
+                               (targetProperty?.title ? targetProperty.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + (targetProperty.property_code || targetProperty.id || '').toLowerCase() : '') ||
+                               targetProperty?.property_code || 
+                               targetProperty?.id || 
+                               'jms-apartment-srm-prop-2026-000001';
+
+              const liveRatingLink = `${cleanBase}/properties/${propSlug}?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(ratingCustomerName || 'Customer')}&mobile=${encodeURIComponent(ratingCustomerMobile || '')}#rate-advisor`;
+
+              return (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', marginBottom: '6px' }}>
+                    🔗 Generated Live Rating Submission Link
+                  </label>
+                  <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '10px', padding: '10px 14px', fontFamily: 'monospace', fontSize: '0.75rem', color: '#38bdf8', wordBreak: 'break-all', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                    <a href={liveRatingLink} target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8', textDecoration: 'underline' }}>
+                      {liveRatingLink}
+                    </a>
+                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                      <a
+                        href={liveRatingLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ background: '#10b981', color: '#ffffff', padding: '5px 12px', borderRadius: '6px', fontWeight: '800', fontSize: '0.72rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        Open Link ↗
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (navigator.clipboard) {
+                            navigator.clipboard.writeText(liveRatingLink);
+                            setCopiedRatingLinkSuccess(true);
+                            setTimeout(() => setCopiedRatingLinkSuccess(false), 3000);
+                          }
+                        }}
+                        style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem' }}
+                      >
+                        {copiedRatingLinkSuccess ? '✓ Copied!' : 'Copy Link'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '14px', marginTop: '6px' }}>
@@ -4239,10 +4276,43 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
               onClick={() => {
                 const targetCustomer = ratingCustomerName || 'Customer';
                 const targetMobile = ratingCustomerMobile || '';
-                const link = `https://www.swaramayi.com/properties/property-srm-prop-2026?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(targetCustomer)}#rate-advisor`;
+
+                const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+                const websiteBaseUrl = isLocal
+                  ? (import.meta.env.VITE_WEBSITE_URL || 'http://localhost:5001')
+                  : (import.meta.env.VITE_WEBSITE_URL && !import.meta.env.VITE_WEBSITE_URL.includes('localhost')
+                      ? import.meta.env.VITE_WEBSITE_URL
+                      : 'https://web.swaramayi.info');
+                const cleanBase = (websiteBaseUrl || 'https://web.swaramayi.info').replace(/\/+$/, '');
+
+                const matchedAdvisor = assignedAdvisors.find(a => a.name === ratingAdvisorName || a.id === ratingAdvisorName);
+                const advFirstProp = (matchedAdvisor?.assigned_properties && matchedAdvisor.assigned_properties[0]) || null;
+                const targetProperty = (properties || []).find((p: any) => 
+                  (advFirstProp && (p.property_code === advFirstProp.code || p.id === advFirstProp.code || p.title === advFirstProp.title)) ||
+                  (p.assigned_employee_name && p.assigned_employee_name.toLowerCase().includes((ratingAdvisorName || '').toLowerCase())) ||
+                  (p.assignedAdvisor?.name && p.assignedAdvisor.name.toLowerCase().includes((ratingAdvisorName || '').toLowerCase()))
+                ) || (properties && properties[0]) || null;
+
+                const propSlug = targetProperty?.slug || 
+                                 (targetProperty?.title ? targetProperty.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + (targetProperty.property_code || targetProperty.id || '').toLowerCase() : '') ||
+                                 targetProperty?.property_code || 
+                                 targetProperty?.id || 
+                                 'jms-apartment-srm-prop-2026-000001';
+
+                const link = `${cleanBase}/properties/${propSlug}?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(targetCustomer)}&mobile=${encodeURIComponent(targetMobile)}#rate-advisor`;
 
                 if (ratingDeliveryChannel === 'WHATSAPP') {
                   window.open(`https://wa.me/${targetMobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Dear ${targetCustomer}, thank you for your recent property consultation with Swaramayi Real Estate. Please rate your assigned Property Advisor (${ratingAdvisorName}) here: ${link}`)}`, '_blank');
+                } else if (ratingDeliveryChannel === 'SMS') {
+                  window.open(`sms:${targetMobile.replace(/[^0-9]/g, '')}?body=${encodeURIComponent(`Dear ${targetCustomer}, please rate your Swaramayi Property Advisor (${ratingAdvisorName}): ${link}`)}`);
+                } else if (ratingDeliveryChannel === 'EMAIL') {
+                  window.open(`mailto:?subject=${encodeURIComponent(`Rate your Swaramayi Property Advisor (${ratingAdvisorName})`)}&body=${encodeURIComponent(`Dear ${targetCustomer},\n\nPlease share your feedback for your property consultation here:\n${link}\n\nThank you,\nSwaramayi Real Estate`)}`);
+                } else if (ratingDeliveryChannel === 'COPY') {
+                  if (navigator.clipboard) {
+                    navigator.clipboard.writeText(link);
+                    setCopiedRatingLinkSuccess(true);
+                    setTimeout(() => setCopiedRatingLinkSuccess(false), 3000);
+                  }
                 }
 
                 const host = window.location.hostname || 'localhost';
@@ -4252,7 +4322,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   customerName: targetCustomer,
                   customerMobile: targetMobile,
                   advisorName: ratingAdvisorName,
-                  propertyTitle: ratingPropertyTitle || 'General Site Visit',
+                  propertyTitle: ratingPropertyTitle || targetProperty?.title || 'General Site Visit',
                   deliveryChannel: ratingDeliveryChannel,
                   customNote: ratingCustomNote || null
                 };

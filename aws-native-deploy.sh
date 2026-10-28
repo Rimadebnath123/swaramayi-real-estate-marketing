@@ -85,7 +85,7 @@ npm run build
 
 echo -e "${CYAN}Starting backend with PM2...${NC}"
 pm2 delete swaramayi-backend 2>/dev/null || true
-pm2 start dist/server.js --name "swaramayi-backend" --env NODE_ENV=production
+pm2 start "npx tsx src/server.ts" --name "swaramayi-backend" --env NODE_ENV=production
 pm2 save
 sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u $USER --hp $HOME || true
 

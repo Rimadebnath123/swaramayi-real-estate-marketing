@@ -468,8 +468,15 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
     };
 
     if (Array.isArray(payload.leads)) {
-      payload.leads = payload.leads.filter((l: any) => !isTestRecord(l));
-      dbStore.data.leads = payload.leads;
+      const incomingLeads = payload.leads.filter((l: any) => !isTestRecord(l));
+      const incomingKeys = new Set(incomingLeads.map((l: any) => String(l.lead_number || l.id || '')));
+      
+      // Preserve any server-side web inquiries or leads that the CRM client hasn't fetched yet
+      const existingServerLeads = (dbStore.data.leads || []).filter(
+        (sl: any) => sl && !incomingKeys.has(String(sl.lead_number || '')) && !incomingKeys.has(String(sl.id || ''))
+      );
+
+      dbStore.data.leads = [...existingServerLeads, ...incomingLeads];
     }
     if (Array.isArray(payload.properties)) dbStore.data.properties = payload.properties;
     if (Array.isArray(payload.customers)) {

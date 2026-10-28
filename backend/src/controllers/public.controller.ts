@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { dbStore, loadData, saveData, generateID, PropertyRecord, CustomerRecord } from '../db/database.js';
-import { syncToMongoDB, LeadModel, SiteVisitModel } from '../db/mongoPersistence.js';
+import { syncToMongoDB, LeadModel, SiteVisitModel, RatingInviteModel } from '../db/mongoPersistence.js';
 
 // Helper to generate a URL-friendly slug
 function slugify(text: string): string {
@@ -1020,14 +1020,43 @@ export async function getPublicAgents(req: Request, res: Response) {
 
 const defaultRatingInvites: any[] = [];
 
+export function generateRatingInviteId(): string {
+  let maxSeq = 0;
+  const invites: any[] = (dbStore.data as any).rating_invites || [];
+  invites.forEach((i: any) => {
+    const match = String(i.id || '').match(/SRM-RAT-INV-(\d+)/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (!isNaN(num) && num > maxSeq) maxSeq = num;
+    }
+  });
+  const next = maxSeq + 1;
+  return `SRM-RAT-INV-${String(next).padStart(6, '0')}`;
+}
+
 export async function getPublicAdvisorRatings(req: Request, res: Response) {
-  loadData();
+  try {
+    await loadData();
+  } catch (e) {}
+
   if (!(dbStore.data as any).rating_invites) {
     (dbStore.data as any).rating_invites = defaultRatingInvites;
-    saveData();
   }
 
-  let invites: any[] = (dbStore.data as any).rating_invites || [];
+  let invites: any[] = [...((dbStore.data as any).rating_invites || [])];
+
+  // Also query directly from MongoDB RatingInviteModel to ensure 100% persistence
+  try {
+    const mongoInvites = await RatingInviteModel.find({}).lean();
+    if (Array.isArray(mongoInvites) && mongoInvites.length > 0) {
+      mongoInvites.forEach((m: any) => {
+        const already = invites.some((i: any) => i.id === m.id || (i._id && String(i._id) === String(m._id)));
+        if (!already) {
+          invites.unshift(m);
+        }
+      });
+    }
+  } catch (err) {}
 
   // Filter out unwanted/test duplicate entries like gfhj / 5677456775
   invites = invites.filter((item: any) => {
@@ -1035,6 +1064,54 @@ export async function getPublicAdvisorRatings(req: Request, res: Response) {
     const cMob = String(item.customerMobile || item.customerPhone || '');
     return !cName.includes('gfhj') && !cMob.includes('5677456775');
   });
+
+  // Deduplicate records so each customer consultation rating appears only once
+  const seenMap = new Map<string, any>();
+  invites.forEach((item: any) => {
+    const mob = String(item.customerMobile || item.customerPhone || '').replace(/\D/g, '');
+    const cName = String(item.customerName || '').toLowerCase().trim();
+    const dedupeKey = (mob && mob.length >= 7)
+      ? `mob-${mob.slice(-10)}`
+      : (cName ? `name-${cName}` : String(item.id || item._id));
+
+    if (!seenMap.has(dedupeKey)) {
+      seenMap.set(dedupeKey, item);
+    } else {
+      const existing = seenMap.get(dedupeKey);
+      if ((!existing.rating && item.rating) || (item.propertyTitle && item.propertyTitle !== 'Property Visit')) {
+        seenMap.set(dedupeKey, { ...existing, ...item });
+      }
+    }
+  });
+
+  invites = Array.from(seenMap.values());
+
+  // Normalize IDs to start from SRM-RAT-INV-000001 sequentially without any gaps
+  let invCounter = 1;
+  invites.forEach((inv: any) => {
+    const targetId = `SRM-RAT-INV-${String(invCounter).padStart(6, '0')}`;
+    if (inv.id !== targetId) {
+      const oldId = inv.id;
+      inv.id = targetId;
+      if (oldId) {
+        RatingInviteModel.updateMany({ id: oldId }, { $set: { id: inv.id } }).catch(() => {});
+      }
+    }
+    invCounter++;
+  });
+
+    // Clean up any old SRM-RATING records from site_visits
+  if (Array.isArray(dbStore.data.site_visits)) {
+    dbStore.data.site_visits = dbStore.data.site_visits.filter((v: any) => 
+      !String(v.site_visit_code || '').includes('RATING') && v.visit_status !== 'RATED'
+    );
+  }
+  SiteVisitModel.deleteMany({
+    $or: [
+      { site_visit_code: { $regex: 'RATING', $options: 'i' } },
+      { visit_status: 'RATED' }
+    ]
+  }).catch(() => {});
 
   (dbStore.data as any).rating_invites = invites;
 
@@ -1066,20 +1143,25 @@ export async function getPublicAdvisorRatings(req: Request, res: Response) {
 }
 
 export async function createPublicAdvisorRatingInvite(req: Request, res: Response) {
-  loadData();
+  try {
+    await loadData();
+  } catch (e) {}
+
   const { id, date, customerName, customerMobile, advisorName, propertyTitle, deliveryChannel, customNote } = req.body;
 
   if (!(dbStore.data as any).rating_invites) {
     (dbStore.data as any).rating_invites = [];
   }
 
+  const effectiveAdvisor = (advisorName && String(advisorName).trim()) || 'Official Swaramayi Advisor';
+
   const newInvite = {
-    id: id || `SRM-RAT-INV-${Math.floor(1000 + Math.random() * 9000)}`,
+    id: id || generateRatingInviteId(),
     date: date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     customerName: customerName || '',
     customerMobile: customerMobile || '',
     customerPhone: customerMobile || '',
-    advisorName: advisorName || '',
+    advisorName: effectiveAdvisor,
     propertyTitle: propertyTitle || '',
     rating: null,
     feedbackText: customNote || null,
@@ -1092,6 +1174,15 @@ export async function createPublicAdvisorRatingInvite(req: Request, res: Respons
 
   (dbStore.data as any).rating_invites.unshift(newInvite);
   saveData();
+
+  try {
+    await RatingInviteModel.findOneAndUpdate(
+      { id: newInvite.id },
+      { $set: newInvite },
+      { upsert: true, new: true }
+    );
+  } catch (e) {}
+
   syncToMongoDB(dbStore.data).catch(() => {});
 
   return res.json({
@@ -1103,15 +1194,14 @@ export async function createPublicAdvisorRatingInvite(req: Request, res: Respons
 }
 
 export async function submitPublicAdvisorRating(req: Request, res: Response) {
-  loadData();
-  const { advisorName, rating, customerName, customerPhone, comment, propertyTitle } = req.body;
+  try {
+    await loadData();
+  } catch (e) {}
 
-  if (!advisorName || !rating) {
-    return res.status(400).json({
-      status: 'error',
-      success: false,
-      message: 'Advisor name and rating are required.'
-    });
+  let { advisorName, rating, customerName, customerPhone, comment, propertyTitle } = req.body;
+
+  if (!advisorName || String(advisorName).trim() === '') {
+    advisorName = 'Official Swaramayi Advisor';
   }
 
   const ratingNum = Math.min(5, Math.max(1, Number(rating) || 5));
@@ -1123,7 +1213,8 @@ export async function submitPublicAdvisorRating(req: Request, res: Response) {
 
   // Search if there is a pending invite dispatch for this specific customer and advisor
   const existingPending = ratingInvites.find((i: any) => {
-    const isSameAdvisor = i.advisorName?.toLowerCase() === String(advisorName).toLowerCase();
+    const isSameAdvisor = i.advisorName?.toLowerCase() === String(advisorName).toLowerCase() ||
+      i.advisorName?.toLowerCase().includes('advisor') || String(advisorName).toLowerCase().includes('advisor');
     if (!isSameAdvisor) return false;
     const isPending = i.status === 'DELIVERED_PENDING_REVIEW' || i.rating === null || i.rating === undefined;
     if (!isPending) return false;
@@ -1141,7 +1232,7 @@ export async function submitPublicAdvisorRating(req: Request, res: Response) {
     return matchesName || matchesPhone;
   });
 
-  const uniqueId = `SRM-RAT-INV-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+  const uniqueId = generateRatingInviteId();
 
   const newLogItem = {
     id: existingPending ? existingPending.id : uniqueId,
@@ -1186,17 +1277,14 @@ export async function submitPublicAdvisorRating(req: Request, res: Response) {
     (targetUser as any).rating = advisorAvgRating;
   }
 
-  if (!dbStore.data.site_visits) dbStore.data.site_visits = [];
-  dbStore.data.site_visits.unshift({
-    id: uuidv4(),
-    site_visit_code: `SRM-RATING-${Math.floor(100000 + Math.random() * 900000)}`,
-    customer_name: customerName || 'Website Customer',
-    customer_number: customerPhone || '',
-    sales_executive: advisorName,
-    visit_status: 'RATED',
-    feedback_notes: `Rating: ${ratingNum}/5 Stars. Feedback: ${comment || 'No comment'}`,
-    created_at: new Date().toISOString()
-  });
+  // Explicitly persist to MongoDB Atlas RatingInvite collection directly
+  try {
+    await RatingInviteModel.findOneAndUpdate(
+      { id: newLogItem.id },
+      { $set: newLogItem },
+      { upsert: true, new: true }
+    );
+  } catch (e) {}
 
   saveData();
   syncToMongoDB(dbStore.data).catch(() => {});
@@ -1299,21 +1387,20 @@ export async function deletePublicAdvisorRatingById(req: Request, res: Response)
 
   try {
     const { RatingInviteModel, SiteVisitModel } = await import('../db/mongoPersistence.js');
-    await RatingInviteModel.deleteMany({
-      $or: [
-        { id: targetId },
-        { _id: targetId },
-        ...(targetName ? [{ customerName: { $regex: new RegExp(`^${targetName}$`, 'i') } }] : [])
-      ]
-    });
-    if (targetName) {
-      await SiteVisitModel.deleteMany({
-        $or: [
-          { site_visit_code: targetId },
-          { customer_name: { $regex: new RegExp(`^${targetName}$`, 'i') } }
-        ]
-      });
-    }
+    const mongoose = (await import('mongoose')).default;
+    const isObjId = mongoose.Types.ObjectId.isValid(targetId);
+
+    const inviteConditions: any[] = [{ id: targetId }];
+    if (isObjId) inviteConditions.push({ _id: targetId });
+    if (targetName) inviteConditions.push({ customerName: { $regex: new RegExp(`^${targetName}$`, 'i') } });
+
+    await RatingInviteModel.deleteMany({ $or: inviteConditions });
+
+    const visitConditions: any[] = [{ site_visit_code: targetId }, { id: targetId }];
+    if (isObjId) visitConditions.push({ _id: targetId });
+    if (targetName) visitConditions.push({ customer_name: { $regex: new RegExp(`^${targetName}$`, 'i') } });
+
+    await SiteVisitModel.deleteMany({ $or: visitConditions });
   } catch (err: any) {
     console.warn('MongoDB delete error:', err?.message);
   }

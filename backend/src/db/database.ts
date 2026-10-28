@@ -516,7 +516,9 @@ export async function loadData() {
   try {
     const mongoData = await loadDataFromMongoDB();
     if (mongoData) {
-      if (Array.isArray(mongoData.users) && mongoData.users.length > 0) dbStore.data.users = mongoData.users as any;
+      if (Array.isArray(mongoData.users) && mongoData.users.length > 0) {
+        dbStore.data.users = mongoData.users as any;
+      }
       if (Array.isArray(mongoData.teams)) dbStore.data.teams = mongoData.teams as any;
       if (Array.isArray(mongoData.branches)) dbStore.data.branches = mongoData.branches as any;
       if (Array.isArray(mongoData.properties)) dbStore.data.properties = mongoData.properties as any;

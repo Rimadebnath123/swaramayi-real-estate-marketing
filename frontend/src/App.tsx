@@ -4914,7 +4914,7 @@ export default function App() {
   // 1. Employee Directory (Strict Single Super Admin Master Store - Direct MongoDB Source)
   const [users, setUsers] = useState<any[]>(() => {
     const defaultCoreUsers = [
-      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'avishek@swaramayi.info', password: 'Swaramayi@2026', mobile: '+91 94323 28947', role: 'SUPER_ADMIN', designation: 'Managing Director & Founder', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' }
+      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'avishek@swaramayi.info', password: 'Swaramayi@2026', mobile: '+9198490 00001', role: 'SUPER_ADMIN', designation: 'Super Admin', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' }
     ];
     try {
       ['swaramayi_users_v7', 'swaramayi_users_v6', 'swaramayi_users_v8', 'swaramayi_users_v5', 'swaramayi_users'].forEach(k => {

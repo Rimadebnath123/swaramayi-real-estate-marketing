@@ -24,7 +24,12 @@ const PORT = process.env.PORT || 5000;
 
 // Initialize Database Storage (Local file + MongoDB fallback)
 loadData();
-connectMongoDB();
+connectMongoDB().then(async (connected) => {
+  if (connected) {
+    await loadData();
+    console.log('✅ In-memory store synced with MongoDB Atlas on startup');
+  }
+});
 
 app.use(cors({
   origin: '*',

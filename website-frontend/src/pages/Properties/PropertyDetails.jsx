@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import {
   MapPin,
   Bed,
@@ -35,6 +35,7 @@ import { useCompare } from '../../context/CompareContext';
 
 export default function PropertyDetails() {
   const { slug } = useParams();
+  const location = useLocation();
   const [property, setProperty] = useState(null);
   const [similarProperties, setSimilarProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,45 +64,57 @@ export default function PropertyDetails() {
     setRatingSubmittedSuccess(false);
   };
 
+  const safeDecode = (str) => {
+    if (!str) return '';
+    try {
+      return decodeURIComponent(str.replace(/\+/g, ' '));
+    } catch (e) {
+      return str;
+    }
+  };
+
+  const getQueryParam = (paramName) => {
+    const search = location.search || window.location.search || '';
+    const hash = location.hash || window.location.hash || '';
+
+    let searchParams = new URLSearchParams(search);
+    let val = searchParams.get(paramName);
+    if (val) return safeDecode(val);
+
+    const qIndex = hash.indexOf('?');
+    if (qIndex !== -1) {
+      const hashQuery = hash.substring(qIndex + 1);
+      const hashParams = new URLSearchParams(hashQuery);
+      val = hashParams.get(paramName);
+      if (val) return safeDecode(val);
+    }
+    return null;
+  };
+
   useEffect(() => {
     fetchDetails();
     window.scrollTo(0, 0);
 
-    const getQueryParam = (paramName) => {
-      let searchParams = new URLSearchParams(window.location.search);
-      let val = searchParams.get(paramName);
-      if (val) return val;
-
-      const hash = window.location.hash || '';
-      const qIndex = hash.indexOf('?');
-      if (qIndex !== -1) {
-        const hashQuery = hash.substring(qIndex + 1);
-        const hashParams = new URLSearchParams(hashQuery);
-        val = hashParams.get(paramName);
-        if (val) return val;
-      }
-      return null;
-    };
-
-    const hash = window.location.hash || '';
+    const hash = location.hash || window.location.hash || '';
     const urlCustomer = getQueryParam('customer') || getQueryParam('name') || getQueryParam('customerName');
     const urlAdvisor = getQueryParam('advisor') || getQueryParam('advisorName') || getQueryParam('advisor_name');
     const urlMobile = getQueryParam('mobile') || getQueryParam('phone') || getQueryParam('customerPhone');
 
-    if (hash.includes('rate-advisor') || getQueryParam('rate') === 'true' || urlCustomer || urlAdvisor) {
-      resetRatingForm();
-      setShowRatingModal(true);
-      if (urlCustomer) {
-        setRatingCustomerName(decodeURIComponent(urlCustomer));
-      }
-      if (urlAdvisor) {
-        setRatingAdvisorName(decodeURIComponent(urlAdvisor));
-      }
-      if (urlMobile) {
-        setRatingCustomerPhone(decodeURIComponent(urlMobile));
-      }
+    if (urlCustomer) {
+      setRatingCustomerName(urlCustomer);
     }
-  }, [slug]);
+    if (urlAdvisor) {
+      setRatingAdvisorName(urlAdvisor);
+    }
+    if (urlMobile) {
+      setRatingCustomerPhone(urlMobile);
+    }
+
+    if (hash.includes('rate-advisor') || getQueryParam('rate') === 'true' || urlCustomer || urlAdvisor) {
+      setShowRatingModal(true);
+      setRatingSubmittedSuccess(false);
+    }
+  }, [slug, location.search, location.hash]);
 
   const fetchDetails = async () => {
     try {
@@ -354,12 +367,15 @@ export default function PropertyDetails() {
               <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
                 <div className="text-xs font-bold text-gold-600 uppercase tracking-wider mb-3">Assigned Property Advisor</div>
                 {(() => {
+                  const urlAdvisor = getQueryParam('advisor') || getQueryParam('advisorName') || getQueryParam('advisor_name') || ratingAdvisorName;
                   const advisor = property.assignedAdvisor || property.agent || {};
-                  const advisorName = advisor.name || advisor.full_name || property.assigned_employee_name || property.site_person_name || 'Official Swaramayi Advisor';
+                  const advisorName = urlAdvisor || advisor.name || advisor.full_name || property.assigned_employee_name || property.site_person_name || 'Official Swaramayi Advisor';
                   const advisorRole = advisor.role || advisor.designation || 'Property Consultation Desk';
                   const advisorPhone = '+91 89021 30791';
                   const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(advisorName)}&background=0b192c&color=e5a93c&size=200&bold=true`;
-                  const advisorImage = advisor.profileImage || advisor.image || advisor.avatar || defaultAvatar;
+                  const advisorImage = urlAdvisor && urlAdvisor !== advisor.name
+                    ? defaultAvatar
+                    : (advisor.profileImage || advisor.image || advisor.avatar || defaultAvatar);
                   const advisorRating = (advisor.rating && Number(advisor.rating) > 0)
                     ? Number(advisor.rating).toFixed(1)
                     : (advisor.advisor_rating || '4.8');
@@ -424,7 +440,11 @@ export default function PropertyDetails() {
                       <button
                         type="button"
                         onClick={() => {
-                          resetRatingForm();
+                          setRatingSubmittedSuccess(false);
+                          const cName = getQueryParam('customer') || getQueryParam('name') || getQueryParam('customerName');
+                          const mob = getQueryParam('mobile') || getQueryParam('phone') || getQueryParam('customerPhone');
+                          if (cName && !ratingCustomerName) setRatingCustomerName(cName);
+                          if (mob && !ratingCustomerPhone) setRatingCustomerPhone(mob);
                           setRatingAdvisorName(advisorName);
                           setShowRatingModal(true);
                         }}
@@ -498,32 +518,46 @@ export default function PropertyDetails() {
                     alert('Please enter your full name to submit the rating.');
                     return;
                   }
-                  const advName = ratingAdvisorName || property?.assignedAdvisor?.name || property?.agent?.name || property?.assigned_employee_name || property?.site_person_name || 'Property Advisor';
+                  const advName = (ratingAdvisorName && ratingAdvisorName.trim()) 
+                    || (property?.assignedAdvisor?.name && property?.assignedAdvisor?.name.trim()) 
+                    || (property?.agent?.name && property?.agent?.name.trim()) 
+                    || (property?.assigned_employee_name && property?.assigned_employee_name.trim()) 
+                    || (property?.site_person_name && property?.site_person_name.trim()) 
+                    || 'Official Swaramayi Advisor';
                   const host = window.location.hostname || 'localhost';
                   const ratingPayload = {
                     advisorName: advName,
                     rating: ratingStars,
-                    customerName: ratingCustomerName,
-                    customerPhone: ratingCustomerPhone,
-                    comment: ratingComment,
+                    customerName: ratingCustomerName.trim(),
+                    customerPhone: ratingCustomerPhone.trim(),
+                    comment: ratingComment.trim(),
                     propertyTitle: property?.title || ''
                   };
 
+                  let submittedOk = false;
+                  // 1. Try relative URL /api/public/advisor-rating (Works on AWS Nginx & Vite dev proxy)
                   try {
-                    await fetch(`http://${host}:5000/api/public/advisor-rating`, {
+                    const res1 = await fetch('/api/public/advisor-rating', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify(ratingPayload)
                     });
-                  } catch (err) {
+                    if (res1.ok) submittedOk = true;
+                  } catch (e1) {
+                    console.warn('Proxy advisor rating submit:', e1);
+                  }
+
+                  // 2. Fallback to direct port 5000 if running locally without proxy
+                  if (!submittedOk) {
                     try {
-                      await fetch('/api/public/advisor-rating', {
+                      const res2 = await fetch(`http://${host}:5000/api/public/advisor-rating`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(ratingPayload)
                       });
+                      if (res2.ok) submittedOk = true;
                     } catch (e2) {
-                      console.warn('Backend rating endpoint sync:', e2);
+                      console.warn('Direct port 5000 advisor rating submit:', e2);
                     }
                   }
 
@@ -550,20 +584,24 @@ export default function PropertyDetails() {
                   </span>
                   <h3 className="text-lg font-bold text-navy-900">Rate Your Property Advisor</h3>
                   <p className="text-xs text-gray-500">
-                    Share your consultation experience with {ratingAdvisorName || property?.assignedAdvisor?.name || property?.agent?.name || property?.assigned_employee_name || property?.site_person_name || 'Property Advisor'}
+                    Share your consultation experience with {ratingAdvisorName || getQueryParam('advisor') || property?.assignedAdvisor?.name || property?.agent?.name || 'Official Swaramayi Advisor'}
                   </p>
                 </div>
 
                 {/* Advisor Banner */}
                 <div className="flex items-center space-x-3 p-3 bg-amber-50/70 rounded-xl border border-amber-200/80">
                   <img
-                    src={property?.assignedAdvisor?.profileImage || property?.agent?.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(ratingAdvisorName || property?.assignedAdvisor?.name || property?.agent?.name || 'Swaramayi Advisor')}&background=0b192c&color=e5a93c&size=200&bold=true`}
-                    alt="Advisor"
+                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(ratingAdvisorName || getQueryParam('advisor') || property?.assignedAdvisor?.name || 'Swaramayi Advisor')}&background=0b192c&color=e5a93c&size=200&bold=true`}
+                    alt={ratingAdvisorName || 'Advisor'}
                     className="w-12 h-12 rounded-full object-cover border-2 border-gold-500 shadow-xs"
                   />
                   <div>
-                    <h4 className="font-bold text-navy-900 text-sm">{ratingAdvisorName || property?.assignedAdvisor?.name || property?.agent?.name || property?.assigned_employee_name || property?.site_person_name || 'Property Advisor'}</h4>
-                    <p className="text-xs text-gray-500 font-medium">{property?.assignedAdvisor?.role || property?.agent?.role || 'Property Advisor'}</p>
+                    <h4 className="font-bold text-navy-900 text-sm">
+                      {ratingAdvisorName || getQueryParam('advisor') || property?.assignedAdvisor?.name || property?.agent?.name || property?.assigned_employee_name || 'Official Swaramayi Advisor'}
+                    </h4>
+                    <p className="text-xs text-gray-500 font-medium">
+                      {(ratingAdvisorName || getQueryParam('advisor')) ? 'Assigned Property Advisor' : (property?.assignedAdvisor?.role || property?.agent?.role || 'Property Advisor')}
+                    </p>
                     <div className="text-[10px] text-amber-800 font-bold mt-0.5">Official Swaramayi Property Advisor</div>
                   </div>
                 </div>

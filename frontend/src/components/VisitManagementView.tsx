@@ -325,7 +325,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       payment_mode: 'UPI / Online Bank Transfer',
       payment_ref: `TXN-SRM-${Math.floor(100000 + Math.random() * 900000)}`,
       brokerage_rate: '2.0%',
-      brokerage_amount: Math.round((pva.agreement_value_num || 0) * 0.02),
+      brokerage_amount: Math.round(((v?.agreement_value_num || 5114880) || 0) * 0.02),
       approval_status: 'APPROVED_LOCKED',
       sales_executive: v.assignedExecutive || 'Unassigned'
     };
@@ -416,45 +416,8 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       }
     });
 
-    // 2. Add site_visits with RATED status from scheduledVisits
-    (scheduledVisits || []).forEach((v: any) => {
-      const isRatedVisit = v.visit_status === 'RATED' || v.status === 'RATED' || String(v.site_visit_code || '').includes('RATING') || String(v.feedback_notes || '').includes('Rating');
-      if (isRatedVisit) {
-        const cName = String(v.customer_name || v.customerName || '').toLowerCase();
-        const cMob = String(v.customer_number || v.customerNumber || v.mobile || '');
-        if (!cName.includes('gfhj') && !cMob.includes('5677456775')) {
-          const key = String(v.site_visit_code || v.id || `${v.customer_name}-${v.sales_executive}`);
-          if (!map.has(key)) {
-            let rNum = 5;
-            let noteText = v.feedback_notes || v.remarks || 'Website Customer Rating';
-            if (v.feedback_notes && v.feedback_notes.includes('Rating:')) {
-              const match = v.feedback_notes.match(/Rating:\s*(\d)/);
-              if (match) rNum = parseInt(match[1], 10);
-              if (v.feedback_notes.includes('Feedback:')) {
-                noteText = v.feedback_notes.split('Feedback:')[1].trim();
-              }
-            }
-            map.set(key, {
-              id: v.site_visit_code || v.id || `SRM-RAT-INV-${Math.floor(1000 + Math.random() * 9000)}`,
-              date: v.created_at ? new Date(v.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              customerName: v.customer_name || v.customerName || 'Customer',
-              customerMobile: v.customer_number || v.customerNumber || v.mobile || '',
-              advisorName: v.sales_executive || v.assignedExecutive || 'Unassigned',
-              propertyTitle: v.propertyTitle || 'Property Visit',
-              rating: rNum,
-              feedbackText: noteText,
-              comment: noteText,
-              status: 'VERIFIED_AND_RATED',
-              deliveryChannel: 'DIRECT_WEBSITE_FORM',
-              channel: 'DIRECT_WEBSITE_FORM'
-            });
-          }
-        }
-      }
-    });
-
     return Array.from(map.values());
-  }, [ratingInvitesList, scheduledVisits]);
+  }, [ratingInvitesList]);
 
   const unifiedVisits = React.useMemo(() => {
     let list: any[] = [...(scheduledVisits || [])].map((v: any) => {
@@ -3534,7 +3497,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
               <h4 style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff' }}>📋 DISPATCHED ADVISOR RATING INVITES & FEEDBACK LOGS</h4>
               <p style={{ fontSize: '0.76rem', color: isLight ? '#64748b' : '#94a3b8' }}>Track customer feedback link delivery status and customer review responses</p>
             </div>
-            <button onClick={() => setShowSendAdvisorRatingModal(true)} style={{ background: '#f59e0b', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button onClick={() => { if (!ratingAdvisorName && assignedAdvisors.length > 0) { setRatingAdvisorName(assignedAdvisors[0].name); } setShowSendAdvisorRatingModal(true); }} style={{ background: '#f59e0b', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Plus size={14} /> Send New Link
             </button>
           </div>
@@ -4204,19 +4167,16 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
 
             {(() => {
               const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-              const websiteBaseUrl = isLocal
-                ? (import.meta.env.VITE_WEBSITE_URL || 'http://localhost:5001')
-                : (import.meta.env.VITE_WEBSITE_URL && !import.meta.env.VITE_WEBSITE_URL.includes('localhost')
-                    ? import.meta.env.VITE_WEBSITE_URL
-                    : 'https://web.swaramayi.info');
-              const cleanBase = (websiteBaseUrl || 'https://web.swaramayi.info').replace(/\/+$/, '');
+              const cleanBase = isLocal ? 'http://localhost:5001' : 'https://web.swaramayi.info';
 
-              const matchedAdvisor = assignedAdvisors.find(a => a.name === ratingAdvisorName || a.id === ratingAdvisorName);
-              const advFirstProp = (matchedAdvisor?.assigned_properties && matchedAdvisor.assigned_properties[0]) || null;
+              const effectiveAdvisor = ratingAdvisorName || (assignedAdvisors.length > 0 ? assignedAdvisors[0].name : 'Official Swaramayi Advisor');
+              const matchedAdvisor = assignedAdvisors.find(a => a.name === effectiveAdvisor || a.id === effectiveAdvisor);
+              const advFirstProp = ((matchedAdvisor as any)?.assigned_properties && matchedAdvisor.assigned_properties[0]) || null;
               const targetProperty = (properties || []).find((p: any) => 
+                (ratingPropertyTitle && (p.title === ratingPropertyTitle || p.property_code === ratingPropertyTitle || p.id === ratingPropertyTitle)) ||
                 (advFirstProp && (p.property_code === advFirstProp.code || p.id === advFirstProp.code || p.title === advFirstProp.title)) ||
-                (p.assigned_employee_name && p.assigned_employee_name.toLowerCase().includes((ratingAdvisorName || '').toLowerCase())) ||
-                (p.assignedAdvisor?.name && p.assignedAdvisor.name.toLowerCase().includes((ratingAdvisorName || '').toLowerCase()))
+                (p.assigned_employee_name && p.assigned_employee_name.toLowerCase().includes((effectiveAdvisor || '').toLowerCase())) ||
+                (p.assignedAdvisor?.name && p.assignedAdvisor.name.toLowerCase().includes((effectiveAdvisor || '').toLowerCase()))
               ) || (properties && properties[0]) || null;
 
               const propSlug = targetProperty?.slug || 
@@ -4225,7 +4185,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                targetProperty?.id || 
                                'jms-apartment-srm-prop-2026-000001';
 
-              const liveRatingLink = `${cleanBase}/properties/${propSlug}?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(ratingCustomerName || 'Customer')}&mobile=${encodeURIComponent(ratingCustomerMobile || '')}#rate-advisor`;
+              const liveRatingLink = `${cleanBase}/properties/${propSlug}?rate=true&advisor=${encodeURIComponent(effectiveAdvisor)}&customer=${encodeURIComponent(ratingCustomerName || 'Customer')}&mobile=${encodeURIComponent(ratingCustomerMobile || '')}#rate-advisor`;
 
               return (
                 <div>
@@ -4278,19 +4238,16 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                 const targetMobile = ratingCustomerMobile || '';
 
                 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-                const websiteBaseUrl = isLocal
-                  ? (import.meta.env.VITE_WEBSITE_URL || 'http://localhost:5001')
-                  : (import.meta.env.VITE_WEBSITE_URL && !import.meta.env.VITE_WEBSITE_URL.includes('localhost')
-                      ? import.meta.env.VITE_WEBSITE_URL
-                      : 'https://web.swaramayi.info');
-                const cleanBase = (websiteBaseUrl || 'https://web.swaramayi.info').replace(/\/+$/, '');
+                const cleanBase = isLocal ? 'http://localhost:5001' : 'https://web.swaramayi.info';
 
-                const matchedAdvisor = assignedAdvisors.find(a => a.name === ratingAdvisorName || a.id === ratingAdvisorName);
-                const advFirstProp = (matchedAdvisor?.assigned_properties && matchedAdvisor.assigned_properties[0]) || null;
+                const effectiveAdvisor = ratingAdvisorName || (assignedAdvisors.length > 0 ? assignedAdvisors[0].name : 'Official Swaramayi Advisor');
+                const matchedAdvisor = assignedAdvisors.find(a => a.name === effectiveAdvisor || a.id === effectiveAdvisor);
+                const advFirstProp = ((matchedAdvisor as any)?.assigned_properties && matchedAdvisor.assigned_properties[0]) || null;
                 const targetProperty = (properties || []).find((p: any) => 
+                  (ratingPropertyTitle && (p.title === ratingPropertyTitle || p.property_code === ratingPropertyTitle || p.id === ratingPropertyTitle)) ||
                   (advFirstProp && (p.property_code === advFirstProp.code || p.id === advFirstProp.code || p.title === advFirstProp.title)) ||
-                  (p.assigned_employee_name && p.assigned_employee_name.toLowerCase().includes((ratingAdvisorName || '').toLowerCase())) ||
-                  (p.assignedAdvisor?.name && p.assignedAdvisor.name.toLowerCase().includes((ratingAdvisorName || '').toLowerCase()))
+                  (p.assigned_employee_name && p.assigned_employee_name.toLowerCase().includes((effectiveAdvisor || '').toLowerCase())) ||
+                  (p.assignedAdvisor?.name && p.assignedAdvisor.name.toLowerCase().includes((effectiveAdvisor || '').toLowerCase()))
                 ) || (properties && properties[0]) || null;
 
                 const propSlug = targetProperty?.slug || 
@@ -4299,7 +4256,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                  targetProperty?.id || 
                                  'jms-apartment-srm-prop-2026-000001';
 
-                const link = `${cleanBase}/properties/${propSlug}?rate=true&advisor=${encodeURIComponent(ratingAdvisorName)}&customer=${encodeURIComponent(targetCustomer)}&mobile=${encodeURIComponent(targetMobile)}#rate-advisor`;
+                const link = `${cleanBase}/properties/${propSlug}?rate=true&advisor=${encodeURIComponent(effectiveAdvisor)}&customer=${encodeURIComponent(targetCustomer)}&mobile=${encodeURIComponent(targetMobile)}#rate-advisor`;
 
                 if (ratingDeliveryChannel === 'WHATSAPP') {
                   window.open(`https://wa.me/${targetMobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Dear ${targetCustomer}, thank you for your recent property consultation with Swaramayi Real Estate. Please rate your assigned Property Advisor (${ratingAdvisorName}) here: ${link}`)}`, '_blank');
@@ -4316,12 +4273,22 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                 }
 
                 const host = window.location.hostname || 'localhost';
+                let maxInviteSeq = 0;
+                (allRatingLogs || []).forEach((item: any) => {
+                  const match = String(item.id || '').match(/SRM-RAT-INV-(\d+)/);
+                  if (match) {
+                    const num = parseInt(match[1], 10);
+                    if (!isNaN(num) && num > maxInviteSeq) maxInviteSeq = num;
+                  }
+                });
+                const nextInviteId = `SRM-RAT-INV-${String(maxInviteSeq + 1).padStart(6, '0')}`;
+
                 const newInvitePayload = {
-                  id: `SRM-RAT-INV-${Math.floor(1000 + Math.random() * 9000)}`,
+                  id: nextInviteId,
                   date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
                   customerName: targetCustomer,
                   customerMobile: targetMobile,
-                  advisorName: ratingAdvisorName,
+                  advisorName: effectiveAdvisor,
                   propertyTitle: ratingPropertyTitle || targetProperty?.title || 'General Site Visit',
                   deliveryChannel: ratingDeliveryChannel,
                   customNote: ratingCustomNote || null

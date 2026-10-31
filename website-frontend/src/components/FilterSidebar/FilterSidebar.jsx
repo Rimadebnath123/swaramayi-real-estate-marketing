@@ -1,5 +1,6 @@
-import React from 'react';
-import { SlidersHorizontal, RotateCcw, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { SlidersHorizontal, RotateCcw, Check, X, MapPin } from 'lucide-react';
+import { KOLKATA_LOCATIONS } from '../PropertySearch/PropertySearchBox';
 
 export default function FilterSidebar({ filters, setFilters, onReset, isMobile = false }) {
   const handleChange = (key, value) => {
@@ -42,65 +43,31 @@ export default function FilterSidebar({ filters, setFilters, onReset, isMobile =
         {/* Location */}
         <div>
           <label className="block font-bold text-gray-700 uppercase tracking-wider mb-1.5">Kolkata Location</label>
-          <select
-            value={filters.location || ''}
-            onChange={(e) => handleChange('location', e.target.value)}
-            className="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-xs text-navy-900 focus:outline-none focus:border-navy-900"
-          >
-            <option value="">All Locations</option>
-            <option value="Alipore">Alipore</option>
-            <option value="Anwar Shah Road">Anwar Shah Road</option>
-            <option value="Ashok Nagar Road">Ashok Nagar Road</option>
-            <option value="Ballygunge">Ballygunge</option>
-            <option value="Bamangachhi">Bamangachhi</option>
-            <option value="Bansdroni">Bansdroni</option>
-            <option value="Barasat">Barasat</option>
-            <option value="Behala">Behala</option>
-            <option value="Bhawanipur">Bhawanipur</option>
-            <option value="Bidhan Nagar Road">Bidhan Nagar Road</option>
-            <option value="Bira">Bira</option>
-            <option value="Birati">Birati</option>
-            <option value="Bisharpara Kodaliya">Bisharpara Kodaliya</option>
-            <option value="Chetla">Chetla</option>
-            <option value="Dattapukur">Dattapukur</option>
-            <option value="Dhakuria">Dhakuria</option>
-            <option value="Dum Dum">Dum Dum</option>
-            <option value="Dum Dum Cantonment">Dum Dum Cantonment</option>
-            <option value="Dum Dum Junction">Dum Dum Junction</option>
-            <option value="Durganagar">Durganagar</option>
-            <option value="EM Bypass">EM Bypass</option>
-            <option value="Garia">Garia</option>
-            <option value="Gariahat">Gariahat</option>
-            <option value="Golf Green">Golf Green</option>
-            <option value="Guma">Guma</option>
-            <option value="Hazra">Hazra</option>
-            <option value="Howrah">Howrah</option>
-            <option value="Hridaypur">Hridaypur</option>
-            <option value="Jadavpur">Jadavpur</option>
-            <option value="Jodhpur Park">Jodhpur Park</option>
-            <option value="Kalighat">Kalighat</option>
-            <option value="Kasba">Kasba</option>
-            <option value="Kudghat">Kudghat</option>
-            <option value="Lake Gardens">Lake Gardens</option>
-            <option value="Lansdowne">Lansdowne</option>
-            <option value="Madhyamgram">Madhyamgram</option>
-            <option value="Mukundapur">Mukundapur</option>
-            <option value="Naktala">Naktala</option>
-            <option value="Netaji Nagar">Netaji Nagar</option>
-            <option value="New Alipore">New Alipore</option>
-            <option value="New Barrackpore">New Barrackpore</option>
-            <option value="New Town">New Town</option>
-            <option value="Prince Anwar Shah Road">Prince Anwar Shah Road</option>
-            <option value="Rajarhat">Rajarhat</option>
-            <option value="Rashbehari Avenue">Rashbehari Avenue</option>
-            <option value="Regent Park">Regent Park</option>
-            <option value="Ruby">Ruby</option>
-            <option value="Salt Lake">Salt Lake</option>
-            <option value="Santoshpur">Santoshpur</option>
-            <option value="Sarat Bose Road">Sarat Bose Road</option>
-            <option value="Sealdah">Sealdah</option>
-            <option value="Tollygunge">Tollygunge</option>
-          </select>
+          <div className="relative">
+            <input
+              type="text"
+              value={filters.location || ''}
+              onChange={(e) => handleChange('location', e.target.value)}
+              placeholder="All Locations (Type or select)..."
+              list="filter-kolkata-locations"
+              className="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-xs text-navy-900 focus:outline-none focus:border-navy-900 font-medium pr-7"
+            />
+            <datalist id="filter-kolkata-locations">
+              {KOLKATA_LOCATIONS.map((loc) => (
+                <option key={loc} value={loc} />
+              ))}
+            </datalist>
+            {filters.location && (
+              <button
+                type="button"
+                onClick={() => handleChange('location', '')}
+                className="absolute right-2.5 top-2.5 text-gray-400 hover:text-navy-900 text-xs font-bold"
+                title="Clear location"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Property Status */}

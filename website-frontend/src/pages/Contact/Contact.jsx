@@ -209,8 +209,6 @@ export default function Contact() {
                           className="w-full bg-gray-50 border border-gray-300 text-navy-900 text-xs rounded-xl p-3 focus:outline-none focus:border-navy-900"
                         >
                           <option value="Property Consultation">Property Consultation</option>
-                          <option value="List My Property">List My Property</option>
-                          <option value="Schedule Site Visit">Schedule Site Visit</option>
                           <option value="Commercial Inquiry">Commercial Inquiry</option>
                         </select>
                       </div>

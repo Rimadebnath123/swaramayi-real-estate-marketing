@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import SEO from '../../components/Common/SEO';
 import Breadcrumbs from '../../components/Common/Breadcrumbs';
 import { fileService } from '../../services/fileService';
-import { FileText, Download, ShieldCheck, ExternalLink } from 'lucide-react';
+import { FileText, Download } from 'lucide-react';
 
 const defaultDemoFiles = [
   {

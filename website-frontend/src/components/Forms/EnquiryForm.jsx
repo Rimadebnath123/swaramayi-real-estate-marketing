@@ -120,8 +120,6 @@ export default function EnquiryForm({ propertyId, propertyTitle }) {
               className="w-full bg-navy-800 border border-gray-700 text-white text-xs sm:text-sm rounded-xl px-3.5 py-2.5 focus:border-gold-500 focus:outline-none font-semibold"
             >
               <option value="Property Consultation">Property Consultation</option>
-              <option value="List My Property">List My Property</option>
-              <option value="Schedule Site Visit">Schedule Site Visit</option>
               <option value="Commercial Inquiry">Commercial Inquiry</option>
             </select>
           </div>

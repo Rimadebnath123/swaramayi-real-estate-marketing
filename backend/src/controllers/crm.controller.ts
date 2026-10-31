@@ -286,7 +286,7 @@ export async function deleteCustomer(req: AuthRequest, res: Response) {
   });
 }
 
-// 4. Complete Customer 360° Profile Dataset (18 Streams)
+// 4. Complete Customer 360┬░ Profile Dataset (18 Streams)
 export async function getCustomer360(req: AuthRequest, res: Response) {
   const { id } = req.params;
   await loadData();
@@ -436,7 +436,7 @@ export async function smartSearch(req: AuthRequest, res: Response) {
 import { 
   syncToMongoDB, loadDataFromMongoDB, PropertyModel, DeveloperModel, 
   CustomerModel, LeadModel, AgreementModel, CostSheetModel, 
-  InvoiceModel, SiteVisitModel 
+  InvoiceModel, SiteVisitModel, MatchingRequestModel, RecycleBinModel
 } from '../db/mongoPersistence.js';
 
 export async function getMongoDBSync(req: AuthRequest, res: Response) {
@@ -449,6 +449,9 @@ export async function getMongoDBSync(req: AuthRequest, res: Response) {
   const data = mongoData || dbStore.data;
   if (data && Array.isArray(dbStore.data.users) && dbStore.data.users.length > 0) {
     data.users = dbStore.data.users;
+  }
+  if (data && Array.isArray((dbStore.data as any).files)) {
+    (data as any).files = (dbStore.data as any).files;
   }
   return res.json({
     status: 'SUCCESS',
@@ -473,14 +476,7 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
 
     if (Array.isArray(payload.leads)) {
       const incomingLeads = payload.leads.filter((l: any) => !isTestRecord(l));
-      const incomingKeys = new Set(incomingLeads.map((l: any) => String(l.lead_number || l.id || '')));
-      
-      // Preserve any server-side web inquiries or leads that the CRM client hasn't fetched yet
-      const existingServerLeads = (dbStore.data.leads || []).filter(
-        (sl: any) => sl && !incomingKeys.has(String(sl.lead_number || '')) && !incomingKeys.has(String(sl.id || ''))
-      );
-
-      dbStore.data.leads = [...existingServerLeads, ...incomingLeads];
+      dbStore.data.leads = incomingLeads;
     }
     if (Array.isArray(payload.properties)) dbStore.data.properties = payload.properties;
     if (Array.isArray(payload.customers)) {
@@ -509,6 +505,8 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
     if (Array.isArray(payload.sourcing_requests)) (dbStore.data as any).sourcing_requests = payload.sourcing_requests;
     if (Array.isArray(payload.developers)) (dbStore.data as any).developers = payload.developers;
     if (Array.isArray(payload.rating_invites)) (dbStore.data as any).rating_invites = payload.rating_invites;
+    if (Array.isArray(payload.files)) (dbStore.data as any).files = payload.files;
+    if (Array.isArray(payload.recycled_items)) (dbStore.data as any).recycled_items = payload.recycled_items;
     saveData();
     await syncToMongoDB(payload);
   }
@@ -535,9 +533,20 @@ function extractItemIdentifiers(item: any): { ids: string[]; cleanTitle: string;
   const fields = isPropertyUnit
     ? [item.id, item._id, rawItem.id, rawItem._id, rawItem.property_code, item.property_code, rawItem.code, item.code]
     : [
-        item.id, item._id, item.property_code, item.code, item.project_id, item.propertyId, item.projectId,
-        item.lead_number, item.customer_number, item.booking_code, item.agreement_code, item.invoice_number,
-        item.costSheetId, item.visitId, item.visitScheduleId, item.visitPlanId, item.record_id, item.itemId
+        item.id, item._id, rawItem.id, rawItem._id,
+        item.property_code, item.code, item.project_id, item.propertyId, item.projectId,
+        rawItem.property_code, rawItem.code, rawItem.project_id,
+        item.lead_number, rawItem.lead_number,
+        item.customer_number, rawItem.customer_number, rawItem.customerNumber, rawItem.customerId,
+        item.booking_code, rawItem.booking_code,
+        item.agreement_code, rawItem.agreement_code,
+        item.invoice_number, rawItem.invoice_number,
+        item.costSheetId, rawItem.costSheetId,
+        item.visitId, rawItem.visitId,
+        item.visitScheduleId, rawItem.visitScheduleId,
+        item.visitPlanId, rawItem.visitPlanId,
+        item.record_id, item.itemId, rawItem.record_id,
+        rawItem.requestId, rawItem.matchingId
       ];
 
   fields.forEach(f => {
@@ -547,14 +556,31 @@ function extractItemIdentifiers(item: any): { ids: string[]; cleanTitle: string;
     }
   });
 
+  const mob = String(rawItem.mobile || rawItem.phone || item.mobile || item.phone || '').replace(/\D/g, '');
+  if (mob && mob.length >= 7) {
+    idsSet.add(mob);
+    idsSet.add(mob.slice(-10));
+  }
+
   const rawTitle = String(
+    rawItem.name || rawItem.full_name || rawItem.customer_name ||
     item.record_title || item.title || item.projectTitle || item.propertyTitle || item.name || item.full_name || ''
   ).trim();
 
-  let cleanTitle = rawTitle;
+  let cleanTitle = rawTitle.replace(/^(Customer|Lead|Property|Project|Booking|Agreement|Invoice)\s*-\s*/i, '');
   const match = cleanTitle.match(/^([^(]+)/);
   if (match && match[1]) {
     cleanTitle = match[1].trim();
+  }
+
+  const bracketMatch = rawTitle.match(/\(([^)]+)\)/);
+  if (bracketMatch && bracketMatch[1]) {
+    const extracted = bracketMatch[1].trim();
+    if (extracted) {
+      idsSet.add(extracted);
+      idsSet.add(extracted.toLowerCase());
+      idsSet.add(extracted.toUpperCase());
+    }
   }
 
   return {
@@ -565,6 +591,14 @@ function extractItemIdentifiers(item: any): { ids: string[]; cleanTitle: string;
 }
 
 export async function purgeSingleItemFromDB(item: any) {
+  if (item && item.id) {
+    try {
+      await RecycleBinModel.deleteMany({ id: item.id });
+      if (Array.isArray((dbStore.data as any).recycled_items)) {
+        (dbStore.data as any).recycled_items = (dbStore.data as any).recycled_items.filter((r: any) => r.id !== item.id);
+      }
+    } catch (e) {}
+  }
   if (!item) return;
   const { ids, cleanTitle, isPropertyUnit } = extractItemIdentifiers(item);
   const cat = String(item.category || item.record_category || '').toLowerCase();
@@ -584,6 +618,12 @@ export async function purgeSingleItemFromDB(item: any) {
     }
     orConditions.push({ lead_number: id });
     orConditions.push({ customer_number: id });
+    orConditions.push({ requestId: id });
+    orConditions.push({ matchingId: id });
+    orConditions.push({ customerNumber: id });
+    orConditions.push({ customerName: id });
+    orConditions.push({ mobile: id });
+    orConditions.push({ phone: id });
     orConditions.push({ booking_code: id });
     orConditions.push({ agreement_code: id });
     orConditions.push({ invoice_number: id });
@@ -597,6 +637,8 @@ export async function purgeSingleItemFromDB(item: any) {
     orConditions.push({ title: titleRegex });
     orConditions.push({ name: titleRegex });
     orConditions.push({ full_name: titleRegex });
+    orConditions.push({ customerName: titleRegex });
+    orConditions.push({ customer_name: titleRegex });
   }
 
   if (orConditions.length === 0) return;
@@ -654,6 +696,18 @@ export async function purgeSingleItemFromDB(item: any) {
       }
     }
 
+    if (cat.includes('dev') || (item.originalLocation && item.originalLocation.includes('Developer')) || ids.some(id => String(id).includes('DEV-'))) {
+      await DeveloperModel.deleteMany(query);
+      if (Array.isArray((dbStore.data as any).developers)) {
+        (dbStore.data as any).developers = (dbStore.data as any).developers.filter((d: any) => {
+          const dIds = extractItemIdentifiers(d).ids;
+          const matchId = dIds.some(id => ids.includes(id));
+          const matchName = cleanTitle && d.name && d.name.toLowerCase().trim() === cleanTitle.toLowerCase().trim();
+          return !matchId && !matchName;
+        });
+      }
+    }
+
     if (cat.includes('lead')) {
       await LeadModel.deleteMany(query);
       if (Array.isArray(dbStore.data.leads)) {
@@ -661,10 +715,21 @@ export async function purgeSingleItemFromDB(item: any) {
       }
     }
 
+    if (cat.includes('match')) {
+      await MatchingRequestModel.deleteMany(query);
+      if (Array.isArray((dbStore.data as any).matching_requests)) {
+        (dbStore.data as any).matching_requests = (dbStore.data as any).matching_requests.filter((m: any) => !extractItemIdentifiers(m).ids.some(id => ids.includes(id)));
+      }
+    }
+
     if (cat.includes('customer')) {
       await CustomerModel.deleteMany(query);
+      await MatchingRequestModel.deleteMany(query);
       if (Array.isArray(dbStore.data.customers)) {
         dbStore.data.customers = dbStore.data.customers.filter((c: any) => !extractItemIdentifiers(c).ids.some(id => ids.includes(id)));
+      }
+      if (Array.isArray((dbStore.data as any).matching_requests)) {
+        (dbStore.data as any).matching_requests = (dbStore.data as any).matching_requests.filter((m: any) => !extractItemIdentifiers(m).ids.some(id => ids.includes(id)));
       }
     }
 
@@ -721,6 +786,10 @@ export async function purgeRecycledItem(req: AuthRequest, res: Response) {
 export async function purgeAllRecycledItems(req: AuthRequest, res: Response) {
   const { items } = req.body;
   await loadData();
+  try {
+    await RecycleBinModel.deleteMany({});
+    (dbStore.data as any).recycled_items = [];
+  } catch (e) {}
 
   if (Array.isArray(items) && items.length > 0) {
     for (const item of items) {

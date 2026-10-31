@@ -61,17 +61,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const currentUser = activeUser;
 
-  const storageKey = `swaramayi_user_avatar_${currentUser.id || currentUser.username}`;
-  const [avatarUrl, setAvatarUrl] = React.useState<string | null>(() => localStorage.getItem(storageKey));
   const [toastMsg, setToastMsg] = React.useState<string>('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    const key = `swaramayi_user_avatar_${currentUser.id || currentUser.username}`;
-    setAvatarUrl(localStorage.getItem(key));
-  }, [currentUser.id, currentUser.username]);
+    // Purge any legacy avatar/image keys from localStorage
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('swaramayi_user_avatar_')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (e) {}
+  }, []);
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfileImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
@@ -81,10 +85,55 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64 = reader.result as string;
-        const key = `swaramayi_user_avatar_${currentUser.id || currentUser.username}`;
-        localStorage.setItem(key, base64);
-        setAvatarUrl(base64);
-        setToastMsg('Profile logo updated successfully!');
+
+        // 1. Update active user profile state with ONLY profileImage (no avatar duplicate)
+        const updatedUser = {
+          ...currentUser,
+          profileImage: base64
+        };
+        delete updatedUser.avatar;
+        setActiveUser(updatedUser);
+
+        // 2. Update users state
+        const updatedUsers = (users || []).map((u: any) => {
+          if (u.id === currentUser.id || u.username === currentUser.username || u.email === currentUser.email) {
+            const clean = { ...u, profileImage: base64 };
+            delete clean.avatar;
+            return clean;
+          }
+          return u;
+        });
+        if (setUsers) setUsers(updatedUsers);
+
+        // 3. For localStorage, store ONLY clean user metadata (strip base64 images so image data is NEVER stored in localStorage)
+        try {
+          const stripImage = (list: any[]) => list.map(u => {
+            const { avatar, profileImage, ...rest } = u;
+            return rest;
+          });
+          const { avatar, profileImage, ...cleanUser } = updatedUser;
+          localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(stripImage(updatedUsers)));
+          localStorage.setItem('swaramayi_users_v7', JSON.stringify(stripImage(updatedUsers)));
+          localStorage.setItem('swaramayi_logged_in_user', JSON.stringify(cleanUser));
+        } catch (err) {}
+
+        // 4. Directly save and persist profileImage to MongoDB database!
+        if (syncAllToMongoDB) {
+          syncAllToMongoDB({ users: updatedUsers });
+        } else {
+          try {
+            const apiUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+              ? 'http://localhost:5000/api/v1/crm/sync'
+              : '/api/v1/crm/sync';
+            fetch(apiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ users: updatedUsers })
+            });
+          } catch (err) {}
+        }
+
+        setToastMsg('Profile image saved to MongoDB successfully!');
         window.dispatchEvent(new Event('swaramayi-avatar-updated'));
         setTimeout(() => setToastMsg(''), 4000);
       };
@@ -92,11 +141,52 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
-  const handleRemoveLogo = () => {
-    const key = `swaramayi_user_avatar_${currentUser.id || currentUser.username}`;
-    localStorage.removeItem(key);
-    setAvatarUrl(null);
-    setToastMsg('Profile logo removed successfully.');
+  const handleRemoveProfileImage = () => {
+    const updatedUser = {
+      ...currentUser,
+      profileImage: ''
+    };
+    delete updatedUser.avatar;
+    setActiveUser(updatedUser);
+
+    const updatedUsers = (users || []).map((u: any) => {
+      if (u.id === currentUser.id || u.username === currentUser.username || u.email === currentUser.email) {
+        const clean = { ...u, profileImage: '' };
+        delete clean.avatar;
+        return clean;
+      }
+      return u;
+    });
+    if (setUsers) setUsers(updatedUsers);
+
+    try {
+      const stripImage = (list: any[]) => list.map(u => {
+        const { avatar, profileImage, ...rest } = u;
+        return rest;
+      });
+      const { avatar, profileImage, ...cleanUser } = updatedUser;
+      localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(stripImage(updatedUsers)));
+      localStorage.setItem('swaramayi_users_v7', JSON.stringify(stripImage(updatedUsers)));
+      localStorage.setItem('swaramayi_logged_in_user', JSON.stringify(cleanUser));
+    } catch (err) {}
+
+    // Remove from MongoDB database
+    if (syncAllToMongoDB) {
+      syncAllToMongoDB({ users: updatedUsers });
+    } else {
+      try {
+        const apiUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+          ? 'http://localhost:5000/api/v1/crm/sync'
+          : '/api/v1/crm/sync';
+        fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ users: updatedUsers })
+        });
+      } catch (err) {}
+    }
+
+    setToastMsg('Profile image removed from MongoDB.');
     window.dispatchEvent(new Event('swaramayi-avatar-updated'));
     setTimeout(() => setToastMsg(''), 4000);
   };
@@ -183,37 +273,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   ];
 
   // ==========================================
-  // MODAL 1: EDIT USER PROFILE (MATCHING IMAGE 2)
+  // MODAL 1: EDIT USER PROFILE
   // ==========================================
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [editForm, setEditForm] = React.useState({
     full_name: '',
-    username: '',
     email: '',
     mobile: '',
-    designation: '',
-    branch_name: '',
-    department: 'Executive Board',
-    team_name: '',
-    manager_name: '',
     user_status: 'ACTIVE & VERIFIED',
     two_factor_method: 'Hardware Key (FIDO2 YubiKey)'
   });
 
   const handleOpenEditModal = () => {
-    if (handleStartEditProfile) {
-      handleStartEditProfile(currentUser);
-    }
     setEditForm({
       full_name: currentUser.full_name || '',
-      username: currentUser.username || currentUser.full_name || '',
       email: currentUser.email || '',
       mobile: currentUser.mobile || '',
-      designation: currentUser.designation || designation,
-      branch_name: currentUser.branch_name || 'Head Office (Kolkata)',
-      department: currentUser.department || 'Executive Board',
-      team_name: currentUser.team_name || 'Corporate Leadership Squad',
-      manager_name: currentUser.manager_name || 'Self',
       user_status: currentUser.user_status || 'ACTIVE & VERIFIED',
       two_factor_method: currentUser.two_factor_method || 'Hardware Key (FIDO2 YubiKey)'
     });
@@ -234,29 +309,31 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     const updatedUser = {
       ...currentUser,
       full_name: editForm.full_name.trim(),
-      username: editForm.username.trim() || editForm.full_name.trim(),
       email: editForm.email.trim(),
       mobile: editForm.mobile.trim(),
-      designation: editForm.designation.trim(),
-      branch_name: editForm.branch_name.trim(),
-      department: editForm.department.trim(),
-      team_name: editForm.team_name.trim(),
-      manager_name: editForm.manager_name.trim(),
       user_status: editForm.user_status,
       two_factor_method: editForm.two_factor_method
     };
+    delete updatedUser.avatar;
 
     setActiveUser(updatedUser);
 
     // Update in users array
-    const updatedUsers = (users || []).map(u => u.id === currentUser.id ? updatedUser : u);
+    const updatedUsers = (users || []).map((u: any) =>
+      (u.id === currentUser.id || u.email === currentUser.email) ? updatedUser : u
+    );
     if (setUsers) setUsers(updatedUsers);
 
-    // Persist to localStorages
+    // Persist clean metadata to localStorage (never store large profile images in localStorage)
     try {
-      localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(updatedUsers));
-      localStorage.setItem('swaramayi_users_v7', JSON.stringify(updatedUsers));
-      localStorage.setItem('swaramayi_logged_in_user', JSON.stringify(updatedUser));
+      const stripAvatar = (list: any[]) => list.map(u => {
+        const { avatar, profileImage, ...rest } = u;
+        return rest;
+      });
+      const { avatar, profileImage, ...cleanUser } = updatedUser;
+      localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(stripAvatar(updatedUsers)));
+      localStorage.setItem('swaramayi_users_v7', JSON.stringify(stripAvatar(updatedUsers)));
+      localStorage.setItem('swaramayi_logged_in_user', JSON.stringify(cleanUser));
     } catch (err) {}
 
     // Sync to MongoDB database
@@ -458,11 +535,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
-      {/* HIDDEN LOGO FILE INPUT */}
+      {/* HIDDEN PROFILE IMAGE FILE INPUT */}
       <input 
         type="file" 
         ref={fileInputRef} 
-        onChange={handleLogoUpload} 
+        onChange={handleProfileImageUpload} 
         accept="image/*" 
         style={{ display: 'none' }} 
       />
@@ -491,16 +568,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: windowWidth <= 480 ? '14px' : '20px', flexWrap: 'wrap' }}>
-          {/* AVATAR BADGE WITH PROFILE LOGO SUPPORT */}
+          {/* PROFILE IMAGE BADGE WITH ONE-CLICK UPLOAD */}
           <div style={{ position: 'relative' }}>
             <div 
               onClick={() => fileInputRef.current?.click()}
-              title="Click to upload or change profile logo"
+              title="Click to upload or change profile photo"
               style={{
                 width: windowWidth <= 480 ? '75px' : '95px',
                 height: windowWidth <= 480 ? '75px' : '95px',
                 borderRadius: '24px',
-                background: avatarUrl ? '#0f172a' : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                background: currentUser.profileImage ? '#0f172a' : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -514,14 +591,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 position: 'relative'
               }}
             >
-              {avatarUrl ? (
+              {currentUser.profileImage ? (
                 <img 
-                  src={avatarUrl} 
-                  alt="Profile Logo" 
+                  src={currentUser.profileImage} 
+                  alt={currentUser.full_name || 'Profile'} 
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                 />
               ) : (
-                currentUser.full_name ? currentUser.full_name.split(' ').map((n: string) => n[0]).join('') : 'AD'
+                currentUser.full_name ? currentUser.full_name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() : (currentUser.username ? currentUser.username.substring(0, 2).toUpperCase() : 'AD')
               )}
 
               {/* CAMERA OVERLAY ON HOVER */}
@@ -547,7 +624,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {/* CAMERA BADGE OVERLAY BUTTON */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              title="Upload Profile Logo"
+              title="Upload Profile Photo"
               style={{
                 position: 'absolute',
                 bottom: '-4px',
@@ -960,27 +1037,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>Full Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={editForm.full_name}
-                      onChange={(e) => setEditForm(f => ({ ...f, full_name: e.target.value }))}
-                      style={{ width: '100%', background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', outline: 'none' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>Username & Display Alias *</label>
-                    <input
-                      type="text"
-                      required
-                      value={editForm.username}
-                      onChange={(e) => setEditForm(f => ({ ...f, username: e.target.value }))}
-                      style={{ width: '100%', background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#f59e0b', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', outline: 'none' }}
-                    />
-                  </div>
+                <div>
+                  <label style={{ fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.full_name}
+                    onChange={(e) => setEditForm(f => ({ ...f, full_name: e.target.value }))}
+                    style={{ width: '100%', background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', outline: 'none' }}
+                  />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
@@ -1005,77 +1070,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     />
                   </div>
                 </div>
-
-                <div>
-                  <label style={{ fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>Official Designation</label>
-                  <input
-                    type="text"
-                    value={editForm.designation}
-                    onChange={(e) => setEditForm(f => ({ ...f, designation: e.target.value }))}
-                    style={{ width: '100%', background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', outline: 'none' }}
-                  />
-                </div>
               </div>
 
-              {/* SECTION 2: ORGANIZATIONAL & BRANCH GOVERNANCE */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Building size={15} color="#f59e0b" />
-                  <span style={{ fontSize: '0.76rem', fontWeight: '900', color: '#f59e0b', letterSpacing: '0.5px' }}>
-                    ORGANIZATIONAL & BRANCH GOVERNANCE
-                  </span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>Assigned Branch</label>
-                    <input
-                      type="text"
-                      value={editForm.branch_name}
-                      onChange={(e) => setEditForm(f => ({ ...f, branch_name: e.target.value }))}
-                      style={{ width: '100%', background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', outline: 'none' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>Department</label>
-                    <select
-                      value={editForm.department}
-                      onChange={(e) => setEditForm(f => ({ ...f, department: e.target.value }))}
-                      style={{ width: '100%', background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', outline: 'none' }}
-                    >
-                      <option value="Executive Board">Executive Board</option>
-                      <option value="Sales Operations">Sales Operations</option>
-                      <option value="System Admin">System Admin</option>
-                      <option value="Property Management">Property Management</option>
-                      <option value="Client Acquisition">Client Acquisition</option>
-                      <option value="Finance & Accounts">Finance & Accounts</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>Team Assignment</label>
-                    <input
-                      type="text"
-                      value={editForm.team_name}
-                      onChange={(e) => setEditForm(f => ({ ...f, team_name: e.target.value }))}
-                      style={{ width: '100%', background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', outline: 'none' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '4px' }}>Reporting Manager</label>
-                    <input
-                      type="text"
-                      value={editForm.manager_name}
-                      onChange={(e) => setEditForm(f => ({ ...f, manager_name: e.target.value }))}
-                      style={{ width: '100%', background: isLight ? '#f8fafc' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', outline: 'none' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 3: ACCOUNT STATUS & SECURITY PREFERENCES */}
+              {/* SECTION 2: ACCOUNT STATUS & SECURITY PREFERENCES */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Key size={15} color="#22c55e" />

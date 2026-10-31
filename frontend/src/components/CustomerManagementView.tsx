@@ -717,42 +717,8 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
       }
     });
 
-    // 3. Auto-incorporate leads (Skip unassigned web inquiries)
-    (leadsList || []).forEach(l => {
-      if (!l) return;
-      const isWebLead = l.source && (l.source.includes('Website') || l.source.includes('Web'));
-      if (isWebLead) return;
-      const custNum = l.customer_number || `SRM-CUS-2026-000${String(l.id).slice(-3)}`;
-      const cleanMob = l.mobile ? l.mobile.replace(/\D/g, '') : '';
-      const { keys } = getKeys({ customer_number: custNum, mobile: cleanMob, name: l.customer_name, id: l.customer_id || `CUS-${l.id}` });
+    // 3. Auto-incorporate matching requests (unconverted leads are kept in Lead Management until 9-step conversion)
 
-      if (!isDuplicate(keys)) {
-        registerKeys(keys);
-        list.push({
-          id: l.customer_id || `CUS-${l.id}`,
-          customer_number: custNum,
-          full_name: l.customer_name || 'Lead Customer',
-          name: l.customer_name || 'Lead Customer',
-          mobile: l.mobile,
-          email: l.email || 'lead@swaramayi.com',
-          budget: l.budget || ((l.budget_min || l.budget_max) ? `${l.budget_min || ''} - ${l.budget_max || ''}`.trim() : '50 Lakhs - 60 Lakhs'),
-          preferredArea: l.preferred_location || l.location || '',
-          configuration: l.bhk || '3BHK',
-          priority: l.priority || 'HOT',
-          score: l.quality_score || 88,
-          source: l.source || 'Lead Ingestion',
-          lead_status: l.lead_status || 'NEW_INGESTED',
-          customer_status: 'NEW',
-          status: 'NEW',
-          quality_score: l.quality_score || 88,
-          created_at: l.created_at || new Date().toISOString(),
-          is_deleted: false,
-          leadData: l
-        });
-      }
-    });
-
-    // 4. Auto-incorporate matching requests
     (matchingRequestsQueue || []).forEach(m => {
       if (!m) return;
       const custNum = m.customerNumber || m.customerId || m.customer_number || `SRM-CUS-2026-${String(m.id || m.requestId || '000186').replace(/\D/g, '').slice(-6) || '000186'}`;
@@ -841,7 +807,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
     });
 
     return list;
-  }, [customers, individualCostSheets, leadsList, matchingRequestsQueue, scheduledVisits, recycledItems]);
+  }, [customers, individualCostSheets, matchingRequestsQueue, scheduledVisits, recycledItems]);
 
   const getCustomerTransactionChainItems = (cust: any) => {
     const custNum = (cust?.customer_number || cust?.customer_id || cust?.id || '').toString().trim();

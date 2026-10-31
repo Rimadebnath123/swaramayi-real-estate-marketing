@@ -1,5 +1,5 @@
 import React from 'react';
-import { GitMerge, Calendar, Sparkles, UserPlus, Search, X, ArrowDown, FileSpreadsheet } from 'lucide-react';
+import { GitMerge, Calendar, Sparkles, UserPlus, Search, X, ArrowDown } from 'lucide-react';
 
 const cleanExecutiveName = (val?: string): string => {
   if (!val) return 'Avishek Das (Super Admin)';
@@ -13,7 +13,6 @@ interface LeadManagementViewProps {
   leadViewMode: 'inbox' | 'pipeline' | 'calendar' | 'analytics';
   setLeadViewMode: React.Dispatch<React.SetStateAction<'inbox' | 'pipeline' | 'calendar' | 'analytics'>>;
   setShowLeadModal: (val: boolean) => void;
-  setShowBulkUploadModal?: (val: boolean) => void;
   leadsList: any[];
   leadInboxTab: string;
   setLeadInboxTab: (tab: string) => void;
@@ -41,6 +40,8 @@ interface LeadManagementViewProps {
   isSuperAdmin?: boolean;
   setLeadsList?: React.Dispatch<React.SetStateAction<any[]>>;
   onRecycleItem?: (itemData: any) => void;
+  recycledItems?: any[];
+  syncAllToMongoDB?: (overrideData?: any) => Promise<void>;
 }
 
 export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
@@ -49,10 +50,11 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
   leadViewMode,
   setLeadViewMode,
   setShowLeadModal,
-  setShowBulkUploadModal,
   leadsList = [],
   setLeadsList,
   onRecycleItem,
+  recycledItems = [],
+  syncAllToMongoDB,
   isSuperAdmin = false,
   leadInboxTab,
   setLeadInboxTab,
@@ -118,9 +120,6 @@ export const LeadManagementView: React.FC<LeadManagementViewProps> = ({
           </button>
           <button onClick={() => setLeadViewMode(leadViewMode === 'analytics' ? 'inbox' : 'analytics')} style={{ background: leadViewMode === 'analytics' ? '#0284c7' : (isLight ? '#f1f5f9' : '#0f172a'), color: leadViewMode === 'analytics' ? '#ffffff' : (isLight ? '#0f172a' : '#ffffff'), border: leadViewMode === 'analytics' ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), padding: windowWidth <= 640 ? '6px 10px' : '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: windowWidth <= 640 ? '0.73rem' : '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', flex: windowWidth <= 640 ? '1 1 calc(50% - 6px)' : 'initial' }}>
             <Sparkles size={15} color={leadViewMode === 'analytics' ? '#ffffff' : (isLight ? '#0284c7' : 'currentColor')} /> {leadViewMode === 'analytics' ? '📋 Back to Central Inbox' : '📊 Lead & Performance Analytics'}
-          </button>
-          <button onClick={() => setShowBulkUploadModal ? setShowBulkUploadModal(true) : null} style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: '1px solid #0284c7', padding: windowWidth <= 640 ? '6px 10px' : '8px 14px', borderRadius: '8px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.73rem' : '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', flex: windowWidth <= 640 ? '1 1 calc(50% - 6px)' : 'initial', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.15)' }}>
-            <FileSpreadsheet size={15} color="#0284c7" /> 📁 BULK UPLOAD LEADS
           </button>
           <button onClick={() => handleOpenLeadModal ? handleOpenLeadModal() : setShowLeadModal(true)} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: windowWidth <= 640 ? '6px 12px' : '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: windowWidth <= 640 ? '0.75rem' : '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', flex: windowWidth <= 640 ? '1 1 100%' : 'initial', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)' }}>
             <UserPlus size={16} /> + CREATE NEW LEAD

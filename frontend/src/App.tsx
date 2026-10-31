@@ -41,13 +41,24 @@ export const extractAllIdentifiers = (item: any): Set<string> => {
 
   [
     item.id,
+    item.customer_number,
+    item.lead_number,
     data.id,
     data._id,
     data.property_code,
     data.code,
     data.lead_number,
+    data.leadNumber,
     data.customer_number,
-    data.name
+    data.customerNumber,
+    data.customerId,
+    data.requestId,
+    data.matchingId,
+    data.name,
+    data.full_name,
+    data.customer_name,
+    data.mobile,
+    data.phone
   ].forEach(val => {
     if (val && typeof val === 'string' && val.trim()) {
       const trimmed = val.trim();
@@ -75,7 +86,9 @@ export const extractAllIdentifiers = (item: any): Set<string> => {
       data.property_title,
       data.project_title,
       data.project_name,
-      data.name
+      data.name,
+      data.customerName,
+      data.customer_name
     ];
 
     titlesToProcess.forEach(rawTitle => {
@@ -103,6 +116,13 @@ export const isItemInRecycledSet = (targetItem: any, recycledSet: Set<string>): 
     if (recycledSet.has(id)) return true;
   }
   return false;
+};
+
+export const parsePct = (val: any, fallback: number = 0): number => {
+  if (typeof val === 'number') return isNaN(val) ? fallback : val;
+  if (val === null || val === undefined || val === '') return fallback;
+  const parsed = parseFloat(String(val).replace(/[^0-9.]/g, ''));
+  return isNaN(parsed) ? fallback : parsed;
 };
 
 export const cleanExecutiveName = (val?: string): string => {
@@ -148,6 +168,7 @@ export const numberToWordsIndian = (num: number): string => {
 };
 
 import { ProfileView } from './components/ProfileView';
+import { ForgotPasswordView } from './components/ForgotPasswordView';
 import { RecycleBinView } from './components/RecycleBinView';
 import { RoleManagementView } from './components/RoleManagementView';
 import { BillingManagementView } from './components/BillingManagementView';
@@ -159,10 +180,10 @@ import { VisitManagementView } from './components/VisitManagementView';
 import { CostSheetSharingView } from './components/CostSheetSharingView';
 import { CustomerManagementView } from './components/CustomerManagementView';
 import { LeadManagementView } from './components/LeadManagementView';
-import { BulkLeadUploadModal } from './components/BulkLeadUploadModal';
 import { MatchingManagementView } from './components/MatchingManagementView';
 import { PropertySourcingRequestsView } from './components/PropertySourcingRequestsView';
 import { CrmReportView } from './components/CrmReportView';
+import { WebsitePortalView } from './components/WebsitePortalView';
 import { MultiSelectFloorSelector } from './components/MultiSelectFloorSelector';
 import { LocationAutocompleteInput } from './components/LocationAutocompleteInput';
 import { loadGoogleMapsApi, geocodeAddress, getGoogleMapsApiKey } from './utils/googleMapsLoader';
@@ -1397,7 +1418,7 @@ function ScheduleVisitModalContent({
   };
 
   // Execute Creation
-  const handleConfirmCreate = () => {
+  const handleConfirmCreate = async () => {
     try {
       // 1. Resolve Stops to Use
       let stopsToUse = (Array.isArray(orderedStops) && orderedStops.length > 0) ? orderedStops : [];
@@ -1496,6 +1517,32 @@ function ScheduleVisitModalContent({
         ? (branches.find((b: any) => b && (b.id === 'BR-01' || (typeof b.branch_name === 'string' && b.branch_name.includes('Head Office')))) || branches[0])
         : null;
 
+      // Resolve live GPS coordinates via geocodeAddress for pickup and drop locations
+      let resolvedPickLat = '22.720500° N';
+      let resolvedPickLng = '88.485000° E';
+      let resolvedDropLat = '22.725000° N';
+      let resolvedDropLng = '88.498000° E';
+
+      if (pickupAddress && pickupAddress.trim()) {
+        try {
+          const geoP = await geocodeAddress(pickupAddress.trim());
+          if (geoP && geoP.lat && geoP.lng) {
+            resolvedPickLat = `${geoP.lat.toFixed(6)}° N`;
+            resolvedPickLng = `${geoP.lng.toFixed(6)}° E`;
+          }
+        } catch (e) {}
+      }
+
+      if (dropAddress && dropAddress.trim()) {
+        try {
+          const geoD = await geocodeAddress(dropAddress.trim());
+          if (geoD && geoD.lat && geoD.lng) {
+            resolvedDropLat = `${geoD.lat.toFixed(6)}° N`;
+            resolvedDropLng = `${geoD.lng.toFixed(6)}° E`;
+          }
+        } catch (e) {}
+      }
+
       // 5. Construct Complete Visit Plan
       const newPlan = {
         visitPlanId: masterScheduleId,
@@ -1513,13 +1560,13 @@ function ScheduleVisitModalContent({
         status: 'ASSIGNED',
         transport: transportMode || '🚗 Cab Pick & Drop Needed',
         pickupAddress: pickupAddress || '',
-        pickupLat: '22.720500° N',
-        pickupLng: '88.485000° E',
+        pickupLat: resolvedPickLat,
+        pickupLng: resolvedPickLng,
         pickupStatus: 'PENDING',
         pickupTime: pickupTime || '10:00 AM',
         dropAddress: dropAddress || '',
-        dropLat: '22.725000° N',
-        dropLng: '88.498000° E',
+        dropLat: resolvedDropLat,
+        dropLng: resolvedDropLng,
         dropStatus: 'PENDING',
         currentStopIndex: 0,
         autoNavigateNext: true,
@@ -2479,9 +2526,24 @@ function IndividualStopModalContent({
   setActiveProjectSubTab
 }: any) {
   const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
-  const cleanLat = stop.latitude.replace(/[^0-9.]/g, '') || '22.722361';
-  const cleanLng = stop.longitude.replace(/[^0-9.]/g, '') || '88.493403';
-  const mapsDirUrl = `https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}&travelmode=driving`;
+  const safeStop = stop || {};
+  const safePlan = plan || {};
+  const [activeLat, setActiveLat] = useState<string>(String(safeStop.latitude || '').replace(/[^0-9.]/g, '') || '22.722361');
+  const [activeLng, setActiveLng] = useState<string>(String(safeStop.longitude || '').replace(/[^0-9.]/g, '') || '88.493403');
+
+  useEffect(() => {
+    if (safeStop.address && (!safeStop.latitude || String(safeStop.latitude).includes('22.722361'))) {
+      geocodeAddress(safeStop.address).then(coords => {
+        if (coords && coords.lat && coords.lng) {
+          setActiveLat(String(coords.lat.toFixed(6)));
+          setActiveLng(String(coords.lng.toFixed(6)));
+        }
+      });
+    }
+  }, [safeStop.address]);
+
+  const mapsDirUrl = `https://www.google.com/maps/dir/?api=1&destination=${activeLat},${activeLng}&travelmode=driving`;
+  const mobileStr = String(safePlan.mobile || safePlan.customerMobile || '').replace(/[^0-9]/g, '');
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2100, padding: '20px' }}>
@@ -2530,13 +2592,13 @@ function IndividualStopModalContent({
             🚀 START NAVIGATION
           </button>
           <button 
-            onClick={() => window.open(`tel:${plan.mobile}`)}
+            onClick={() => window.open(`tel:${safePlan.mobile || safePlan.customerMobile || ''}`)}
             style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
           >
             📞 CALL
           </button>
           <button 
-            onClick={() => window.open(`https://api.whatsapp.com/send?phone=${plan.mobile.replace(/[^0-9]/g, '')}`)}
+            onClick={() => window.open(`https://api.whatsapp.com/send?phone=${mobileStr}`)}
             style={{ background: '#25D366', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
           >
             💬 WHATSAPP
@@ -3731,7 +3793,7 @@ export default function App() {
   const [activeVisitSubTab, setActiveVisitSubTab] = useState<'visit_scheduler' | 'visit_route_planner' | 'visit_otp_checkin' | 'visit_feedback' | 'visit_analytics' | 'visit_owner_tracking' | 'advisor_ratings' | 'need_to_followup'>('visit_route_planner');
   const [activeMatchingSubTab, setActiveMatchingSubTab] = useState<'ai_matching_engine' | 'req_inventory_matrix' | 'portfolio_dispatcher'>('ai_matching_engine');
   const [activeCostSheetShareSubTab, setActiveCostSheetShareSubTab] = useState<'individual_cost_sheets' | 'dispatcher' | 'delivery_analytics' | 'portal_tokens' | 'interest_handoff'>('individual_cost_sheets');
-  const [activeRoleSubTab, setActiveRoleSubTab] = useState<'user_directory' | 'permission_matrix' | 'org_hierarchy' | 'teams_directory' | 'approval_queue' | 'session_security' | 'exit_handover'>('user_directory');
+  const [activeRoleSubTab, setActiveRoleSubTab] = useState<'user_directory' | 'permission_matrix' | 'org_hierarchy' | 'teams_directory' | 'approval_queue' | 'session_security' | 'exit_handover' | 'website_files' | string>('user_directory');
   const [activeProjectSubTab, setActiveProjectSubTab] = useState<'property_master' | 'live_inventory_board' | 'map_radius' | 'price_security' | 'deal_pipeline_tracker' | 'add_property_master' | 'introduction_register'>('property_master');
   const [activeCustomerSubTab, setActiveCustomerSubTab] = useState<'sales_journey_funnel' | 'cost_sheet_engine' | 'site_visit_engine' | 'smart_matching_engine' | 'customer_master_vault' | 'customer_360_profile' | 'anti_leakage_engine' | 'selected_properties_connections' | 'secure_customer_portal'>('customer_master_vault');
   const [activeAgreementSubTab, setActiveAgreementSubTab] = useState<'all_agreements' | 'customer_agreements' | 'developer_agreements' | 'tc_templates'>('all_agreements');
@@ -3805,9 +3867,15 @@ export default function App() {
     }
     return '/login';
   });
+  const [isForgotPassword, setIsForgotPassword] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname.toLowerCase().startsWith('/forgot') || window.location.hash === '#forgot';
+    }
+    return false;
+  });
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      if (window.location.pathname.toLowerCase().startsWith('/login')) {
+      if (window.location.pathname.toLowerCase().startsWith('/login') || window.location.pathname.toLowerCase().startsWith('/forgot')) {
         return false;
       }
       try {
@@ -3831,8 +3899,12 @@ export default function App() {
     const handlePopState = () => {
       if (typeof window !== 'undefined') {
         setCurrentPath(window.location.pathname);
-        if (window.location.pathname.toLowerCase().startsWith('/login')) {
+        if (window.location.pathname.toLowerCase().startsWith('/forgot')) {
+          setIsForgotPassword(true);
           setIsLoggedIn(false);
+        } else if (window.location.pathname.toLowerCase().startsWith('/login')) {
+          setIsLoggedIn(false);
+          setIsForgotPassword(false);
         }
       }
     };
@@ -3854,12 +3926,13 @@ export default function App() {
   useEffect(() => {
     if (!isLoggedIn && typeof window !== 'undefined') {
       const isPayRoute = window.location.pathname.startsWith('/pay') || window.location.search.includes('inv=') || window.location.search.includes('pay_inv=');
-      if (!isPayRoute && window.location.pathname !== '/login') {
+      const isForgotRoute = isForgotPassword || window.location.pathname.startsWith('/forgot') || window.location.hash === '#forgot' || currentPath.toLowerCase().startsWith('/forgot');
+      if (!isPayRoute && !isForgotRoute && window.location.pathname !== '/login') {
         window.history.replaceState({}, '', '/login');
         setCurrentPath('/login');
       }
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, isForgotPassword, currentPath]);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
 
   // Bulk Selection States
@@ -3910,7 +3983,6 @@ export default function App() {
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [leadIngestSuccessModal, setLeadIngestSuccessModal] = useState<any>(null);
-  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showFullContractModal, setShowFullContractModal] = useState(false);
   const [showCreateShareModal, setShowCreateShareModal] = useState(false);
@@ -4381,32 +4453,7 @@ export default function App() {
     return `SRM-CUS-2026-${String(nextVal).padStart(6, '0')}`;
   };
 
-  const generateNextLeadCode = () => {
-    const allNums: number[] = [];
-    leadsList.forEach(l => {
-      if (l.lead_number) {
-        const match = l.lead_number.match(/\d+$/);
-        if (match) allNums.push(parseInt(match[0], 10));
-      }
-    });
-    const maxVal = allNums.length > 0 ? Math.max(...allNums) : 5;
-    const nextVal = maxVal + 1;
-    const pad = String(nextVal).padStart(6, '0');
-    return `SRM-LEAD-2026-${pad}`;
-  };
 
-  const generateNextMatchingCode = () => {
-    const allNums: number[] = [];
-    matchingRequestsQueue.forEach(q => {
-      if (q.requestId) {
-        const match = q.requestId.match(/\d+$/);
-        if (match) allNums.push(parseInt(match[0], 10));
-      }
-    });
-    const maxVal = allNums.length > 0 ? Math.max(...allNums) : 421;
-    const nextVal = maxVal + 1;
-    return `SRM-MAT-2026-000${nextVal}`;
-  };
 
   const generateNextCostSheetCode = () => {
     const allNums: number[] = [];
@@ -4434,24 +4481,6 @@ export default function App() {
     return `SRM-PROP-2026-${String(nextVal).padStart(6, '0')}`;
   };
 
-  const parseCSVLine = (text: string): string[] => {
-    const result: string[] = [];
-    let cur = '';
-    let inQuotes = false;
-    for (let i = 0; i < text.length; i++) {
-      const c = text[i];
-      if (c === '"') {
-        inQuotes = !inQuotes;
-      } else if (c === ',' && !inQuotes) {
-        result.push(cur.trim());
-        cur = '';
-      } else {
-        cur += c;
-      }
-    }
-    result.push(cur.trim());
-    return result;
-  };
 
   const [showBulkImportPropertyModal, setShowBulkImportPropertyModal] = useState(false);
   const [bulkPropertyCsvText, setBulkPropertyCsvText] = useState(
@@ -4709,55 +4738,6 @@ export default function App() {
     return matchingRequestsQueue.length > 0 ? matchingRequestsQueue[0] : null;
   };
 
-  const handleCreateCostSheetForProperty = (prop: any) => {
-    const newCSCode = generateNextCostSheetCode();
-    const newShareId = `SRM-PSH-2026-0000${Math.floor(10 + Math.random() * 89)}`;
-
-    // Resolve matching request from current queue, customer list, or selected matching ID
-    const currentReq = resolveCurrentMatchingReq(selectedMatchingId);
-
-    const custName = currentReq?.customerName || selectedCust?.name || '';
-    const custNum = currentReq?.customerNumber || selectedCust?.customer_number || '';
-    const custMobile = currentReq?.mobile || selectedCust?.mobile || '';
-    const matchingReqId = currentReq?.requestId || selectedMatchingId || '';
-
-    const newShare = {
-      shareId: newShareId,
-      costSheetId: newCSCode,
-      customerName: custName,
-      customerNumber: custNum,
-      mobile: custMobile,
-      propertyTitle: `${prop.title || 'Selected Property'} (${prop.property_code || 'PROP'})`,
-      finalPrice: prop.final_price || '₹55 Lakhs',
-      channel: 'WhatsApp & Email Gateway',
-      sentTime: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      viewsCount: 1,
-      pdfDownloaded: true,
-      interestStatus: 'QUOTATION_GENERATED',
-      parentMatchingId: matchingReqId
-    };
-
-    setCostSheetShares(prev => [newShare, ...prev]);
-
-    // Update matching request in queue with generated Cost Sheet ID and status
-    setMatchingRequestsQueue(prev => prev.map(req => {
-      if (req.requestId === matchingReqId || req.customerNumber === custNum) {
-        return {
-          ...req,
-          costSheetId: newCSCode,
-          status: 'COST_SHEET_CREATED'
-        };
-      }
-      return req;
-    }));
-
-    if (prop.property_code && !selectedPropertyIds.includes(prop.property_code)) {
-      setSelectedPropertyIds(prev => [...prev, prop.property_code]);
-    }
-
-    setActiveTab('cost_sheet_share');
-    alert(`🚀 Successfully Generated Cost Sheet ID ${newCSCode}!\n\nCustomer: ${custName} (${custNum})\nProperty: ${prop.title || prop.property_code}\nLinked Matching ID: ${matchingReqId}\nStatus Updated: COST_SHEET_CREATED\n\nTransferred seamlessly to Cost Sheet Sharing Category!`);
-  };
 
   // Universal Interactive ID Details Modal State & Handler
   const [viewIdDetailsModal, setViewIdDetailsModal] = useState<{ open: boolean; type: 'MATCHING_ID' | 'CUSTOMER_ID' | 'REQUIREMENT_ID' | 'LEAD_ID'; id: string; data?: any } | null>(null);
@@ -5005,7 +4985,12 @@ export default function App() {
   useEffect(() => {
     if (loggedInUser && users && users.length > 0) {
       const match = users.find(u => u.id === loggedInUser.id || (u.email && u.email.toLowerCase() === loggedInUser.email?.toLowerCase()));
-      if (match && (match.role !== loggedInUser.role || match.full_name !== loggedInUser.full_name || match.designation !== loggedInUser.designation)) {
+      if (match && (
+        match.role !== loggedInUser.role || 
+        match.full_name !== loggedInUser.full_name || 
+        match.designation !== loggedInUser.designation ||
+        match.profileImage !== loggedInUser.profileImage
+      )) {
         setLoggedInUser(match);
       }
     }
@@ -5308,13 +5293,7 @@ export default function App() {
     return [];
   });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_recycled_items', JSON.stringify(recycledItems));
-    } catch (e) {
-      console.error('Error saving recycled items to localStorage:', e);
-    }
-  }, [recycledItems]);
+  // Live Recycle Bin persistence is now strictly stored in MongoDB Atlas Cluster
 
   const handleRecycleItem = (itemData: {
     id?: string;
@@ -5334,38 +5313,50 @@ export default function App() {
       details: itemData.details || itemData.title,
       originalData: itemData.originalData
     };
-    setRecycledItems(prev => [newItem, ...prev.filter(r => r.id !== newItem.id)]);
+    const updated = [newItem, ...recycledItems.filter(r => r.id !== newItem.id)];
+    setRecycledItems(updated);
+    syncAllToMongoDB({ recycled_items: updated });
   };
 
   const handleRestoreRecycledItem = (item: any) => {
     const data = item.originalData || {};
     let nextDevs: any[] = developers;
+    const updatedRecycled = recycledItems.filter(r => r.id !== item.id);
 
     switch (item.category) {
       case 'Lead':
         setLeadsList(prev => {
           const updated = [data, ...prev.filter(l => l.id !== data.id && l.lead_number !== data.lead_number)];
-          syncAllToMongoDB({ leads: updated });
+          syncAllToMongoDB({ leads: updated, recycled_items: updatedRecycled });
           return updated;
         });
         break;
       case 'Customer':
         setCustomers(prev => {
           const updated = [data, ...prev.filter(c => c.id !== data.id && c.customer_number !== data.customer_number)];
-          syncAllToMongoDB({ customers: updated });
+          syncAllToMongoDB({ customers: updated, recycled_items: updatedRecycled });
           return updated;
         });
         break;
+      case 'Developer': {
+        const updatedDevs = [data, ...nextDevs.filter(d => d.id !== data.id && d.name !== data.name)];
+        setDevelopers(updatedDevs);
+        try {
+          localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
+        } catch (e) {}
+        syncAllToMongoDB({ developers: updatedDevs, recycled_items: updatedRecycled });
+        break;
+      }
       case 'Project':
         if (data.projects || data.projectsCount !== undefined) {
           const updatedDevs = [data, ...nextDevs.filter(d => d.id !== data.id && d.name !== data.name)];
           setDevelopers(updatedDevs);
 
-          syncAllToMongoDB({ developers: updatedDevs });
+          syncAllToMongoDB({ developers: updatedDevs, recycled_items: updatedRecycled });
         } else {
           setProperties(prev => {
             const updated = [data, ...prev.filter(p => p.id !== data.id && p.property_code !== data.property_code)];
-            syncAllToMongoDB({ properties: updated });
+            syncAllToMongoDB({ properties: updated, recycled_items: updatedRecycled });
             return updated;
           });
         }
@@ -5376,7 +5367,7 @@ export default function App() {
         } else {
           setAgreements(prev => {
             const updated = [data, ...prev.filter((a: any) => a.id !== data.id)];
-            syncAllToMongoDB({ agreements: updated });
+            syncAllToMongoDB({ agreements: updated, recycled_items: updatedRecycled });
             return updated;
           });
         }
@@ -5384,14 +5375,14 @@ export default function App() {
       case 'Cost Sheet':
         setIndividualCostSheets(prev => {
           const updated = [data, ...prev.filter((c: any) => c.id !== data.id && c.costSheetId !== data.costSheetId)];
-          syncAllToMongoDB({ cost_sheets: updated });
+          syncAllToMongoDB({ cost_sheets: updated, recycled_items: updatedRecycled });
           return updated;
         });
         break;
       case 'Billing':
         setInvoices(prev => {
           const updated = [data, ...prev.filter((i: any) => i.id !== data.id && i.invoice_number !== data.invoice_number)];
-          syncAllToMongoDB({ invoices: updated });
+          syncAllToMongoDB({ invoices: updated, recycled_items: updatedRecycled });
           return updated;
         });
         break;
@@ -5401,7 +5392,7 @@ export default function App() {
         } else {
           setScheduledVisits(prev => {
             const updated = [data, ...prev.filter((s: any) => s.visitId !== data.visitId && s.costSheetId !== data.costSheetId)];
-            syncAllToMongoDB({ site_visits: updated });
+            syncAllToMongoDB({ site_visits: updated, recycled_items: updatedRecycled });
             return updated;
           });
         }
@@ -5428,27 +5419,98 @@ export default function App() {
   const handlePurgeRecycledItem = (item: any) => {
     const updatedRecycled = recycledItems.filter(r => r.id !== item.id);
     setRecycledItems(updatedRecycled);
-    try {
-      localStorage.setItem('swaramayi_recycled_items', JSON.stringify(updatedRecycled));
-    } catch (e) {}
+    // Persisted to MongoDB Atlas
 
     const purgeSet = extractAllIdentifiers(item);
+    const cat = (item.category || '').toLowerCase();
 
-    const nextProps = properties.filter(p => !isItemInRecycledSet(p, purgeSet));
-    setProperties(nextProps);
+    let nextProps = properties;
+    if (cat.includes('prop') || cat.includes('unit')) {
+      nextProps = properties.filter(p => !isItemInRecycledSet(p, purgeSet));
+      setProperties(nextProps);
+    }
 
-    let currentDevs: any[] = developers;
+    let nextDevs = developers;
+    if (cat.includes('dev') || cat.includes('project') || (item.originalLocation && item.originalLocation.includes('Developer')) || (typeof item.id === 'string' && item.id.includes('DEV-'))) {
+      const devName = (item.originalData?.name || item.name || item.title || '').replace(/^Developer\s*-\s*/i, '').replace(/\s*\([^)]*\)$/, '').trim().toLowerCase();
+      nextDevs = (developers || [])
+        .filter((d: any) => {
+          if (isItemInRecycledSet(d, purgeSet)) return false;
+          if (d.id === item.id || (item.originalData && d.id === item.originalData.id)) return false;
+          if (devName && d.name && d.name.toLowerCase().trim() === devName) return false;
+          return true;
+        })
+        .map((d: any) => ({
+          ...d,
+          projects: (d.projects || []).filter((proj: any) => !isItemInRecycledSet(proj, purgeSet))
+        }));
+      setDevelopers(nextDevs);
+      try {
+        localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevs));
+      } catch (e) {}
+    }
 
-    const nextDevs = currentDevs
-      .map((d: any) => ({
-        ...d,
-        projects: (d.projects || []).filter((proj: any) => !isItemInRecycledSet(proj, purgeSet))
-      }))
-      .filter((d: any) => !isItemInRecycledSet(d, purgeSet));
+    let nextCusts = customers;
+    if (cat.includes('cust')) {
+      nextCusts = (customers || []).filter(c => !isItemInRecycledSet(c, purgeSet));
+      setCustomers(nextCusts);
+      try {
+        localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(nextCusts));
+        localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(nextCusts));
+      } catch (e) {}
+    }
 
-    setDevelopers(nextDevs);
+    // CRUCIAL: ONLY purge from leadsList if the recycled item is specifically a LEAD!
+    // Purging a Customer or Matching Request must NEVER delete the Lead from Lead Management.
+    let nextLeads = leadsList;
+    if (cat.includes('lead')) {
+      const orig = item.originalData || {};
+      const targetLeadId = (item.id || '').toString().toLowerCase().trim();
+      const targetLeadNum = (orig.lead_number || item.lead_number || '').toString().toLowerCase().trim();
+      const targetMob = (orig.mobile || orig.phone || item.mobile || item.phone || '').replace(/\D/g, '');
+      const targetName = (orig.customer_name || orig.name || item.customer_name || item.name || '').toLowerCase().trim();
 
+      nextLeads = (leadsList || []).filter(l => {
+        if (!l) return false;
+        if (isItemInRecycledSet(l, purgeSet)) return false;
+        const lId = (l.id || '').toString().toLowerCase().trim();
+        const lNum = (l.lead_number || l.customer_number || '').toString().toLowerCase().trim();
+        const lMob = (l.mobile || l.phone || '').replace(/\D/g, '');
+        const lName = (l.customer_name || l.name || '').toLowerCase().trim();
 
+        if (targetLeadId && (lId === targetLeadId || lNum === targetLeadId)) return false;
+        if (targetLeadNum && (lNum === targetLeadNum || lId === targetLeadNum)) return false;
+        if (targetMob && targetMob.length >= 7 && lMob && (lMob.endsWith(targetMob) || targetMob.endsWith(lMob))) return false;
+        if (targetName && targetName.length > 2 && lName === targetName) return false;
+        return true;
+      });
+      setLeadsList(nextLeads);
+      try {
+        localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(nextLeads));
+        localStorage.setItem('swaramayi_leads_v5_clean', JSON.stringify(nextLeads));
+      } catch (e) {}
+    }
+
+    let nextMatches = matchingRequestsQueue;
+    if (cat.includes('match') || cat.includes('cust')) {
+      nextMatches = (matchingRequestsQueue || []).filter(m => !isItemInRecycledSet(m, purgeSet));
+      setMatchingRequestsQueue(nextMatches);
+      try {
+        localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(nextMatches));
+      } catch (e) {}
+    }
+
+    let nextCostSheets = individualCostSheets;
+    if (cat.includes('cost')) {
+      nextCostSheets = (individualCostSheets || []).filter((cs: any) => !isItemInRecycledSet(cs, purgeSet));
+      setIndividualCostSheets(nextCostSheets);
+    }
+
+    let nextVisits = scheduledVisits;
+    if (cat.includes('visit')) {
+      nextVisits = (scheduledVisits || []).filter((v: any) => !isItemInRecycledSet(v, purgeSet));
+      setScheduledVisits(nextVisits);
+    }
 
     const purgeUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? 'http://localhost:5000/api/v1/crm/purge'
@@ -5464,16 +5526,46 @@ export default function App() {
     }).catch(err => console.warn('Direct MongoDB Purge API Error:', err));
 
     setTimeout(() => {
-      syncAllToMongoDB({ properties: nextProps, developers: nextDevs });
+      syncAllToMongoDB({ 
+        recycled_items: updatedRecycled,
+        properties: nextProps, 
+        developers: nextDevs,
+        customers: nextCusts,
+        leads: nextLeads,
+        matching_requests: nextMatches,
+        cost_sheets: nextCostSheets,
+        site_visits: nextVisits
+      });
     }, 100);
   };
 
   const handleEmptyRecycleBin = () => {
     const itemsToPurge = [...recycledItems];
     setRecycledItems([]);
-    try {
-      localStorage.setItem('swaramayi_recycled_items', JSON.stringify([]));
-    } catch (e) {}
+
+    const purgedDevIds = new Set<string>();
+    itemsToPurge.forEach(i => {
+      const cat = (i.category || '').toLowerCase();
+      if (cat.includes('dev') || (i.originalLocation || '').includes('Developer') || (typeof i.id === 'string' && i.id.includes('DEV-'))) {
+        purgedDevIds.add(String(i.id).toLowerCase());
+        if (i.originalData?.id) purgedDevIds.add(String(i.originalData.id).toLowerCase());
+        if (i.originalData?.name) purgedDevIds.add(String(i.originalData.name).toLowerCase().trim());
+      }
+    });
+
+    let nextDevs = developers;
+    if (purgedDevIds.size > 0) {
+      nextDevs = (developers || []).filter((d: any) => 
+        !purgedDevIds.has(String(d.id).toLowerCase()) && 
+        !purgedDevIds.has(String(d.name || '').toLowerCase().trim())
+      );
+      setDevelopers(nextDevs);
+      try {
+        localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevs));
+      } catch (e) {}
+    }
+
+    syncAllToMongoDB({ recycled_items: [], developers: nextDevs });
 
     const purgeAllUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? 'http://localhost:5000/api/v1/crm/purge-all'
@@ -7145,312 +7237,7 @@ export default function App() {
   }, [users]);
 
 
-  // Helper: Auto-Hydrate Previous Customer Details into Wizard
-  const handleAutoHydrateCustomerDetails = (foundRecord: any) => {
-    if (!foundRecord) return;
 
-    const targetCustCode = foundRecord.customer_number || foundRecord.customer_id || newCustomerForm.customer_number;
-    const targetLeadId = foundRecord.lead_number || foundRecord.id || null;
-
-    setNewCustomerForm({
-      ...newCustomerForm,
-      customer_number: targetCustCode,
-      name: foundRecord.customer_name || foundRecord.name || newCustomerForm.name,
-      mobile: foundRecord.mobile || foundRecord.phone || newCustomerForm.mobile,
-      phone: foundRecord.phone || foundRecord.mobile || newCustomerForm.phone,
-      whatsapp: foundRecord.whatsapp || foundRecord.whatsapp_number || foundRecord.mobile || newCustomerForm.whatsapp,
-      email: (foundRecord.email && foundRecord.email !== 'N/A') ? foundRecord.email : newCustomerForm.email,
-      city: foundRecord.city || newCustomerForm.city || 'Kolkata',
-      locality: foundRecord.locality || foundRecord.address || newCustomerForm.locality,
-      address: foundRecord.address || foundRecord.locality || newCustomerForm.address,
-      pincode: foundRecord.pincode || newCustomerForm.pincode,
-      language: foundRecord.language || newCustomerForm.language || 'Bengali',
-      lead_source: foundRecord.lead_source || foundRecord.source || newCustomerForm.lead_source || 'Meta Ads',
-      campaign_id: foundRecord.campaign_id || foundRecord.campaign || newCustomerForm.campaign_id,
-      project_posting_id: foundRecord.project_posting_id || newCustomerForm.project_posting_id,
-      utm_source: foundRecord.utm_source || newCustomerForm.utm_source,
-      searched_property_code: foundRecord.searched_property_code || newCustomerForm.searched_property_code,
-      referral_name: foundRecord.referral_name || newCustomerForm.referral_name,
-      referral_source: foundRecord.referral_source || newCustomerForm.referral_source,
-      investment_purpose: foundRecord.investment_purpose || foundRecord.purpose || newCustomerForm.investment_purpose,
-      property_type: foundRecord.property_type || newCustomerForm.property_type,
-      configuration: foundRecord.configuration || foundRecord.bhk || newCustomerForm.configuration,
-      preferredArea: foundRecord.preferredArea || foundRecord.preferred_location || newCustomerForm.preferredArea,
-      secondary_areas: foundRecord.secondary_areas || foundRecord.secondaryAreas || newCustomerForm.secondary_areas,
-      floor_pref: foundRecord.floor_pref || foundRecord.floor_preference || newCustomerForm.floor_pref,
-      non_preferred_floor: foundRecord.non_preferred_floor || foundRecord.avoided_floors || newCustomerForm.non_preferred_floor,
-      budget_min: foundRecord.budget_min || newCustomerForm.budget_min,
-      budget_max: foundRecord.budget_max || newCustomerForm.budget_max,
-      budget_flexibility: foundRecord.budget_flexibility || newCustomerForm.budget_flexibility,
-      carpet_area_min: foundRecord.carpet_area_min || newCustomerForm.carpet_area_min,
-      carpet_area_max: foundRecord.carpet_area_max || newCustomerForm.carpet_area_max,
-      area_unit: foundRecord.area_unit || newCustomerForm.area_unit || 'Sq.Ft.',
-      possession_status: foundRecord.possession_status || foundRecord.possession_preference || newCustomerForm.possession_status,
-      facing: foundRecord.facing || newCustomerForm.facing,
-      parking: foundRecord.parking || newCustomerForm.parking,
-      amenities: foundRecord.amenities || newCustomerForm.amenities,
-      brokerage_rate: foundRecord.brokerage_rate || newCustomerForm.brokerage_rate || '2.0%',
-      brokerage_payer: foundRecord.brokerage_payer || newCustomerForm.brokerage_payer || 'CUSTOMER',
-      assigned_employee_id: foundRecord.assigned_employee_id || foundRecord.assigned_salesperson || newCustomerForm.assigned_employee_id,
-      notes: foundRecord.notes || foundRecord.remarks || newCustomerForm.notes || ''
-    });
-
-    if (targetLeadId) {
-      setActiveEditingLeadId(targetLeadId);
-    }
-
-    alert(`✨ PREVIOUS CUSTOMER DETAILS DETECTED & HYDRATED!\n\n• Customer Name: ${foundRecord.customer_name || foundRecord.name}\n• Phone Number: ${foundRecord.mobile || foundRecord.phone}\n• Existing Customer ID: ${targetCustCode}\n${targetLeadId ? `• Linked Lead ID: ${targetLeadId}\n` : ''}\nAll contact details & property requirements restored into wizard!`);
-  };
-
-  // --------------------------------------------------------------------------
-  // INGEST LEAD WITH NON-INTERESTED / NO-RESPONSE / CALLBACK DISPOSITION (BYPASS STEPS 3-9)
-  // --------------------------------------------------------------------------
-  const handleSaveLeadWithDisposition = () => {
-    const disp = (newLeadForm as any).call_disposition || 'CONNECTED_INTERESTED';
-    const targetMobile = (newCustomerForm.mobile || newCustomerForm.phone || newLeadForm.mobile || '').replace(/[^0-9]/g, '');
-    const targetCustCode = newCustomerForm.customer_number;
-    const cleanName = (newCustomerForm.name || newLeadForm.customer_name || '').trim().toLowerCase();
-
-    const existingLead = leadsList.find(l => 
-      (activeEditingLeadId && (l.id === activeEditingLeadId || l.lead_number === activeEditingLeadId)) ||
-      (targetCustCode && (l.customer_number === targetCustCode || l.customer_id === targetCustCode)) ||
-      (targetMobile && targetMobile.length >= 4 && ((l.mobile && l.mobile.replace(/[^0-9]/g, '').includes(targetMobile)) || (l.phone && l.phone.replace(/[^0-9]/g, '').includes(targetMobile)))) ||
-      (cleanName && cleanName.length >= 3 && cleanName !== 'inbound prospect' && (l.customer_name || l.name || '').trim().toLowerCase() === cleanName)
-    );
-
-    const existingCustomer = customers.find(c => 
-      (targetCustCode && c.customer_number === targetCustCode) ||
-      (targetMobile && targetMobile.length >= 4 && ((c.mobile && c.mobile.replace(/[^0-9]/g, '').includes(targetMobile)) || (c.phone && c.phone.replace(/[^0-9]/g, '').includes(targetMobile)))) ||
-      (cleanName && cleanName.length >= 3 && cleanName !== 'inbound prospect' && (c.name || '').trim().toLowerCase() === cleanName)
-    );
-
-    const leadNum = existingLead ? existingLead.lead_number : `SRM-LD-2026-000${leadsList.length + 101}`;
-    const finalCustomerCode = targetCustCode || (existingCustomer ? existingCustomer.customer_number : `SRM-CUS-2026-${String(customers.length + 1).padStart(6, '0')}`);
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    const scheduledDateVal = followupDate || todayStr;
-    const scheduledTimeVal = followupTime || '11:00';
-    const customRemarks = followupRemarks || (disp === 'NO_RESPONSE' ? '1st Call Unanswered, retry callback scheduled' : disp === 'CALL_BACK_LATER' ? 'Customer busy, callback requested' : disp === 'PENDING_CALL' ? 'Call pending, executive follow-up queued' : 'Initial call disposition logged during lead intake wizard');
-
-    let leadStatus = 'NEW';
-    let priority = 'WARM';
-    let status = 'ACTIVE';
-    let notes = customRemarks;
-
-    if (disp === 'NOT_INTERESTED') {
-      leadStatus = 'NOT_INTERESTED';
-      priority = 'COLD';
-      status = 'ARCHIVED';
-      notes = customRemarks || 'Customer expressed Not Interested during initial intake; steps 3–9 bypassed';
-    } else if (disp === 'NO_RESPONSE') {
-      leadStatus = 'NO_RESPONSE';
-      priority = 'WARM';
-      status = 'UNANSWERED';
-      notes = customRemarks || 'No response / unanswered on initial intake call; queued for retry callbacks (steps 3–9 bypassed)';
-    } else if (disp === 'CALL_BACK_LATER') {
-      leadStatus = 'CALL_BACK_LATER';
-      priority = 'HIGH';
-      status = 'SCHEDULED_CALLBACK';
-      notes = customRemarks || 'Customer requested call back later / busy; scheduled for follow-up retry (steps 3–9 bypassed)';
-    } else if (disp === 'PENDING_CALL') {
-      leadStatus = 'PENDING_CALL';
-      priority = 'HIGH';
-      status = 'PENDING_CALL';
-      notes = customRemarks || 'Call pending logged during initial intake; scheduled for executive follow-up (steps 3–9 bypassed)';
-    }
-
-    const newCustObj = {
-      id: existingCustomer ? existingCustomer.id : `CUS-${Date.now()}`,
-      customer_number: finalCustomerCode,
-      name: newCustomerForm.name || newLeadForm.customer_name || existingCustomer?.name || 'Inbound Prospect',
-      phone: newCustomerForm.phone || newCustomerForm.mobile || newLeadForm.mobile || existingCustomer?.phone || 'N/A',
-      mobile: newCustomerForm.mobile || newCustomerForm.phone || newLeadForm.mobile || existingCustomer?.mobile || 'N/A',
-      whatsapp: newCustomerForm.whatsapp || newCustomerForm.mobile || newCustomerForm.phone || existingCustomer?.whatsapp || 'N/A',
-      email: newCustomerForm.email || newLeadForm.email || existingCustomer?.email || 'N/A',
-      city: newCustomerForm.city || existingCustomer?.city || 'Kolkata',
-      locality: newCustomerForm.address || newCustomerForm.locality || existingCustomer?.locality || 'Madhyamgram',
-      address: newCustomerForm.address || existingCustomer?.address || 'Madhyamgram',
-      pincode: newCustomerForm.pincode || existingCustomer?.pincode || '700129',
-      language: newCustomerForm.language || existingCustomer?.language || 'Bengali',
-      source: newCustomerForm.lead_source || newLeadForm.source || existingCustomer?.source || 'Digital Intake',
-      lead_source: newCustomerForm.lead_source || existingCustomer?.lead_source || 'Digital Intake',
-      investment_purpose: newCustomerForm.investment_purpose || existingCustomer?.investment_purpose || '',
-      property_type: newCustomerForm.property_type || existingCustomer?.property_type || '',
-      configuration: newCustomerForm.configuration || existingCustomer?.configuration || '',
-      preferredArea: newCustomerForm.preferredArea || existingCustomer?.preferredArea || '',
-      secondary_areas: newCustomerForm.secondary_areas || existingCustomer?.secondary_areas || '',
-      secondaryAreas: newCustomerForm.secondary_areas || existingCustomer?.secondaryAreas || '',
-      floor_pref: newCustomerForm.floor_pref || existingCustomer?.floor_pref || '',
-      floor_preference: newCustomerForm.floor_pref || existingCustomer?.floor_preference || '',
-      non_preferred_floor: newCustomerForm.non_preferred_floor || existingCustomer?.non_preferred_floor || '',
-      avoided_floors: newCustomerForm.non_preferred_floor || existingCustomer?.avoided_floors || '',
-      budget_min: newCustomerForm.budget_min || existingCustomer?.budget_min || '',
-      budget_max: newCustomerForm.budget_max || existingCustomer?.budget_max || '',
-      budget_flexibility: newCustomerForm.budget_flexibility || existingCustomer?.budget_flexibility || '',
-      carpet_area_min: newCustomerForm.carpet_area_min || existingCustomer?.carpet_area_min || '',
-      carpet_area_max: newCustomerForm.carpet_area_max || existingCustomer?.carpet_area_max || '',
-      area_unit: newCustomerForm.area_unit || existingCustomer?.area_unit || 'Sq.Ft.',
-      possession_status: newCustomerForm.possession_status || existingCustomer?.possession_status || '',
-      facing: newCustomerForm.facing || existingCustomer?.facing || '',
-      parking: newCustomerForm.parking || existingCustomer?.parking || '',
-      amenities: newCustomerForm.amenities || existingCustomer?.amenities || '',
-      brokerage_rate: newCustomerForm.brokerage_rate || existingCustomer?.brokerage_rate || '2.0%',
-      brokerage_payer: newCustomerForm.brokerage_payer || existingCustomer?.brokerage_payer || 'CUSTOMER',
-      assigned_employee_id: newCustomerForm.assigned_employee_id || existingCustomer?.assigned_employee_id || (dynamicSalesExecutives[0]?.value || 'Avishek Das (Super Admin)'),
-      assigned_salesperson: newCustomerForm.assigned_employee_id || existingCustomer?.assigned_salesperson || (dynamicSalesExecutives[0]?.value || 'Avishek Das (Super Admin)'),
-      lead_status: leadStatus,
-      call_disposition: disp,
-      priority: priority,
-      status: status,
-      notes: notes,
-      next_followup: scheduledDateVal,
-      next_followup_time: scheduledTimeVal,
-      next_action: disp === 'NO_RESPONSE' ? 'Retry Unanswered Call' : (disp === 'CALL_BACK_LATER' || disp === 'PENDING_CALL') ? 'Call Back Customer' : 'N/A',
-      last_completed_step: 2,
-      created_at: existingCustomer ? existingCustomer.created_at : new Date().toLocaleString()
-    };
-
-    const newLeadObj = {
-      id: existingLead ? existingLead.id : `LD-${Date.now()}`,
-      lead_number: leadNum,
-      customer_name: newCustObj.name,
-      customer_number: finalCustomerCode,
-      mobile: newCustObj.phone,
-      email: newCustObj.email,
-      city: newCustObj.city,
-      locality: newCustObj.locality,
-      address: newCustObj.address,
-      pincode: newCustObj.pincode,
-      source: newCustObj.source,
-      lead_source: newCustObj.source,
-      investment_purpose: newCustomerForm.investment_purpose || '',
-      property_type: newCustomerForm.property_type || '',
-      configuration: newCustomerForm.configuration || '',
-      bhk: newCustomerForm.configuration || '',
-      preferredArea: newCustomerForm.preferredArea || '',
-      preferred_location: newCustomerForm.preferredArea || '',
-      secondary_areas: newCustomerForm.secondary_areas || '',
-      secondaryAreas: newCustomerForm.secondary_areas || '',
-      floor_pref: newCustomerForm.floor_pref || '',
-      floor_preference: newCustomerForm.floor_pref || '',
-      non_preferred_floor: newCustomerForm.non_preferred_floor || '',
-      avoided_floors: newCustomerForm.non_preferred_floor || '',
-      budget_min: newCustomerForm.budget_min || '',
-      budget_max: newCustomerForm.budget_max || '',
-      budget_flexibility: newCustomerForm.budget_flexibility || '',
-      carpet_area_min: newCustomerForm.carpet_area_min || '',
-      carpet_area_max: newCustomerForm.carpet_area_max || '',
-      area_unit: newCustomerForm.area_unit || 'Sq.Ft.',
-      possession_status: newCustomerForm.possession_status || '',
-      facing: newCustomerForm.facing || '',
-      parking: newCustomerForm.parking || '',
-      amenities: newCustomerForm.amenities || '',
-      brokerage_rate: newCustomerForm.brokerage_rate || '2.0%',
-      brokerage_payer: newCustomerForm.brokerage_payer || 'CUSTOMER',
-      lead_status: leadStatus,
-      call_disposition: disp,
-      priority: priority,
-      status: status,
-      assigned_employee_name: newCustObj.assigned_salesperson,
-      assigned_employee_id: newCustObj.assigned_employee_id,
-      notes: notes,
-      next_followup: scheduledDateVal,
-      next_followup_time: scheduledTimeVal,
-      next_action: newCustObj.next_action,
-      last_completed_step: 2,
-      created_at: existingLead ? existingLead.created_at : new Date().toLocaleString()
-    };
-
-
-    let nextLeads: any[];
-    if (existingLead) {
-      nextLeads = leadsList.map(l => (l.id === existingLead.id || l.lead_number === leadNum || l.customer_number === finalCustomerCode) ? newLeadObj : l);
-    } else {
-      nextLeads = [newLeadObj, ...leadsList];
-    }
-    setLeadsList(nextLeads);
-
-    setCustomers(prev => {
-      const cleanMob = (newCustObj.phone || '').replace(/[^0-9]/g, '');
-      const exists = (prev || []).some(c => (c.customer_number && c.customer_number === finalCustomerCode) || (cleanMob && cleanMob.length >= 7 && c.mobile && c.mobile.replace(/[^0-9]/g, '') === cleanMob));
-      let nextCusts: any[];
-      if (exists) {
-        nextCusts = (prev || []).map(c => (c.customer_number === finalCustomerCode || (cleanMob && cleanMob.length >= 7 && c.mobile && c.mobile.replace(/[^0-9]/g, '') === cleanMob)) ? { ...c, ...newCustObj } : c);
-      } else {
-        nextCusts = [newCustObj, ...(prev || [])];
-      }
-      try {
-        localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(nextCusts));
-        localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(nextCusts));
-      } catch (e) {}
-      syncAllToMongoDB({ customers: nextCusts, leads: nextLeads });
-      return nextCusts;
-    });
-
-    // Create or Update System Call Notification Alert for NO_RESPONSE, CALL_BACK_LATER and PENDING_CALL
-    if (disp === 'NO_RESPONSE' || disp === 'CALL_BACK_LATER' || disp === 'PENDING_CALL') {
-      const notifTitle = disp === 'NO_RESPONSE' ? '📵 Call Alert: No Response Retry Needed' : disp === 'PENDING_CALL' ? '📞 Call Alert: Pending Call Due' : '⏳ Call Alert: Scheduled Callback Due';
-      const newNotifObj = {
-        id: `NOTIF-${Date.now()}`,
-        type: 'CALL_ALERT',
-        title: notifTitle,
-        customer_name: newCustObj.name,
-        mobile: newCustObj.phone,
-        lead_number: leadNum,
-        customer_number: finalCustomerCode,
-        scheduled_date: scheduledDateVal,
-        scheduled_time: scheduledTimeVal,
-        message: `Call ${newCustObj.name} (${newCustObj.phone}) scheduled for ${scheduledDateVal} at ${scheduledTimeVal}. Note: ${notes}`,
-        priority: (disp === 'CALL_BACK_LATER' || disp === 'PENDING_CALL') ? 'HIGH' : 'MEDIUM',
-        is_read: false,
-        assigned_executive: newCustObj.assigned_salesperson,
-        created_at: new Date().toLocaleString()
-      };
-
-      setSystemNotifications(prev => {
-        const cleanPhone = (newCustObj.phone || '').replace(/[^0-9]/g, '');
-        const existingIdx = prev.findIndex(n => 
-          (finalCustomerCode && n.customer_number === finalCustomerCode) || 
-          (cleanPhone && n.mobile && n.mobile.replace(/[^0-9]/g, '') === cleanPhone)
-        );
-        if (existingIdx >= 0) {
-          const updated = [...prev];
-          updated[existingIdx] = { 
-            ...updated[existingIdx], 
-            ...newNotifObj, 
-            id: updated[existingIdx].id 
-          };
-          return updated;
-        }
-        return [newNotifObj, ...prev];
-      });
-    }
-
-    setShowLeadModal(false);
-    setShowAddCustomerModal(false);
-    setActiveEditingLeadId(null);
-    setLeadIntakeStep(1);
-
-    setActiveTab('lead_management');
-    setLeadViewMode('inbox');
-
-    if (disp === 'NOT_INTERESTED') {
-      setLeadInboxTab('not_interested');
-    } else if (disp === 'NO_RESPONSE') {
-      setLeadInboxTab('no_response');
-    } else if (disp === 'CALL_BACK_LATER' || disp === 'PENDING_CALL') {
-      setLeadInboxTab('call_back_later');
-    } else {
-      setLeadInboxTab('all');
-    }
-
-    const dispLabel = disp === 'NOT_INTERESTED' ? '❌ NOT INTERESTED' : disp === 'NO_RESPONSE' ? '📵 NO RESPONSE' : disp === 'PENDING_CALL' ? '📞 PENDING CALL' : '⏳ CALL BACK LATER';
-    const notifMsg = (disp === 'NO_RESPONSE' || disp === 'CALL_BACK_LATER' || disp === 'PENDING_CALL') 
-      ? `\n\n🔔 AUTOMATED CALL ALERT & NOTIFICATION CREATED!\n• Scheduled Date: ${scheduledDateVal}\n• Scheduled Time: ${scheduledTimeVal}\n• Follow-up Alert queued for executive call!` 
-      : '';
-
-    alert(`✅ LEAD SAVED TO FOLLOW-UP VAULT SUCCESSFULLY!\n\n• Lead ID: ${leadNum}\n• Customer ID: ${finalCustomerCode}\n• Customer Name: ${newCustObj.name}\n• Phone: ${newCustObj.phone}\n• City: ${newCustObj.city}\n• Status: ${dispLabel}\n• Assigned Executive: ${newCustObj.assigned_salesperson}${notifMsg}\n\nRecord stored in Lead & Customer Management for future follow-up!`);
-  };
 
   // --------------------------------------------------------------------------
   // SAVE QUALIFICATION DRAFT HANDLER (PERMANENT PERSISTENCE FOR STEPS 1 TO 8)
@@ -7593,24 +7380,29 @@ export default function App() {
       console.error('Error saving draft lead to localStorage', err);
     }
 
-    // Update customers list
-    const updatedCusts = existingCustomer
-      ? customers.map(c => (c.customer_number === finalCustomerCode || c.id === existingCustomer.id) ? { ...c, ...draftCustObj } : c)
-      : [draftCustObj, ...customers];
-
-    setCustomers(updatedCusts);
-    try {
-      localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updatedCusts));
-      localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updatedCusts));
-    } catch (err) {
-      console.error('Error saving draft customer to localStorage', err);
+    // Update customers list ONLY if this was already an existing customer (leads drafting steps 1-8 are kept strictly in leadsList)
+    if (existingCustomer) {
+      const updatedCusts = customers.map(c => (c.customer_number === finalCustomerCode || c.id === existingCustomer.id) ? { ...c, ...draftCustObj } : c);
+      setCustomers(updatedCusts);
+      try {
+        localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updatedCusts));
+        localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updatedCusts));
+      } catch (err) {
+        console.error('Error saving draft customer to localStorage', err);
+      }
+      syncAllToMongoDB({ customers: updatedCusts, leads: updatedLeads });
+    } else {
+      syncAllToMongoDB({ leads: updatedLeads });
     }
-    syncAllToMongoDB({ customers: updatedCusts, leads: updatedLeads });
 
     alert(`💾 QUALIFICATION DRAFT SAVED SUCCESSFULLY!\n\n• Lead ID: ${leadNum}\n• Customer ID: ${finalCustomerCode}\n• Customer Name: ${custName}\n• Progress Saved: Step ${leadIntakeStep} of 9\n• Status: DRAFT / QUALIFICATION IN PROGRESS\n\nYour progress has been permanently saved to the Central Lead Vault. You can click "Resume Qualification" on this lead card anytime to continue right where you left off!`);
 
     setShowLeadModal(false);
     setShowAddCustomerModal(false);
+  };
+
+  const handleSaveBypassedLead = (disposition?: string) => {
+    handleSaveQualificationDraft();
   };
 
   // RE-OPEN & RESUME STEP-BY-STEP QUALIFICATION WIZARD FROM LAST STEP
@@ -7860,6 +7652,7 @@ export default function App() {
       if (Array.isArray(overrideData.teams)) payload.teams = overrideData.teams;
       if (Array.isArray(overrideData.branches)) payload.branches = overrideData.branches;
       if (Array.isArray(overrideData.rating_invites)) payload.rating_invites = overrideData.rating_invites;
+      if (Array.isArray(overrideData.recycled_items)) payload.recycled_items = overrideData.recycled_items;
 
       if (Object.keys(payload).length === 0) {
         return;
@@ -7894,10 +7687,22 @@ export default function App() {
             const mData = result.data;
 
             let activeRecycled: any[] = [];
-            try {
-              const savedRec = localStorage.getItem('swaramayi_recycled_items');
-              if (savedRec) activeRecycled = JSON.parse(savedRec);
-            } catch (e) {}
+            if (Array.isArray(mData.recycled_items)) {
+              activeRecycled = mData.recycled_items;
+              setRecycledItems(mData.recycled_items);
+            } else {
+              try {
+                const savedRec = localStorage.getItem('swaramayi_recycled_items');
+                if (savedRec) {
+                  const parsed = JSON.parse(savedRec);
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    activeRecycled = parsed;
+                    setRecycledItems(parsed);
+                    syncAllToMongoDB({ recycled_items: parsed });
+                  }
+                }
+              } catch (e) {}
+            }
 
             const recycledSet = new Set<string>();
             (activeRecycled || []).forEach((r: any) => {
@@ -9151,17 +8956,6 @@ export default function App() {
     downloadFormattedCSV(rows, 'Billing_Management_Export');
   };
 
-  // Universal Fallback / Raw Sanitized Export (Strictly eliminates MongoDB internal _id, __v, password)
-  const exportToCSV = (dataList: any[], filenamePrefix: string) => {
-    if (!dataList || dataList.length === 0) return alert('No records available to export.');
-    const headers = Object.keys(dataList[0]).filter(k => !k.startsWith('_') && k !== '__v' && k !== 'password');
-    const sanitizedRows = dataList.map(item => {
-      const row: any = {};
-      headers.forEach(h => { row[h] = item[h]; });
-      return row;
-    });
-    downloadFormattedCSV(sanitizedRows, filenamePrefix);
-  };
 
   // Module Label Resolver for UI Button
   const getCurrentModuleLabel = () => {
@@ -9224,27 +9018,6 @@ export default function App() {
     else setSelectedPropertyIds([...selectedPropertyIds, id]);
   };
 
-  const handleBulkDeleteProperties = () => {
-    if (selectedPropertyIds.length === 0) return alert('Please select at least 1 property to delete.');
-    if (window.confirm(`Are you sure you want to move ${selectedPropertyIds.length} selected properties to Recycle Bin?`)) {
-      const propsToDelete = properties.filter(p => selectedPropertyIds.includes(p.id));
-      propsToDelete.forEach(prop => {
-        handleRecycleItem({
-          id: prop.id || `PROP-${Date.now()}`,
-          title: `${prop.title || 'Property'} (${prop.property_code || prop.id})`,
-          category: 'Project',
-          originalLocation: 'Property Master / Live Inventory',
-          details: `${prop.configuration || ''} ${prop.property_type || ''} at ${prop.locality || ''}`,
-          originalData: prop
-        });
-      });
-      const nextProps = properties.filter(p => !selectedPropertyIds.includes(p.id));
-      setProperties(nextProps);
-      setSelectedPropertyIds([]);
-      syncAllToMongoDB({ properties: nextProps });
-      alert(`🗑️ Selected properties moved to Recycle Bin!`);
-    }
-  };
 
   const handleDeleteProperty = (id: string, code: string) => {
     if (window.confirm(`Are you sure you want to move Property Master Record ${code} to Recycle Bin?`)) {
@@ -9548,329 +9321,20 @@ export default function App() {
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSaveEditedProperty = (e: React.FormEvent) => {
-    e.preventDefault();
-    setProperties(properties.map(p => p.id === editingProperty.id ? editingProperty : p));
-    setShowEditPropertyModal(false);
-    alert(`✏️ Property Master Record ${editingProperty.property_code} updated successfully!`);
-  };
 
-  const handleDeleteCustomer = (id: string, code: string) => {
-    if (window.confirm(`Are you sure you want to move Customer Record ${code} to Recycle Bin?`)) {
-      const cleanCode = (code || '').toLowerCase().trim();
-      const cleanId = (id || '').toLowerCase().trim();
-      const cust = customers.find(c => c.id === id || c.customer_number === code);
-      if (cust) {
-        handleRecycleItem({
-          id: cust.id || `CUST-${Date.now()}`,
-          title: `${cust.full_name || cust.customer_name || 'Customer'} (${code})`,
-          category: 'Customer',
-          originalLocation: 'Customer 360 Vault',
-          details: `Mobile: ${cust.mobile || 'N/A'} • Preferred Locality: ${cust.preferred_locality || 'N/A'}`,
-          originalData: cust
-        });
-      }
-      setCustomers(prev => prev.filter(c => c.id !== id && (c.customer_number || '').toLowerCase() !== cleanCode));
-      setMatchingRequestsQueue(prev => prev.filter(r => (r.customerNumber || '').toLowerCase() !== cleanCode && (r.requestId || '').toLowerCase() !== cleanCode && (r.id || '').toLowerCase() !== cleanId));
-      setIndividualCostSheets(prev => prev.filter(cs => (cs.customerId || cs.customerSnapshot?.customerNumber || '').toLowerCase() !== cleanCode));
-      setLeadsList(prev => prev.filter(l => (l.customer_number || '').toLowerCase() !== cleanCode && (l.id || '').toLowerCase() !== cleanId));
-      alert(`🗑️ Customer Record ${code} moved to Recycle Bin!`);
-    }
-  };
 
   const handleStartEditCustomer = (c: any) => {
     setEditingCustomer({ ...c });
     setShowEditCustomerModal(true);
   };
 
-  const handleSaveEditedCustomer = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingCustomer) return;
-
-    let computedBudget = editingCustomer.budget;
-    if (editingCustomer.budget_min || editingCustomer.budget_max) {
-      computedBudget = `${editingCustomer.budget_min || ''} - ${editingCustomer.budget_max || ''}`.trim();
-    }
-    const updatedCust = {
-      ...editingCustomer,
-      budget: computedBudget || editingCustomer.budget || '₹70 Lakhs - ₹1.5 Crores'
-    };
-
-    const cleanCustCode = (updatedCust.customer_number || updatedCust.customer_id || updatedCust.id || '').toString().toLowerCase();
-    const cleanId = (updatedCust.id || '').toString().toLowerCase();
-    const cleanMobile = (updatedCust.mobile || updatedCust.phone || '').toString().replace(/\D/g, '');
-    const cleanName = (updatedCust.name || updatedCust.customer_name || '').toString().toLowerCase().trim();
-
-    // 1. Update customers master state
-    const updatedCustomers = customers.map(c => {
-      const cCode = (c.customer_number || c.customer_id || c.id || '').toString().toLowerCase();
-      const cId = (c.id || '').toString().toLowerCase();
-      const cMob = (c.mobile || c.phone || '').toString().replace(/\D/g, '');
-      const cName = (c.name || c.customer_name || '').toString().toLowerCase().trim();
-
-      if (
-        (cleanId && cId === cleanId) ||
-        (cleanCustCode && cCode === cleanCustCode) ||
-        (cleanMobile && cMob && cMob === cleanMobile) ||
-        (cleanName && cName && cName === cleanName)
-      ) {
-        return { ...c, ...updatedCust };
-      }
-      return c;
-    });
-    setCustomers(updatedCustomers);
-
-    // 2. Cascade edits to central leadsList
-    const updatedLeads = leadsList.map(l => {
-      const lCode = (l.customer_number || l.customer_id || l.id || '').toString().toLowerCase();
-      const lId = (l.id || '').toString().toLowerCase();
-      const lMob = (l.mobile || l.phone || '').toString().replace(/\D/g, '');
-      const lName = (l.customer_name || l.name || '').toString().toLowerCase().trim();
-
-      if (
-        (cleanId && lId === cleanId) ||
-        (cleanCustCode && lCode === cleanCustCode) ||
-        (cleanMobile && lMob && lMob === cleanMobile) ||
-        (cleanName && lName && lName === cleanName)
-      ) {
-        return {
-          ...l,
-          customer_name: updatedCust.name || updatedCust.customer_name || l.customer_name,
-          mobile: updatedCust.mobile || l.mobile,
-          phone: updatedCust.mobile || l.phone,
-          secondary_phone: updatedCust.secondary_phone || updatedCust.alternate_mobile || l.secondary_phone,
-          email: updatedCust.email || l.email,
-          city: updatedCust.city || l.city,
-          address: updatedCust.address || l.address,
-          preferred_location: updatedCust.preferredArea || updatedCust.preferred_location || l.preferred_location,
-          budget_min: updatedCust.budget_min || l.budget_min,
-          budget_max: updatedCust.budget_max || l.budget_max,
-          budget: updatedCust.budget || l.budget,
-          bhk: updatedCust.configuration || updatedCust.bhk || l.bhk,
-          property_type: updatedCust.property_type || l.property_type,
-          facing: updatedCust.facing || l.facing,
-          floor_pref: updatedCust.floor_pref || updatedCust.floor_preference || l.floor_pref,
-          avoided_floors: updatedCust.avoided_floors || l.avoided_floors,
-          flexibility_stretch: updatedCust.flexibility_stretch || updatedCust.stretch || l.flexibility_stretch,
-          assigned_employee_name: updatedCust.assigned_employee_name || updatedCust.assigned_salesperson || l.assigned_employee_name,
-          source: updatedCust.source || l.source,
-          notes: updatedCust.notes || l.notes,
-          updated_at: new Date().toISOString()
-        };
-      }
-      return l;
-    });
-    setLeadsList(updatedLeads);
-
-    // 3. Cascade edits to matchingRequestsQueue
-    const updatedMatchingQueue = matchingRequestsQueue.map(r => {
-      const rCode = (r.customerNumber || r.requestId || r.id || '').toString().toLowerCase();
-      const rMob = (r.mobile || '').toString().replace(/\D/g, '');
-      const rName = (r.customerName || '').toString().toLowerCase().trim();
-
-      if (
-        (cleanCustCode && rCode === cleanCustCode) ||
-        (cleanMobile && rMob && rMob === cleanMobile) ||
-        (cleanName && rName && rName === cleanName)
-      ) {
-        return {
-          ...r,
-          customerName: updatedCust.name || updatedCust.customer_name || r.customerName,
-          mobile: updatedCust.mobile || r.mobile,
-          purpose: updatedCust.purpose || r.purpose,
-          propertyType: updatedCust.property_type || r.propertyType,
-          configuration: updatedCust.configuration || updatedCust.bhk || r.configuration,
-          budget: updatedCust.budget || r.budget,
-          budget_min: updatedCust.budget_min || r.budget_min,
-          budget_max: updatedCust.budget_max || r.budget_max,
-          preferredArea: updatedCust.preferredArea || updatedCust.preferred_location || r.preferredArea,
-          facing: updatedCust.facing || r.facing,
-          floor_pref: updatedCust.floor_pref || updatedCust.floor_preference || r.floor_pref,
-          avoided_floors: updatedCust.avoided_floors || r.avoided_floors,
-          flexibility_stretch: updatedCust.flexibility_stretch || updatedCust.stretch || r.flexibility_stretch,
-          assignedExecutive: updatedCust.assigned_employee_name || updatedCust.assigned_salesperson || r.assignedExecutive,
-          priority: updatedCust.priority || r.priority
-        };
-      }
-      return r;
-    });
-    setMatchingRequestsQueue(updatedMatchingQueue);
-
-    // 4. Cascade edits to scheduledVisits & visitPlans
-    const updatedVisitPlans = (visitPlans || []).map(p => {
-      const pCode = (p.customerNumber || '').toString().toLowerCase();
-      const pMob = (p.mobile || '').toString().replace(/\D/g, '');
-      const pName = (p.customerName || '').toString().toLowerCase().trim();
-
-      if (
-        (cleanCustCode && pCode === cleanCustCode) ||
-        (cleanMobile && pMob && pMob === cleanMobile) ||
-        (cleanName && pName && pName === cleanName)
-      ) {
-        return {
-          ...p,
-          customerName: updatedCust.name || updatedCust.customer_name || p.customerName,
-          mobile: updatedCust.mobile || p.mobile,
-          assignedExecutive: updatedCust.assigned_employee_name || updatedCust.assigned_salesperson || p.assignedExecutive
-        };
-      }
-      return p;
-    });
-    setVisitPlans(updatedVisitPlans);
-
-    const updatedScheduledVisits = (scheduledVisits || []).map(v => {
-      const vCode = (v.customerNumber || v.customerId || '').toString().toLowerCase();
-      const vMob = (v.mobile || v.custMobile || '').toString().replace(/\D/g, '');
-      const vName = (v.customerName || '').toString().toLowerCase().trim();
-
-      if (
-        (cleanCustCode && vCode === cleanCustCode) ||
-        (cleanMobile && vMob && vMob === cleanMobile) ||
-        (cleanName && vName && vName === cleanName)
-      ) {
-        return {
-          ...v,
-          customerName: updatedCust.name || updatedCust.customer_name || v.customerName,
-          mobile: updatedCust.mobile || v.mobile,
-          custMobile: updatedCust.mobile || v.custMobile,
-          assignedExecutive: updatedCust.assigned_employee_name || updatedCust.assigned_salesperson || v.assignedExecutive
-        };
-      }
-      return v;
-    });
-    setScheduledVisits(updatedScheduledVisits);
-
-    // 5. Cascade edits to individualCostSheets
-    const updatedCostSheets = (individualCostSheets || []).map(cs => {
-      const csCode = (cs.customerId || cs.customerSnapshot?.customerNumber || '').toString().toLowerCase();
-      const csMob = (cs.customerSnapshot?.mobile || '').toString().replace(/\D/g, '');
-      const csName = (cs.customerSnapshot?.customerName || '').toString().toLowerCase().trim();
-
-      if (
-        (cleanCustCode && csCode === cleanCustCode) ||
-        (cleanMobile && csMob && csMob === cleanMobile) ||
-        (cleanName && csName && csName === cleanName)
-      ) {
-        return {
-          ...cs,
-          customerSnapshot: {
-            ...cs.customerSnapshot,
-            customerName: updatedCust.name || updatedCust.customer_name || cs.customerSnapshot?.customerName,
-            mobile: updatedCust.mobile || cs.customerSnapshot?.mobile,
-            email: updatedCust.email || cs.customerSnapshot?.email,
-            address: updatedCust.address || cs.customerSnapshot?.address
-          }
-        };
-      }
-      return cs;
-    });
-    setIndividualCostSheets(updatedCostSheets);
-
-    // 6. Cascade edits to invoices
-    const updatedInvoices = (invoices || []).map(inv => {
-      const invCode = (inv.customer_number || '').toString().toLowerCase();
-      const invMob = (inv.customer_mobile || '').toString().replace(/\D/g, '');
-      const invName = (inv.customer_name || '').toString().toLowerCase().trim();
-
-      if (
-        (cleanCustCode && invCode === cleanCustCode) ||
-        (cleanMobile && invMob && invMob === cleanMobile) ||
-        (cleanName && invName && invName === cleanName)
-      ) {
-        return {
-          ...inv,
-          customer_name: updatedCust.name || updatedCust.customer_name || inv.customer_name,
-          customer_mobile: updatedCust.mobile || inv.customer_mobile,
-          customer_email: updatedCust.email || inv.customer_email,
-          customer_address: updatedCust.address || inv.customer_address
-        };
-      }
-      return inv;
-    });
-    setInvoices(updatedInvoices);
-
-    // 7. Cascade edits to bookings
-    const updatedBookings = (bookings || []).map(b => {
-      const bCode = (b.customer_number || '').toString().toLowerCase();
-      const bMob = (b.customer_mobile || '').toString().replace(/\D/g, '');
-      const bName = (b.customer_name || '').toString().toLowerCase().trim();
-
-      if (
-        (cleanCustCode && bCode === cleanCustCode) ||
-        (cleanMobile && bMob && bMob === cleanMobile) ||
-        (cleanName && bName && bName === cleanName)
-      ) {
-        return {
-          ...b,
-          customer_name: updatedCust.name || updatedCust.customer_name || b.customer_name,
-          customer_mobile: updatedCust.mobile || b.customer_mobile,
-          sales_executive: updatedCust.assigned_employee_name || updatedCust.assigned_salesperson || b.sales_executive
-        };
-      }
-      return b;
-    });
-    setBookings(updatedBookings);
-
-    if (selectedCustomer360 && (selectedCustomer360.id === updatedCust.id || selectedCustomer360.customer_number === updatedCust.customer_number)) {
-      setSelectedCustomer360(updatedCust);
-    }
-    if (rawSelectedCust && (rawSelectedCust.id === updatedCust.id || rawSelectedCust.customer_number === updatedCust.customer_number)) {
-      setSelectedCust(updatedCust);
-    }
-
-    try {
-      localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updatedCustomers));
-      localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updatedCustomers));
-      localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(updatedLeads));
-      localStorage.setItem('swaramayi_leads_v5_clean', JSON.stringify(updatedLeads));
-      localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(updatedMatchingQueue));
-      localStorage.setItem('swaramayi_cost_sheets_v7_clean', JSON.stringify(updatedCostSheets));
-      localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(updatedInvoices));
-      localStorage.setItem('swaramayi_bookings_v7', JSON.stringify(updatedBookings));
-      localStorage.setItem('swaramayi_visit_plans_v7', JSON.stringify(updatedVisitPlans));
-    } catch (err) {
-      console.error('Error saving edited customer cross-module updates to localStorage:', err);
-    }
-
-    if (typeof syncAllToMongoDB === 'function') {
-      syncAllToMongoDB({
-        customers: updatedCustomers,
-        leads: updatedLeads,
-        matchingQueue: updatedMatchingQueue,
-        cost_sheets: updatedCostSheets,
-        invoices: updatedInvoices,
-        bookings: updatedBookings
-      });
-    }
-
-    setShowEditCustomerModal(false);
-    alert(`✏️ Customer Record ${updatedCust.customer_number || updatedCust.name} updated successfully across ALL categories!`);
-  };
 
   const handleStartEditProfile = (userToEdit?: any) => {
     const target = userToEdit || loggedInUser || users.find(u => u.id === loggedInUser?.id) || users[0];
-    const isLoggedSuperAdmin = loggedInUser?.role === 'SUPER_ADMIN' || loggedInUser?.role === 'OWNER';
-    const targetRole = (target?.role || '').toUpperCase();
-    const isTargetAdminOrSuper = targetRole.includes('SUPER') || targetRole.includes('OWNER') || targetRole === 'ADMIN' || targetRole.includes('ADMIN');
-
-    if (!isLoggedSuperAdmin && isTargetAdminOrSuper) {
-      alert('🔒 Security Policy: Admin accounts cannot edit Admin or Super Admin profiles. Admins can only maintain staff profiles below Admin level. Super Admin maintains all profiles.');
-      return;
-    }
     setEditingProfile({ ...target });
     setShowEditProfileModal(true);
   };
 
-  const handleSaveEditedProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingProfile) return;
-    const updatedUsers = users.map(u => u.id === editingProfile.id ? editingProfile : u);
-    setUsers(updatedUsers);
-    syncAllToMongoDB({ users: updatedUsers });
-    setShowEditProfileModal(false);
-    setProfileToastMessage(`✅ Profile details for ${editingProfile.full_name} updated successfully in MongoDB Atlas!`);
-    setTimeout(() => setProfileToastMessage(null), 5000);
-  };
 
   const handleDeleteUser = (id: string, username?: string) => {
     const targetUser = users.find(u => u.id === id || u.username === username || u.full_name === username);
@@ -9898,11 +9362,6 @@ export default function App() {
     }
   };
 
-  const handleResetUserPassword = (id: string, username: string) => {
-    if (window.confirm(`🔐 Are you sure you want to reset credentials for User ${username} (${id})?`)) {
-      alert(`🔑 Credentials & Password for User ${username} (${id}) have been reset to default standard security credentials!`);
-    }
-  };
 
   const handleOpenAddUserModal = () => {
     setEditingUser(null);
@@ -9989,49 +9448,6 @@ export default function App() {
     setShowUserModal(true);
   };
 
-  const handleCreateBranchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newBranchForm.branch_name.trim()) {
-      alert('Please enter a Branch Office Name.');
-      return;
-    }
-
-    const branchNameTrim = newBranchForm.branch_name.trim();
-
-    if (editingBranchId) {
-      setBranches(prev => prev.map(b => b.id === editingBranchId ? {
-        ...b,
-        branch_name: branchNameTrim,
-        city: newBranchForm.city,
-        manager_name: newBranchForm.manager_name,
-        address: newBranchForm.address.trim() || b.address,
-        target_revenue: newBranchForm.target_revenue.trim() || b.target_revenue,
-        teams: newBranchForm.assigned_teams.trim() 
-          ? newBranchForm.assigned_teams.split(',').map(t => t.trim()).filter(Boolean)
-          : (b.teams || ['General Operations Squad'])
-      } : b));
-      alert(`✅ Branch '${branchNameTrim}' updated successfully across Company Hierarchy!`);
-    } else {
-      const newB = {
-        id: `BR-0${branches.length + 1}`,
-        branch_name: branchNameTrim,
-        city: newBranchForm.city,
-        manager_name: newBranchForm.manager_name,
-        address: newBranchForm.address.trim() || `${newBranchForm.city} Main Operational Hub`,
-        target_revenue: newBranchForm.target_revenue.trim() || '₹5,00,00,000',
-        teams: newBranchForm.assigned_teams.trim()
-          ? newBranchForm.assigned_teams.split(',').map(t => t.trim()).filter(Boolean)
-          : ['General Operations Squad'],
-        created_at: new Date().toISOString().split('T')[0]
-      };
-      setBranches(prev => [...prev, newB]);
-      alert(`🏢 Enterprise Branch '${branchNameTrim}' (City: ${newBranchForm.city}) created & provisioned across Company Hierarchy!`);
-    }
-
-    setShowBranchModal(false);
-    setEditingBranchId(null);
-    setNewBranchForm({ branch_name: '', city: 'Kolkata', manager_name: 'Avishek Das (Super Admin)', address: '', target_revenue: '₹5,00,00,000', assigned_teams: 'Corporate Leadership Squad' });
-  };
 
   const handleOpenEditBranchModal = (b: any) => {
     setEditingBranchId(b.id);
@@ -10086,54 +9502,6 @@ export default function App() {
     alert(`🗑️ Branch "${branchName}" removed from Company Hierarchy and Database.`);
   };
 
-  const handleCreateTeamSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTeamForm.team_name.trim()) {
-      alert('Please enter a Sales Team Name.');
-      return;
-    }
-    const teamNameTrim = newTeamForm.team_name.trim();
-
-    if (editingTeamId) {
-      setTeams(prev => prev.map(t => t.id === editingTeamId ? {
-        ...t,
-        team_name: teamNameTrim,
-        branch_name: newTeamForm.branch_name,
-        department: newTeamForm.department,
-        leader_name: newTeamForm.leader_name,
-        monthly_target: newTeamForm.monthly_target.trim() || '15 Property Units'
-      } : t));
-      alert(`✅ Team Squad '${teamNameTrim}' updated successfully!`);
-    } else {
-      const newT = {
-        id: `TEAM-0${teams.length + 1}`,
-        team_name: teamNameTrim,
-        branch_name: newTeamForm.branch_name,
-        department: newTeamForm.department,
-        leader_name: newTeamForm.leader_name,
-        monthly_target: newTeamForm.monthly_target.trim() || '15 Property Units',
-        created_at: new Date().toISOString().split('T')[0]
-      };
-      setTeams(prev => [...prev, newT]);
-
-      // Also add team to parent branch teams array if not present
-      setBranches(prev => prev.map(b => {
-        if (b.branch_name === newTeamForm.branch_name) {
-          const currentTeams = Array.isArray(b.teams) ? b.teams : [];
-          if (!currentTeams.includes(teamNameTrim)) {
-            return { ...b, teams: [...currentTeams, teamNameTrim] };
-          }
-        }
-        return b;
-      }));
-
-      alert(`👥 Sales Team '${teamNameTrim}' (Branch: ${newTeamForm.branch_name}) created & provisioned successfully!`);
-    }
-
-    setShowTeamModal(false);
-    setEditingTeamId(null);
-    setNewTeamForm({ team_name: '', branch_name: 'Head Office (Kolkata)', department: 'Sales Operations', leader_name: 'Avishek Das (Super Admin)', monthly_target: '15 Property Units' });
-  };
 
   const handleDeleteTeam = (teamId: string, teamName: string) => {
     if (window.confirm(`Are you sure you want to delete Team Squad "${teamName}"?`)) {
@@ -10161,56 +9529,6 @@ export default function App() {
     }
   };
 
-  const handleCreateUser = (e: React.FormEvent) => {
-    e.preventDefault();
-    const userPermissions = newUserForm.permissions || { perm_view: true, perm_create: true, perm_edit: true, perm_delete: false, perm_export: true, perm_approve: false, perm_price_change: false, perm_brokerage: false };
-    if (editingUser) {
-      const updatedUsers = users.map(u => u.id === editingUser.id ? {
-        ...u,
-        username: newUserForm.username,
-        full_name: newUserForm.full_name || newUserForm.username,
-        email: newUserForm.email,
-        password: newUserForm.password || u.password || 'Swaramayi@2026',
-        mobile: newUserForm.mobile,
-        role: newUserForm.role,
-        designation: newUserForm.designation,
-        branch_name: newUserForm.branch_name,
-        department: newUserForm.department,
-        team_name: newUserForm.team_name,
-        manager_name: newUserForm.manager_name,
-        permissions: userPermissions
-      } : u);
-      setUsers(updatedUsers);
-      syncAllToMongoDB({ users: updatedUsers });
-      alert(`✏️ User ${newUserForm.full_name || newUserForm.username} (${editingUser.id}) updated & saved to MongoDB Atlas successfully!`);
-      setEditingUser(null);
-    } else {
-      const newU = { 
-        id: `USR-0${users.length + 1}`, 
-        username: newUserForm.username, 
-        full_name: newUserForm.full_name || newUserForm.username, 
-        email: newUserForm.email, 
-        password: newUserForm.password || 'Swaramayi@2026',
-        mobile: newUserForm.mobile || '', 
-        role: newUserForm.role, 
-        designation: newUserForm.designation || '',
-        branch_name: newUserForm.branch_name, 
-        department: newUserForm.department, 
-        team_name: newUserForm.team_name, 
-        manager_name: newUserForm.manager_name, 
-        permissions: userPermissions,
-        is_active: true, 
-        user_status: 'ACTIVE' 
-      };
-      const updatedUsers = [newU, ...users];
-      setUsers(updatedUsers);
-      syncAllToMongoDB({ users: updatedUsers });
-      alert(`👤 User ${newU.username} created & saved to MongoDB Atlas successfully!`);
-    }
-    setShowUserModal(false);
-    setEditingUser(null);
-    setNewUserForm({ username: '', full_name: '', email: '', password: '', mobile: '', role: customRoles[0]?.key || 'SUPER_ADMIN', branch_name: 'Kolkata Branch', department: 'Sales Operations', team_name: 'Kolkata Expansion Team', manager_name: 'Avishek Das (Super Admin)', permissions: { perm_view: true, perm_create: true, perm_edit: true, perm_delete: false, perm_export: true, perm_approve: false, perm_price_change: false, perm_brokerage: false } });
-  };
 
   const handleCreateCustomerSubmit = (e?: React.FormEvent) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -10356,26 +9674,23 @@ export default function App() {
       return updatedQueue;
     });
 
-    if (activeEditingLeadId) {
-      setLeadsList((prevLeads: any[]) => {
-        const updatedLeads = (prevLeads || []).map((l: any) => {
-          if (l.id === activeEditingLeadId || l.lead_number === activeEditingLeadId) {
-            return {
-              ...l,
-              lead_status: 'MATCHING_INITIATED',
-              matchingId: matchingId,
-              customer_number: newCustNumber,
-              notes: newCustomerForm.notes || l.notes || ''
-            };
-          }
-          return l;
-        });
-        try {
-          localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(updatedLeads));
-        } catch (e) {}
-        return updatedLeads;
+    // Once 9 steps are completed, the lead graduates to direct Customer + Matching, so remove from leadsList
+    setLeadsList((prevLeads: any[]) => {
+      const cleanMobile = (newCustomerForm.mobile || newCustomerForm.phone || '').replace(/\D/g, '');
+      const updatedLeads = (prevLeads || []).filter((l: any) => {
+        if (!l) return false;
+        if (activeEditingLeadId && (l.id === activeEditingLeadId || l.lead_number === activeEditingLeadId)) return false;
+        if (newCustNumber && (l.customer_number === newCustNumber || l.customer_id === newCustNumber)) return false;
+        const lMob = (l.mobile || l.phone || '').toString().replace(/\D/g, '');
+        if (cleanMobile && cleanMobile.length >= 7 && lMob && (lMob.endsWith(cleanMobile) || cleanMobile.endsWith(lMob))) return false;
+        return true;
       });
-    }
+      try {
+        localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(updatedLeads));
+      } catch (e) {}
+      syncAllToMongoDB({ leads: updatedLeads });
+      return updatedLeads;
+    });
 
     setShowAddCustomerModal(false);
     setShowCustomerModal(false);
@@ -10537,21 +9852,13 @@ export default function App() {
     } catch (e) {}
 
     // Ensure newly created property is removed from any stale recycle set
-    try {
-      const savedRec = localStorage.getItem('swaramayi_recycled_items');
-      if (savedRec) {
-        const parsedRec = JSON.parse(savedRec);
-        if (Array.isArray(parsedRec)) {
-          const cleanedRec = parsedRec.filter((r: any) => {
-            const rIds = extractAllIdentifiers(r);
-            return !rIds.has(newPropCode) && !rIds.has(newPropCode.toLowerCase()) && !rIds.has(newPropCode.toUpperCase());
-          });
-          localStorage.setItem('swaramayi_recycled_items', JSON.stringify(cleanedRec));
-        }
-      }
-    } catch (e) {}
+    const cleanedRec = (recycledItems || []).filter((r: any) => {
+      const rIds = extractAllIdentifiers(r);
+      return !rIds.has(newPropCode) && !rIds.has(newPropCode.toLowerCase()) && !rIds.has(newPropCode.toUpperCase());
+    });
+    setRecycledItems(cleanedRec);
 
-    await syncAllToMongoDB({ properties: updatedProps });
+    await syncAllToMongoDB({ properties: updatedProps, recycled_items: cleanedRec });
 
     setShowAddPropertyModal(false);
     setShowPropertyModal(false);
@@ -10559,98 +9866,6 @@ export default function App() {
     alert(`🎉 Property Registration Complete! New Property Master ${newPropCode} saved & registered into Central Stock Inventory Registry & MongoDB Atlas!`);
   };
 
-  const handleCreateLeadSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newCustNumber = newCustomerForm.customer_number || generateNextCustomerCode();
-    const custName = newLeadForm.customer_name || newCustomerForm.name || 'Ingested Lead Customer';
-    const mob = newLeadForm.mobile || newCustomerForm.mobile || '';
-    const em = newLeadForm.email || newCustomerForm.email || 'lead@swaramayi.com';
-    const loc = newLeadForm.preferred_location || newCustomerForm.preferredArea || '';
-    const bhkConf = newLeadForm.bhk || newCustomerForm.configuration || '3BHK';
-    const bud = newCustomerForm.budget || `${newLeadForm.budget_min || '70L'} - ${newLeadForm.budget_max || '85L'}`;
-    const prio = (newLeadForm.priority || newCustomerForm.priority || 'HOT') as any;
-
-    const callDisp = (newLeadForm as any).call_disposition || 'CONNECTED_INTERESTED';
-    let leadStat = 'INTERESTED';
-    if (callDisp === 'NOT_INTERESTED') leadStat = 'NOT_INTERESTED';
-    else if (callDisp === 'NO_RESPONSE') leadStat = 'NO_RESPONSE';
-    else if (callDisp === 'CALL_BACK_LATER') leadStat = 'CALL_BACK_LATER';
-
-    const newC = {
-      id: `CUS-${Date.now()}`,
-      customer_number: newCustNumber,
-      name: custName,
-      mobile: mob,
-      email: em,
-      budget: bud,
-      preferredArea: loc,
-      configuration: bhkConf,
-      priority: prio,
-      score: callDisp === 'NOT_INTERESTED' ? 15 : (callDisp === 'NO_RESPONSE' ? 40 : 88),
-      source: newLeadForm.source || 'Meta Ads',
-      lead_status: leadStat,
-      call_disposition: callDisp
-    };
-
-    const newLeadObj = {
-      id: `LEAD-${Date.now().toString().slice(-6)}`,
-      lead_number: `SRM-LEAD-2026-000${leadsList.length + 1}`,
-      customer_id: newCustNumber,
-      customer_number: newCustNumber,
-      customer_name: custName,
-      mobile: mob,
-      alternate_mobile: newLeadForm.alternate_mobile || '',
-      whatsapp_number: newLeadForm.whatsapp_number || mob,
-      email: em,
-      source: newLeadForm.source || 'Meta Ads',
-      campaign: newLeadForm.campaign || 'Direct Lead Ingestion',
-      preferred_location: loc,
-      preferred_project: newLeadForm.preferred_project || '',
-      property_type: newLeadForm.property_type || 'Flat / Apartment',
-      bhk: bhkConf,
-      budget_min: newLeadForm.budget_min || 7000000,
-      budget_max: newLeadForm.budget_max || 8500000,
-      purpose: newLeadForm.purpose || 'Self Use',
-      possession_preference: newLeadForm.possession_preference || 'Immediate (< 30 Days)',
-      loan_required: newLeadForm.loan_required || true,
-      occupation: newLeadForm.occupation || 'Consultant / Professional',
-      priority: prio,
-      lead_status: leadStat,
-      call_disposition: callDisp,
-      next_action: callDisp === 'NOT_INTERESTED' ? 'Closed / Archived' : (callDisp === 'NO_RESPONSE' ? 'Retry Callback' : 'Initial Consultation'),
-      next_followup: new Date(Date.now() + (callDisp === 'NO_RESPONSE' ? 6 : 24) * 3600000).toISOString(),
-      assigned_employee_id: 'USR-01',
-      assigned_employee_name: 'Avishek Das (Super Admin)',
-      created_by: 'USR-01',
-      quality_score: callDisp === 'NOT_INTERESTED' ? 15 : (callDisp === 'NO_RESPONSE' ? 40 : 88),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    let updatedCusts: any[] = [];
-    setCustomers(prev => {
-      const cleanMobile = (mob || '').replace(/\D/g, '');
-      const exists = prev.some(c => (c.customer_number && c.customer_number === newCustNumber) || (cleanMobile && cleanMobile.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMobile));
-      if (exists) {
-        updatedCusts = prev.map(c => ((c.customer_number === newCustNumber || (cleanMobile && cleanMobile.length >= 7 && c.mobile && c.mobile.replace(/\D/g, '') === cleanMobile)) ? { ...c, ...newC } : c));
-      } else {
-        updatedCusts = [newC, ...prev];
-      }
-      return updatedCusts;
-    });
-    const updatedLeads = [newLeadObj, ...leadsList];
-    setLeadsList(updatedLeads);
-
-    try {
-      localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(updatedLeads));
-      localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updatedCusts));
-    } catch (e) {}
-
-    syncAllToMongoDB({ leads: updatedLeads, customers: updatedCusts });
-
-    setShowLeadModal(false);
-    alert(`📋 New Lead (${newLeadObj.lead_number} - ${callDisp}) & Customer Master (${newCustNumber}) saved into Customer & Lead Management & MongoDB Atlas!`);
-  };
 
   const getSevenDigitCustomerNumber = (custNo?: string, altId?: string) => {
     const raw = (custNo || altId || '').replace(/[^0-9]/g, '');
@@ -10725,14 +9940,7 @@ export default function App() {
       `• Developer: ${devName}`);
   };
 
-  const handleRespondApproval = (reqId: string, action: 'APPROVED' | 'REJECTED') => {
-    setApprovalRequests(approvalRequests.map(r => r.id === reqId ? { ...r, status: action, approved_by: 'Avishek Das (Super Admin)' } : r));
-    alert(`⚖️ Request ${reqId} set to ${action}!`);
-  };
 
-  const handleTogglePermission = (roleKey: string, permKey: string) => {
-    setRolePermissions(rolePermissions.map(rp => rp.role_key === roleKey ? { ...rp, [permKey]: !rp[permKey as keyof typeof rp] } : rp));
-  };
 
   const filteredProperties = properties.filter(p => selectedLocality === 'ALL' || p.locality.toLowerCase().replace(/\s+/g, '') === selectedLocality.toLowerCase().replace(/\s+/g, ''));
   const localitiesList = ['ALL', ...Array.from(new Set(properties.map((p: any) => p.locality).filter(Boolean)))];
@@ -11315,6 +10523,30 @@ export default function App() {
     );
   }
 
+  if (isForgotPassword || currentPath.toLowerCase().startsWith('/forgot')) {
+    return (
+      <ForgotPasswordView 
+        users={users}
+        onUpdateUsers={async (updatedUsers) => {
+          setUsers(updatedUsers);
+          await syncAllToMongoDB({ users: updatedUsers });
+        }}
+        onBackToLogin={(prefilledEmail) => {
+          setIsForgotPassword(false);
+          setCurrentPath('/login');
+          if (prefilledEmail) {
+            setLoginEmail(prefilledEmail);
+          }
+          if (typeof window !== 'undefined') {
+            window.history.pushState({}, '', '/login');
+          }
+        }}
+        themeMode={themeMode}
+        setThemeMode={setThemeMode}
+      />
+    );
+  }
+
   const isLoginPage = !isLoggedIn || currentPath.toLowerCase().startsWith('/login');
 
   if (isLoginPage) {
@@ -11539,7 +10771,20 @@ export default function App() {
                   <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer', fontWeight: '700' }}>
                     <input type="checkbox" defaultChecked style={{ accentColor: '#0284c7' }} /> Remember me
                   </label>
-                  <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('🔑 Reset link has been dispatched to your registered corporate email.'); }} style={{ color: '#0284c7', textDecoration: 'none', fontWeight: '800' }}>Forgot password?</a>
+                  <a 
+                    href="#forgot" 
+                    onClick={(e) => { 
+                      e.preventDefault(); 
+                      setIsForgotPassword(true);
+                      setCurrentPath('/forgot-password');
+                      if (typeof window !== 'undefined') {
+                        window.history.pushState({}, '', '/forgot-password');
+                      }
+                    }} 
+                    style={{ color: '#0284c7', textDecoration: 'none', fontWeight: '800', cursor: 'pointer' }}
+                  >
+                    Forgot password?
+                  </a>
                 </div>
 
                 <button 
@@ -11675,42 +10920,11 @@ export default function App() {
           <button onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); setActiveTab('recycle_bin'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: activeTab === 'recycle_bin' ? 'rgba(14, 165, 233, 0.15)' : 'transparent', color: activeTab === 'recycle_bin' ? '#38bdf8' : '#94a3b8', border: activeTab === 'recycle_bin' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', textAlign: 'left' }}>
             <Trash2 size={18} /> <span>Recycle Bin</span>
           </button>
-          {/* 16. Go to Website */}
-          <button 
-            onClick={() => { 
-              if (isMobile) setIsMobileSidebarOpen(false); 
-              const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-              const websiteUrl = isLocal
-                ? (import.meta.env.VITE_WEBSITE_URL || 'http://localhost:5001')
-                : (import.meta.env.VITE_WEBSITE_URL && !import.meta.env.VITE_WEBSITE_URL.includes('localhost')
-                    ? import.meta.env.VITE_WEBSITE_URL
-                    : 'https://web.swaramayi.info');
-              if (typeof window !== 'undefined') {
-                window.open(websiteUrl, '_blank', 'noopener,noreferrer');
-              }
-            }} 
-            title="Open Customer Website in a new browser tab"
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between', 
-              width: '100%', 
-              padding: '10px 14px', 
-              borderRadius: '8px', 
-              background: isLight ? 'rgba(2, 132, 199, 0.08)' : 'rgba(56, 189, 248, 0.1)', 
-              color: isLight ? '#0284c7' : '#38bdf8', 
-              border: '1px solid rgba(56, 189, 248, 0.3)', 
-              fontSize: '0.875rem', 
-              fontWeight: '800', 
-              cursor: 'pointer', 
-              textAlign: 'left' 
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Globe size={18} /> <span>Go to Website</span>
-            </div>
-            <ExternalLink size={14} style={{ opacity: 0.8 }} />
-          </button>
+          {/* 16. Go to Website (Powered by WebsitePortalView) */}
+          <WebsitePortalView 
+            isLight={isLight} 
+            onClick={() => { if (isMobile) setIsMobileSidebarOpen(false); }} 
+          />
           {/* 17. Logout */}
           <button onClick={() => {
     if (isMobile) setIsMobileSidebarOpen(false);
@@ -12234,8 +11448,12 @@ export default function App() {
                 }}
                 title="View My Logged-In Profile"
               >
-                <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#0284c7', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '900' }}>
-                  {(loggedInUser.full_name || loggedInUser.username || 'U').charAt(0).toUpperCase()}
+                <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#0284c7', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '900', overflow: 'hidden' }}>
+                  {loggedInUser.profileImage ? (
+                    <img src={loggedInUser.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    (loggedInUser.full_name || loggedInUser.username || 'U').charAt(0).toUpperCase()
+                  )}
                 </div>
                 <span style={{ fontSize: '0.78rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
                   {loggedInUser.full_name || loggedInUser.username}
@@ -12504,7 +11722,8 @@ export default function App() {
                   };
                 });
 
-                const combinedPool = [...customers, ...leadsList, ...matchingCusts, ...costSheetCusts, ...visitCusts, ...bookingCusts];
+                // Uncompleted leads in leadsList are NOT customers until 9 steps are completed
+                const combinedPool = [...customers, ...matchingCusts, ...costSheetCusts, ...visitCusts, ...bookingCusts];
                 const deduplicatedPool = dedupeCustomerList(combinedPool);
 
                 // Filter customers dynamically based on active filters
@@ -13838,6 +13057,7 @@ export default function App() {
               agreements={agreements}
               setAgreements={setAgreements}
               onRecycleItem={handleRecycleItem}
+              recycledItems={recycledItems}
             />
           )}
 
@@ -13849,7 +13069,6 @@ export default function App() {
               leadViewMode={leadViewMode}
               setLeadViewMode={setLeadViewMode}
               setShowLeadModal={setShowLeadModal}
-              setShowBulkUploadModal={setShowBulkUploadModal}
               leadsList={leadsList}
               leadInboxTab={leadInboxTab}
               setLeadInboxTab={setLeadInboxTab}
@@ -13877,6 +13096,8 @@ export default function App() {
               isSuperAdmin={isSuperAdmin}
               setLeadsList={setLeadsList}
               onRecycleItem={handleRecycleItem}
+              recycledItems={recycledItems}
+              syncAllToMongoDB={syncAllToMongoDB}
             />
           )}
 
@@ -13978,6 +13199,10 @@ export default function App() {
               invoices={invoices}
               agreements={agreements}
               onRecycleItem={handleRecycleItem}
+              recycledItems={recycledItems}
+              syncAllToMongoDB={syncAllToMongoDB}
+              leadsList={leadsList}
+              setLeadsList={setLeadsList}
             />
           )}
 
@@ -14000,6 +13225,7 @@ export default function App() {
               costSheetShares={costSheetShares}
               scheduledVisits={scheduledVisits}
               onRecycleItem={handleRecycleItem}
+              recycledItems={recycledItems}
             />
           )}
 
@@ -14042,6 +13268,7 @@ export default function App() {
               setSelectedCust={setSelectedCust}
               setShowShiftToMatchingModal={setShowShiftToMatchingModal}
               onRecycleItem={handleRecycleItem}
+              recycledItems={recycledItems}
               setUpdateReqForm={setUpdateReqForm}
               setShowUpdateRequirementModal={setShowUpdateRequirementModal}
             />
@@ -14107,6 +13334,7 @@ export default function App() {
               setProperties={setProperties}
               syncAllToMongoDB={syncAllToMongoDB}
               onRecycleItem={handleRecycleItem}
+              recycledItems={recycledItems}
               users={users}
             />
           )}
@@ -14134,6 +13362,7 @@ export default function App() {
               properties={properties}
               customers={customers}
               onRecycleItem={handleRecycleItem}
+              recycledItems={recycledItems}
             />
           )}
 
@@ -14149,6 +13378,8 @@ export default function App() {
               handleStartEditProfile={handleStartEditProfile}
               handleOpenSecurityAuditModal={handleOpenSecurityAuditModal}
               loggedInUser={loggedInUser}
+              setUsers={setUsers}
+              syncAllToMongoDB={syncAllToMongoDB}
             />
           )}
 
@@ -14186,6 +13417,7 @@ export default function App() {
               setSelectedAgreement={setSelectedAgreement}
               setShowFullContractModal={setShowFullContractModal}
               onRecycleItem={handleRecycleItem}
+              recycledItems={recycledItems}
               bookings={bookings}
               setBookings={setBookings}
               syncAllToMongoDB={syncAllToMongoDB}
@@ -14214,9 +13446,9 @@ export default function App() {
               setProperties={setProperties}
               syncAllToMongoDB={syncAllToMongoDB}
               onRecycleItem={handleRecycleItem}
+              recycledItems={recycledItems}
               projectVisitAgreements={projectVisitAgreements}
               agreements={agreements}
-              recycledItems={recycledItems}
             />
           )}
 
@@ -14735,6 +13967,19 @@ export default function App() {
           setVisitPlans={setVisitPlans}
           setScheduledVisits={setScheduledVisits}
           setShowPvaDocumentModal={setShowPvaDocumentModal}
+        />
+      )}
+
+      {/* MODAL: INDIVIDUAL PROPERTY STOP DETAILS */}
+      {showIndividualStopModal && showIndividualStopModal.open && showIndividualStopModal.stop && (
+        <IndividualStopModalContent
+          isLight={isLight}
+          stop={showIndividualStopModal.stop}
+          plan={showIndividualStopModal.plan}
+          onClose={() => setShowIndividualStopModal(null)}
+          setActiveTab={setActiveTab}
+          setActiveCostSheetShareSubTab={setActiveCostSheetShareSubTab}
+          setActiveProjectSubTab={setActiveProjectSubTab}
         />
       )}
 

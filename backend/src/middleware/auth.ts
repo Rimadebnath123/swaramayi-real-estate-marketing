@@ -58,7 +58,6 @@ export function verifyToken(req: AuthRequest, res: Response, next: NextFunction)
   }
 }
 
-export const authenticate = verifyToken;
 export const authenticateToken = verifyToken;
 
 export function requireRole(allowedRoles: string[]) {

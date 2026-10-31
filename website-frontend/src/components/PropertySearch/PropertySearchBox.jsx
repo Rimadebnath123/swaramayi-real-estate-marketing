@@ -1,15 +1,102 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, Home, IndianRupee, Layers, SlidersHorizontal, ArrowRight } from 'lucide-react';
+import { Search, MapPin, Home, IndianRupee, Layers, SlidersHorizontal, ArrowRight, X, ChevronDown } from 'lucide-react';
+
+// All 52 previous Kolkata location options + popular extended hubs
+export const KOLKATA_LOCATIONS = [
+  "Alipore",
+  "Anwar Shah Road",
+  "Ashok Nagar Road",
+  "Ballygunge",
+  "Bamangachhi",
+  "Bansdroni",
+  "Barasat",
+  "Behala",
+  "Bhawanipur",
+  "Bidhan Nagar Road",
+  "Bira",
+  "Birati",
+  "Bisharpara Kodaliya",
+  "Chetla",
+  "Dattapukur",
+  "Dhakuria",
+  "Dum Dum",
+  "Dum Dum Cantonment",
+  "Dum Dum Junction",
+  "Durganagar",
+  "EM Bypass",
+  "Garia",
+  "Gariahat",
+  "Golf Green",
+  "Guma",
+  "Hazra",
+  "Howrah",
+  "Hridaypur",
+  "Jadavpur",
+  "Jodhpur Park",
+  "Kalighat",
+  "Kasba",
+  "Kudghat",
+  "Lake Gardens",
+  "Lansdowne",
+  "Madhyamgram",
+  "Mukundapur",
+  "Naktala",
+  "Netaji Nagar",
+  "New Alipore",
+  "New Barrackpore",
+  "New Town",
+  "Prince Anwar Shah Road",
+  "Rajarhat",
+  "Rashbehari Avenue",
+  "Regent Park",
+  "Ruby",
+  "Salt Lake",
+  "Santoshpur",
+  "Sarat Bose Road",
+  "Sealdah",
+  "Tollygunge",
+  // Extended hubs
+  "Action Area 1",
+  "Action Area 2",
+  "Action Area 3",
+  "Baguiati",
+  "Baruipur",
+  "BT Road",
+  "Chinar Park",
+  "Joka",
+  "Kaikhali",
+  "Kestopur",
+  "Lake Town",
+  "Park Street",
+  "Rajarhat Chowmatha",
+  "Sector V",
+  "Sonarpur",
+  "Ultadanga",
+  "VIP Road"
+];
 
 export default function PropertySearchBox() {
   const [activeTab, setActiveTab] = useState('Buy');
   const [location, setLocation] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
   const [propertyType, setPropertyType] = useState('');
   const [bedrooms, setBedrooms] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [minSqft, setMinSqft] = useState('');
   const navigate = useNavigate();
+  const dropdownRef = useRef(null);
+
+  // Close dropdown menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -23,6 +110,10 @@ export default function PropertySearchBox() {
 
     navigate(`/properties?${params.toString()}`);
   };
+
+  const filteredLocations = KOLKATA_LOCATIONS.filter((loc) =>
+    loc.toLowerCase().includes((location || '').toLowerCase())
+  );
 
   return (
     <div className="relative z-30 max-w-6xl mx-auto px-4 -mt-16 sm:-mt-24 mb-12">
@@ -46,72 +137,106 @@ export default function PropertySearchBox() {
 
         {/* SEARCH FORM */}
         <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-          {/* Location Field */}
-          <div>
+          {/* UNIFIED LOCATION / AREA: TYPE & DROPDOWN MENU TOGETHER */}
+          <div ref={dropdownRef} className="relative">
             <label className="block text-[11px] font-bold text-gold-400 uppercase tracking-wider mb-1">
               Location / Area
             </label>
             <div className="relative">
-              <MapPin className="w-4 h-4 text-gold-500 absolute left-3 top-3" />
-              <select
+              <MapPin className="w-4 h-4 text-gold-500 absolute left-3 top-3 pointer-events-none z-10" />
+              <input
+                type="text"
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full bg-navy-800 text-white text-xs sm:text-sm rounded-xl pl-9 pr-4 py-2.5 border border-gray-700 focus:border-gold-500 focus:outline-none"
-              >
-                <option value="">All Kolkata Locations</option>
-                <option value="Alipore">Alipore</option>
-                <option value="Anwar Shah Road">Anwar Shah Road</option>
-                <option value="Ashok Nagar Road">Ashok Nagar Road</option>
-                <option value="Ballygunge">Ballygunge</option>
-                <option value="Bamangachhi">Bamangachhi</option>
-                <option value="Bansdroni">Bansdroni</option>
-                <option value="Barasat">Barasat</option>
-                <option value="Behala">Behala</option>
-                <option value="Bhawanipur">Bhawanipur</option>
-                <option value="Bidhan Nagar Road">Bidhan Nagar Road</option>
-                <option value="Bira">Bira</option>
-                <option value="Birati">Birati</option>
-                <option value="Bisharpara Kodaliya">Bisharpara Kodaliya</option>
-                <option value="Chetla">Chetla</option>
-                <option value="Dattapukur">Dattapukur</option>
-                <option value="Dhakuria">Dhakuria</option>
-                <option value="Dum Dum">Dum Dum</option>
-                <option value="Dum Dum Cantonment">Dum Dum Cantonment</option>
-                <option value="Dum Dum Junction">Dum Dum Junction</option>
-                <option value="Durganagar">Durganagar</option>
-                <option value="EM Bypass">EM Bypass</option>
-                <option value="Garia">Garia</option>
-                <option value="Gariahat">Gariahat</option>
-                <option value="Golf Green">Golf Green</option>
-                <option value="Guma">Guma</option>
-                <option value="Hazra">Hazra</option>
-                <option value="Howrah">Howrah</option>
-                <option value="Hridaypur">Hridaypur</option>
-                <option value="Jadavpur">Jadavpur</option>
-                <option value="Jodhpur Park">Jodhpur Park</option>
-                <option value="Kalighat">Kalighat</option>
-                <option value="Kasba">Kasba</option>
-                <option value="Kudghat">Kudghat</option>
-                <option value="Lake Gardens">Lake Gardens</option>
-                <option value="Lansdowne">Lansdowne</option>
-                <option value="Madhyamgram">Madhyamgram</option>
-                <option value="Mukundapur">Mukundapur</option>
-                <option value="Naktala">Naktala</option>
-                <option value="Netaji Nagar">Netaji Nagar</option>
-                <option value="New Alipore">New Alipore</option>
-                <option value="New Barrackpore">New Barrackpore</option>
-                <option value="New Town">New Town</option>
-                <option value="Prince Anwar Shah Road">Prince Anwar Shah Road</option>
-                <option value="Rajarhat">Rajarhat</option>
-                <option value="Rashbehari Avenue">Rashbehari Avenue</option>
-                <option value="Regent Park">Regent Park</option>
-                <option value="Ruby">Ruby</option>
-                <option value="Salt Lake">Salt Lake</option>
-                <option value="Santoshpur">Santoshpur</option>
-                <option value="Sarat Bose Road">Sarat Bose Road</option>
-                <option value="Sealdah">Sealdah</option>
-                <option value="Tollygunge">Tollygunge</option>
-              </select>
+                onChange={(e) => {
+                  setLocation(e.target.value);
+                  setIsOpen(true);
+                }}
+                onClick={() => setIsOpen(true)}
+                onFocus={() => setIsOpen(true)}
+                placeholder="All Kolkata Locations"
+                className="w-full bg-navy-800 text-white text-xs sm:text-sm rounded-xl pl-9 pr-8 py-2.5 border border-gray-700 focus:border-gold-500 focus:outline-none placeholder-gray-400 cursor-text"
+              />
+              {location ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLocation('');
+                    setIsOpen(true);
+                  }}
+                  className="absolute right-2.5 top-3 text-gray-400 hover:text-white z-10"
+                  title="Clear"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsOpen(!isOpen);
+                  }}
+                  className="absolute right-2.5 top-3 text-gray-400 hover:text-gold-400 z-10"
+                  title="Open location list"
+                >
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180 text-gold-400' : ''}`} />
+                </button>
+              )}
+
+              {/* Combined Type + Dropdown Menu */}
+              {isOpen && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 bg-navy-900 border border-gold-500/50 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-50 py-1 divide-y divide-gray-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLocation('');
+                      setIsOpen(false);
+                    }}
+                    className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition-colors ${
+                      !location ? 'bg-gold-500/20 text-gold-400 font-bold' : 'text-gray-300 hover:bg-navy-800 hover:text-white'
+                    }`}
+                  >
+                    <span className="font-bold">🏙️ All Kolkata Locations</span>
+                    <span className="text-[10px] text-gray-400">Show All</span>
+                  </button>
+
+                  {location.trim() && !KOLKATA_LOCATIONS.some(l => l.toLowerCase() === location.trim().toLowerCase()) && (
+                    <button
+                      type="button"
+                      onClick={() => setIsOpen(false)}
+                      className="w-full text-left px-3.5 py-2 text-xs bg-gold-500/10 text-gold-400 hover:bg-gold-500/20 font-bold flex items-center justify-between"
+                    >
+                      <span>🔍 Search typed: "{location}"</span>
+                      <span className="text-[10px] bg-gold-500 text-navy-900 font-extrabold px-1.5 py-0.5 rounded">Custom</span>
+                    </button>
+                  )}
+
+                  {filteredLocations.map((loc) => (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => {
+                        setLocation(loc);
+                        setIsOpen(false);
+                      }}
+                      className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition-colors ${
+                        location.toLowerCase() === loc.toLowerCase()
+                          ? 'bg-gold-500/20 text-gold-400 font-bold'
+                          : 'text-gray-200 hover:bg-navy-800 hover:text-white'
+                      }`}
+                    >
+                      <span>{loc}</span>
+                      <MapPin className="w-3 h-3 text-gold-500/60" />
+                    </button>
+                  ))}
+
+                  {filteredLocations.length === 0 && (
+                    <div className="px-3.5 py-2.5 text-xs text-gray-400 text-center">
+                      Press <span className="text-gold-400 font-bold">Search Property</span> to search "{location}".
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -121,7 +246,7 @@ export default function PropertySearchBox() {
               Property Type
             </label>
             <div className="relative">
-              <Home className="w-4 h-4 text-gold-500 absolute left-3 top-3" />
+              <Home className="w-4 h-4 text-gold-500 absolute left-3 top-3 pointer-events-none" />
               <select
                 value={propertyType}
                 onChange={(e) => setPropertyType(e.target.value)}
@@ -144,7 +269,7 @@ export default function PropertySearchBox() {
               Bedrooms (BHK)
             </label>
             <div className="relative">
-              <Layers className="w-4 h-4 text-gold-500 absolute left-3 top-3" />
+              <Layers className="w-4 h-4 text-gold-500 absolute left-3 top-3 pointer-events-none" />
               <select
                 value={bedrooms}
                 onChange={(e) => setBedrooms(e.target.value)}
@@ -166,7 +291,7 @@ export default function PropertySearchBox() {
               Max Budget
             </label>
             <div className="relative">
-              <IndianRupee className="w-4 h-4 text-gold-500 absolute left-3 top-3" />
+              <IndianRupee className="w-4 h-4 text-gold-500 absolute left-3 top-3 pointer-events-none" />
               <select
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(e.target.value)}

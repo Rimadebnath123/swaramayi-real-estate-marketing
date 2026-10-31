@@ -3,7 +3,7 @@ import {
   ShieldAlert, UserPlus, Building2, Users, CheckCircle2, ShieldCheck, Edit3, Trash2, Search,
   Lock, Shield, XCircle, RotateCw, Check, Briefcase, UserCheck, Activity, FileText, AlertTriangle,
   Layers, Award, Phone, Building, UserX, RefreshCw, Zap, Eye, EyeOff, Sliders, Server, Cpu, ArrowRight, X, PhoneCall,
-  Plus, MapPin, Star, FileDown, Download
+  Plus, MapPin, Star, FileDown, Download, Upload, Camera
 } from 'lucide-react';
 
 interface RoleManagementViewProps {
@@ -137,6 +137,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
     if (activeRoleSubTab === 'branches_offices' || activeRoleSubTab === 'org_hierarchy') return 'branches_offices';
     if (activeRoleSubTab === 'sales_teams_squads' || activeRoleSubTab === 'teams_directory') return 'sales_teams_squads';
     if (activeRoleSubTab === 'assigned_property_advisors') return 'assigned_property_advisors';
+    if (activeRoleSubTab === 'website_files') return 'website_files';
     if (activeRoleSubTab === 'exit_handover') return 'exit_handover';
     return 'active_roles_matrix';
   });
@@ -150,6 +151,8 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       setCurrentSubTab('sales_teams_squads');
     } else if (activeRoleSubTab === 'assigned_property_advisors') {
       setCurrentSubTab('assigned_property_advisors');
+    } else if (activeRoleSubTab === 'website_files') {
+      setCurrentSubTab('website_files');
     } else if (activeRoleSubTab === 'exit_handover') {
       setCurrentSubTab('exit_handover');
     } else if (activeRoleSubTab === 'active_roles_matrix' || activeRoleSubTab === 'permission_matrix') {
@@ -276,6 +279,185 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
   const [internalFilterCategory, setInternalFilterCategory] = React.useState('ALL');
   const [localApprovals, setLocalApprovals] = React.useState<any[]>([]);
 
+  // Website Files State & CRUD Management
+  const [websiteFiles, setWebsiteFiles] = React.useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem('swaramayi_website_files_cache');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [
+      {
+        id: 'FILE-001',
+        title: 'Swarnamayi Corporate Portfolio & Services 2026',
+        category: 'Corporate Profile',
+        description: 'Complete overview of Swarnamayi Real Estate Marketing, verified project portfolios, property advisory protocols, and client track record across Kolkata.',
+        fileSize: 'PDF • 4.2 MB',
+        filePath: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/examples/learning/helloworld.pdf'
+      }
+    ];
+  });
+  const [fileSearchQuery, setFileSearchQuery] = React.useState('');
+  const [fileCategoryFilter, setFileCategoryFilter] = React.useState('ALL');
+
+  // Website File Modal State
+  const [showFileModal, setShowFileModal] = React.useState(false);
+  const [editingFile, setEditingFile] = React.useState<any | null>(null);
+  const [fileSubmitting, setFileSubmitting] = React.useState(false);
+  const [fileForm, setFileForm] = React.useState({
+    title: '',
+    category: 'Corporate Profile',
+    description: '',
+    fileSize: 'PDF • 4.2 MB',
+    filePath: ''
+  });
+
+  const fetchWebsiteFiles = React.useCallback(async () => {
+    try {
+      const apiUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:5000/api/v1/public/files'
+        : '/api/v1/public/files';
+      const res = await fetch(apiUrl);
+      if (res.ok) {
+        const json = await res.json();
+        const list = json.data || [];
+        if (Array.isArray(list) && list.length > 0) {
+          setWebsiteFiles(list);
+          try { localStorage.setItem('swaramayi_website_files_cache', JSON.stringify(list)); } catch (e) {}
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch website files:', err);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchWebsiteFiles();
+  }, [fetchWebsiteFiles]);
+
+  const handleOpenAddFileModal = () => {
+    setEditingFile(null);
+    setFileForm({
+      title: '',
+      category: 'Corporate Profile',
+      description: '',
+      fileSize: 'PDF • 4.2 MB',
+      filePath: ''
+    });
+    setShowFileModal(true);
+  };
+
+  const handleOpenEditFileModal = (file: any) => {
+    setEditingFile(file);
+    setFileForm({
+      title: file.title || '',
+      category: file.category || 'Corporate Profile',
+      description: file.description || '',
+      fileSize: file.fileSize || 'PDF • 4.2 MB',
+      filePath: file.filePath || ''
+    });
+    setShowFileModal(true);
+  };
+
+  const handleSaveFileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fileForm.title.trim() || !fileForm.filePath.trim()) {
+      alert('Please provide both the File Title and the File Download URL / Path.');
+      return;
+    }
+
+    setFileSubmitting(true);
+    try {
+      const isEdit = Boolean(editingFile && editingFile.id);
+      const baseUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:5000/api/v1/public/files'
+        : '/api/v1/public/files';
+      const endpoint = isEdit ? `${baseUrl}/${editingFile.id}` : baseUrl;
+      const method = isEdit ? 'PUT' : 'POST';
+
+      const res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fileForm)
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const savedFile = json.data;
+        if (isEdit) {
+          setWebsiteFiles(prev => {
+            const next = prev.map(f => f.id === editingFile.id ? (savedFile || { ...f, ...fileForm }) : f);
+            try { localStorage.setItem('swaramayi_website_files_cache', JSON.stringify(next)); } catch (e) {}
+            return next;
+          });
+        } else {
+          setWebsiteFiles(prev => {
+            const next = [savedFile || { ...fileForm, id: `FILE-${Date.now()}` }, ...prev];
+            try { localStorage.setItem('swaramayi_website_files_cache', JSON.stringify(next)); } catch (e) {}
+            return next;
+          });
+        }
+        setShowFileModal(false);
+        fetchWebsiteFiles();
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        alert(`Failed to save file: ${errJson.message || 'Server error'}`);
+      }
+    } catch (err: any) {
+      console.error('File save error:', err);
+      if (editingFile && editingFile.id) {
+        setWebsiteFiles(prev => prev.map(f => f.id === editingFile.id ? { ...f, ...fileForm } : f));
+      } else {
+        setWebsiteFiles(prev => [{ ...fileForm, id: `FILE-${Date.now()}` }, ...prev]);
+      }
+      setShowFileModal(false);
+    } finally {
+      setFileSubmitting(false);
+    }
+  };
+
+  const handleDeleteFile = async (file: any) => {
+    if (!canDelete) {
+      alert('Strict Access Control: Only Super Admin / Owner has authorization to delete website files.');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to permanently delete "${file.title}"?\nIt will be removed from the public website.`)) {
+      return;
+    }
+
+    try {
+      const baseUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:5000/api/v1/public/files'
+        : '/api/v1/public/files';
+      await fetch(`${baseUrl}/${file.id}`, { method: 'DELETE' });
+      setWebsiteFiles(prev => {
+        const next = prev.filter(f => f.id !== file.id);
+        try { localStorage.setItem('swaramayi_website_files_cache', JSON.stringify(next)); } catch (e) {}
+        return next;
+      });
+    } catch (err) {
+      setWebsiteFiles(prev => prev.filter(f => f.id !== file.id));
+    }
+  };
+
+  const filteredFiles = React.useMemo(() => {
+    let result = websiteFiles;
+    if (fileCategoryFilter !== 'ALL') {
+      result = result.filter(f => (f.category || '').toLowerCase() === fileCategoryFilter.toLowerCase());
+    }
+    if (fileSearchQuery.trim()) {
+      const q = fileSearchQuery.toLowerCase();
+      result = result.filter(f => 
+        (f.title || '').toLowerCase().includes(q) ||
+        (f.category || '').toLowerCase().includes(q) ||
+        (f.description || '').toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [websiteFiles, fileCategoryFilter, fileSearchQuery]);
+
   // User Modal State (Add & Edit Employee)
   const [showUserModalInternal, setShowUserModalInternal] = React.useState(false);
   const [editingUser, setEditingUser] = React.useState<any | null>(null);
@@ -292,6 +474,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
     department: 'Sales Operations',
     team_name: '',
     manager_name: '',
+    profileImage: '',
     permissions: {
       perm_view: true,
       perm_create: true,
@@ -319,6 +502,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       department: 'Sales Operations',
       team_name: localTeams[0]?.team_name || '',
       manager_name: safeUsers.find((u: any) => (u.role || '').toUpperCase() === 'SUPER_ADMIN')?.full_name || safeUsers[0]?.full_name || '',
+      profileImage: '',
       permissions: {
         perm_view: true,
         perm_create: true,
@@ -354,6 +538,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       department: u.department || (isSuper ? 'Executive Board' : 'Sales Operations'),
       team_name: u.team_name || (isSuper ? 'Corporate Leadership Squad' : (localTeams[0]?.team_name || 'Head Office Sales Squad')),
       manager_name: u.manager_name || (isSuper ? 'Avishek Das (Super Admin)' : (safeUsers.find((x: any) => (x.role || '').toUpperCase().includes('SUPER'))?.full_name || 'Avishek Das (Super Admin)')),
+      profileImage: u.profileImage || '',
       permissions: u.permissions || {
         perm_view: true,
         perm_create: true,
@@ -395,15 +580,33 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
         department: userForm.department,
         team_name: userForm.team_name,
         manager_name: userForm.manager_name,
-        permissions: userForm.permissions
+        permissions: userForm.permissions,
+        profileImage: userForm.profileImage !== undefined ? userForm.profileImage : (u.profileImage || '')
       } : u);
 
       if (setUsers) setUsers(updatedUsers);
       try {
-        localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(updatedUsers));
+        const stripImage = (list: any[]) => list.map(item => {
+          const { profileImage, avatar, ...rest } = item;
+          return rest;
+        });
+        localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(stripImage(updatedUsers)));
       } catch (err) {}
-      if (syncAllToMongoDB) syncAllToMongoDB({ users: updatedUsers });
-      alert(`✏️ User "${nameTrim}" (${editingUser.id}) updated & saved successfully!`);
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({ users: updatedUsers });
+      } else {
+        try {
+          const apiUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:5000/api/v1/crm/sync'
+            : '/api/v1/crm/sync';
+          fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ users: updatedUsers })
+          });
+        } catch (err) {}
+      }
+      alert(`✏️ User "${nameTrim}" (${editingUser.id}) updated & saved to MongoDB successfully!`);
     } else {
       const newId = `USR-${String((users || []).length + 1).padStart(2, '0')}`;
       const newU = {
@@ -420,6 +623,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
         team_name: userForm.team_name,
         manager_name: userForm.manager_name,
         permissions: userForm.permissions,
+        profileImage: userForm.profileImage || '',
         is_active: true,
         user_status: 'ACTIVE',
         created_at: new Date().toISOString().split('T')[0]
@@ -427,10 +631,27 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       const updatedUsers = [newU, ...(users || [])];
       if (setUsers) setUsers(updatedUsers);
       try {
-        localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(updatedUsers));
+        const stripImage = (list: any[]) => list.map(item => {
+          const { profileImage, avatar, ...rest } = item;
+          return rest;
+        });
+        localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(stripImage(updatedUsers)));
       } catch (err) {}
-      if (syncAllToMongoDB) syncAllToMongoDB({ users: updatedUsers });
-      alert(`👤 User "${nameTrim}" (${newId}) provisioned & created successfully!`);
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({ users: updatedUsers });
+      } else {
+        try {
+          const apiUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:5000/api/v1/crm/sync'
+            : '/api/v1/crm/sync';
+          fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ users: updatedUsers })
+          });
+        } catch (err) {}
+      }
+      alert(`👤 User "${nameTrim}" (${newId}) provisioned & saved to MongoDB successfully!`);
     }
 
     setShowUserModalInternal(false);
@@ -1928,6 +2149,13 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
         </button>
 
         <button 
+          onClick={() => handleSwitchSubTab('website_files')} 
+          style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', background: currentSubTab === 'website_files' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: currentSubTab === 'website_files' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}
+        >
+          📂 Website Files & Brochures ({websiteFiles.length})
+        </button>
+
+        <button 
           onClick={() => handleSwitchSubTab('exit_handover')} 
           style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', background: currentSubTab === 'exit_handover' ? '#ef4444' : (isLight ? '#ffffff' : '#1e293b'), color: currentSubTab === 'exit_handover' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
@@ -2199,8 +2427,12 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                       <tr key={u.id} style={{ borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
                         <td style={{ padding: '10px 14px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '0.9rem' }}>
-                              {(u.full_name || u.username || 'U').substring(0, 2).toUpperCase()}
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '0.9rem', overflow: 'hidden', flexShrink: 0 }}>
+                              {u.profileImage ? (
+                                <img src={u.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                (u.full_name || u.username || 'U').substring(0, 2).toUpperCase()
+                              )}
                             </div>
                             <div>
                               <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.9rem' }}>{u.full_name || u.username}</strong>
@@ -2706,6 +2938,233 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
         </div>
       )}
 
+      {/* SUB-TAB: WEBSITE FILES & BROCHURES MANAGEMENT */}
+      {currentSubTab === 'website_files' && (
+        <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* TOP CONTROLS & HEADER */}
+          <div style={{ display: 'flex', flexDirection: windowWidth <= 768 ? 'column' : 'row', justifyContent: 'space-between', alignItems: windowWidth <= 768 ? 'flex-start' : 'center', gap: '14px', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingBottom: '16px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.25rem' }}>📂</span>
+                <h3 style={{ fontSize: windowWidth <= 480 ? '1.05rem' : '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>
+                  Website Files & Downloadable Resources Management
+                </h3>
+              </div>
+              <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', margin: '4px 0 0 0' }}>
+                Directly manage corporate brochures, project floor plans, and investment guides served live on the website at <strong style={{ color: '#0284c7' }}>http://localhost:5001/files</strong>.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', width: windowWidth <= 768 ? '100%' : 'auto' }}>
+              <a 
+                href="http://localhost:5001/files" 
+                target="_blank" 
+                rel="noreferrer"
+                style={{ 
+                  background: isLight ? '#f1f5f9' : '#0f172a', 
+                  color: isLight ? '#334155' : '#93c5fd', 
+                  border: isLight ? '1px solid #cbd5e1' : '1px solid #1e3a8a', 
+                  padding: '9px 14px', 
+                  borderRadius: '8px', 
+                  fontWeight: '800', 
+                  fontSize: '0.8rem', 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  textDecoration: 'none' 
+                }}
+              >
+                <span>🌐 Preview Website Files Page ↗</span>
+              </a>
+
+              <button
+                onClick={handleOpenAddFileModal}
+                style={{ 
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', 
+                  color: '#ffffff', 
+                  border: 'none', 
+                  padding: '9px 16px', 
+                  borderRadius: '8px', 
+                  fontWeight: '900', 
+                  fontSize: '0.82rem', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)' 
+                }}
+              >
+                <Plus size={16} /> Add Website File / Brochure
+              </button>
+            </div>
+          </div>
+
+          {/* SEARCH & CATEGORY FILTER BAR */}
+          <div style={{ display: 'flex', flexDirection: windowWidth <= 640 ? 'column' : 'row', gap: '12px', alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: 1, width: '100%' }}>
+              <Search size={15} color={isLight ? '#64748b' : '#94a3b8'} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                type="text"
+                value={fileSearchQuery}
+                onChange={(e) => setFileSearchQuery(e.target.value)}
+                placeholder="Search files by title, category, or description..."
+                style={{
+                  width: '100%',
+                  background: isLight ? '#f8fafc' : '#0f172a',
+                  color: isLight ? '#0f172a' : '#ffffff',
+                  border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                  borderRadius: '8px',
+                  padding: '9px 12px 9px 36px',
+                  fontSize: '0.85rem'
+                }}
+              />
+            </div>
+
+            <select
+              value={fileCategoryFilter}
+              onChange={(e) => setFileCategoryFilter(e.target.value)}
+              style={{
+                background: isLight ? '#f8fafc' : '#0f172a',
+                color: isLight ? '#0f172a' : '#ffffff',
+                border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                borderRadius: '8px',
+                padding: '9px 14px',
+                fontSize: '0.85rem',
+                fontWeight: '700',
+                width: windowWidth <= 640 ? '100%' : 'auto'
+              }}
+            >
+              <option value="ALL">All Categories</option>
+              <option value="Corporate Profile">Corporate Profile</option>
+              <option value="Investment Guide">Investment Guide</option>
+              <option value="Floor Plan">Floor Plan</option>
+              <option value="Price List">Price List</option>
+              <option value="Legal Checklist">Legal Checklist</option>
+              <option value="Project Brochure">Project Brochure</option>
+              <option value="General Resource">General Resource</option>
+            </select>
+          </div>
+
+          {/* FILES GRID CARDS */}
+          {filteredFiles.length === 0 ? (
+            <div style={{ padding: '40px 20px', textAlign: 'center', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155' }}>
+              <FileText size={36} color={isLight ? '#94a3b8' : '#64748b'} style={{ margin: '0 auto 10px auto', display: 'block' }} />
+              <p style={{ margin: 0, fontWeight: '800', color: isLight ? '#334155' : '#e2e8f0' }}>No website files found</p>
+              <p style={{ margin: '4px 0 14px 0', fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8' }}>Click the button below to upload or publish a new downloadable file.</p>
+              <button
+                onClick={handleOpenAddFileModal}
+                style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
+              >
+                + Add Website File
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 768 ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
+              {filteredFiles.map((file: any) => (
+                <div 
+                  key={file.id} 
+                  style={{ 
+                    background: isLight ? '#ffffff' : '#0f172a', 
+                    border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', 
+                    borderRadius: '14px', 
+                    padding: '20px', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    justifyContent: 'space-between',
+                    boxShadow: isLight ? '0 2px 8px rgba(0,0,0,0.04)' : '0 4px 16px rgba(0,0,0,0.25)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div>
+                    {/* CARD HEADER */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid rgba(2, 132, 199, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284c7' }}>
+                          <FileText size={22} />
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase', background: isLight ? '#e0f2fe' : '#1e3a8a', color: isLight ? '#0369a1' : '#93c5fd', padding: '2px 8px', borderRadius: '4px', letterSpacing: '0.5px' }}>
+                            {file.category || 'General'}
+                          </span>
+                          <div style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '3px' }}>
+                            {file.fileSize || 'PDF Document'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <span style={{ fontSize: '0.72rem', color: isLight ? '#94a3b8' : '#64748b', fontWeight: '700' }}>
+                        {file.id}
+                      </span>
+                    </div>
+
+                    {/* CARD CONTENT */}
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff', margin: '0 0 8px 0', lineHeight: 1.4 }}>
+                      {file.title}
+                    </h4>
+
+                    <p style={{ fontSize: '0.78rem', color: isLight ? '#475569' : '#94a3b8', lineHeight: 1.5, margin: '0 0 16px 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {file.description || 'No description provided.'}
+                    </p>
+                  </div>
+
+                  {/* CARD ACTIONS */}
+                  <div style={{ borderTop: isLight ? '1px solid #f1f5f9' : '1px solid #1e293b', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <a
+                      href={file.filePath}
+                      target="_blank"
+                      rel="noreferrer"
+                      download
+                      style={{ 
+                        width: '100%', 
+                        padding: '8px 12px', 
+                        background: isLight ? '#0f172a' : '#0284c7', 
+                        color: '#ffffff', 
+                        borderRadius: '8px', 
+                        fontSize: '0.78rem', 
+                        fontWeight: '800', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        gap: '6px', 
+                        textDecoration: 'none' 
+                      }}
+                    >
+                      <Download size={14} /> Download / View Resource
+                    </a>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: isLight ? '#94a3b8' : '#64748b' }}>
+                        {file.created_at ? new Date(file.created_at).toLocaleDateString() : 'Live on Website'}
+                      </span>
+
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={() => handleOpenEditFileModal(file)}
+                          style={{ background: isLight ? '#f1f5f9' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '5px 10px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          title="Edit File Metadata"
+                        >
+                          <Edit3 size={13} /> Edit
+                        </button>
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDeleteFile(file)}
+                            style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.25)', padding: '5px 10px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            title="Delete File from Website"
+                          >
+                            <Trash2 size={13} /> Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ASSIGN PROPERTY TO ADVISOR MODAL */}
       {showAssignPropertyModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
@@ -2865,6 +3324,162 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
         </div>
       )}
 
+      {/* WEBSITE FILE ADD / EDIT MODAL */}
+      {showFileModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.78)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#0f1d38', border: isLight ? '1px solid #cbd5e1' : '1.5px solid #1e3a8a', borderRadius: '18px', width: '100%', maxWidth: '580px', maxHeight: '92vh', overflowY: 'auto', padding: windowWidth <= 640 ? '18px' : '26px', boxShadow: '0 25px 60px rgba(0,0,0,0.65)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            
+            {/* MODAL HEADER */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #1e3a8a', paddingBottom: '14px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FileText size={20} color="#0284c7" /> {editingFile ? 'Edit Website Resource File' : 'Publish New Website Resource File'}
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', margin: '3px 0 0 0' }}>
+                  This file will be immediately visible for download by visitors on the public website.
+                </p>
+              </div>
+              <button 
+                onClick={() => { setShowFileModal(false); setEditingFile(null); }}
+                style={{ background: 'transparent', border: 'none', color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveFileSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '6px' }}>
+                  File Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={fileForm.title}
+                  onChange={(e) => setFileForm({ ...fileForm, title: e.target.value })}
+                  placeholder="e.g. Swarnamayi Corporate Portfolio & Services 2026"
+                  style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px 12px', fontSize: '0.85rem', fontWeight: '700' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '6px' }}>
+                    Resource Category *
+                  </label>
+                  <select
+                    value={fileForm.category}
+                    onChange={(e) => setFileForm({ ...fileForm, category: e.target.value })}
+                    style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px 12px', fontSize: '0.85rem', fontWeight: '700' }}
+                  >
+                    <option value="Corporate Profile">Corporate Profile</option>
+                    <option value="Investment Guide">Investment Guide</option>
+                    <option value="Floor Plan">Floor Plan</option>
+                    <option value="Price List">Price List</option>
+                    <option value="Legal Checklist">Legal Checklist</option>
+                    <option value="Project Brochure">Project Brochure</option>
+                    <option value="General Resource">General Resource</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '6px' }}>
+                    File Size & Format Badge *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={fileForm.fileSize}
+                    onChange={(e) => setFileForm({ ...fileForm, fileSize: e.target.value })}
+                    placeholder="e.g. PDF • 4.2 MB"
+                    style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px 12px', fontSize: '0.85rem' }}
+                  />
+                </div>
+              </div>
+
+              {/* FILE LINK OR UPLOAD */}
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '6px' }}>
+                  File Download URL / Path *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={fileForm.filePath}
+                  onChange={(e) => setFileForm({ ...fileForm, filePath: e.target.value })}
+                  placeholder="https://... or /files/brochure.pdf"
+                  style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px 12px', fontSize: '0.85rem' }}
+                />
+
+                <div style={{ marginTop: '8px', padding: '10px 14px', background: isLight ? '#f1f5f9' : '#1e293b', borderRadius: '8px', border: isLight ? '1px dashed #cbd5e1' : '1px dashed #475569', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                  <div style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                    📎 Or attach a local PDF file:
+                  </div>
+                  <label style={{ background: '#0284c7', color: '#ffffff', padding: '5px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}>
+                    Browse File
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                          const ext = file.name.split('.').pop()?.toUpperCase() || 'FILE';
+                          const reader = new FileReader();
+                          reader.onload = (uploadEvt) => {
+                            const dataUrl = uploadEvt.target?.result as string;
+                            setFileForm(prev => ({
+                              ...prev,
+                              filePath: dataUrl || prev.filePath,
+                              fileSize: `${ext} • ${sizeMB} MB`,
+                              title: prev.title || file.name.replace(/\.[^/.]+$/, "")
+                            }));
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '6px' }}>
+                  Description / Overview *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={fileForm.description}
+                  onChange={(e) => setFileForm({ ...fileForm, description: e.target.value })}
+                  placeholder="Provide a brief overview of what this brochure or guide covers..."
+                  style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '8px', padding: '10px 12px', fontSize: '0.85rem', resize: 'vertical' }}
+                />
+              </div>
+
+              {/* MODAL ACTIONS */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '12px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #1e3a8a' }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowFileModal(false); setEditingFile(null); }}
+                  style={{ background: isLight ? '#f1f5f9' : '#1e293b', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '9px 18px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={fileSubmitting}
+                  style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '9px 22px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', opacity: fileSubmitting ? 0.7 : 1 }}
+                >
+                  {fileSubmitting ? 'Saving...' : (editingFile ? 'Update Website File' : 'Publish File to Website')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* 1. ENTERPRISE USER PROVISIONING & EDIT MODAL (BLUE ENTERPRISE THEME) */}
       {showUserModalInternal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(10, 20, 40, 0.82)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px', overflowY: 'auto' }}>
@@ -2940,6 +3555,102 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                   1. Identity & Login Credentials
                 </div>
 
+                {/* PROFILE IMAGE UPLOAD */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  padding: '12px 14px',
+                  background: isLight ? '#ffffff' : '#08142b',
+                  border: isLight ? '1px dashed #cbd5e1' : '1px dashed #1e3a8a',
+                  borderRadius: '10px'
+                }}>
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '14px',
+                    background: userForm.profileImage ? '#0f172a' : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    border: '2px solid #38bdf8',
+                    flexShrink: 0
+                  }}>
+                    {userForm.profileImage ? (
+                      <img src={userForm.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: '1.25rem', fontWeight: '900', color: '#ffffff' }}>
+                        {(userForm.full_name || userForm.username || 'U').charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>
+                      Profile Image (Optional)
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                      PNG, JPG or AVIF up to 5MB. Stored directly in MongoDB.
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                      <label style={{
+                        background: '#0284c7',
+                        color: '#ffffff',
+                        fontSize: '0.74rem',
+                        fontWeight: '800',
+                        padding: '6px 14px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        <Upload size={13} /> {userForm.profileImage ? 'Change Photo' : 'Upload Photo'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 5 * 1024 * 1024) {
+                                alert('File size must be less than 5MB');
+                                return;
+                              }
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setUserForm(f => ({ ...f, profileImage: reader.result as string }));
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                      {userForm.profileImage && (
+                        <button
+                          type="button"
+                          onClick={() => setUserForm(f => ({ ...f, profileImage: '' }))}
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            color: '#ef4444',
+                            border: '1px solid rgba(239, 68, 68, 0.4)',
+                            fontSize: '0.74rem',
+                            fontWeight: '800',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Trash2 size={13} /> Remove Photo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : '1fr 1fr', gap: '14px' }}>
                   <div>
                     <label style={{ fontSize: '0.78rem', fontWeight: '700', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginBottom: '6px' }}>
@@ -2950,7 +3661,8 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                       required
                       value={userForm.full_name}
                       onChange={(e) => setUserForm(f => ({ ...f, full_name: e.target.value, username: f.username || e.target.value }))}
-                      placeholder="e.g. Avishek Das"
+                      placeholder="e.g. Rahul Sharma"
+                      autoComplete="off"
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#08142b', border: isLight ? '1px solid #cbd5e1' : '1px solid #1e3a8a', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
                     />
                   </div>
@@ -2963,7 +3675,8 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                       required
                       value={userForm.email}
                       onChange={(e) => setUserForm(f => ({ ...f, email: e.target.value }))}
-                      placeholder="avishek@swaramayi.info"
+                      placeholder="employee@swaramayi.info"
+                      autoComplete="off"
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#08142b', border: isLight ? '1px solid #cbd5e1' : '1px solid #1e3a8a', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
                     />
                   </div>
@@ -2979,7 +3692,8 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                         type={showUserModalPassword ? 'text' : 'password'}
                         value={userForm.password}
                         onChange={(e) => setUserForm(f => ({ ...f, password: e.target.value }))}
-                        placeholder="••••••••••••"
+                        placeholder={editingUser ? "Leave blank to keep existing password" : "Enter password (min. 6 chars)"}
+                        autoComplete="new-password"
                         style={{ width: '100%', background: isLight ? '#ffffff' : '#08142b', border: isLight ? '1px solid #cbd5e1' : '1px solid #1e3a8a', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 36px 9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
                       />
                       <button
@@ -3000,7 +3714,8 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                       required
                       value={userForm.mobile}
                       onChange={(e) => setUserForm(f => ({ ...f, mobile: e.target.value }))}
-                      placeholder="+91 00000 00000"
+                      placeholder="+91 98000 00000"
+                      autoComplete="off"
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#08142b', border: isLight ? '1px solid #cbd5e1' : '1px solid #1e3a8a', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
                     />
                   </div>
@@ -3014,7 +3729,8 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                     type="text"
                     value={userForm.designation}
                     onChange={(e) => setUserForm(f => ({ ...f, designation: e.target.value }))}
-                    placeholder="Managing Director & Founder"
+                    placeholder="e.g. Sales Specialist / Property Advisor / Branch Manager"
+                    autoComplete="off"
                     style={{ width: '100%', background: isLight ? '#ffffff' : '#08142b', border: isLight ? '1px solid #cbd5e1' : '1px solid #1e3a8a', color: isLight ? '#0f172a' : '#ffffff', padding: '9px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700' }}
                   />
                 </div>

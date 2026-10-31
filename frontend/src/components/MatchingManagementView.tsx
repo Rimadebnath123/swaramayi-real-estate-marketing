@@ -43,6 +43,10 @@ interface MatchingManagementViewProps {
   invoices?: any[];
   agreements?: any[];
   onRecycleItem?: (itemData: any) => void;
+  recycledItems?: any[];
+  syncAllToMongoDB?: (overrideData?: any) => Promise<void>;
+  leadsList?: any[];
+  setLeadsList?: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 export interface CustomerUsedPropertyCodeInfo {
@@ -193,6 +197,10 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
   invoices = [],
   agreements = [],
   onRecycleItem,
+  recycledItems = [],
+  syncAllToMongoDB,
+  leadsList = [],
+  setLeadsList,
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
@@ -518,15 +526,17 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
         onRecycleItem({
           id: reqId || `MAT-${Date.now()}`,
           title: `Matching Request - ${custName || 'Client'} (${reqId})`,
-          category: 'Lead',
+          category: 'Matching',
           originalLocation: 'Matching Management Vault',
           details: `Customer ID: ${custNum || 'N/A'}, Mobile: ${mobile || 'N/A'}`,
           originalData: req
         });
       }
+
+      let nextMatches: any[] = [];
       if (setMatchingRequestsQueue) {
         setMatchingRequestsQueue(prev => {
-          const next = (prev || []).filter(r => {
+          nextMatches = (prev || []).filter(r => {
             const rId = (r.requestId || r.id || '').toString().trim();
             const rCustNum = (r.customerNumber || r.customerId || '').toString().trim();
             const rName = (r.customerName || r.name || '').toString().trim();
@@ -539,17 +549,18 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             return true;
           });
           try {
-            localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(next));
+            localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(nextMatches));
           } catch (e) {
             console.error(e);
           }
-          return next;
+          return nextMatches;
         });
       }
 
+      let nextCusts: any[] = [];
       if (setCustomers) {
         setCustomers(prev => {
-          const next = (prev || []).filter(c => {
+          nextCusts = (prev || []).filter(c => {
             const cNum = (c.customer_number || c.customerNumber || c.customerId || c.id || '').toString().trim();
             const cName = (c.name || c.full_name || '').toString().trim();
             const cMob = (c.mobile || c.phone || '').toString().replace(/\D/g, '');
@@ -560,11 +571,39 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             return true;
           });
           try {
-            localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(next));
+            localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(nextCusts));
           } catch (e) {
             console.error(e);
           }
-          return next;
+          return nextCusts;
+        });
+      }
+
+      let nextLeads: any[] = [];
+      if (setLeadsList) {
+        setLeadsList(prev => {
+          nextLeads = (prev || []).filter(l => {
+            const lNum = (l.customer_number || l.lead_number || l.id || '').toString().trim();
+            const lName = (l.customer_name || l.name || '').toString().trim();
+            const lMob = (l.mobile || '').toString().replace(/\D/g, '');
+
+            if (custNum && lNum && lNum.toLowerCase() === custNum.toLowerCase()) return false;
+            if (mobile && lMob && mobile.length >= 7 && lMob === mobile) return false;
+            if (custName && lName && lName.toLowerCase() === custName.toLowerCase()) return false;
+            return true;
+          });
+          try {
+            localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(nextLeads));
+          } catch (e) {}
+          return nextLeads;
+        });
+      }
+
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({
+          matching_requests: nextMatches,
+          customers: nextCusts,
+          leads: nextLeads
         });
       }
 
@@ -572,7 +611,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
         setSelectedMatchingId('');
       }
 
-      alert(`🗑️ Matching Request & Customer ${custName || reqId} removed successfully!`);
+      alert(`🗑️ Matching Request & Customer ${custName || reqId} moved to Recycle Bin!`);
     }
   };
 
@@ -631,6 +670,44 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
           const list: any[] = [];
           const seenCustNums = new Set<string>();
           const seenMobiles = new Set<string>();
+
+          // RECYCLE EXCLUSION SETS (Remove any matching request, customer, or lead currently in the Recycle Bin)
+          const recycledReqIds = new Set<string>();
+          const recycledCustNums = new Set<string>();
+          const recycledMobiles = new Set<string>();
+          const recycledNames = new Set<string>();
+
+          (recycledItems || []).forEach((r: any) => {
+            if (!r) return;
+            const rId = (r.id || '').toString().trim().toLowerCase();
+            if (rId) recycledReqIds.add(rId);
+
+            const orig = r.originalData || {};
+            const origReqId = (orig.requestId || orig.matchingId || orig.id || '').toString().trim().toLowerCase();
+            if (origReqId) recycledReqIds.add(origReqId);
+
+            const cNum = (orig.customerNumber || orig.customer_number || orig.customerId || orig.customer_id || '').toString().trim().toLowerCase();
+            if (cNum) recycledCustNums.add(cNum);
+
+            const cMob = (orig.mobile || orig.phone || '').toString().replace(/\D/g, '');
+            if (cMob && cMob.length >= 7) recycledMobiles.add(cMob);
+
+            const cName = (orig.customerName || orig.customer_name || orig.name || orig.full_name || '').toString().trim().toLowerCase();
+            if (cName && cName.length > 2) recycledNames.add(cName);
+          });
+
+          const isRecycled = (reqId?: string, custNum?: string, custName?: string, mob?: string) => {
+            const rId = (reqId || '').toString().trim().toLowerCase();
+            const cNum = (custNum || '').toString().trim().toLowerCase();
+            const cName = (custName || '').toString().trim().toLowerCase();
+            const cMob = (mob || '').toString().replace(/\D/g, '');
+
+            if (rId && recycledReqIds.has(rId)) return true;
+            if (cNum && recycledCustNums.has(cNum)) return true;
+            if (cMob && cMob.length >= 7 && recycledMobiles.has(cMob)) return true;
+            if (cName && cName.length > 2 && recycledNames.has(cName)) return true;
+            return false;
+          };
 
           // SOURCING EXCLUSION SETS (Remove any customer/request shifted to Property Sourcing Requests)
           const sourcedMatchingIds = new Set<string>();
@@ -745,6 +822,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
 
           matchingRequestsQueue.forEach(r => {
             if (isShiftedToSourcing(r.requestId || r.id, r.customerNumber || r.customerId, r.customerName || r.name, r.mobile)) return;
+            if (isRecycled(r.requestId || r.id, r.customerNumber || r.customerId, r.customerName || r.name, r.mobile)) return;
 
             const custNum = (r.customerNumber || '').toLowerCase().trim();
             const mob = (r.mobile || '').replace(/\D/g, '');
@@ -776,6 +854,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             const reqId = `SRM-MAT-2026-${numDigits || String(420 + idx)}`;
 
             if (isShiftedToSourcing(reqId, custNum, custName, custMob)) return;
+            if (isRecycled(reqId, custNum, custName, custMob)) return;
 
             if (!seenCustNums.has(numKey) && (!cleanMob || !seenMobiles.has(cleanMob))) {
               seenCustNums.add(numKey);
@@ -835,6 +914,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             const reqId = `SRM-MAT-2026-${numDigits || String(500 + idx)}`;
 
             if (isShiftedToSourcing(reqId, custNum, custName, custMob)) return;
+            if (isRecycled(reqId, custNum, custName, custMob)) return;
 
             if ((numKey && !seenCustNums.has(numKey)) || (cleanMob && !seenMobiles.has(cleanMob))) {
               if (numKey) seenCustNums.add(numKey);

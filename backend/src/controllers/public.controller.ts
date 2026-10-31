@@ -241,7 +241,7 @@ function formatPublicProperty(p: any) {
       const phone = '+91 89021 30791';
       const email = isAssigned ? (u?.email || 'support@swaramayi.info') : 'support@swaramayi.info';
       const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0b192c&color=e5a93c&size=200&bold=true`;
-      const img = (u as any)?.avatar || (u as any)?.profileImage || defaultAvatar;
+      const img = (u as any)?.profileImage || defaultAvatar;
       const rating = (isAssigned && u && !isNaN(Number((u as any).rating)) && Number((u as any).rating) > 0)
         ? Number((u as any).rating)
         : 4.8;
@@ -295,7 +295,7 @@ function formatPublicProperty(p: any) {
       const phone = '+91 89021 30791';
       const email = isAssigned ? (u?.email || 'support@swaramayi.info') : 'support@swaramayi.info';
       const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0b192c&color=e5a93c&size=200&bold=true`;
-      const img = (u as any)?.avatar || (u as any)?.profileImage || defaultAvatar;
+      const img = (u as any)?.profileImage || defaultAvatar;
       const rating = (isAssigned && u && !isNaN(Number((u as any).rating)) && Number((u as any).rating) > 0)
         ? Number((u as any).rating)
         : 4.8;
@@ -770,125 +770,6 @@ export async function submitPublicEnquiry(req: Request, res: Response) {
   });
 }
 
-// 8. Schedule Site Visit from Website -> Creates SiteVisit & Lead in CRM
-export async function schedulePublicSiteVisit(req: Request, res: Response) {
-  const { name, email, phone, propertyId, propertyTitle, preferredVisitDate, preferredVisitTime, notes } = req.body;
-
-  if (!name || !phone || !preferredVisitDate) {
-    return res.status(400).json({
-      status: 'error',
-      success: false,
-      message: 'Name, phone, and preferred visit date are required.'
-    });
-  }
-
-  await loadData();
-
-  // Compute sequences dynamically
-  let maxLeadSeq = dbStore.data.sequences?.lead_seq || 0;
-  if (Array.isArray(dbStore.data.leads)) {
-    dbStore.data.leads.forEach((l: any) => {
-      const match = String(l.lead_number || '').match(/SRM-LEAD-\d+-(\d+)/);
-      if (match) {
-        const num = parseInt(match[1], 10);
-        if (!isNaN(num) && num > maxLeadSeq) maxLeadSeq = num;
-      }
-    });
-  }
-  maxLeadSeq += 1;
-  if (!dbStore.data.sequences) (dbStore.data as any).sequences = {};
-  dbStore.data.sequences.lead_seq = maxLeadSeq;
-  const leadNum = `SRM-LEAD-2026-${String(maxLeadSeq).padStart(6, '0')}`;
-
-  let maxSvSeq = dbStore.data.sequences?.site_visit_seq || 0;
-  if (Array.isArray(dbStore.data.site_visits)) {
-    dbStore.data.site_visits.forEach((v: any) => {
-      const match = String(v.site_visit_code || '').match(/SRM-SV-\d+-(\d+)/);
-      if (match) {
-        const num = parseInt(match[1], 10);
-        if (!isNaN(num) && num > maxSvSeq) maxSvSeq = num;
-      }
-    });
-  }
-  maxSvSeq += 1;
-  dbStore.data.sequences.site_visit_seq = maxSvSeq;
-  const siteVisitCode = `SRM-SV-2026-${String(maxSvSeq).padStart(6, '0')}`;
-
-  // Site Visit Record
-  const newSiteVisit = {
-    id: uuidv4(),
-    site_visit_code: siteVisitCode,
-    customer_number: '',
-    customer_name: name,
-    property_title: propertyTitle || 'Property Visit',
-    sales_executive: 'Unassigned (Web Booking)',
-    scheduled_date: preferredVisitDate,
-    scheduled_time: preferredVisitTime || '11:00 AM',
-    visit_status: 'SCHEDULED',
-    feedback_notes: notes || 'Booked directly via public website',
-    created_at: new Date().toISOString()
-  };
-
-  // Lead Record (saved in Leads only, not Customers or Matching)
-  const newLead = {
-    id: uuidv4(),
-    lead_number: leadNum,
-    customer_number: '',
-    customer_name: name,
-    full_name: name,
-    name: name,
-    phone,
-    mobile: phone,
-    customer_mobile: phone,
-    email: email || '',
-    source: 'Website Site Visit Request',
-    property_title: propertyTitle || 'Property Visit',
-    property_id: propertyId || '',
-    preferred_visit_date: preferredVisitDate,
-    preferred_visit_time: preferredVisitTime || '11:00 AM',
-    priority: 'HOT',
-    status: 'SITE_VISIT_SCHEDULED',
-    lead_status: 'SITE_VISIT_SCHEDULED',
-    assigned_employee_name: 'Unassigned (Web Lead)',
-    created_at: new Date().toISOString()
-  };
-
-  // Directly persist to MongoDB
-  try {
-    await SiteVisitModel.findOneAndUpdate(
-      { site_visit_code: newSiteVisit.site_visit_code },
-      { $set: newSiteVisit },
-      { upsert: true, new: true }
-    );
-    await LeadModel.findOneAndUpdate(
-      { lead_number: newLead.lead_number },
-      { $set: newLead },
-      { upsert: true, new: true }
-    );
-    console.log(`✅ [SITE VISIT] Booking ${siteVisitCode} & Lead ${leadNum} saved directly to MongoDB Atlas!`);
-  } catch (dbErr: any) {
-    console.error(`❌ [SITE VISIT] MongoDB direct save note:`, dbErr.message);
-  }
-
-  if (!dbStore.data.site_visits) dbStore.data.site_visits = [];
-  dbStore.data.site_visits.unshift(newSiteVisit);
-
-  if (!dbStore.data.leads) dbStore.data.leads = [];
-  dbStore.data.leads.unshift(newLead);
-
-  saveData();
-
-  return res.status(201).json({
-    status: 'success',
-    success: true,
-    message: 'Site visit scheduled successfully! We look forward to showing you the property.',
-    data: {
-      site_visit_code: siteVisitCode,
-      lead_number: leadNum
-    }
-  });
-}
-
 // 9. Get Public Locations / Cities
 export async function getPublicLocations(req: Request, res: Response) {
   loadData();
@@ -989,16 +870,174 @@ export async function getPublicPhases(req: Request, res: Response) {
 }
 
 export async function getPublicFiles(req: Request, res: Response) {
-  loadData();
-  const dbFiles = (dbStore.data as any).files || [];
-  const filesList = dbFiles;
+  await loadData();
+  let files = (dbStore.data as any).files;
+  if (!Array.isArray(files) || files.length === 0) {
+    files = [
+      {
+        id: 'FILE-001',
+        title: 'Swarnamayi Corporate Portfolio & Services 2026',
+        category: 'Corporate Profile',
+        description: 'Complete overview of Swarnamayi Real Estate Marketing, verified project portfolios, property advisory protocols, and client track record across Kolkata.',
+        fileSize: 'PDF • 4.2 MB',
+        filePath: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/examples/learning/helloworld.pdf',
+        created_at: '2026-01-15T10:00:00.000Z',
+        updated_at: '2026-01-15T10:00:00.000Z'
+      }
+    ];
+    (dbStore.data as any).files = files;
+    saveData();
+  }
+
+  const { category } = req.query;
+  let filtered = files;
+  if (category && typeof category === 'string' && category.trim() !== '' && category.toLowerCase() !== 'all') {
+    filtered = files.filter((f: any) => (f.category || '').toLowerCase() === category.trim().toLowerCase());
+  }
 
   return res.json({
     status: 'success',
     success: true,
-    count: filesList.length,
-    data: filesList
+    count: filtered.length,
+    data: filtered
   });
+}
+
+export async function createPublicFile(req: Request, res: Response) {
+  try {
+    await loadData();
+    const { title, category, description, fileSize, filePath, fileUrl, url } = req.body;
+    const finalPath = filePath || fileUrl || url || '';
+
+    if (!title || !finalPath) {
+      return res.status(400).json({
+        status: 'error',
+        success: false,
+        message: 'Title and file path / URL are required.'
+      });
+    }
+
+    if (!Array.isArray((dbStore.data as any).files)) {
+      (dbStore.data as any).files = [];
+    }
+
+    const newId = `FILE-${String(Date.now()).slice(-6)}`;
+    const newFile = {
+      id: newId,
+      title: String(title).trim(),
+      category: String(category || 'General Resource').trim(),
+      description: String(description || '').trim(),
+      fileSize: String(fileSize || 'PDF Document').trim(),
+      filePath: String(finalPath).trim(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    (dbStore.data as any).files.unshift(newFile);
+    saveData();
+
+    return res.status(201).json({
+      status: 'success',
+      success: true,
+      message: 'Website file created successfully',
+      data: newFile
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      status: 'error',
+      success: false,
+      message: error?.message || 'Failed to create file'
+    });
+  }
+}
+
+export async function updatePublicFile(req: Request, res: Response) {
+  try {
+    await loadData();
+    const { id } = req.params;
+    const { title, category, description, fileSize, filePath, fileUrl, url } = req.body;
+    const finalPath = filePath || fileUrl || url;
+
+    if (!Array.isArray((dbStore.data as any).files)) {
+      (dbStore.data as any).files = [];
+    }
+
+    const files = (dbStore.data as any).files;
+    const index = files.findIndex((f: any) => String(f.id) === String(id) || String(f._id) === String(id));
+
+    if (index === -1) {
+      return res.status(404).json({
+        status: 'error',
+        success: false,
+        message: 'File record not found'
+      });
+    }
+
+    const existing = files[index];
+    const updatedFile = {
+      ...existing,
+      ...(title !== undefined ? { title: String(title).trim() } : {}),
+      ...(category !== undefined ? { category: String(category).trim() } : {}),
+      ...(description !== undefined ? { description: String(description).trim() } : {}),
+      ...(fileSize !== undefined ? { fileSize: String(fileSize).trim() } : {}),
+      ...(finalPath !== undefined ? { filePath: String(finalPath).trim() } : {}),
+      updated_at: new Date().toISOString()
+    };
+
+    files[index] = updatedFile;
+    saveData();
+
+    return res.json({
+      status: 'success',
+      success: true,
+      message: 'Website file updated successfully',
+      data: updatedFile
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      status: 'error',
+      success: false,
+      message: error?.message || 'Failed to update file'
+    });
+  }
+}
+
+export async function deletePublicFile(req: Request, res: Response) {
+  try {
+    await loadData();
+    const { id } = req.params;
+
+    if (!Array.isArray((dbStore.data as any).files)) {
+      (dbStore.data as any).files = [];
+    }
+
+    const initialLength = (dbStore.data as any).files.length;
+    (dbStore.data as any).files = (dbStore.data as any).files.filter(
+      (f: any) => String(f.id) !== String(id) && String(f._id) !== String(id)
+    );
+
+    if ((dbStore.data as any).files.length === initialLength) {
+      return res.status(404).json({
+        status: 'error',
+        success: false,
+        message: 'File record not found'
+      });
+    }
+
+    saveData();
+
+    return res.json({
+      status: 'success',
+      success: true,
+      message: 'Website file deleted successfully'
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      status: 'error',
+      success: false,
+      message: error?.message || 'Failed to delete file'
+    });
+  }
 }
 
 export async function getPublicAgents(req: Request, res: Response) {

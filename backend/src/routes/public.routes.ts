@@ -8,13 +8,15 @@ import {
   getPublicProjects,
   getPublicProjectBySlug,
   submitPublicEnquiry,
-  schedulePublicSiteVisit,
   getPublicLocations,
   getPublicLocationBySlug,
   getPublicCities,
   getPublicSocieties,
   getPublicPhases,
   getPublicFiles,
+  createPublicFile,
+  updatePublicFile,
+  deletePublicFile,
   getPublicAgents,
   submitPublicAdvisorRating,
   getPublicAdvisorRatings,
@@ -38,7 +40,6 @@ router.get('/projects/:slug', getPublicProjectBySlug);
 
 // Public Enquiry & Site Visit & Advisor Rating Submissions
 router.post('/enquiries', submitPublicEnquiry);
-router.post('/site-visits', schedulePublicSiteVisit);
 router.get('/advisor-rating', getPublicAdvisorRatings);
 router.post('/advisor-rating', submitPublicAdvisorRating);
 router.post('/advisor-rating/invite', createPublicAdvisorRatingInvite);
@@ -54,6 +55,9 @@ router.get('/locations/:slug', getPublicLocationBySlug);
 
 // Public File & Agent listings
 router.get('/files', getPublicFiles);
+router.post('/files', createPublicFile);
+router.put('/files/:id', updatePublicFile);
+router.delete('/files/:id', deletePublicFile);
 router.get('/agents', getPublicAgents);
 
 export default router;

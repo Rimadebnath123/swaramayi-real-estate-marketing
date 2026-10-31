@@ -23,6 +23,8 @@ export const ProjectVisitAgreementSchema = new mongoose.Schema({ id: { type: Str
 export const SourcingRequestSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const DeveloperSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const RatingInviteSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
+export const RecycleBinSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
+export const FileSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 
 export const UserModel = mongoose.models.User || mongoose.model('User', UserSchema);
 export const PropertyModel = mongoose.models.Property || mongoose.model('Property', PropertySchema);
@@ -42,6 +44,8 @@ export const ProjectVisitAgreementModel = mongoose.models.ProjectVisitAgreement 
 export const SourcingRequestModel = mongoose.models.SourcingRequest || mongoose.model('SourcingRequest', SourcingRequestSchema);
 export const DeveloperModel = mongoose.models.Developer || mongoose.model('Developer', DeveloperSchema);
 export const RatingInviteModel = mongoose.models.RatingInvite || mongoose.model('RatingInvite', RatingInviteSchema);
+export const RecycleBinModel = mongoose.models.RecycleBin || mongoose.model('RecycleBin', RecycleBinSchema);
+export const FileModel = mongoose.models.File || mongoose.model('File', FileSchema);
 
 // Helper function to sync array of records into a model (handles permanent deletions)
 async function syncCollection(model: mongoose.Model<any>, records: any[]) {
@@ -112,6 +116,9 @@ async function syncCollection(model: mongoose.Model<any>, records: any[]) {
       const toSet = { ...rec };
       delete toSet._id;
       delete toSet.__v;
+      if (model.modelName === 'User') {
+        delete toSet.avatar; // Keep only profileImage; never store duplicate avatar field
+      }
       if (model.modelName === 'CostSheet' && !toSet.id && toSet.costSheetId) {
         toSet.id = String(toSet.costSheetId);
       }
@@ -163,8 +170,30 @@ export async function syncToMongoDB(data: any) {
   try {
     if (Array.isArray(data.users)) await syncCollection(UserModel, data.users);
     if (Array.isArray(data.properties)) await syncCollection(PropertyModel, data.properties);
-    if (Array.isArray(data.customers)) await syncCollection(CustomerModel, data.customers);
-    if (Array.isArray(data.leads)) await syncCollection(LeadModel, data.leads);
+    if (Array.isArray(data.customers)) {
+      if (data.customers.length === 0) {
+        await CustomerModel.deleteMany({});
+      } else {
+        const activeCustNums = data.customers.map((c: any) => String(c.customer_number || c.id || '')).filter(Boolean);
+        await CustomerModel.deleteMany({
+          customer_number: { $nin: activeCustNums },
+          id: { $nin: activeCustNums }
+        }).catch(() => {});
+      }
+      await syncCollection(CustomerModel, data.customers);
+    }
+    if (Array.isArray(data.leads)) {
+      if (data.leads.length === 0) {
+        await LeadModel.deleteMany({});
+      } else {
+        const activeLeadNums = data.leads.map((l: any) => String(l.lead_number || l.id || '')).filter(Boolean);
+        await LeadModel.deleteMany({
+          lead_number: { $nin: activeLeadNums },
+          id: { $nin: activeLeadNums }
+        }).catch(() => {});
+      }
+      await syncCollection(LeadModel, data.leads);
+    }
     if (Array.isArray(data.bookings)) await syncCollection(BookingModel, data.bookings);
     if (Array.isArray(data.invoices)) await syncCollection(InvoiceModel, data.invoices);
     if (Array.isArray(data.agreements)) await syncCollection(AgreementModel, data.agreements);
@@ -174,11 +203,56 @@ export async function syncToMongoDB(data: any) {
     if (Array.isArray(data.teams)) await syncCollection(TeamModel, data.teams);
     if (Array.isArray(data.branches)) await syncCollection(BranchModel, data.branches);
     if (Array.isArray(data.cost_sheets)) await syncCollection(CostSheetModel, data.cost_sheets);
-    if (Array.isArray(data.matching_requests)) await syncCollection(MatchingRequestModel, data.matching_requests);
+    if (Array.isArray(data.matching_requests)) {
+      if (data.matching_requests.length === 0) {
+        await MatchingRequestModel.deleteMany({});
+      } else {
+        const activeReqIds = data.matching_requests.map((r: any) => String(r.requestId || r.id || '')).filter(Boolean);
+        const activeCustNums = data.matching_requests.map((r: any) => String(r.customerNumber || r.customer_number || '')).filter(Boolean);
+        await MatchingRequestModel.deleteMany({
+          $and: [
+            { requestId: { $nin: activeReqIds } },
+            { id: { $nin: activeReqIds } },
+            ...(activeCustNums.length > 0 ? [{ customerNumber: { $nin: activeCustNums } }] : [])
+          ]
+        }).catch(() => {});
+      }
+      await syncCollection(MatchingRequestModel, data.matching_requests);
+    }
     if (Array.isArray(data.pva_agreements)) await syncCollection(ProjectVisitAgreementModel, data.pva_agreements);
     if (Array.isArray(data.sourcing_requests)) await syncCollection(SourcingRequestModel, data.sourcing_requests);
-    if (Array.isArray(data.developers)) await syncCollection(DeveloperModel, data.developers);
+    if (Array.isArray(data.developers)) {
+      if (data.developers.length === 0) {
+        await DeveloperModel.deleteMany({});
+      } else {
+        const activeDevIds = data.developers.map((d: any) => String(d.id || '')).filter(Boolean);
+        const activeDevNames = data.developers.map((d: any) => String(d.name || '')).filter(Boolean);
+        await DeveloperModel.deleteMany({
+          id: { $nin: activeDevIds },
+          name: { $nin: activeDevNames }
+        }).catch(() => {});
+      }
+      await syncCollection(DeveloperModel, data.developers);
+    }
     if (Array.isArray(data.rating_invites)) await syncCollection(RatingInviteModel, data.rating_invites);
+    if (Array.isArray(data.files)) {
+      if (data.files.length === 0) {
+        await FileModel.deleteMany({});
+      } else {
+        const currentIds = data.files.map((f: any) => String(f.id || f._id)).filter(Boolean);
+        await FileModel.deleteMany({ id: { $nin: currentIds } });
+        await syncCollection(FileModel, data.files);
+      }
+    }
+    if (Array.isArray(data.recycled_items)) {
+      if (data.recycled_items.length === 0) {
+        await RecycleBinModel.deleteMany({});
+      } else {
+        const currentIds = data.recycled_items.map((r: any) => String(r.id)).filter(Boolean);
+        await RecycleBinModel.deleteMany({ id: { $nin: currentIds } });
+        await syncCollection(RecycleBinModel, data.recycled_items);
+      }
+    }
 
     console.log(`⚡ MongoDB Atlas Live Sync Complete with Permanent Deletion Support`);
   } catch (e: any) {
@@ -211,6 +285,8 @@ export async function loadDataFromMongoDB() {
     const mongoSourcingRequests = await SourcingRequestModel.find({}).lean();
     const mongoDevelopers = await DeveloperModel.find({}).lean();
     const mongoRatingInvites = await RatingInviteModel.find({}).lean();
+    const mongoRecycledItems = await RecycleBinModel.find({}).lean();
+    const mongoFiles = await FileModel.find({}).lean();
 
     console.log(`📥 Loaded existing data from MongoDB Atlas: ${mongoUsers.length} users, ${mongoTeams.length} teams, ${mongoBranches.length} branches, ${mongoProperties.length} properties, ${mongoCustomers.length} customers, ${mongoDevelopers.length} developers, ${mongoRatingInvites.length} rating invites`);
 
@@ -294,7 +370,9 @@ export async function loadDataFromMongoDB() {
       pva_agreements: mongoPvaAgreements,
       sourcing_requests: mongoSourcingRequests,
       developers: mongoDevelopers,
-      rating_invites: mongoRatingInvites
+      rating_invites: mongoRatingInvites,
+      recycled_items: mongoRecycledItems,
+      files: mongoFiles
     };
   } catch (e: any) {
     console.warn('MongoDB Data Loading Warning:', e.message);

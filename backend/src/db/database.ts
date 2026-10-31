@@ -22,7 +22,6 @@ export interface UserRecord {
   is_mfa_enabled?: boolean;
   assigned_properties?: any[];
   assignedProperties?: any[];
-  avatar?: string;
   profileImage?: string;
   rating?: number | string;
 }
@@ -375,6 +374,17 @@ export interface AuditLogRecord {
   timestamp: string;
 }
 
+export interface WebsiteFileRecord {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  fileSize: string;
+  filePath: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Schema {
   branches: BranchRecord[];
   teams: TeamRecord[];
@@ -395,6 +405,7 @@ export interface Schema {
   active_sessions: ActiveSessionRecord[];
   security_alerts: SecurityAlertRecord[];
   audit_logs: AuditLogRecord[];
+  files: WebsiteFileRecord[];
   payments: any[];
   marketing_campaigns: any[];
   employee_activities: any[];
@@ -464,6 +475,18 @@ const initialData: Schema = {
   active_sessions: [],
   security_alerts: [],
   audit_logs: [],
+  files: [
+    {
+      id: 'FILE-001',
+      title: 'Swarnamayi Corporate Portfolio & Services 2026',
+      category: 'Corporate Profile',
+      description: 'Complete overview of Swarnamayi Real Estate Marketing, verified project portfolios, property advisory protocols, and client track record across Kolkata.',
+      fileSize: 'PDF • 4.2 MB',
+      filePath: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/examples/learning/helloworld.pdf',
+      created_at: '2026-01-15T10:00:00.000Z',
+      updated_at: '2026-01-15T10:00:00.000Z'
+    }
+  ],
   payments: [],
   marketing_campaigns: [],
   employee_activities: [],
@@ -532,6 +555,12 @@ export async function loadData() {
       if (Array.isArray(mongoData.matching_requests)) (dbStore.data as any).matching_requests = mongoData.matching_requests as any;
       if (Array.isArray(mongoData.developers)) (dbStore.data as any).developers = mongoData.developers as any;
       if (Array.isArray(mongoData.rating_invites)) (dbStore.data as any).rating_invites = mongoData.rating_invites as any;
+      if (Array.isArray(mongoData.recycled_items)) (dbStore.data as any).recycled_items = mongoData.recycled_items as any;
+      if (Array.isArray(mongoData.files) && mongoData.files.length > 0) {
+        (dbStore.data as any).files = mongoData.files as any;
+      } else if (!(dbStore.data as any).files || (dbStore.data as any).files.length === 0) {
+        (dbStore.data as any).files = initialData.files;
+      }
     }
   } catch (err) {}
 }

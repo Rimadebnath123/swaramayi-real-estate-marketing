@@ -169,7 +169,21 @@ export async function syncToMongoDB(data: any) {
 
   try {
     if (Array.isArray(data.users)) await syncCollection(UserModel, data.users);
-    if (Array.isArray(data.properties)) await syncCollection(PropertyModel, data.properties);
+    if (Array.isArray(data.properties)) {
+      if (data.properties.length === 0) {
+        await PropertyModel.deleteMany({});
+      } else {
+        const activePropCodes = data.properties.map((p: any) => String(p.property_code || p.code || '')).filter(Boolean);
+        const activePropIds = data.properties.map((p: any) => String(p.id || p._id || '')).filter(Boolean);
+        await PropertyModel.deleteMany({
+          $and: [
+            { property_code: { $nin: activePropCodes } },
+            { id: { $nin: [...activePropCodes, ...activePropIds] } }
+          ]
+        }).catch(() => {});
+      }
+      await syncCollection(PropertyModel, data.properties);
+    }
     if (Array.isArray(data.customers)) {
       if (data.customers.length === 0) {
         await CustomerModel.deleteMany({});
@@ -254,7 +268,8 @@ export async function syncToMongoDB(data: any) {
       }
     }
 
-    console.log(`⚡ MongoDB Atlas Live Sync Complete with Permanent Deletion Support`);
+    const syncedKeys = Object.keys(data || {}).filter(k => Array.isArray(data[k]));
+    console.log(`⚡ MongoDB Atlas Live Sync Complete (${syncedKeys.length > 0 ? syncedKeys.join(', ') : 'records'})`);
   } catch (e: any) {
     console.error('MongoDB Live Sync Error:', e.message);
   }
@@ -267,26 +282,49 @@ export async function loadDataFromMongoDB() {
   }
 
   try {
-    const mongoUsers = await UserModel.find({}).lean();
-    const mongoProperties = await PropertyModel.find({}).lean();
-    const mongoCustomers = await CustomerModel.find({}).lean();
-    const mongoLeads = await LeadModel.find({}).lean();
-    const mongoBookings = await BookingModel.find({}).lean();
-    const mongoInvoices = await InvoiceModel.find({}).lean();
-    const mongoAgreements = await AgreementModel.find({}).lean();
-    const mongoSiteVisits = await SiteVisitModel.find({}).lean();
-    const mongoBrokerage = await BrokerageModel.find({}).lean();
-    const mongoFollowups = await FollowupModel.find({}).lean();
-    const mongoTeams = await TeamModel.find({}).lean();
-    const mongoBranches = await BranchModel.find({}).lean();
-    const mongoCostSheets = await CostSheetModel.find({}).lean();
-    const mongoMatchingRequests = await MatchingRequestModel.find({}).lean();
-    const mongoPvaAgreements = await ProjectVisitAgreementModel.find({}).lean();
-    const mongoSourcingRequests = await SourcingRequestModel.find({}).lean();
-    const mongoDevelopers = await DeveloperModel.find({}).lean();
-    const mongoRatingInvites = await RatingInviteModel.find({}).lean();
-    const mongoRecycledItems = await RecycleBinModel.find({}).lean();
-    const mongoFiles = await FileModel.find({}).lean();
+    const [
+      mongoUsers,
+      mongoProperties,
+      mongoCustomers,
+      mongoLeads,
+      mongoBookings,
+      mongoInvoices,
+      mongoAgreements,
+      mongoSiteVisits,
+      mongoBrokerage,
+      mongoFollowups,
+      mongoTeams,
+      mongoBranches,
+      mongoCostSheets,
+      mongoMatchingRequests,
+      mongoPvaAgreements,
+      mongoSourcingRequests,
+      mongoDevelopers,
+      mongoRatingInvites,
+      mongoRecycledItems,
+      mongoFiles
+    ] = await Promise.all([
+      UserModel.find({}).lean(),
+      PropertyModel.find({}).lean(),
+      CustomerModel.find({}).lean(),
+      LeadModel.find({}).lean(),
+      BookingModel.find({}).lean(),
+      InvoiceModel.find({}).lean(),
+      AgreementModel.find({}).lean(),
+      SiteVisitModel.find({}).lean(),
+      BrokerageModel.find({}).lean(),
+      FollowupModel.find({}).lean(),
+      TeamModel.find({}).lean(),
+      BranchModel.find({}).lean(),
+      CostSheetModel.find({}).lean(),
+      MatchingRequestModel.find({}).lean(),
+      ProjectVisitAgreementModel.find({}).lean(),
+      SourcingRequestModel.find({}).lean(),
+      DeveloperModel.find({}).lean(),
+      RatingInviteModel.find({}).lean(),
+      RecycleBinModel.find({}).lean(),
+      FileModel.find({}).lean()
+    ]);
 
     console.log(`📥 Loaded existing data from MongoDB Atlas: ${mongoUsers.length} users, ${mongoTeams.length} teams, ${mongoBranches.length} branches, ${mongoProperties.length} properties, ${mongoCustomers.length} customers, ${mongoDevelopers.length} developers, ${mongoRatingInvites.length} rating invites`);
 
@@ -352,9 +390,40 @@ export async function loadDataFromMongoDB() {
       }
     }
 
+    // Exclude any properties that have been moved to the recycle bin
+    const recycledPropCodes = new Set<string>();
+    (mongoRecycledItems || []).forEach((r: any) => {
+      if (r.id) recycledPropCodes.add(String(r.id).toLowerCase().trim());
+      const orig = r.originalData || {};
+      if (orig.property_code) recycledPropCodes.add(String(orig.property_code).toLowerCase().trim());
+      if (orig.code) recycledPropCodes.add(String(orig.code).toLowerCase().trim());
+      if (orig.id) recycledPropCodes.add(String(orig.id).toLowerCase().trim());
+      if (r.property_code) recycledPropCodes.add(String(r.property_code).toLowerCase().trim());
+      if (r.code) recycledPropCodes.add(String(r.code).toLowerCase().trim());
+    });
+
+    const activeMongoProperties = mongoProperties.filter((p: any) => {
+      const pCode = String(p.property_code || p.code || '').toLowerCase().trim();
+      const pId = String(p.id || p._id || '').toLowerCase().trim();
+      if (pCode && recycledPropCodes.has(pCode)) return false;
+      if (pId && recycledPropCodes.has(pId)) return false;
+      return true;
+    });
+
+    // Clean up soft-deleted properties from PropertyModel collection if they are in recycle bin
+    if (recycledPropCodes.size > 0) {
+      const codesArr = Array.from(recycledPropCodes);
+      PropertyModel.deleteMany({
+        $or: [
+          { property_code: { $in: codesArr.map(c => new RegExp(`^${c}$`, 'i')) } },
+          { id: { $in: codesArr.map(c => new RegExp(`^${c}$`, 'i')) } }
+        ]
+      }).catch(() => {});
+    }
+
     return {
       users: mongoUsers,
-      properties: mongoProperties,
+      properties: activeMongoProperties,
       customers: sanitizedCustomers,
       leads: sanitizedLeads,
       bookings: mongoBookings,

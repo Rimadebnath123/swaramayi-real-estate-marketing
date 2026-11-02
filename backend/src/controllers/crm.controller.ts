@@ -444,7 +444,6 @@ export async function getMongoDBSync(req: AuthRequest, res: Response) {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.setHeader('Surrogate-Control', 'no-store');
-  await loadData();
   const mongoData = await loadDataFromMongoDB();
   const data = mongoData || dbStore.data;
   if (data && Array.isArray(dbStore.data.users) && dbStore.data.users.length > 0) {
@@ -506,8 +505,25 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
     if (Array.isArray(payload.developers)) (dbStore.data as any).developers = payload.developers;
     if (Array.isArray(payload.rating_invites)) (dbStore.data as any).rating_invites = payload.rating_invites;
     if (Array.isArray(payload.files)) (dbStore.data as any).files = payload.files;
-    if (Array.isArray(payload.recycled_items)) (dbStore.data as any).recycled_items = payload.recycled_items;
-    saveData();
+    if (Array.isArray(payload.recycled_items)) {
+      (dbStore.data as any).recycled_items = payload.recycled_items;
+      const recSet = new Set<string>();
+      payload.recycled_items.forEach((r: any) => {
+        if (r.id) recSet.add(String(r.id).toLowerCase());
+        const orig = r.originalData || {};
+        if (orig.property_code) recSet.add(String(orig.property_code).toLowerCase());
+        if (orig.code) recSet.add(String(orig.code).toLowerCase());
+        if (orig.id) recSet.add(String(orig.id).toLowerCase());
+      });
+      if (Array.isArray(dbStore.data.properties)) {
+        dbStore.data.properties = dbStore.data.properties.filter((p: any) => {
+          const pCode = String(p.property_code || p.code || '').toLowerCase();
+          const pId = String(p.id || p._id || '').toLowerCase();
+          return !recSet.has(pCode) && !recSet.has(pId);
+        });
+      }
+    }
+    dbStore.save();
     await syncToMongoDB(payload);
   }
   return res.json({

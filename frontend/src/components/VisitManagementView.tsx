@@ -356,7 +356,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
         return p;
       });
       setProperties(updatedProps);
-      try { localStorage.setItem('swaramayi_properties_v4_clean', JSON.stringify(updatedProps)); } catch (e) {}
+
     }
 
     if (setScheduledVisits) setScheduledVisits(updatedVisits);

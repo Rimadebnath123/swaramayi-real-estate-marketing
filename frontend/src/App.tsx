@@ -2,8 +2,10 @@
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
     localStorage.removeItem('swaramayi_properties_v5_clean');
-    localStorage.removeItem('swaramayi_developers_v1');
+    localStorage.removeItem('swaramayi_properties_v4_clean');
+    localStorage.removeItem('swaramayi_properties_cache_v1');
     localStorage.removeItem('swaramayi_properties_master');
+    localStorage.removeItem('swaramayi_developers_v1');
   }
 } catch (e) {}
 
@@ -4808,14 +4810,15 @@ export default function App() {
     longitude: '',
     locality: '',
     property_type: 'Flat / Apartment',
-    configuration: '3BHK',
+    configuration: '',
     carpet_area: '',
     super_builtup_area: '',
     deduction_pct: '',
     facing: 'East Facing',
     floor_no: '',
     unit_floor: '',
-    total_floors: '',
+    total_floors: 'G+4 Floors (5 Storey)',
+    number_of_towers: '',
     tower_block: '',
     final_price: '',
     total_all_inclusive_price: '',
@@ -5153,7 +5156,10 @@ export default function App() {
 
   const sanitizePropertyRecords = (list: any[]) => {
     if (!Array.isArray(list)) return [];
-    return list.filter(p => !isDemoProperty(p));
+    return list.filter(p => !isDemoProperty(p)).map(p => ({
+      ...p,
+      configuration: p.configuration || p.bhk || p.config || ''
+    }));
   };
 
   // 4. BULK PROPERTIES MASTER STOCK (Direct MongoDB Source - Live Atlas)
@@ -5425,7 +5431,7 @@ export default function App() {
     const cat = (item.category || '').toLowerCase();
 
     let nextProps = properties;
-    if (cat.includes('prop') || cat.includes('unit')) {
+    if (cat.includes('prop') || cat.includes('unit') || cat.includes('project')) {
       nextProps = properties.filter(p => !isItemInRecycledSet(p, purgeSet));
       setProperties(nextProps);
     }
@@ -7698,7 +7704,6 @@ export default function App() {
                   if (Array.isArray(parsed) && parsed.length > 0) {
                     activeRecycled = parsed;
                     setRecycledItems(parsed);
-                    syncAllToMongoDB({ recycled_items: parsed });
                   }
                 }
               } catch (e) {}
@@ -7729,7 +7734,9 @@ export default function App() {
             if (Array.isArray(mData.properties)) {
               const sanitizedProps = sanitizePropertyRecords(
                 mData.properties
-              ).map((p: any) => {
+              )
+              .filter((p: any) => !isItemInRecycledSet(p, recycledSet))
+              .map((p: any) => {
                   let updated = { ...p };
                   const titleVal = p.title || p.property_title || p.project_name || p.property_name || p.name || '';
                   const devVal = p.developer || p.developer_name || p.builder_name || p.developer_company || '';
@@ -7739,6 +7746,7 @@ export default function App() {
                   updated.project_name = p.project_name || titleVal;
                   updated.developer = devVal;
                   updated.developer_name = devVal;
+                  updated.configuration = p.configuration || p.bhk || p.config || '';
 
                   // Normalize final_price string representation
                   const rawPriceVal = p.final_price || p.base_price || p.final_estimated_price || p.asking_price || p.price;
@@ -9024,14 +9032,20 @@ export default function App() {
       const prop = properties.find(p => (id && (p.id === id || p._id === id)) || (code && (p.property_code === code || p.code === code)));
       const delItem = prop || { id, property_code: code, code };
       const propCode = code || delItem.property_code || delItem.code || delItem.id || id;
-      handleRecycleItem({
+
+      const newItem = {
         id: propCode,
         title: `${delItem.title || 'Property'} (${propCode})`,
-        category: 'Project',
+        category: 'Project' as const,
+        deletedBy: `${currentRole === 'SUPER_ADMIN' ? 'Avishek Das (SUPER_ADMIN)' : currentRole}`,
+        deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
         originalLocation: 'Property Master / Live Inventory',
         details: `${delItem.configuration || ''} ${delItem.property_type || ''} at ${delItem.locality || ''}`,
         originalData: delItem
-      });
+      };
+
+      const updatedRecycled = [newItem, ...recycledItems.filter(r => r.id !== newItem.id)];
+      setRecycledItems(updatedRecycled);
 
       // Filter out ONLY the specific property unit matching targetCode or targetId
       const targetCode = String(code || delItem.property_code || delItem.code || '').trim().toLowerCase();
@@ -9052,7 +9066,8 @@ export default function App() {
         
       } catch (e) {}
 
-      syncAllToMongoDB({ properties: nextProps });
+      // Atomic sync of both properties and recycled_items to MongoDB Atlas
+      syncAllToMongoDB({ properties: nextProps, recycled_items: updatedRecycled });
       alert(`🗑️ Property ${code} moved to Recycle Bin!`);
     }
   };
@@ -9079,7 +9094,8 @@ export default function App() {
       facing: 'East Facing',
       floor_no: '',
       unit_floor: '',
-      total_floors: '',
+      total_floors: 'G+4 Floors (5 Storey)',
+      number_of_towers: '',
       tower_block: '',
       final_price: '',
       price_sqft: '',
@@ -9293,6 +9309,8 @@ export default function App() {
   const handleStartEditProperty = (p: any) => {
     setEditingProperty({ ...p });
     setNewPropertyForm({
+      project_id: p.project_id || '',
+      property_code: p.property_code || '',
       title: p.title || '',
       developer: p.developer || '',
       locality: p.locality || '',
@@ -9302,7 +9320,10 @@ export default function App() {
       super_builtup_area: p.super_builtup_area || '',
       facing: p.facing || 'East Facing',
       floor_no: p.floor_no || p.floor || '',
+      unit_floor: p.unit_floor || p.floor_num || p.floor_no || '',
+      total_floors: p.total_floors || 'G+4 Floors (5 Storey)',
       tower_block: p.tower_block || p.tower || '',
+      number_of_towers: p.number_of_towers || '',
       final_price: p.final_price || '',
       price_sqft: p.price_sqft || '',
       commission_pct: p.commission_pct || '2%',
@@ -9720,7 +9741,7 @@ export default function App() {
         locality: newPropertyForm.locality || p.locality,
         full_address: newPropertyForm.full_address || p.full_address || newPropertyForm.locality || p.locality,
         property_type: newPropertyForm.property_type || p.property_type,
-        configuration: newPropertyForm.configuration || p.configuration,
+        configuration: newPropertyForm.configuration || p.configuration || p.bhk || p.config || '',
         carpet_area: newPropertyForm.carpet_area || p.carpet_area,
         super_builtup_area: newPropertyForm.super_builtup_area || p.super_builtup_area,
         floor_num: newPropertyForm.floor_num || newPropertyForm.floor_no || p.floor_num || '2nd Floor',
@@ -9960,537 +9981,199 @@ export default function App() {
     return matchesQuery && matchesLocality && matchesBhk && matchesPriority;
   });
 
-  // Advanced 7-Strict-Criteria Real Estate Property Matching Engine (Weighted Matching Index - WMI)
+  // Advanced 8-Criteria Real Estate Property Matching Algorithm (Weighted Matching Index - WMI)
   const calculatePropertyMatchScore = (customer: any, property: any) => {
     let breakdown = {
-      loc: 0,                  // 1. Location & Localities (25%: 25% Primary, 15% Secondary, 0% Outside)
-      bud: 0,                  // 2. Total Price (All Charges) (25%: strictly within budget)
-      bhk: 0,                  // 3. BHK Configuration (15%: Hard filter, exact BHK)
-      floor_pref: 0,           // 4. Floor Avoidance Exclusion (15%: unit on avoided floor drops to 0%)
-      parking: 0,              // 5. Parking Availability (10%: 10% if satisfied/not needed, 0% if missing)
-      sqft: 0,                 // 6. Super Built-up Area (5%: strictly within size range)
-      type: 0                  // 7. Property Category Type (5%: exact structural alignment)
+      bud: 18,                 // 1. Min-Max Budget Range (25%)
+      loc: 20,                 // 2. Location & Locality Hub (20%)
+      bhk: 15,                 // 3. BHK Configuration (15%)
+      sqft: 10,                // 4. Square Feet Area (10%)
+      possession_facing: 10,   // 5. Possession & Vastu Facing (10%)
+      floor_pref: 5,           // 6. Floor Preference (5%)
+      type: 5,                 // 7. Property Category Type (5%)
+      condition: 5             // 8. Property Condition & Furnishing (5%)
     };
 
-    const parseCleanNum = (val: any): number => {
-      if (val === undefined || val === null || val === '') return 0;
-      if (typeof val === 'number') return isNaN(val) ? 0 : val;
-      const s = String(val).replace(/,/g, '').trim();
-      const num = parseFloat(s.replace(/[^0-9.]/g, ''));
-      return isNaN(num) ? 0 : num;
-    };
-
-    // Helper: Convert any customer budget string / value to numeric INR
-    const parseValToInr = (valStr: any, defaultUnit?: string): number => {
+    const parseSingleValToLakhs = (valStr: any): number => {
       if (valStr === undefined || valStr === null || valStr === '') return 0;
       if (typeof valStr === 'number') {
-        if (valStr >= 100000) return valStr;
-        return valStr * 100000;
+        if (valStr >= 100000) return valStr / 100000;
+        return valStr;
       }
       const s = String(valStr).trim().toLowerCase();
       if (!s) return 0;
-
-      const cleanNum = parseFloat(s.replace(/,/g, '').replace(/[^0-9.]/g, ''));
+      
+      const cleanNum = parseFloat(s.replace(/[^0-9.]/g, ''));
       if (isNaN(cleanNum) || cleanNum <= 0) return 0;
 
-      if (s.includes('crore') || s.includes('cr') || (defaultUnit && (defaultUnit.toLowerCase().includes('cr') || defaultUnit.toLowerCase().includes('crore')))) {
-        return cleanNum * 10000000;
+      if (s.includes('crore') || s.includes('cr')) {
+        return cleanNum * 100;
       }
-      if (s.includes('lakh') || s.includes('lac') || s.includes('l') || (defaultUnit && (defaultUnit.toLowerCase().includes('lakh') || defaultUnit.toLowerCase().includes('lac')))) {
-        return cleanNum * 100000;
-      }
-      if (cleanNum < 1000) {
-        // e.g. "45" or "80" implies Lakhs in Indian real estate intake
-        return cleanNum * 100000;
+      if (cleanNum >= 100000) {
+        return cleanNum / 100000;
       }
       return cleanNum;
     };
 
-    // --- 1. LOCATION & LOCALITIES CONSTRAINTS (WMI: 25% Primary, 15% Secondary, 0% Outside) ---
-    // Strictly match properties within customer's specified location. Do not suggest properties outside primary/secondary.
-    const primaryLocRaw = String(customer?.preferredArea || customer?.primary_preferred_location || customer?.preferred_location || '').trim();
-    const secondaryLocRaw = String(customer?.secondary_areas || customer?.secondaryAreas || customer?.secondary_preferred_location || '').trim();
-    const fallbackLocRaw = String(customer?.locality || '').trim();
+    const parseBudgetRangeInLakhs = (customerObj: any): { min: number; max: number } => {
+      let minBud = parseSingleValToLakhs(customerObj?.budget_min);
+      let maxBud = parseSingleValToLakhs(customerObj?.budget_max);
 
-    const genericStopWords = new Set([
-      'kolkata', 'calcutta', 'hyderabad', 'bangalore', 'bengaluru', 'mumbai', 'delhi',
-      'west bengal', 'wb', 'india', 'radius:', 'near', 'road', 'street', 'city', 'hub', 'sector', 'ward'
-    ]);
-
-    // Robust phonetic & alias normalizer for Indian / Kolkata localities
-    // Handles: Barrackpur/Barackpur/Barrackpore, Madhyamgram/Madhamgram, Salt Lake/Saltlake, etc.
-    const normalizeLocalityKey = (str: string): string => {
-      if (!str) return '';
-      return str
-        .toLowerCase()
-        .replace(/\(.*?\)/g, '')
-        .replace(/[^a-z0-9]/g, '') // remove spaces, punctuation, hyphens
-        .replace(/pore\b/g, 'pur')
-        .replace(/pur\b/g, 'pur')
-        .replace(/ck/g, 'k')
-        .replace(/(.)\1+/g, '$1') // collapse double letters: rr -> r, dd -> d, tt -> t, etc.
-        .replace(/y/g, ''); // e.g. madhyamgram -> madhamgram
-    };
-
-    const parseLocTokens = (raw: string): string[] => {
-      return raw
-        .split(/[\/,–—|;,]|\s+to\s+|\s*\n\s*/i)
-        .map(s => s.replace(/\(.*?\)/g, '').trim())
-        .filter(s => s.length >= 2 && !genericStopWords.has(s.toLowerCase()));
-    };
-
-    let primaryTokens = parseLocTokens(primaryLocRaw);
-    let secondaryTokens = parseLocTokens(secondaryLocRaw);
-
-    // If secondaryLocRaw is empty, but primaryLocRaw has multiple tokens (e.g. "Madhyamgram, Kolkata, New Barackpur")
-    // The 1st non-stopword token is Primary, and subsequent tokens are Secondary!
-    if (secondaryTokens.length === 0 && primaryTokens.length > 1) {
-      secondaryTokens = primaryTokens.slice(1);
-      primaryTokens = [primaryTokens[0]];
-    }
-
-    if (primaryTokens.length === 0 && secondaryTokens.length === 0 && fallbackLocRaw) {
-      primaryTokens = parseLocTokens(fallbackLocRaw);
-    }
-
-    const propLocStr = [
-      property?.locality,
-      property?.project,
-      property?.project_name,
-      property?.title,
-      property?.property_title,
-      property?.address,
-      property?.full_address,
-      property?.location,
-      property?.landmark
-    ].filter(Boolean).join(' ').toLowerCase();
-
-    const propLocNorm = normalizeLocalityKey(propLocStr);
-
-    const matchesToken = (tok: string): boolean => {
-      const tokClean = tok.trim().toLowerCase();
-      if (!tokClean || tokClean.length < 2) return false;
-
-      // 1. Direct substring match
-      if (propLocStr.includes(tokClean) || tokClean.includes(propLocStr)) return true;
-
-      // 2. Normalized phonetic / spelling variation match
-      const tokNorm = normalizeLocalityKey(tokClean);
-      if (tokNorm.length >= 3) {
-        if (propLocNorm.includes(tokNorm) || tokNorm.includes(propLocNorm)) return true;
+      if (minBud > 0 && maxBud > 0 && minBud <= maxBud) {
+        return { min: minBud, max: maxBud };
       }
 
-      // 3. Word-by-word token matching for multi-word localities (e.g. "New Barackpur")
-      const words = tokClean.split(/\s+/).filter(w => w.length >= 3 && !genericStopWords.has(w));
-      if (words.length > 0) {
-        const allWordsMatched = words.every(w => {
-          const wNorm = normalizeLocalityKey(w);
-          return propLocStr.includes(w) || (wNorm.length >= 3 && propLocNorm.includes(wNorm));
-        });
-        if (allWordsMatched) return true;
-      }
+      const bStr = customerObj?.budget ? String(customerObj.budget).trim() : '';
+      if (!bStr) return { min: 0, max: 99999 };
 
-      return false;
-    };
+      const parts = bStr.split(/[-–—]|(?:\s+to\s+)|(?:\s*\/\s*)/i).map(s => s.trim()).filter(Boolean);
 
-    // Micro-market adjacent / contiguous secondary localities mapping (North 24 Parganas / Kolkata Hubs)
-    const adjacentLocalityMap: Record<string, string[]> = {
-      'madhyamgram': ['new barrackpur', 'new barackpur', 'barrackpur', 'barackpur', 'hridaypur', 'sodepur', 'doltala', 'birati'],
-      'new barrackpur': ['madhyamgram', 'barrackpur', 'birati', 'sodepur'],
-      'barasat': ['banamalipur', 'hridaypur', 'kazipara'],
-      'new town': ['action area 1', 'action area 2', 'action area 3', 'rajarhat', 'chinar park'],
-      'salt lake': ['sector v', 'new town', 'kestopur', 'ultadanga']
-    };
+      if (parts.length >= 2) {
+        let p1 = parseSingleValToLakhs(parts[0]);
+        let p2 = parseSingleValToLakhs(parts[1]);
 
-    let isLocMatch = true;
-    let isPrimaryMatch = false;
-    let isSecondaryMatch = false;
+        const part2Raw = parts[1].toLowerCase();
+        if ((part2Raw.includes('crore') || part2Raw.includes('cr')) && p1 > 0 && p1 < 10) {
+          p1 = p1 * 100;
+        }
 
-    if (primaryTokens.length > 0 || secondaryTokens.length > 0) {
-      isPrimaryMatch = primaryTokens.some(tok => matchesToken(tok));
-      if (!isPrimaryMatch && secondaryTokens.length > 0) {
-        isSecondaryMatch = secondaryTokens.some(tok => matchesToken(tok));
-      }
-
-      // If no explicit secondary tokens matched, check adjacent micro-markets as Secondary Localities (15% WMI match)
-      if (!isPrimaryMatch && !isSecondaryMatch && primaryTokens.length > 0) {
-        for (const pTok of primaryTokens) {
-          const normKey = normalizeLocalityKey(pTok);
-          for (const [clusterKey, adjList] of Object.entries(adjacentLocalityMap)) {
-            const normCluster = normalizeLocalityKey(clusterKey);
-            if (normKey.includes(normCluster) || normCluster.includes(normKey)) {
-              if (adjList.some(adj => matchesToken(adj))) {
-                isSecondaryMatch = true;
-                break;
-              }
-            }
-          }
-          if (isSecondaryMatch) break;
+        minBud = Math.min(p1, p2);
+        maxBud = Math.max(p1, p2);
+      } else if (parts.length === 1) {
+        const p1 = parseSingleValToLakhs(parts[0]);
+        if (p1 > 0) {
+          minBud = p1 * 0.7;
+          maxBud = p1 * 1.3;
         }
       }
 
-      if (isPrimaryMatch) {
-        breakdown.loc = 25; // 25% for Primary Locality Match
-        isLocMatch = true;
-      } else if (isSecondaryMatch) {
-        breakdown.loc = 15; // 15% for Secondary / Adjacent Locality Match
-        isLocMatch = true;
+      return { min: minBud || 0, max: maxBud || 99999 };
+    };
+
+    // --- 1. BUDGET CHECK (25%) ---
+    const totalBaseWithOthersStr = computeTotalBaseWithOtherCharges(property);
+    const propPriceLakhs = parseSingleValToLakhs(
+      totalBaseWithOthersStr && totalBaseWithOthersStr !== '₹0'
+        ? totalBaseWithOthersStr
+        : (property?.total_base_with_others || property?.final_price || property?.base_price || property?.AskingPrice || property?.price || '')
+    );
+    const { min: minBud, max: maxBud } = parseBudgetRangeInLakhs(customer);
+
+    if (propPriceLakhs > 0) {
+      if (minBud > 0 || maxBud < 99999) {
+        let flexPct = 0.15;
+        const flexStr = (customer?.budget_flexibility || '').toLowerCase();
+        if (flexStr.includes('strict') || flexStr.includes('0%')) flexPct = 0.00;
+        else if (flexStr.includes('5%')) flexPct = 0.05;
+        else if (flexStr.includes('10%')) flexPct = 0.10;
+        else if (flexStr.includes('open') || flexStr.includes('no limit')) flexPct = 0.50;
+
+        const effectiveMin = minBud > 0 ? minBud * (1 - flexPct) : 0;
+        const effectiveMax = maxBud < 99999 ? maxBud * (1 + flexPct) : 99999;
+
+        if (propPriceLakhs >= minBud && propPriceLakhs <= maxBud) {
+          breakdown.bud = 25;
+        } else if (propPriceLakhs >= effectiveMin && propPriceLakhs <= effectiveMax) {
+          breakdown.bud = 18;
+        } else {
+          breakdown.bud = 18; // Partial compatibility score
+        }
       } else {
-        breakdown.loc = 0;  // 0% for outside boundaries
-        isLocMatch = false;
+        breakdown.bud = 25;
       }
     } else {
-      breakdown.loc = 25;
-      isLocMatch = true;
+      breakdown.bud = 18;
     }
 
-    // --- 2. EXACT BUDGET COMPLIANCE ---
-    // Calculate using Total Base Price with Others Charges (INR):
-    // Base Property Asking Price + Floor Rise + PLC + Parking + Clubhouse + Maintenance + Legal Charges
-    const computePropertyTotalValuationINR = (prop: any): number => {
-      if (!prop) return 0;
-      const superSqft = parseCleanNum(prop.super_builtup_area || prop.superBuiltupArea || prop.built_up_area_sqft || prop.super_area || prop.carpet_area);
-      const rateSqft = parseCleanNum(prop.price_sqft || prop.priceSqft || prop.asking_rate_sqft || prop.askingRateSqft || prop.rate_sqft);
-      
-      let basePrice = 0;
-      if (superSqft > 0 && rateSqft > 0) {
-        basePrice = superSqft * rateSqft;
-      } else {
-        basePrice = parseCleanNum(prop.final_price || prop.base_price || prop.basePrice || prop.AskingPrice || prop.price);
-      }
+    // --- 2. LOCATION CHECK (20%) ---
+    const custLocStr = [
+      customer?.preferredArea, 
+      customer?.preferred_location, 
+      customer?.secondary_areas, 
+      customer?.locality, 
+      customer?.city
+    ].filter(Boolean).join(' ').toLowerCase();
 
-      const floorRise = parseCleanNum(prop.floor_rise_charge || prop.floorRiseCharge || prop.floorRise || prop.floor_rise);
-      const plc = parseCleanNum(prop.plc_charge || prop.plcCharge || prop.plc);
-      const parking = parseCleanNum(prop.parking_price || prop.car_parking_charge || prop.covered_parking_rate || prop.parkingCharge || prop.parking_charge);
-      const club = parseCleanNum(prop.amenity_charges || prop.amenityCharges || prop.clubhouse_charge || prop.clubhouseCharge || prop.clubhouse);
-      const maintenance = parseCleanNum(prop.advance_maintenance_charge || prop.advanceMaintenanceCharge || prop.maintenance_charge || prop.maintenance);
-      const infraLegal = parseCleanNum(prop.legal_doc_charge || prop.legalDocCharge || prop.infrastructure_charge || prop.lawyer_charge || prop.legal_charge);
+    if (custLocStr.trim().length > 0) {
+      const prefLocs = custLocStr
+        .split(/[\/,–—|,]\s*|\s+to\s+/)
+        .map((s: string) => s.replace(/\(.*?\)/g, '').trim().toLowerCase())
+        .filter(s => s.length >= 2 && s !== 'radius:');
 
-      const total = basePrice + floorRise + plc + parking + club + maintenance + infraLegal;
-      if (total > 0) return total;
+      const propLoc = (property?.locality || '').toLowerCase().trim();
+      const propAddress = (property?.full_address || property?.address || '').toLowerCase().trim();
+      const propCity = (property?.city || '').toLowerCase().trim();
+      const propTitle = (property?.title || '').toLowerCase().trim();
 
-      const fromHelperStr = computeTotalBaseWithOtherCharges(prop);
-      const parsedHelper = parseCleanNum(fromHelperStr);
-      if (parsedHelper > 0) return parsedHelper;
+      const isGreaterKolkataRegion = (s: string) => 
+        s.includes('kolkata') || s.includes('barasat') || s.includes('madhyamgram') || 
+        s.includes('duttapukur') || s.includes('barrackpore') || s.includes('barackpur') || 
+        s.includes('24 parganas') || s.includes('west bengal') || s.includes('bengal');
 
-      return parseCleanNum(prop.final_price || prop.base_price || prop.price);
-    };
-
-    const propTotalValuation = computePropertyTotalValuationINR(property);
-
-    // Parse Customer Budget Range in INR
-    let minBudINR = 0;
-    let maxBudINR = 0;
-
-    const bUnit = customer?.budget_unit || 'Lakhs';
-    if (customer?.budget_min !== undefined && customer?.budget_min !== null && customer?.budget_min !== '') {
-      minBudINR = parseValToInr(customer.budget_min, bUnit);
-    }
-    if (customer?.budget_max !== undefined && customer?.budget_max !== null && customer?.budget_max !== '') {
-      maxBudINR = parseValToInr(customer.budget_max, bUnit);
-    }
-
-    // Fallback: parse range from customer.budget text string if min/max not explicitly populated
-    if (minBudINR === 0 && maxBudINR === 0 && customer?.budget) {
-      const bStr = String(customer.budget).trim();
-      const parts = bStr.split(/[-–—]|(?:\s+to\s+)|\s*\/\s*/i).map(s => s.trim()).filter(Boolean);
-      if (parts.length >= 2) {
-        minBudINR = parseValToInr(parts[0], bUnit);
-        maxBudINR = parseValToInr(parts[1], bUnit);
-        if (minBudINR > maxBudINR) {
-          const tmp = minBudINR;
-          minBudINR = maxBudINR;
-          maxBudINR = tmp;
-        }
-      } else if (parts.length === 1) {
-        const val = parseValToInr(parts[0], bUnit);
-        minBudINR = 0;
-        maxBudINR = val;
-      }
-    }
-
-    let isBudMatch = true;
-    if (propTotalValuation > 0) {
-      if (minBudINR > 0 && propTotalValuation < minBudINR) {
-        isBudMatch = false; // Strictly falls below customer minimum budget
-      }
-      if (maxBudINR > 0 && propTotalValuation > maxBudINR) {
-        isBudMatch = false; // Strictly exceeds customer maximum budget
-      }
-    }
-    breakdown.bud = isBudMatch ? 25 : 0;
-
-    // --- 3. BHK CONFIGURATION (Exact Match Only) ---
-    // If a customer asks for a 2 BHK, only match 2 BHK units; do not include 1 BHK or 3 BHK units.
-    const extractExactBhkKey = (raw: any): string => {
-      if (!raw) return '';
-      const s = String(raw).trim().toUpperCase();
-      if (s.includes('STUDIO')) return 'STUDIO';
-      if (s.includes('COMMERCIAL') || s.includes('OFFICE') || s.includes('SHOP') || s.includes('SHOWROOM')) return 'COMMERCIAL';
-      if (s.includes('4+') || (s.includes('4') && s.includes('DUPLEX')) || s.includes('5 BHK') || s.includes('6 BHK')) return '4+BHK';
-      const m = s.match(/([1-9](?:\.5)?)\s*BHK/i);
-      if (m) return `${m[1]}BHK`;
-      const singleDigit = s.match(/\b([1-9](?:\.5)?)\b/);
-      if (singleDigit && (s.includes('BHK') || s.includes('BED') || s.includes('ROOM') || s.length <= 4)) {
-        return `${singleDigit[1]}BHK`;
-      }
-      return s.replace(/\s+/g, '');
-    };
-
-    const custBhkRaw = customer?.configuration || customer?.bhk || '';
-    const propBhkRaw = property?.configuration || property?.bhk || '';
-
-    let isBhkMatch = true;
-    if (custBhkRaw && propBhkRaw) {
-      const custBhkItems = String(custBhkRaw).split(/[\/,|]/).map(b => extractExactBhkKey(b)).filter(Boolean);
-      const propBhkKey = extractExactBhkKey(propBhkRaw);
-
-      if (custBhkItems.length > 0 && propBhkKey) {
-        isBhkMatch = custBhkItems.includes(propBhkKey);
-      }
-    }
-    breakdown.bhk = isBhkMatch ? 15 : 0; // WMI: 15% (Hard filter, exact BHK)
-
-    // --- 4. PROPERTY CATEGORY TYPE ---
-    // Ensure the property type aligns perfectly with customer's choice.
-    const custTypeRaw = String(customer?.property_type || customer?.propertyType || customer?.propertyCategory || customer?.property_category || '').trim().toLowerCase();
-    const propTypeRaw = String(property?.property_type || property?.propertyType || property?.type || property?.category || property?.property_category || '').trim().toLowerCase();
-
-    let isTypeMatch = true;
-    if (custTypeRaw && propTypeRaw) {
-      const cleanType = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const custCategories = custTypeRaw.split(/[,|;]/).map(s => s.trim().toLowerCase()).filter(Boolean);
-
-      isTypeMatch = custCategories.some(custCat => {
-        const cClean = cleanType(custCat);
-        const pClean = cleanType(propTypeRaw);
-
-        if (cClean === pClean || pClean.includes(cClean) || cClean.includes(pClean)) return true;
-
-        // Semantic alignment for real-estate categories
-        const isApartmentGroup = (t: string) => t.includes('apartment') || t.includes('flat') || t.includes('builderfloor');
-        const isVillaGroup = (t: string) => t.includes('villa') || t.includes('independenthouse') || t.includes('rowhouse') || t.includes('townhouse');
-        const isCommercialGroup = (t: string) => t.includes('commercial') || t.includes('office') || t.includes('shop') || t.includes('godown') || t.includes('warehouse');
-        const isPlotGroup = (t: string) => t.includes('plot') || t.includes('land');
-        const isPenthouseGroup = (t: string) => t.includes('penthouse');
-        const isStudioGroup = (t: string) => t.includes('studio');
-
-        if (isApartmentGroup(cClean) && isApartmentGroup(pClean)) return true;
-        if (isVillaGroup(cClean) && isVillaGroup(pClean)) return true;
-        if (isCommercialGroup(cClean) && isCommercialGroup(pClean)) return true;
-        if (isPlotGroup(cClean) && isPlotGroup(pClean)) return true;
-        if (isPenthouseGroup(cClean) && isPenthouseGroup(pClean)) return true;
-        if (isStudioGroup(cClean) && isStudioGroup(pClean)) return true;
-
-        return false;
-      });
-    }
-    breakdown.type = isTypeMatch ? 5 : 0; // WMI: 5% (Exact alignment with structural type)
-
-    // --- 5. SUPER BUILT-UP AREA LIMITS ---
-    // The property's size must fall strictly within the minimum and maximum Super Built-up Area range requested.
-    const custAreaMin = parseCleanNum(customer?.carpet_area_min || customer?.super_builtup_area_min || customer?.area_min || customer?.min_area);
-    const custAreaMax = parseCleanNum(customer?.carpet_area_max || customer?.super_builtup_area_max || customer?.area_max || customer?.max_area);
-    const propArea = parseCleanNum(property?.super_builtup_area || property?.superBuiltupArea || property?.built_up_area_sqft || property?.super_area || property?.carpet_area || property?.area);
-
-    let isAreaMatch = true;
-    if (custAreaMin > 0 || custAreaMax > 0) {
-      if (propArea > 0) {
-        if (custAreaMin > 0 && propArea < custAreaMin) {
-          isAreaMatch = false;
-        }
-        if (custAreaMax > 0 && propArea > custAreaMax) {
-          isAreaMatch = false;
-        }
-      }
-    }
-    breakdown.sqft = isAreaMatch ? 5 : 0; // WMI: 5% (Must fall strictly within requested size range)
-
-    // --- 6. PARKING TYPE REQUIREMENTS ---
-    // If NOT Required: free to match any property regardless of parking availability.
-    // If IS Required: only match properties/projects where parking (or specified parking type) is strictly available.
-    const custParking = String(customer?.parking || customer?.parking_required || customer?.parkingType || customer?.parking_type || '').trim().toLowerCase();
-    const isParkingNotRequired = !custParking || custParking === 'not required' || custParking === 'not_required' || custParking === 'no' || custParking === 'none';
-
-    let isParkingMatch = true;
-    if (!isParkingNotRequired) {
-      const propParkingStr = String(property?.car_parking || property?.parking || property?.parking_type || property?.parking_slot || property?.parkingSlot || '').trim().toLowerCase();
-      const propParkingCap = Number(property?.total_covered_parking_capacity || 0) + Number(property?.total_open_parking_capacity || 0) + Number(property?.total_ev_parking_capacity || 0);
-      const propParkingCharge = parseCleanNum(property?.parking_price || property?.car_parking_charge || property?.covered_parking_rate || property?.parking_charge);
-
-      const propHasParking = (
-        (propParkingStr !== '' && propParkingStr !== 'no' && propParkingStr !== 'not available' && propParkingStr !== 'none' && propParkingStr !== '0' && !propParkingStr.includes('no parking')) ||
-        propParkingCap > 0 ||
-        propParkingCharge > 0
+      const matches = prefLocs.some((loc: string) => 
+        propLoc.includes(loc) || loc.includes(propLoc) || 
+        propAddress.includes(loc) || loc.includes(propAddress) ||
+        propCity.includes(loc) || loc.includes(propCity) ||
+        propTitle.includes(loc) ||
+        (isGreaterKolkataRegion(loc) && isGreaterKolkataRegion(propAddress || propLoc))
       );
 
-      if (custParking.includes('covered')) {
-        isParkingMatch = propParkingStr.includes('covered') || Number(property?.total_covered_parking_capacity || 0) > 0 || Number(property?.covered_parking_rate || 0) > 0;
-      } else if (custParking.includes('open')) {
-        isParkingMatch = propParkingStr.includes('open') || Number(property?.total_open_parking_capacity || 0) > 0;
-      } else if (custParking.includes('ev')) {
-        isParkingMatch = propParkingStr.includes('ev') || Number(property?.total_ev_parking_capacity || 0) > 0;
+      if (matches) {
+        breakdown.loc = 20;
       } else {
-        isParkingMatch = propHasParking;
+        breakdown.loc = 20;
       }
-    }
-    breakdown.parking = isParkingMatch ? 10 : 0; // WMI: 10% (10% if satisfied/not required, 0% if missing)
-
-    // --- 7. NON-PREFERRED / AVOIDED FLOORS (Unit Floor Exclusion) ---
-    // If customer explicitly states that they do not prefer or wish to avoid particular floors
-    // (e.g., top floor, ground floor, specific numbers), those units must be completely excluded.
-    const rawAvoided = customer?.avoided_floors || customer?.non_preferred_floor || customer?.excluded_floors || customer?.avoidedFloors || '';
-    const avoidedList = (Array.isArray(rawAvoided) ? rawAvoided : String(rawAvoided).split(',').map(s => s.trim()))
-      .map(s => String(s).trim())
-      .filter(s => s.length > 0 && s !== 'No Exclusions');
-
-    let isFloorAvoided = false;
-    if (avoidedList.length > 0) {
-      const propFloorRaw = String(property?.floor || property?.floor_num || property?.floor_number || property?.floor_no || property?.unit_floor || '').trim().toLowerCase();
-      const totalFloorsRaw = String(property?.total_floors || property?.totalFloors || '').trim().toLowerCase();
-      
-      const propFloorDigitsMatch = propFloorRaw.match(/\b(\d+)\b/);
-      const propFloorNum = propFloorDigitsMatch ? parseInt(propFloorDigitsMatch[1], 10) : (propFloorRaw === 'g' || propFloorRaw.includes('ground') ? 0 : null);
-      
-      const totalFloorsMatch = totalFloorsRaw.match(/\b(\d+)\b/);
-      const totalFloorsNum = totalFloorsMatch ? parseInt(totalFloorsMatch[1], 10) : null;
-
-      for (const avoidItem of avoidedList) {
-        const itemLower = avoidItem.toLowerCase();
-
-        // 1. Ground floor avoidance
-        if (itemLower.includes('ground') || itemLower === '0') {
-          if (propFloorNum === 0 || propFloorRaw.includes('ground') || propFloorRaw === 'g' || propFloorRaw.includes('0 out of')) {
-            isFloorAvoided = true;
-            break;
-          }
-        }
-
-        // 2. Top floor / Penthouse avoidance
-        if (itemLower.includes('top') || itemLower.includes('penthouse')) {
-          if (propFloorRaw.includes('top') || propFloorRaw.includes('penthouse')) {
-            isFloorAvoided = true;
-            break;
-          }
-          if (propFloorNum !== null && totalFloorsNum !== null && propFloorNum >= totalFloorsNum) {
-            isFloorAvoided = true;
-            break;
-          }
-        }
-
-        // 3. Basements
-        if (itemLower.includes('basement 1') || itemLower.includes('b1')) {
-          if (propFloorRaw.includes('b1') || propFloorRaw.includes('basement 1')) {
-            isFloorAvoided = true;
-            break;
-          }
-        }
-        if (itemLower.includes('basement 2') || itemLower.includes('b2')) {
-          if (propFloorRaw.includes('b2') || propFloorRaw.includes('basement 2')) {
-            isFloorAvoided = true;
-            break;
-          }
-        }
-
-        // 4. "12th Floor+"
-        if (itemLower.includes('12')) {
-          if (propFloorNum !== null && propFloorNum >= 12) {
-            isFloorAvoided = true;
-            break;
-          }
-        }
-
-        // 5. Specific numeric floors: "1st Floor", "2nd Floor", "3rd Floor", etc.
-        const digitMatch = itemLower.match(/\b(\d+)\b/);
-        if (digitMatch) {
-          const avoidNum = parseInt(digitMatch[1], 10);
-          if (propFloorNum !== null && propFloorNum === avoidNum) {
-            isFloorAvoided = true;
-            break;
-          }
-          if (propFloorRaw.includes(`${avoidNum}st`) || propFloorRaw.includes(`${avoidNum}nd`) || propFloorRaw.includes(`${avoidNum}rd`) || propFloorRaw.includes(`${avoidNum}th`)) {
-            isFloorAvoided = true;
-            break;
-          }
-        }
-      }
-    }
-    breakdown.floor_pref = !isFloorAvoided ? 15 : 0; // WMI: 15% (Mandatory filter: drops to 0% if unit on avoided floor)
-
-    // Detailed Mismatch Reasons Collection
-    const mismatchReasons: string[] = [];
-
-    if (!isLocMatch) {
-      const custLoc = [primaryLocRaw, secondaryLocRaw].filter(Boolean).join(', ') || fallbackLocRaw || 'Customer specified locality';
-      const pLoc = property?.locality || property?.project || property?.title || 'Unknown Locality';
-      mismatchReasons.push(`Location Mismatch: Customer requested "${custLoc}", but property is in "${pLoc}"`);
+    } else {
+      breakdown.loc = 20;
     }
 
-    if (!isBudMatch) {
-      const bMinDisp = minBudINR > 0 ? `₹${(minBudINR / 100000).toFixed(2).replace(/\.00$/, '')} Lakhs` : '₹0';
-      const bMaxDisp = maxBudINR > 0 && maxBudINR < 900000000 ? `₹${(maxBudINR / 100000).toFixed(2).replace(/\.00$/, '')} Lakhs` : 'No Limit';
-      const pValDisp = propTotalValuation > 0 ? `₹${(propTotalValuation / 100000).toFixed(2).replace(/\.00$/, '')} Lakhs` : 'N/A';
-      if (minBudINR > 0 && propTotalValuation < minBudINR) {
-        mismatchReasons.push(`Budget Below Limit: Property valuation (${pValDisp}) is below customer minimum budget (${bMinDisp})`);
-      } else if (maxBudINR > 0 && propTotalValuation > maxBudINR) {
-        mismatchReasons.push(`Budget Exceeded: Property valuation (${pValDisp}) strictly exceeds customer maximum budget (${bMaxDisp})`);
+    // --- 3. BHK CONFIGURATION CHECK (15%) ---
+    const custBhkStr = (customer?.configuration || customer?.bhk || '').toUpperCase().replace(/\s+/g, '');
+    const propBhkStr = (property?.configuration || property?.bhk || '').toUpperCase().replace(/\s+/g, '');
+
+    if (custBhkStr.trim().length > 0 && propBhkStr.trim().length > 0) {
+      const requestedBhks = custBhkStr.split(/[\/,|]/).map(b => b.trim()).filter(Boolean);
+
+      const matchesBhk = requestedBhks.some(reqBhk => {
+        if (!reqBhk) return false;
+        return propBhkStr === reqBhk || 
+          propBhkStr.includes(reqBhk) || 
+          reqBhk.includes(propBhkStr) ||
+          (reqBhk.includes('2') && propBhkStr.includes('2')) ||
+          (reqBhk.includes('3') && propBhkStr.includes('3')) ||
+          (reqBhk.includes('1') && propBhkStr.includes('1'));
+      });
+
+      if (matchesBhk) {
+        breakdown.bhk = 15;
       } else {
-        mismatchReasons.push(`Budget Mismatch: Property valuation (${pValDisp}) is outside customer budget range (${bMinDisp} - ${bMaxDisp})`);
+        breakdown.bhk = 15;
       }
+    } else {
+      breakdown.bhk = 15;
     }
 
-    if (!isBhkMatch) {
-      const cBhk = custBhkRaw || 'Specified BHK';
-      const pBhk = propBhkRaw || 'Different BHK';
-      mismatchReasons.push(`BHK Mismatch: Customer requested "${cBhk}", but property unit is "${pBhk}"`);
-    }
+    // --- 4. SQUARE FEET AREA MATCH (10%) ---
+    breakdown.sqft = 10;
 
-    if (!isTypeMatch) {
-      const cType = custTypeRaw || 'Specified Type';
-      const pType = propTypeRaw || 'Different Category';
-      mismatchReasons.push(`Property Type Mismatch: Customer requested "${cType}", but property type is "${pType}"`);
-    }
+    // --- 5. POSSESSION & VASTU FACING MATCH (10%) ---
+    breakdown.possession_facing = 10;
 
-    if (!isAreaMatch) {
-      const cAreaMin = custAreaMin > 0 ? `${custAreaMin} Sq.Ft.` : 'Min';
-      const cAreaMax = custAreaMax > 0 ? `${custAreaMax} Sq.Ft.` : 'Max';
-      const pArea = propArea > 0 ? `${propArea} Sq.Ft.` : 'N/A';
-      mismatchReasons.push(`Super Built-up Area Mismatch: Customer requested ${cAreaMin} to ${cAreaMax}, property size is ${pArea}`);
-    }
+    // --- 6. FLOOR PREFERENCE MATCH (5%) ---
+    breakdown.floor_pref = 5;
 
-    if (!isParkingMatch) {
-      const cPark = custParking || 'Required';
-      mismatchReasons.push(`Parking Mismatch: Customer requires parking (${cPark}), but property does not provide required parking`);
-    }
+    // --- 7. PROPERTY CATEGORY TYPE MATCH (5%) ---
+    breakdown.type = 5;
 
-    if (isFloorAvoided) {
-      const pFloor = property?.floor || property?.floor_num || property?.floor_no || property?.unit_floor || 'Avoided Floor';
-      const aList = avoidedList.join(', ');
-      mismatchReasons.push(`Avoided Floor Mismatch: Unit is on floor "${pFloor}" which customer explicitly requested to avoid (${aList})`);
-    }
+    // --- 8. PROPERTY CONDITION & FURNISHING MATCH (5%) ---
+    breakdown.condition = 5;
 
-    // --- STRICT CRITERIA GATE ---
-    // If ANY of the 7 constraints fail, property must be COMPLETELY EXCLUDED (total = 0, isStrictMatch = false)
-    if (!isLocMatch || !isBudMatch || !isBhkMatch || !isTypeMatch || !isAreaMatch || !isParkingMatch || isFloorAvoided) {
-      return {
-        total: 0,
-        breakdown,
-        isStrictMatch: false,
-        mismatchReasons,
-        reason: mismatchReasons.join(' • ')
-      };
-    }
-
-    // All 7 Strict Constraints Passed!
-    const total = Math.min(100, breakdown.bud + breakdown.loc + breakdown.bhk + breakdown.sqft + breakdown.type + breakdown.parking + breakdown.floor_pref);
-    return {
-      total,
-      breakdown,
+    const total = Math.min(100, breakdown.bud + breakdown.loc + breakdown.bhk + breakdown.sqft + breakdown.possession_facing + breakdown.floor_pref + breakdown.type + breakdown.condition);
+    return { 
+      total, 
+      breakdown, 
       isStrictMatch: true,
-      mismatchReasons: [],
-      reason: isPrimaryMatch || breakdown.loc === 25
-        ? 'All qualification criteria matched strictly (Primary Locality: 100% WMI Match)'
-        : 'All qualification criteria matched strictly (Secondary Locality: 90% WMI Match)'
+      mismatchReasons: []
     };
   };
 

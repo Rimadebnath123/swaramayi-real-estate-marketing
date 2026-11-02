@@ -283,7 +283,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
 
       setProperties(updatedProps);
       try {
-        localStorage.setItem('swaramayi_properties_v5_clean', JSON.stringify(updatedProps));
+
       } catch (e) {}
     }
 

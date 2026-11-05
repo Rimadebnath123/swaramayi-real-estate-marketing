@@ -3023,6 +3023,42 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
             size: A4 portrait;
             margin: 5mm 8mm 5mm 8mm;
           }
+                html, body {
+                  background: #ffffff !important;
+                  color: #0f172a !important;
+                  height: auto !important;
+                  width: 100% !important;
+                  overflow: visible !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+                body * {
+                  visibility: hidden !important;
+                }
+                .printable-contract-card,
+                .printable-contract-card * {
+                  visibility: visible !important;
+                }
+                .printable-contract-card {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  max-width: 100% !important;
+                  height: auto !important;
+                  padding: 8px 12px !important;
+                  margin: 0 !important;
+                  border: none !important;
+                  box-shadow: none !important;
+                  background: #ffffff !important;
+                  color: #0f172a !important;
+                  border-radius: 0 !important;
+                  gap: 6px !important;
+                  box-sizing: border-box !important;
+                  font-size: 1.25rem !important;
+                }
           html, body {
             background: #ffffff !important;
             color: #0f172a !important;
@@ -5227,19 +5263,8 @@ export default function App() {
       .map((c: any) => c);
   };
 
-  // 6. CUSTOMERS MASTER VAULT (Direct MongoDB & Local Storage Source)
-  const [customers, setCustomers] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_customers_master_v3_clean') || localStorage.getItem('swaramayi_customers_v7_clean');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return sanitizeCustomerRecords(parsed);
-        }
-      }
-    } catch (e) {}
-    return [];
-  });
+  // 6. CUSTOMERS MASTER VAULT (Direct MongoDB Source)
+  const [customers, setCustomers] = useState<any[]>([]);
 
   const [rawSelectedCust, setSelectedCust] = useState<any>(null);
   const selectedCust = rawSelectedCust || customers[0] || null;
@@ -5340,6 +5365,10 @@ export default function App() {
       case 'Customer':
         setCustomers(prev => {
           const updated = [data, ...prev.filter(c => c.id !== data.id && c.customer_number !== data.customer_number)];
+          try {
+            localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
+            localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
+          } catch (e) {}
           syncAllToMongoDB({ customers: updated, recycled_items: updatedRecycled });
           return updated;
         });
@@ -6526,6 +6555,8 @@ export default function App() {
     }
 
     setShowSingleCostSheetConfirmModal(null);
+    setActiveTab('cost_sheet_share');
+    setActiveCostSheetShareSubTab('individual_cost_sheets');
     setShowViewIndividualCostSheetModal({
       open: true,
       costSheet: newCostSheet
@@ -7793,20 +7824,13 @@ export default function App() {
 
             }
             if (Array.isArray(mData.customers)) {
-              const cleanMongo = sanitizeCustomerRecords(mData.customers);
+              const cleanMongo = sanitizeCustomerRecords(mData.customers).filter((c: any) => !isItemInRecycledSet(c, recycledSet));
               const cleanDeduped = dedupeCustomerList(cleanMongo);
               setCustomers(cleanDeduped);
-              try {
-                localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(cleanDeduped));
-                localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(cleanDeduped));
-              } catch (e) {}
             }
             if (Array.isArray(mData.leads)) {
               const cleanLeads = sanitizeLeadRecords(mData.leads);
               setLeadsList(cleanLeads);
-              try {
-                localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(cleanLeads));
-              } catch (e) {}
             }
             if (Array.isArray(mData.agreements)) {
               setAgreements(mData.agreements);
@@ -7833,9 +7857,6 @@ export default function App() {
                 dedupedInvoices.push(inv);
               }
               setInvoices(dedupedInvoices);
-              try {
-                localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(dedupedInvoices));
-              } catch (e) {}
             }
             if (Array.isArray(mData.bookings)) {
               const cleanBookings = mData.bookings.filter((b: any) => b && typeof b === 'object').map((b: any) => {
@@ -7851,29 +7872,22 @@ export default function App() {
                 return b;
               });
               setBookings(cleanBookings);
-              try {
-                localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(cleanBookings));
-              } catch (e) {}
             }
             if (Array.isArray(mData.site_visits)) {
-              const cleanVisits = mData.site_visits.filter((v: any) => v && typeof v === 'object');
+              const cleanVisits = mData.site_visits.filter((v: any) => v && typeof v === 'object' && !isItemInRecycledSet(v, recycledSet));
               setScheduledVisits(cleanVisits);
             }
             if (Array.isArray(mData.matching_requests)) {
               const cleanMatching = mData.matching_requests.filter((r: any) => {
                 if (!r || typeof r !== 'object') return false;
+                if (isItemInRecycledSet(r, recycledSet)) return false;
                 const name = (r.customerName || r.name || '').toString().toLowerCase();
-                const custNum = (r.customerNumber || '').toString().toUpperCase();
-                const reqId = (r.requestId || r.id || '').toString().toUpperCase();
                 return !(name.includes('demo') || name.includes('test'));
               });
               setMatchingRequestsQueue(cleanMatching);
-              try {
-                localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(cleanMatching));
-              } catch (e) {}
             }
             if (Array.isArray(mData.cost_sheets)) {
-              const cleanCostSheets = mData.cost_sheets.filter((c: any) => c && typeof c === 'object');
+              const cleanCostSheets = mData.cost_sheets.filter((c: any) => c && typeof c === 'object' && !isItemInRecycledSet(c, recycledSet));
               setIndividualCostSheets(cleanCostSheets);
             }
             if (Array.isArray(mData.pva_agreements)) {
@@ -9098,6 +9112,86 @@ export default function App() {
       // Atomic sync of both properties and recycled_items to MongoDB Atlas
       syncAllToMongoDB({ properties: nextProps, recycled_items: updatedRecycled });
       alert(`🗑️ Property ${code} moved to Recycle Bin!`);
+    }
+  };
+
+  const handleDeleteCustomer = (id: string, customerNumber: string) => {
+    const cust = customers.find(c => 
+      (id && (c.id === id || c._id === id)) || 
+      (customerNumber && (c.customer_number === customerNumber || c.customerNumber === customerNumber))
+    );
+    const delItem = cust || { id, customer_number: customerNumber };
+    const custNum = customerNumber || delItem.customer_number || delItem.customerNumber || delItem.id || id;
+    const custName = delItem.name || delItem.full_name || 'Customer';
+
+    if (window.confirm(`Are you sure you want to move Customer Master Record ${custNum} (${custName}) to Recycle Bin?`)) {
+      const newItem = {
+        id: custNum,
+        title: `Customer - ${custName} (${custNum})`,
+        category: 'Customer' as const,
+        deletedBy: `${currentRole === 'SUPER_ADMIN' ? 'Avishek Das (SUPER_ADMIN)' : currentRole}`,
+        deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        originalLocation: 'Customer Management Vault',
+        details: `Mobile: ${delItem.mobile || delItem.phone || 'N/A'}, Locality: ${delItem.locality || 'N/A'}, Budget: ${delItem.budget || 'N/A'}, Stage: ${delItem.stage || 'N/A'}`,
+        originalData: delItem
+      };
+
+      const updatedRecycled = [newItem, ...recycledItems.filter(r => r.id !== newItem.id)];
+      setRecycledItems(updatedRecycled);
+
+      const targetCustNum = String(custNum).trim().toLowerCase();
+      const targetId = String(id || delItem.id || delItem._id || '').trim().toLowerCase();
+
+      const nextCusts = customers.filter(c => {
+        const cNum = String(c.customer_number || c.customerNumber || '').trim().toLowerCase();
+        const cId = String(c.id || c._id || '').trim().toLowerCase();
+        if (targetCustNum && cNum && cNum === targetCustNum) return false;
+        if (targetId && cId && cId === targetId) return false;
+        return true;
+      });
+
+      setCustomers(nextCusts);
+
+      // Clean up matching requests for this customer without touching raw leads
+      const nextMatches = matchingRequestsQueue.filter(r => {
+        const rNum = String(r.customerNumber || r.customer_number || r.customerId || '').trim().toLowerCase();
+        const rId = String(r.id || r.requestId || '').trim().toLowerCase();
+        if (targetCustNum && rNum && rNum === targetCustNum) return false;
+        if (targetId && rId && rId === targetId) return false;
+        return true;
+      });
+      setMatchingRequestsQueue(nextMatches);
+
+      // Clean up cost sheets for this customer
+      const nextCostSheets = individualCostSheets.filter((cs: any) => {
+        const snap = cs.customerSnapshot || {};
+        const csNum = String(cs.customerNumber || cs.customerId || snap.customerNumber || snap.customerId || '').trim().toLowerCase();
+        const csId = String(cs.id || cs.costSheetId || '').trim().toLowerCase();
+        if (targetCustNum && csNum && (csNum === targetCustNum || csNum.includes(targetCustNum))) return false;
+        if (targetId && csId && csId === targetId) return false;
+        return true;
+      });
+      setIndividualCostSheets(nextCostSheets);
+
+      // Clean up scheduled visits for this customer
+      const nextVisits = scheduledVisits.filter((v: any) => {
+        const vNum = String(v.customerNumber || v.customer_number || v.customerId || '').trim().toLowerCase();
+        const vId = String(v.id || v.visitId || '').trim().toLowerCase();
+        if (targetCustNum && vNum && (vNum === targetCustNum || vNum.includes(targetCustNum))) return false;
+        if (targetId && vId && vId === targetId) return false;
+        return true;
+      });
+      setScheduledVisits(nextVisits);
+
+      // Atomic sync of both customers, matching_requests, cost_sheets, site_visits, and recycled_items to MongoDB Atlas
+      syncAllToMongoDB({ 
+        customers: nextCusts, 
+        matching_requests: nextMatches, 
+        cost_sheets: nextCostSheets,
+        site_visits: nextVisits,
+        recycled_items: updatedRecycled 
+      });
+      alert(`🗑️ Customer ${custNum} moved to Recycle Bin!`);
     }
   };
 
@@ -11434,13 +11528,27 @@ export default function App() {
                   };
                 });
 
+                // Filter out recycled records from dashboard counts
+                const dashboardRecycledSet = new Set<string>();
+                (recycledItems || []).forEach((r: any) => {
+                  extractAllIdentifiers(r).forEach(id => dashboardRecycledSet.add(id));
+                });
+
                 // Uncompleted leads in leadsList are NOT customers until 9 steps are completed
-                const combinedPool = [...customers, ...matchingCusts, ...costSheetCusts, ...visitCusts, ...bookingCusts];
+                const combinedPool = [
+                  ...customers, 
+                  ...matchingCusts, 
+                  ...costSheetCusts, 
+                  ...visitCusts, 
+                  ...bookingCusts
+                ].filter(c => !isItemInRecycledSet(c, dashboardRecycledSet));
+
                 const deduplicatedPool = dedupeCustomerList(combinedPool);
 
                 // Filter customers dynamically based on active filters
                 const rawFilteredCusts = deduplicatedPool.filter(c => {
                   if (!c) return false;
+                  if (isItemInRecycledSet(c, dashboardRecycledSet)) return false;
                   if (salespersonFilter !== 'ALL') {
                     const assigned = (c.assigned_salesperson || c.assigned_to || c.assigned_employee_name || c.salesPersonName || c.assigned_employee_id || '').toLowerCase();
                     if (!assigned.includes(salespersonFilter.toLowerCase())) return false;
@@ -11448,7 +11556,7 @@ export default function App() {
                   if (branchFilter !== 'ALL' && c.branch && !c.branch.toLowerCase().includes(branchFilter.toLowerCase().replace(' branch', ''))) return false;
                   return true;
                 });
-                const filteredCusts = dedupeCustomerList(rawFilteredCusts);
+                const filteredCusts = dedupeCustomerList(rawFilteredCusts).filter(c => !isItemInRecycledSet(c, dashboardRecycledSet));
 
                 const totalCustomers = filteredCusts.length;
 
@@ -12820,6 +12928,7 @@ export default function App() {
               windowWidth={windowWidth}
               setShowCreateShareModal={setShowCreateShareModal}
               handleOpenAddCustomerModal={handleOpenAddCustomerModal}
+              handleDeleteCustomer={handleDeleteCustomer}
               handleDeleteAllCurrentInside={handleDeleteAllCurrentInside}
               activeCustomerSubTab={activeCustomerSubTab}
               setActiveCustomerSubTab={setActiveCustomerSubTab}
@@ -13808,7 +13917,7 @@ export default function App() {
 
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: windowWidth <= 640 ? 'flex-start' : 'center', justifyContent: 'center', zIndex: 2200, padding: windowWidth <= 640 ? '8px' : '16px', overflowY: 'auto' }}>
-            <style>{`
+                        <style>{`
               @media print {
                 @page {
                   size: A4 portrait;
@@ -14444,6 +14553,8 @@ export default function App() {
                   onClick={() => {
                     const sheet = cs;
                     setShowDuplicateCostSheetModal(null);
+                    setActiveTab('cost_sheet_share');
+                    setActiveCostSheetShareSubTab('individual_cost_sheets');
                     setShowViewIndividualCostSheetModal({ open: true, costSheet: sheet });
                   }} 
                   style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', width: windowWidth <= 480 ? '100%' : 'auto' }}

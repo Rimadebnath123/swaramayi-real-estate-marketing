@@ -188,10 +188,13 @@ export async function syncToMongoDB(data: any) {
       if (data.customers.length === 0) {
         await CustomerModel.deleteMany({});
       } else {
-        const activeCustNums = data.customers.map((c: any) => String(c.customer_number || c.id || '')).filter(Boolean);
+        const activeCustNums = data.customers.map((c: any) => String(c.customer_number || c.customerNumber || c.id || '')).filter(Boolean);
+        const activeCustIds = data.customers.map((c: any) => String(c.id || c._id || '')).filter(Boolean);
         await CustomerModel.deleteMany({
-          customer_number: { $nin: activeCustNums },
-          id: { $nin: activeCustNums }
+          $and: [
+            { customer_number: { $nin: activeCustNums } },
+            { id: { $nin: [...activeCustNums, ...activeCustIds] } }
+          ]
         }).catch(() => {});
       }
       await syncCollection(CustomerModel, data.customers);

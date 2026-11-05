@@ -2666,7 +2666,7 @@ const matchedPropsList = evaluatedPropsList
           </div>
 
           {/* FIXED SELECTED PROPERTY SUMMARY PANEL & DISPATCHER */}
-          <div style={{ 
+          <div className="no-print" style={{ 
             background: isLight ? 'rgba(248, 250, 252, 0.96)' : 'rgba(15, 23, 42, 0.96)', 
             backdropFilter: 'blur(12px)',
             border: '2px solid #0284c7', 

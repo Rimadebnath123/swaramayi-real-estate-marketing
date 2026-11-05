@@ -7,6 +7,7 @@ interface CustomerManagementViewProps {
   windowWidth: number;
   setShowCreateShareModal: (val: boolean) => void;
   handleOpenAddCustomerModal: () => void;
+  handleDeleteCustomer?: (id: string, customerNumber: string) => void;
   handleDeleteAllCurrentInside: () => void;
   activeCustomerSubTab: string;
   setActiveCustomerSubTab: (tab: any) => void;
@@ -60,6 +61,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
   windowWidth,
   setShowCreateShareModal,
   handleOpenAddCustomerModal,
+  handleDeleteCustomer,
   handleDeleteAllCurrentInside,
   activeCustomerSubTab,
   setActiveCustomerSubTab,
@@ -632,6 +634,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
       if (num) keys.push(`num:${num}`);
       if (mob && mob.length >= 7) keys.push(`mob:${mob.slice(-10)}`);
       if (id) keys.push(`id:${id}`);
+      if (name) keys.push(`name:${name}`);
       return { keys, num, mob, name, id };
     };
 
@@ -642,16 +645,19 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
       const orig = r.originalData || {};
       const rNum = (r.id || orig.customer_number || orig.customerNumber || orig.id || '').toString().toLowerCase().trim();
       const rMob = (orig.mobile || orig.phone || '').toString().replace(/\D/g, '');
-      const rName = (r.title || orig.name || orig.full_name || orig.customer_name || '').toString().toLowerCase().trim();
+      const rName = (orig.name || orig.full_name || orig.customer_name || '').toString().toLowerCase().trim();
       const rId = (r.id || orig.id || orig._id || '').toString().toLowerCase().trim();
 
       if (rNum) recycledKeys.add(`num:${rNum}`);
       if (rMob && rMob.length >= 7) recycledKeys.add(`mob:${rMob.slice(-10)}`);
       if (rId) recycledKeys.add(`id:${rId}`);
+      if (rName) recycledKeys.add(`name:${rName}`);
 
       if (r.title && r.title.includes('(') && r.title.includes(')')) {
         const extracted = r.title.split('(')[1].replace(')', '').trim().toLowerCase();
         if (extracted) recycledKeys.add(`num:${extracted}`);
+        const namePart = r.title.split('(')[0].replace(/^Customer\s*-\s*/i, '').trim().toLowerCase();
+        if (namePart) recycledKeys.add(`name:${namePart}`);
       }
     });
 
@@ -2153,30 +2159,55 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
               if (custsToDelete.length === 0) return;
 
               if (window.confirm(`⚠️ CONFIRM BULK DELETION:\n\nAre you sure you want to move ${custsToDelete.length} selected customer record(s) to the Recycle Bin?`)) {
-                custsToDelete.forEach(c => {
-                  if (onRecycleItem) {
-                    onRecycleItem({
-                      id: c.id || c.customer_number || `CUS-${Date.now()}`,
-                      title: `Customer - ${c.name || 'Client'} (${c.customer_number || c.id})`,
-                      category: 'Customer',
-                      originalLocation: 'Customer Management Vault',
-                      details: `Mobile: ${c.mobile || 'N/A'}, Locality: ${c.locality || 'N/A'}`,
-                      originalData: c
-                    });
-                  }
+                const newRecycledItems = custsToDelete.map(c => {
+                  const custNum = c.customer_number || c.customerNumber || c.id;
+                  const custName = c.name || c.full_name || 'Customer';
+                  return {
+                    id: custNum,
+                    title: `Customer - ${custName} (${custNum})`,
+                    category: 'Customer' as const,
+                    deletedBy: `${currentRole === 'SUPER_ADMIN' ? 'Avishek Das (SUPER_ADMIN)' : currentRole}`,
+                    deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+                    originalLocation: 'Customer Management Vault',
+                    details: `Mobile: ${c.mobile || c.phone || 'N/A'}, Locality: ${c.locality || 'N/A'}, Budget: ${c.budget || 'N/A'}, Stage: ${c.stage || 'N/A'}`,
+                    originalData: c
+                  };
                 });
 
-                const targetIds = new Set(selectedCustomerIds);
-                if (setCustomers) {
-                  setCustomers((prev: any[]) => {
-                    const updated = (prev || []).filter((cust: any) => cust && !targetIds.has(cust.id));
-                    try {
-                      localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
-                      localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
-                    } catch (e) {}
-                    if (syncAllToMongoDB) syncAllToMongoDB({ customers: updated });
-                    return updated;
-                  });
+                const newIds = new Set(newRecycledItems.map(i => i.id));
+                const updatedRecycled = [...newRecycledItems, ...recycledItems.filter(r => !newIds.has(r.id))];
+
+                const targetIds = new Set(custsToDelete.map(c => String(c.id || c._id || '').toLowerCase()));
+                const targetCustNums = new Set(custsToDelete.map(c => String(c.customer_number || c.customerNumber || '').toLowerCase()).filter(Boolean));
+
+                const nextCusts = customers.filter(c => {
+                  const cId = String(c.id || c._id || '').toLowerCase();
+                  const cNum = String(c.customer_number || c.customerNumber || '').toLowerCase();
+                  if (cId && targetIds.has(cId)) return false;
+                  if (cNum && targetCustNums.has(cNum)) return false;
+                  return true;
+                });
+
+                if (setCustomers) setCustomers(nextCusts);
+
+                try {
+                  localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(nextCusts));
+                  localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(nextCusts));
+                } catch (e) {}
+
+                if (setMatchingRequestsQueue) {
+                  setMatchingRequestsQueue((prev: any[]) => (prev || []).filter((r: any) => {
+                    if (!r) return false;
+                    const rNum = String(r.customerNumber || r.customerId || r.customer_number || '').toLowerCase().trim();
+                    const rId = String(r.id || r.requestId || '').toLowerCase().trim();
+                    if (rId && targetIds.has(rId)) return false;
+                    if (rNum && targetCustNums.has(rNum)) return false;
+                    return true;
+                  }));
+                }
+
+                if (syncAllToMongoDB) {
+                  syncAllToMongoDB({ customers: nextCusts, recycled_items: updatedRecycled });
                 }
 
                 setSelectedCustomerIds([]);
@@ -2185,126 +2216,60 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
             };
 
             const handleDeleteCustomerAction = (c: any) => {
-              if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete customer record ${c.customer_number || c.id} (${c.name})? It will be moved to Recycle Bin.`)) {
-                const targetCustNum = (c.customer_number || c.customerNumber || '').toString().toLowerCase().trim();
-                const targetMob = (c.mobile || c.phone || '').toString().replace(/\D/g, '');
-                const targetName = (c.name || c.full_name || '').toString().toLowerCase().trim();
-                const targetId = (c.id || c._id || '').toString().toLowerCase().trim();
+              if (handleDeleteCustomer) {
+                handleDeleteCustomer(c.id, c.customer_number || c.customerNumber);
+                return;
+              }
+              const custNum = c.customer_number || c.customerNumber || c.id;
+              const custName = c.name || c.full_name || 'Customer';
+              if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete customer record ${custNum} (${custName})? It will be moved to Recycle Bin.`)) {
+                const newItem = {
+                  id: custNum,
+                  title: `Customer - ${custName} (${custNum})`,
+                  category: 'Customer' as const,
+                  deletedBy: `${currentRole === 'SUPER_ADMIN' ? 'Avishek Das (SUPER_ADMIN)' : currentRole}`,
+                  deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+                  originalLocation: 'Customer Management Vault',
+                  details: `Mobile: ${c.mobile || c.phone || 'N/A'}, Locality: ${c.locality || 'N/A'}, Budget: ${c.budget || 'N/A'}, Stage: ${c.stage || 'N/A'}`,
+                  originalData: c
+                };
 
-                if (onRecycleItem) {
-                  onRecycleItem({
-                    id: c.id || c.customer_number || `CUS-${Date.now()}`,
-                    title: `Customer - ${c.name || 'Client'} (${c.customer_number || c.id})`,
-                    category: 'Customer',
-                    originalLocation: 'Customer Management Vault',
-                    details: `Mobile: ${c.mobile || 'N/A'}, Locality: ${c.locality || 'N/A'}`,
-                    originalData: c
-                  });
-                }
+                const updatedRecycled = [newItem, ...recycledItems.filter(r => r.id !== newItem.id)];
 
-                if (setCustomers) {
-                  setCustomers((prev: any[]) => {
-                    const updated = (prev || []).filter((cust: any) => {
-                      if (!cust) return false;
-                      const cNum = (cust.customer_number || cust.customerNumber || '').toString().toLowerCase().trim();
-                      const cMob = (cust.mobile || cust.phone || '').toString().replace(/\D/g, '');
-                      const cName = (cust.name || cust.full_name || '').toString().toLowerCase().trim();
-                      const cId = (cust.id || cust._id || '').toString().toLowerCase().trim();
+                const targetCustNum = String(custNum).trim().toLowerCase();
+                const targetId = String(c.id || c._id || '').trim().toLowerCase();
 
-                      if (targetId && cId && cId === targetId) return false;
-                      if (targetCustNum && cNum && cNum === targetCustNum) return false;
-                      if (targetMob && targetMob.length >= 7 && cMob && (cMob.endsWith(targetMob) || targetMob.endsWith(cMob))) return false;
-                      if (targetName && cName && cName === targetName) return false;
-                      return true;
-                    });
+                const nextCusts = customers.filter(cust => {
+                  const num = String(cust.customer_number || cust.customerNumber || '').trim().toLowerCase();
+                  const id = String(cust.id || cust._id || '').trim().toLowerCase();
+                  if (targetCustNum && num && num === targetCustNum) return false;
+                  if (targetId && id && id === targetId) return false;
+                  return true;
+                });
 
-                    try {
-                      localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
-                      localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
-                    } catch (e) {}
+                if (setCustomers) setCustomers(nextCusts);
 
-                    if (syncAllToMongoDB) {
-                      syncAllToMongoDB({ customers: updated });
-                    }
+                try {
+                  localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(nextCusts));
+                  localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(nextCusts));
+                } catch (e) {}
 
-                    return updated;
-                  });
-                }
-                if (setLeadsList) {
-                  setLeadsList((prev: any[]) => {
-                    const updatedLeads = (prev || []).filter((l: any) => {
-                      if (!l) return false;
-                      const lNum = (l.customer_number || l.customer_id || l.lead_number || '').toString().toLowerCase().trim();
-                      const lMob = (l.mobile || l.phone || '').toString().replace(/\D/g, '');
-                      const lName = (l.customer_name || l.name || '').toString().toLowerCase().trim();
-                      const lId = (l.id || '').toString().toLowerCase().trim();
-
-                      if (targetId && lId && lId === targetId) return false;
-                      if (targetCustNum && lNum && (lNum === targetCustNum || lNum.includes(targetCustNum))) return false;
-                      if (targetMob && targetMob.length >= 7 && lMob && (lMob.endsWith(targetMob) || targetMob.endsWith(lMob))) return false;
-                      if (targetName && lName && lName === targetName) return false;
-                      return true;
-                    });
-
-                    try {
-                      localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(updatedLeads));
-                      localStorage.setItem('swaramayi_leads_v5_clean', JSON.stringify(updatedLeads));
-                    } catch (e) {}
-
-                    if (syncAllToMongoDB) {
-                      syncAllToMongoDB({ leads: updatedLeads });
-                    }
-
-                    return updatedLeads;
-                  });
-                }
                 if (setMatchingRequestsQueue) {
                   setMatchingRequestsQueue((prev: any[]) => (prev || []).filter((r: any) => {
                     if (!r) return false;
-                    const rNum = (r.customerNumber || r.customerId || r.customer_number || '').toString().toLowerCase().trim();
-                    const rMob = (r.mobile || r.phone || r.customerMobile || '').toString().replace(/\D/g, '');
-                    const rName = (r.customerName || r.customer_name || r.name || '').toString().toLowerCase().trim();
-                    const rId = (r.id || r.requestId || '').toString().toLowerCase().trim();
-
+                    const rNum = String(r.customerNumber || r.customerId || r.customer_number || '').toLowerCase().trim();
+                    const rId = String(r.id || r.requestId || '').toLowerCase().trim();
+                    if (targetCustNum && rNum && rNum === targetCustNum) return false;
                     if (targetId && rId && rId === targetId) return false;
-                    if (targetCustNum && rNum && (rNum === targetCustNum || rNum.includes(targetCustNum))) return false;
-                    if (targetMob && targetMob.length >= 7 && rMob && (rMob.endsWith(targetMob) || targetMob.endsWith(rMob))) return false;
-                    if (targetName && rName && rName === targetName) return false;
                     return true;
                   }));
                 }
-                if (setScheduledVisits) {
-                  setScheduledVisits((prev: any[]) => (prev || []).filter((v: any) => {
-                    if (!v) return false;
-                    const vNum = (v.customerNumber || v.customer_number || v.customerId || '').toString().toLowerCase().trim();
-                    const vMob = (v.mobile || v.phone || v.customerMobile || '').toString().replace(/\D/g, '');
-                    const vName = (v.customerName || v.customer_name || v.name || '').toString().toLowerCase().trim();
-                    const vId = (v.id || v.visitId || '').toString().toLowerCase().trim();
 
-                    if (targetId && vId && vId === targetId) return false;
-                    if (targetCustNum && vNum && (vNum === targetCustNum || vNum.includes(targetCustNum))) return false;
-                    if (targetMob && targetMob.length >= 7 && vMob && (vMob.endsWith(targetMob) || targetMob.endsWith(vMob))) return false;
-                    if (targetName && vName && vName === targetName) return false;
-                    return true;
-                  }));
+                if (syncAllToMongoDB) {
+                  syncAllToMongoDB({ customers: nextCusts, recycled_items: updatedRecycled });
                 }
-                if (setIndividualCostSheets) {
-                  setIndividualCostSheets((prev: any[]) => (prev || []).filter((cs: any) => {
-                    if (!cs) return false;
-                    const snap = cs.customerSnapshot || {};
-                    const csNum = (cs.customerNumber || cs.customerId || snap.customerNumber || snap.customerId || '').toString().toLowerCase().trim();
-                    const csMob = (cs.mobile || cs.customerMobile || snap.mobile || '').toString().replace(/\D/g, '');
-                    const csName = (cs.customerName || snap.customerName || cs.name || '').toString().toLowerCase().trim();
-                    const csId = (cs.id || cs.costSheetId || '').toString().toLowerCase().trim();
 
-                    if (targetId && csId && csId === targetId) return false;
-                    if (targetCustNum && csNum && (csNum === targetCustNum || csNum.includes(targetCustNum))) return false;
-                    if (targetMob && targetMob.length >= 7 && csMob && (csMob.endsWith(targetMob) || targetMob.endsWith(csMob))) return false;
-                    if (targetName && csName && csName === targetName) return false;
-                    return true;
-                  }));
-                }
-                alert(`🗑️ Customer record ${c.customer_number || c.name} moved to Recycle Bin.`);
+                alert(`🗑️ Customer record ${custNum} (${custName}) moved to Recycle Bin.`);
               }
             };
 

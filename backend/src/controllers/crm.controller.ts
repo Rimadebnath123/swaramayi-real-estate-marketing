@@ -514,12 +514,22 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
         if (orig.property_code) recSet.add(String(orig.property_code).toLowerCase());
         if (orig.code) recSet.add(String(orig.code).toLowerCase());
         if (orig.id) recSet.add(String(orig.id).toLowerCase());
+        if (orig._id) recSet.add(String(orig._id).toLowerCase());
+        if (orig.customer_number) recSet.add(String(orig.customer_number).toLowerCase());
+        if (orig.customerNumber) recSet.add(String(orig.customerNumber).toLowerCase());
       });
       if (Array.isArray(dbStore.data.properties)) {
         dbStore.data.properties = dbStore.data.properties.filter((p: any) => {
           const pCode = String(p.property_code || p.code || '').toLowerCase();
           const pId = String(p.id || p._id || '').toLowerCase();
           return !recSet.has(pCode) && !recSet.has(pId);
+        });
+      }
+      if (Array.isArray(dbStore.data.customers)) {
+        dbStore.data.customers = dbStore.data.customers.filter((c: any) => {
+          const cNum = String(c.customer_number || c.customerNumber || '').toLowerCase();
+          const cId = String(c.id || c._id || '').toLowerCase();
+          return !recSet.has(cNum) && !recSet.has(cId);
         });
       }
     }

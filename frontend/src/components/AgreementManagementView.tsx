@@ -127,7 +127,7 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
     const rawTitle = a.title || pva.projectTitle || '';
     const projName = rawTitle.includes('—') ? rawTitle.split('—')[1].trim() : rawTitle;
     const custNum = pva.customerId || pva.customerNumber || a.customer_number || `SRM-CUS-2026-000${Date.now().toString().slice(-3)}`;
-    const bkgCode = `SRM-BKG-2026-000${(bookings?.length || 0) + 188}`;
+    const bkgCode = `SRM-BKG-2026-${String((bookings?.length || 0) + 1).padStart(6, '0')}`;
 
     const newBookingObj = {
       id: `BKG-${Date.now()}`,

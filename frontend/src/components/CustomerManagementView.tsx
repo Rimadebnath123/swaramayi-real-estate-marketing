@@ -584,10 +584,12 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
         });
 
         if (!updated) {
-          const custNum = activeTargetCust?.customer_number || activeTargetCust?.customer_id || '';
+          const custNum = (activeTargetCust?.customer_number || activeTargetCust?.customer_id || '').replace('000188', '000001');
+          const cleanSeq = custNum ? custNum.replace(/[^0-9]/g, '').slice(-6) : '000001';
+          const newInvNo = (invIdOrNum ? invIdOrNum.replace('000188', '000001') : `SRM-INV-2026-${cleanSeq}`);
           const newInv = {
-            id: invIdOrNum || (custNum ? `SRM-INV-2026-${custNum.replace(/[^0-9]/g, '').slice(-6)}` : 'SRM-INV-NEW'),
-            invoice_number: invIdOrNum || (custNum ? `SRM-INV-2026-${custNum.replace(/[^0-9]/g, '').slice(-6)}` : 'SRM-INV-NEW'),
+            id: newInvNo,
+            invoice_number: newInvNo,
             customer_number: custNum,
             customer_name: activeTargetCust?.name || activeTargetCust?.full_name || 'Customer',
             customer_mobile: activeTargetCust?.mobile || '',
@@ -1396,7 +1398,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
 
     // Dynamic Lead / Requirement / Matching IDs
     const leadId = matchingLead?.lead_number || (custNum ? `SRM-LEAD-${custNum.replace(/[^0-9]/g, '').slice(-6)}` : 'N/A');
-    const reqId = cust?.configuration || cust?.preferredArea ? `SRM-REQ-${custNum.replace(/[^0-9]/g, '').slice(-6) || '000094'}` : 'N/A';
+    const reqId = cust?.configuration || cust?.preferredArea ? `SRM-REQ-${custNum.replace(/[^0-9]/g, '').slice(-6) || '000001'}` : 'N/A';
     const matId = linkedMatches.length > 0 ? linkedMatches[0].id || linkedMatches[0].matchId : (propList.length > 0 ? `SRM-MAT-${custNum.replace(/[^0-9]/g, '').slice(-6) || '000421'}` : 'N/A');
 
     const hasPayments = payList.length > 0;
@@ -2944,7 +2946,7 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                 </div>
                 <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.8rem' }}>SRM-REQ-2026-000097</span>
+                    <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.8rem' }}>SRM-REQ-2026-000001</span>
                     <p style={{ fontSize: '0.75rem', color: isLight ? '#0f172a' : '#ffffff', margin: '2px 0 0 0' }}>{activeCust.budget} • Ready to Move</p>
                   </div>
                   <span style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800' }}>ACTIVE REQUIREMENT</span>

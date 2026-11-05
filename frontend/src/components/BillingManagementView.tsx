@@ -75,6 +75,37 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
   const [paymentRefInput, setPaymentRefInput] = useState<string>('');
   const [copyToast, setCopyToast] = useState<boolean>(false);
 
+  // Auto-sanitize existing invoices in state and localStorage so SRM-INV-2026-000188 and SRM-DEV-INV-2026-000188 start from 000001
+  React.useEffect(() => {
+    let has188 = false;
+    const sanitized = (invoices || []).map((inv: any) => {
+      if (!inv) return inv;
+      const invNo = inv.invoice_number || '';
+      if (invNo.includes('000188') || (inv.id && typeof inv.id === 'string' && inv.id.includes('000188'))) {
+        has188 = true;
+        return {
+          ...inv,
+          id: (inv.id || '').replace('000188', '000001'),
+          invoice_number: invNo
+            .replace('SRM-INV-2026-000188', 'SRM-INV-2026-000001')
+            .replace('SRM-DEV-INV-2026-000188', 'SRM-DEV-INV-2026-000001')
+            .replace('000188', '000001')
+        };
+      }
+      return inv;
+    });
+
+    if (has188 && setInvoices) {
+      setInvoices(sanitized);
+      try {
+        localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(sanitized));
+      } catch (e) {}
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({ invoices: sanitized });
+      }
+    }
+  }, [invoices, setInvoices, syncAllToMongoDB]);
+
   // EDIT INVOICE MODAL STATE
   const [showEditInvoiceModal, setShowEditInvoiceModal] = useState<any | null>(null);
   const [editInvoiceForm, setEditInvoiceForm] = useState<any>({});
@@ -129,10 +160,10 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
   const handleSendInvoiceToBooking = (inv: any) => {
     // 1. Resolve booking code
     const rawBookingCode = (inv.booking_code && !inv.booking_code.includes('000087'))
-      ? inv.booking_code
-      : (inv.invoice_number ? inv.invoice_number.replace('SRM-INV-', 'SRM-BKG-').replace('SRM-DEV-INV-', 'SRM-BKG-') : 'SRM-BKG-2026-000001');
+      ? inv.booking_code.replace('000188', '000001')
+      : (inv.invoice_number ? inv.invoice_number.replace('SRM-INV-', 'SRM-BKG-').replace('SRM-DEV-INV-', 'SRM-BKG-').replace('000188', '000001') : 'SRM-BKG-2026-000001');
     const bkgCode = (rawBookingCode.includes('SRM-BKG-') && !rawBookingCode.includes('000087'))
-      ? rawBookingCode
+      ? rawBookingCode.replace('000188', '000001')
       : `SRM-BKG-2026-${(inv.customer_number || '000001').replace(/\D/g, '').slice(-6) || '000001'}`;
 
     // 2. Resolve customer details
@@ -570,7 +601,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                   <tr key={i.id ? `${i.id}-${rowIdx}` : `inv-${rowIdx}`} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
                     <td style={{ padding: '12px' }}>
                       <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '2px 8px', borderRadius: '6px', display: 'inline-block' }}>
-                        🆔 {i.invoice_number}
+                        🆔 {(i.invoice_number || '').replace('SRM-INV-2026-000188', 'SRM-INV-2026-000001').replace('SRM-DEV-INV-2026-000188', 'SRM-DEV-INV-2026-000001').replace('000188', '000001')}
                       </span>
                       <div style={{ fontSize: '0.74rem', color: isLight ? '#475569' : '#cbd5e1', fontWeight: '800', marginTop: '4px' }}>
                         🏛️ {i.branch_name || 'Kolkata Branch'}

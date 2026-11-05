@@ -91,14 +91,18 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
   };
 
   const handleTransferToBilling = (b: any) => {
-    const rawBookingCode = (b.booking_code && !b.booking_code.includes('000087')) ? b.booking_code : 'SRM-BKG-2026-000001';
-    const generatedCustomerInvoiceNumber = rawBookingCode.includes('SRM-BKG-')
-      ? rawBookingCode.replace('SRM-BKG-', 'SRM-INV-')
-      : `SRM-INV-2026-${String((invoices?.length || 0) + 1).padStart(6, '0')}`;
+    const rawBookingCode = (b.booking_code && !b.booking_code.includes('000087')) ? b.booking_code.replace('000188', '000001') : 'SRM-BKG-2026-000001';
+    const cleanBkgCode = rawBookingCode.replace('000188', '000001');
+    const bkgSeqMatch = cleanBkgCode.match(/\d+$/);
+    const seqStr = bkgSeqMatch ? bkgSeqMatch[0].slice(-6).padStart(6, '0') : '000001';
 
-    const generatedDeveloperInvoiceNumber = rawBookingCode.includes('SRM-BKG-')
-      ? rawBookingCode.replace('SRM-BKG-', 'SRM-DEV-INV-')
-      : `SRM-DEV-INV-2026-${String((invoices?.length || 0) + 1).padStart(6, '0')}`;
+    const generatedCustomerInvoiceNumber = cleanBkgCode.includes('SRM-BKG-')
+      ? cleanBkgCode.replace('SRM-BKG-', 'SRM-INV-')
+      : `SRM-INV-2026-${seqStr}`;
+
+    const generatedDeveloperInvoiceNumber = cleanBkgCode.includes('SRM-BKG-')
+      ? cleanBkgCode.replace('SRM-BKG-', 'SRM-DEV-INV-')
+      : `SRM-DEV-INV-2026-${seqStr}`;
 
     const brokerageAmt = Number(b.brokerage_amount) || 0;
     const taxableVal = brokerageAmt;
@@ -358,7 +362,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
         seenKeys.add(key);
         if (pvaCode) seenKeys.add(pvaCode);
 
-        const bkgCode = `SRM-BKG-2026-000${list.length + 188}`;
+        const bkgCode = `SRM-BKG-2026-${String(list.length + 1).padStart(6, '0')}`;
         list.push({
           id: `BKG-PVA-${pva.projectVisitAgreementId || Date.now()}`,
           booking_code: bkgCode,

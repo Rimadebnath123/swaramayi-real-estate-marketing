@@ -835,8 +835,18 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             const isCreated = !!actualCostSheet || !!activeVisit;
             const effectiveCsId = isShiftedToMatch ? undefined : (actualCostSheet?.costSheetId || actualCostSheet?.id || activeVisit?.costSheetId || r.costSheetId || undefined);
 
+            const cleanReqId = (r.requirementId && r.requirementId !== 'SRM-REQ-2026-000094' && !r.requirementId.endsWith('000094'))
+              ? r.requirementId
+              : (r.requestId ? r.requestId.replace('SRM-MAT-', 'SRM-REQ-') : 'SRM-REQ-2026-000001');
+
+            const cleanLeadId = (r.leadId && !r.leadId.includes('000184'))
+              ? r.leadId
+              : (r.requestId ? r.requestId.replace('SRM-MAT-', 'SRM-LEAD-') : 'SRM-LEAD-2026-000001');
+
             list.push({
               ...r,
+              requirementId: cleanReqId,
+              leadId: cleanLeadId,
               status: isShiftedToMatch ? 'PENDING' : (activeVisit ? 'CONVERTED_TO_VISIT' : (isCreated ? 'COST_SHEET_CREATED' : (r.status || 'PENDING'))),
               costSheetId: effectiveCsId
             });
@@ -850,7 +860,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             const numKey = custNum.toLowerCase().trim();
             const custName = c.name || c.full_name || '';
 
-            const numDigits = (c.id || custNum || '184').toString().replace(/\D/g, '').slice(-6).padStart(6, '0');
+            const numDigits = (c.id || custNum || '000001').toString().replace(/\D/g, '').slice(-6).padStart(6, '0');
             const reqId = `SRM-MAT-2026-${numDigits || String(420 + idx)}`;
 
             if (isShiftedToSourcing(reqId, custNum, custName, custMob)) return;
@@ -871,8 +881,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                 date: c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '04 Sep 2026',
                 customerName: c.name || c.full_name || 'Customer',
                 customerNumber: custNum,
-                leadId: c.lead_number || `SRM-LEAD-2026-0012${numDigits.slice(-2)}`,
-                requirementId: `SRM-REQ-2026-0000${numDigits.slice(-2)}`,
+                leadId: c.lead_number || (c.leadId && !c.leadId.includes('000184') ? c.leadId : `SRM-LEAD-2026-${numDigits || '000001'}`),
+                requirementId: c.requirement_id || c.requirementId || `SRM-REQ-2026-${numDigits || '000001'}`,
                 mobile: custMob,
                 email: c.email || `${(c.name || 'customer').toLowerCase().replace(/\s+/g, '.')}@gmail.com`,
                 purpose: c.investment_purpose || 'Self / End Use',
@@ -914,7 +924,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             const reqId = `SRM-MAT-2026-${numDigits || String(500 + idx)}`;
 
             if (isShiftedToSourcing(reqId, custNum, custName, custMob)) return;
-            if (isRecycled(reqId, custNum, custName, custMob)) return;
+            if (isRecycled(reqId, custNum, custName, custMob, cs)) return;
 
             if ((numKey && !seenCustNums.has(numKey)) || (cleanMob && !seenMobiles.has(cleanMob))) {
               if (numKey) seenCustNums.add(numKey);
@@ -928,8 +938,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                 date: cs.createdAt || cs.created_at ? new Date(cs.createdAt || cs.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '29 Sep 2026',
                 customerName: custName,
                 customerNumber: custNum,
-                leadId: cs.leadId || `SRM-LEAD-2026-0012${numDigits.slice(-2)}`,
-                requirementId: `SRM-REQ-2026-0000${numDigits.slice(-2)}`,
+                leadId: cs.leadId || `SRM-LEAD-2026-${numDigits || '000001'}`,
+                requirementId: cs.requirementId || `SRM-REQ-2026-${numDigits || '000001'}`,
                 mobile: custMob,
                 email: cs.email || snap.email || `${custName.toLowerCase().replace(/\s+/g, '.')}@gmail.com`,
                 purpose: cs.investment_purpose || 'Self / End Use',
@@ -969,6 +979,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             const reqId = `SRM-MAT-2026-${numDigits || String(600 + idx)}`;
 
             if (isShiftedToSourcing(reqId, custNum, custName, custMob)) return;
+            if (isRecycled(reqId, custNum, custName, custMob, v)) return;
 
             if ((numKey && !seenCustNums.has(numKey)) || (cleanMob && !seenMobiles.has(cleanMob))) {
               if (numKey) seenCustNums.add(numKey);
@@ -982,8 +993,8 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                 date: v.visitDate || v.date ? new Date(v.visitDate || v.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '29 Sep 2026',
                 customerName: custName,
                 customerNumber: custNum,
-                leadId: `SRM-LEAD-2026-0012${numDigits.slice(-2)}`,
-                requirementId: `SRM-REQ-2026-0000${numDigits.slice(-2)}`,
+                leadId: v.leadId || `SRM-LEAD-2026-${numDigits || '000001'}`,
+                requirementId: v.requirementId || `SRM-REQ-2026-${numDigits || '000001'}`,
                 mobile: custMob,
                 email: v.email || `${custName.toLowerCase().replace(/\s+/g, '.')}@gmail.com`,
                 purpose: 'Self / End Use',
@@ -1037,16 +1048,24 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             budget_flexibility: req.budget_flexibility,
             preferredArea: req.preferredArea,
             secondary_areas: req.secondaryAreas || req.secondary_areas,
+            secondaryAreas: req.secondaryAreas || req.secondary_areas,
             configuration: req.configuration,
             bhk: req.configuration,
             property_type: req.propertyType || req.property_type,
+            propertyType: req.propertyType || req.property_type,
             carpet_area_min: req.carpet_area_min || req.super_builtup_area_min,
             carpet_area_max: req.carpet_area_max || req.super_builtup_area_max,
             parking: req.parking || req.parkingRequired,
             parking_type: req.parking_type || req.parking,
             avoided_floors: req.avoided_floors || req.non_preferred_floor,
             non_preferred_floor: req.avoided_floors || req.non_preferred_floor,
-            preferred_floors: req.preferred_floors || req.floor_pref
+            preferred_floors: req.preferred_floors || req.floor_pref,
+            floor_pref: req.preferred_floors || req.floor_pref,
+            possessionStatus: req.possessionStatus || req.possession_status,
+            possession_status: req.possessionStatus || req.possession_status,
+            facing: req.facing,
+            property_condition: req.property_condition,
+            radiusKm: req.radiusKm || req.radius_km || 2
           };
 
           let count = 0;
@@ -1727,8 +1746,12 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                   </div>
                   <div>
                     <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', textTransform: 'uppercase', fontWeight: '800' }}>LINKED REQ & LEAD IDs</span>
-                    <h4 style={{ fontSize: '0.82rem', fontWeight: '800', color: '#fbbf24', fontFamily: 'monospace', margin: 0 }}>{activeMatchingReq.requirementId || 'SRM-REQ-2026-000094'}</h4>
-                    <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace' }}>{activeMatchingReq.leadId || 'SRM-LEAD-2026-000184'}</span>
+                    <h4 style={{ fontSize: '0.82rem', fontWeight: '800', color: '#fbbf24', fontFamily: 'monospace', margin: 0 }}>{(activeMatchingReq.requirementId && activeMatchingReq.requirementId !== 'SRM-REQ-2026-000094' && !activeMatchingReq.requirementId.endsWith('000094'))
+                        ? activeMatchingReq.requirementId
+                        : (activeMatchingReq.requestId ? activeMatchingReq.requestId.replace('SRM-MAT-', 'SRM-REQ-') : 'SRM-REQ-2026-000001')}</h4>
+                    <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace' }}>{(activeMatchingReq.leadId && !activeMatchingReq.leadId.includes('000184'))
+                        ? activeMatchingReq.leadId
+                        : (activeMatchingReq.requestId ? activeMatchingReq.requestId.replace('SRM-MAT-', 'SRM-LEAD-') : 'SRM-LEAD-2026-000001')}</span>
                   </div>
                   <div>
                     <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', textTransform: 'uppercase', fontWeight: '800' }}>CREATED BY & STATUS</span>
@@ -2074,22 +2097,30 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                     name: activeMatchingReq.customerName || activeMatchingReq.name || selectedCust?.name || linkedCust?.name,
                     customer_number: activeMatchingReq.customerNumber || activeMatchingReq.customerId || selectedCust?.customer_number || linkedCust?.customer_number,
                     budget: activeMatchingReq.budget || selectedCust?.budget || linkedCust?.budget,
-                    budget_min: activeMatchingReq.budget_min !== undefined ? activeMatchingReq.budget_min : (selectedCust?.budget_min || linkedCust?.budget_min),
-                    budget_max: activeMatchingReq.budget_max !== undefined ? activeMatchingReq.budget_max : (selectedCust?.budget_max || linkedCust?.budget_max),
+                    budget_min: activeMatchingReq.budget_min !== undefined ? activeMatchingReq.budget_min : (selectedCust?.budget_min !== undefined ? selectedCust?.budget_min : linkedCust?.budget_min),
+                    budget_max: activeMatchingReq.budget_max !== undefined ? activeMatchingReq.budget_max : (selectedCust?.budget_max !== undefined ? selectedCust?.budget_max : linkedCust?.budget_max),
                     budget_unit: activeMatchingReq.budget_unit || selectedCust?.budget_unit || linkedCust?.budget_unit,
                     budget_flexibility: activeMatchingReq.budget_flexibility || selectedCust?.budget_flexibility || linkedCust?.budget_flexibility,
                     preferredArea: activeMatchingReq.preferredArea || selectedCust?.preferredArea || linkedCust?.preferredArea,
                     secondary_areas: activeMatchingReq.secondary_areas || activeMatchingReq.secondaryAreas || selectedCust?.secondary_areas || linkedCust?.secondary_areas,
+                    secondaryAreas: activeMatchingReq.secondary_areas || activeMatchingReq.secondaryAreas || selectedCust?.secondary_areas || linkedCust?.secondary_areas,
                     configuration: activeMatchingReq.configuration || selectedCust?.configuration || linkedCust?.configuration,
                     bhk: activeMatchingReq.configuration || selectedCust?.configuration || linkedCust?.configuration,
                     property_type: activeMatchingReq.property_type || activeMatchingReq.propertyType || activeMatchingReq.propertyCategory || selectedCust?.property_type || linkedCust?.property_type,
+                    propertyType: activeMatchingReq.property_type || activeMatchingReq.propertyType || activeMatchingReq.propertyCategory || selectedCust?.property_type || linkedCust?.property_type,
                     carpet_area_min: activeMatchingReq.carpet_area_min || activeMatchingReq.super_builtup_area_min || selectedCust?.carpet_area_min || linkedCust?.carpet_area_min,
                     carpet_area_max: activeMatchingReq.carpet_area_max || activeMatchingReq.super_builtup_area_max || selectedCust?.carpet_area_max || linkedCust?.carpet_area_max,
                     parking: activeMatchingReq.parking || activeMatchingReq.parkingRequired || selectedCust?.parking || linkedCust?.parking,
                     parking_type: activeMatchingReq.parking_type || activeMatchingReq.parking || selectedCust?.parking_type || linkedCust?.parking_type,
                     avoided_floors: activeMatchingReq.avoided_floors || activeMatchingReq.non_preferred_floor || selectedCust?.avoided_floors || linkedCust?.avoided_floors,
                     non_preferred_floor: activeMatchingReq.avoided_floors || activeMatchingReq.non_preferred_floor || selectedCust?.avoided_floors || linkedCust?.avoided_floors,
-                    preferred_floors: activeMatchingReq.preferred_floors || activeMatchingReq.floor_pref || selectedCust?.preferred_floors || linkedCust?.preferred_floors
+                    preferred_floors: activeMatchingReq.preferred_floors || activeMatchingReq.floor_pref || selectedCust?.preferred_floors || linkedCust?.preferred_floors,
+                    floor_pref: activeMatchingReq.preferred_floors || activeMatchingReq.floor_pref || selectedCust?.preferred_floors || linkedCust?.preferred_floors,
+                    possessionStatus: activeMatchingReq.possessionStatus || activeMatchingReq.possession_status || selectedCust?.possession_status || linkedCust?.possession_status,
+                    possession_status: activeMatchingReq.possessionStatus || activeMatchingReq.possession_status || selectedCust?.possession_status || linkedCust?.possession_status,
+                    facing: activeMatchingReq.facing || selectedCust?.facing || linkedCust?.facing,
+                    property_condition: activeMatchingReq.property_condition || selectedCust?.property_condition || linkedCust?.property_condition,
+                    radiusKm: (activeMatchingReq.radiusKm !== undefined && activeMatchingReq.radiusKm !== null) ? activeMatchingReq.radiusKm : ((activeMatchingReq.radius_km !== undefined && activeMatchingReq.radius_km !== null) ? activeMatchingReq.radius_km : 2)
                   };
                   const res = calculatePropertyMatchScore(currentMatchingCust, p);
                   let matchVal = res.isStrictMatch === false ? 0 : res.total;
@@ -2099,16 +2130,16 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                   }
                   return { 
                     ...p, 
-                    matchTotal: matchVal || 88, 
+                    matchTotal: typeof matchVal === 'number' ? matchVal : 0, 
                     breakdown: res.breakdown || {
-                      bud: 18,
-                      loc: 20,
-                      bhk: 15,
-                      sqft: 10,
-                      possession_facing: 10,
-                      floor_pref: 5,
-                      type: 5,
-                      condition: 5
+                      bud: 0,
+                      loc: 0,
+                      bhk: 0,
+                      sqft: 0,
+                      possession_facing: 0,
+                      floor_pref: 0,
+                      type: 0,
+                      condition: 0
                     }, 
                     isStrictMatch: true,
                     mismatchReasons: res.mismatchReasons || [],
@@ -2116,7 +2147,38 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                   };
                 });
 
-              const matchedPropsList = evaluatedPropsList
+                            // Dynamic Match Badge Generator (Dynamic achieved vs max score with color-coded status)
+              const renderCriteriaBadge = (achieved: number | undefined, max: number, label: string) => {
+                const val = typeof achieved === 'number' ? achieved : 0;
+                const isFull = val >= max;
+                const isPartial = val > 0 && val < max;
+                const icon = isFull ? '✓' : isPartial ? '⚠️' : '❌';
+                const borderColor = isFull ? '#22c55e' : isPartial ? '#eab308' : '#ef4444';
+                const textColor = isFull ? '#4ade80' : isPartial ? '#fbbf24' : '#ef4444';
+                const bg = isLight ? '#f8fafc' : '#0f172a';
+
+                return (
+                  <span 
+                    key={label}
+                    style={{ 
+                      background: bg, 
+                      border: `1px solid ${borderColor}`, 
+                      padding: '2px 6px', 
+                      borderRadius: '4px', 
+                      color: textColor, 
+                      fontWeight: '700',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <span>{icon}</span> {label} ({val}%/{max}% match)
+                  </span>
+                );
+              };
+
+const matchedPropsList = evaluatedPropsList
                 .filter(p => {
                   // STRICT CRITERIA ENFORCEMENT: Filter out any property that fails qualification
                   if (p.matchTotal <= 0 || p.isStrictMatch === false) return false;
@@ -2371,39 +2433,30 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
 
                           {/* MATCH EXPLANATION (CRITERIA BADGES) */}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ background: '#16a34a', color: '#ffffff', padding: '2px 8px', borderRadius: '10px', fontWeight: '900', fontSize: '0.72rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span style={{ 
+                                background: pct >= 80 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626', 
+                                color: '#ffffff', 
+                                padding: '2px 8px', 
+                                borderRadius: '10px', 
+                                fontWeight: '900', 
+                                fontSize: '0.72rem' 
+                              }}>
                                 🛡️ {pct}% / 100% OVERALL MATCH
                               </span>
                               <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>
-                                High Precision 7-Criteria Match
+                                High Precision 8-Criteria Match
                               </span>
                             </div>
                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', fontSize: '0.68rem' }}>
-                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown?.bud === 25 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.bud === 25 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                {p.breakdown?.bud === 25 ? '✓' : '❌'} Budget Range ({p.breakdown?.bud ?? 18}%/25% match)
-                              </span>
-                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown?.loc >= 20 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.loc >= 20 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                ✓ Location ({p.breakdown?.loc ?? 20}%/20% match)
-                              </span>
-                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown?.bhk >= 15 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.bhk >= 15 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                ✓ BHK Config ({p.breakdown?.bhk ?? 15}%/15% match)
-                              </span>
-                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown?.sqft >= 10 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.sqft >= 10 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                ✓ Sq.Ft Area ({p.breakdown?.sqft ?? 10}%/10% match)
-                              </span>
-                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown?.possession_facing >= 10 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.possession_facing ?? 10 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                ✓ Possession & Facing ({p.breakdown?.possession_facing ?? 10}%/10% match)
-                              </span>
-                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown?.floor_pref >= 5 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.floor_pref >= 5 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                ✓ Floor Preference ({p.breakdown?.floor_pref ?? 5}%/5% match)
-                              </span>
-                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown?.type >= 5 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.type >= 5 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                ✓ Category Type ({p.breakdown?.type ?? 5}%/5% match)
-                              </span>
-                              <span style={{ background: isLight ? '#ffffff' : '#1e293b', border: `1px solid ${p.breakdown?.condition >= 5 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.condition ?? 5 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                ✓ Condition ({p.breakdown?.condition ?? 5}%/5% match)
-                              </span>
+                              {renderCriteriaBadge(p.breakdown?.bud, 25, 'Budget Range')}
+                              {renderCriteriaBadge(p.breakdown?.loc, 20, 'Location')}
+                              {renderCriteriaBadge(p.breakdown?.bhk, 15, 'BHK Config')}
+                              {renderCriteriaBadge(p.breakdown?.sqft, 10, 'Sq.Ft Area')}
+                              {renderCriteriaBadge(p.breakdown?.possession_facing, 10, 'Possession & Facing')}
+                              {renderCriteriaBadge(p.breakdown?.floor_pref, 5, 'Floor Preference')}
+                              {renderCriteriaBadge(p.breakdown?.type, 5, 'Category Type')}
+                              {renderCriteriaBadge(p.breakdown?.condition, 5, 'Condition')}
                             </div>
                           </div>
 
@@ -2533,13 +2586,13 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                                 flexDirection: 'column', 
                                 alignItems: 'center', 
                                 justifyContent: 'center', 
-                                background: 'rgba(34, 197, 94, 0.2)', 
-                                color: '#4ade80', 
+                                background: pct >= 80 ? 'rgba(34, 197, 94, 0.2)' : pct >= 50 ? 'rgba(234, 179, 8, 0.2)' : 'rgba(239, 68, 68, 0.2)', 
+                                color: pct >= 80 ? '#4ade80' : pct >= 50 ? '#fbbf24' : '#f87171', 
                                 padding: '4px 10px', 
                                 borderRadius: '10px', 
                                 fontWeight: '900', 
                                 fontSize: '0.8rem', 
-                                border: '1px solid rgba(34, 197, 94, 0.4)',
+                                border: `1px solid ${pct >= 80 ? 'rgba(34, 197, 94, 0.4)' : pct >= 50 ? 'rgba(234, 179, 8, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
                                 lineHeight: '1.2'
                               }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>🔥 {pct}%</span>
@@ -2547,11 +2600,11 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                               </div>
                             </td>
                             <td style={{ padding: '12px' }}>
-                              {/* MATCH EXPLANATION (ALL 7 CRITERIA BREAKDOWN WITH ACHIEVED%/MAX% MATCH FORMATTING) */}
+                              {/* MATCH EXPLANATION (ALL 8 CRITERIA BREAKDOWN WITH ACHIEVED%/MAX% MATCH FORMATTING) */}
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                   <span style={{ 
-                                    background: '#16a34a', 
+                                    background: pct >= 80 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626', 
                                     color: '#ffffff', 
                                     padding: '3px 10px', 
                                     borderRadius: '12px', 
@@ -2565,35 +2618,19 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                                     🛡️ {pct}% / 100% OVERALL MATCH
                                   </span>
                                   <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800' }}>
-                                    High Precision 7-Criteria Match
+                                    High Precision 8-Criteria Match
                                   </span>
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', fontSize: '0.68rem' }}>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown?.bud === 25 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.bud === 25 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                    {p.breakdown?.bud === 25 ? '✓' : '❌'} Budget Range ({p.breakdown?.bud ?? 18}%/25% match)
-                                  </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown?.loc >= 20 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.loc >= 20 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                    ✓ Location ({p.breakdown?.loc ?? 20}%/20% match)
-                                  </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown?.bhk >= 15 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.bhk >= 15 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                    ✓ BHK Config ({p.breakdown?.bhk ?? 15}%/15% match)
-                                  </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown?.sqft >= 10 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.sqft >= 10 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                    ✓ Sq.Ft Area ({p.breakdown?.sqft ?? 10}%/10% match)
-                                  </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown?.possession_facing >= 10 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.possession_facing ?? 10 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                    ✓ Possession & Facing ({p.breakdown?.possession_facing ?? 10}%/10% match)
-                                  </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown?.floor_pref >= 5 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.floor_pref >= 5 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                    ✓ Floor Preference ({p.breakdown?.floor_pref ?? 5}%/5% match)
-                                  </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown?.type >= 5 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.type >= 5 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                    ✓ Category Type ({p.breakdown?.type ?? 5}%/5% match)
-                                  </span>
-                                  <span style={{ background: isLight ? '#f8fafc' : '#0f172a', border: `1px solid ${p.breakdown?.condition >= 5 ? '#22c55e' : '#ef4444'}`, padding: '2px 6px', borderRadius: '4px', color: p.breakdown?.condition ?? 5 ? '#4ade80' : '#ef4444', fontWeight: '700' }}>
-                                    ✓ Condition ({p.breakdown?.condition ?? 5}%/5% match)
-                                  </span>
+                                  {renderCriteriaBadge(p.breakdown?.bud, 25, 'Budget Range')}
+                                  {renderCriteriaBadge(p.breakdown?.loc, 20, 'Location')}
+                                  {renderCriteriaBadge(p.breakdown?.bhk, 15, 'BHK Config')}
+                                  {renderCriteriaBadge(p.breakdown?.sqft, 10, 'Sq.Ft Area')}
+                                  {renderCriteriaBadge(p.breakdown?.possession_facing, 10, 'Possession & Facing')}
+                                  {renderCriteriaBadge(p.breakdown?.floor_pref, 5, 'Floor Preference')}
+                                  {renderCriteriaBadge(p.breakdown?.type, 5, 'Category Type')}
+                                  {renderCriteriaBadge(p.breakdown?.condition, 5, 'Condition')}
                                 </div>
                               </div>
                             </td>

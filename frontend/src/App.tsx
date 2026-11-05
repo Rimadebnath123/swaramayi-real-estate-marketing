@@ -4436,7 +4436,7 @@ export default function App() {
         const match = c.customer_number.match(/SRM-CUS-\d+-(\d+)/i) || c.customer_number.match(/\d+$/);
         if (match) {
           const n = parseInt(match[1] || match[0], 10);
-          if (!isNaN(n) && n < 188) allNums.push(n);
+          if (!isNaN(n)) allNums.push(n);
         }
       }
     });
@@ -4445,7 +4445,7 @@ export default function App() {
         const match = q.customerNumber.match(/SRM-CUS-\d+-(\d+)/i) || q.customerNumber.match(/\d+$/);
         if (match) {
           const n = parseInt(match[1] || match[0], 10);
-          if (!isNaN(n) && n < 188) allNums.push(n);
+          if (!isNaN(n)) allNums.push(n);
         }
       }
     });
@@ -4771,7 +4771,7 @@ export default function App() {
     } else if (type === 'LEAD_ID') {
       const matchInQueue = matchingRequestsQueue.find(r => r.leadId === cleanId || r.leadId?.toUpperCase() === cleanId.toUpperCase());
       data = matchInQueue || {
-        leadId: cleanId || 'SRM-LEAD-2026-000184',
+        leadId: cleanId || 'SRM-LEAD-2026-000001',
         customerName: newCustomerForm.name || 'Valued Customer',
         customerNumber: newCustomerForm.customer_number || 'SRM-CUS-2026-000001',
         mobile: newCustomerForm.mobile || '',
@@ -7567,14 +7567,23 @@ export default function App() {
         if (Array.isArray(parsed)) {
           const seen = new Set<string>();
           const deduped: any[] = [];
-          for (const inv of parsed) {
+          for (let inv of parsed) {
+            if (inv.invoice_number) {
+              inv.invoice_number = inv.invoice_number
+                .replace('SRM-INV-2026-000188', 'SRM-INV-2026-000001')
+                .replace('SRM-DEV-INV-2026-000188', 'SRM-DEV-INV-2026-000001')
+                .replace('000188', '000001');
+            }
+            if (inv.id && typeof inv.id === 'string') {
+              inv.id = inv.id.replace('000188', '000001');
+            }
             const key = inv.id || `${inv.invoice_number}_${inv.invoice_category || 'CUSTOMER'}`;
             const numKey = inv.invoice_number ? `${inv.invoice_number}_${inv.invoice_category || 'CUSTOMER'}` : null;
             if (numKey && seen.has(numKey)) continue;
             if (seen.has(key)) continue;
             if (numKey) seen.add(numKey);
             seen.add(key);
-            if (inv.invoice_number === 'SRM-INV-2026-000088') {
+            if (inv.invoice_number === 'SRM-INV-2026-000088' || inv.invoice_number === 'SRM-INV-2026-000001') {
               inv.settlement_status = 'SETTLED';
               inv.is_settled = true;
             }
@@ -7805,7 +7814,16 @@ export default function App() {
             if (Array.isArray(mData.invoices)) {
               const seen = new Set<string>();
               const dedupedInvoices: any[] = [];
-              for (const inv of mData.invoices) {
+              for (let inv of mData.invoices) {
+                if (inv.invoice_number) {
+                  inv.invoice_number = inv.invoice_number
+                    .replace('SRM-INV-2026-000188', 'SRM-INV-2026-000001')
+                    .replace('SRM-DEV-INV-2026-000188', 'SRM-DEV-INV-2026-000001')
+                    .replace('000188', '000001');
+                }
+                if (inv.id && typeof inv.id === 'string') {
+                  inv.id = inv.id.replace('000188', '000001');
+                }
                 const key = inv.id || `${inv.invoice_number}_${inv.invoice_category || 'CUSTOMER'}`;
                 const numKey = inv.invoice_number ? `${inv.invoice_number}_${inv.invoice_category || 'CUSTOMER'}` : null;
                 if (numKey && seen.has(numKey)) continue;
@@ -7820,7 +7838,18 @@ export default function App() {
               } catch (e) {}
             }
             if (Array.isArray(mData.bookings)) {
-              const cleanBookings = mData.bookings.filter((b: any) => b && typeof b === 'object');
+              const cleanBookings = mData.bookings.filter((b: any) => b && typeof b === 'object').map((b: any) => {
+                if (b.customer_invoice_number) {
+                  b.customer_invoice_number = b.customer_invoice_number.replace('000188', '000001');
+                }
+                if (b.developer_invoice_number) {
+                  b.developer_invoice_number = b.developer_invoice_number.replace('000188', '000001');
+                }
+                if (b.booking_code) {
+                  b.booking_code = b.booking_code.replace('000188', '000001');
+                }
+                return b;
+              });
               setBookings(cleanBookings);
               try {
                 localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(cleanBookings));
@@ -9890,7 +9919,7 @@ export default function App() {
 
   const getSevenDigitCustomerNumber = (custNo?: string, altId?: string) => {
     const raw = (custNo || altId || '').replace(/[^0-9]/g, '');
-    if (!raw) return '0000184';
+    if (!raw) return '0000001';
     if (raw.length >= 7) return raw.slice(-7);
     return raw.padStart(7, '0');
   };
@@ -12722,7 +12751,6 @@ export default function App() {
               generateNextPropertyCode={generateNextPropertyCode}
               handleOpenAddPropertyModal={handleOpenAddPropertyModal}
               setShowBulkImportPropertyModal={setShowBulkImportPropertyModal}
-              setShowBulkImportProjectDeveloperModal={setShowBulkImportProjectDeveloperModal}
               setShowDeveloperIntroductionReportModal={setShowDeveloperIntroductionReportModal}
               setShowPvaDocumentModal={setShowPvaDocumentModal}
               handleStartEditProperty={handleStartEditProperty}
@@ -15666,13 +15694,42 @@ export default function App() {
                   <label style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
                     👤 Assigned Sales Executive
                   </label>
-                  <input 
-                    type="text" 
-                    value={salesFeedbackForm.exec} 
-                    onChange={(e) => setSalesFeedbackForm({ ...salesFeedbackForm, exec: e.target.value })} 
-                    placeholder="e.g. Punita Roy" 
-                    style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }} 
-                  />
+                  {(() => {
+                    const allExecs = (dynamicSalesExecutives && dynamicSalesExecutives.length > 0)
+                      ? dynamicSalesExecutives
+                      : (users || []).map((u: any) => ({
+                          id: u.id || u.username,
+                          name: (u.full_name || u.name || u.username || '').replace(/\(.*\)/, '').trim(),
+                          designation: u.designation || u.role
+                        }));
+
+                    const matchedExec = allExecs.find((u: any) => 
+                      u.name?.toLowerCase().trim() === (salesFeedbackForm.exec || '').toLowerCase().trim()
+                    );
+                    const selectedVal = matchedExec ? matchedExec.name : salesFeedbackForm.exec;
+
+                    return (
+                      <select 
+                        value={selectedVal} 
+                        onChange={(e) => setSalesFeedbackForm({ ...salesFeedbackForm, exec: e.target.value })} 
+                        style={{ width: '100%', background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700', outline: 'none', cursor: 'pointer' }}
+                      >
+                        <option value="" disabled>-- Select Assigned Executive --</option>
+                        {selectedVal && !matchedExec && (
+                          <option value={selectedVal}>{selectedVal}</option>
+                        )}
+                        {allExecs.map((u: any) => {
+                          const displayName = u.name;
+                          const desig = u.designation ? ` (${u.designation})` : '';
+                          return (
+                            <option key={u.id || displayName} value={displayName}>
+                              {displayName}{desig}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -16239,7 +16296,17 @@ export default function App() {
             <form onSubmit={(e) => {
               e.preventDefault();
               const isDev = createInvoiceForm.invoice_category === 'DEVELOPER';
-              const invNum = isDev ? `SRM-INV-DEV-2026-000${invoices.length + 501}` : `SRM-INV-CUS-2026-000${invoices.length + 401}`;
+              const prefix = isDev ? 'SRM-DEV-INV-2026-' : 'SRM-INV-2026-';
+              const existingNums: number[] = [];
+              (invoices || []).forEach((i: any) => {
+                const num = (i.invoice_number || '').replace('000188', '000001');
+                if (num.startsWith(prefix)) {
+                  const parsed = parseInt(num.replace(prefix, ''), 10);
+                  if (!isNaN(parsed)) existingNums.push(parsed);
+                }
+              });
+              const nextSeq = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1;
+              const invNum = `${prefix}${String(nextSeq).padStart(6, '0')}`;
               const taxVal = Number(createInvoiceForm.taxable_value || 200000);
               const applyGst = createInvoiceForm.apply_gst !== false;
               const cgstRate = applyGst && createInvoiceForm.cgst_rate !== undefined && createInvoiceForm.cgst_rate !== '' ? Number(createInvoiceForm.cgst_rate) : (applyGst ? 9 : 0);

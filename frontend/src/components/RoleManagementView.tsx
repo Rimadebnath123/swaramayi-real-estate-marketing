@@ -2951,9 +2951,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                   Website Files & Downloadable Resources Management
                 </h3>
               </div>
-              <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', margin: '4px 0 0 0' }}>
-                Directly manage corporate brochures, project floor plans, and investment guides served live on the website at <strong style={{ color: '#0284c7' }}>http://localhost:5001/files</strong>.
-              </p>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', width: windowWidth <= 768 ? '100%' : 'auto' }}>

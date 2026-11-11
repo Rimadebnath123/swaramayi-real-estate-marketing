@@ -25,6 +25,7 @@ interface AgreementManagementViewProps {
   setBookings?: React.Dispatch<React.SetStateAction<any[]>>;
   syncAllToMongoDB?: (overrideData?: any) => Promise<void>;
   setActiveTab?: (tab: string) => void;
+  generateNextBookingCode?: () => string;
 }
 
 export const AgreementManagementView: React.FC<AgreementManagementViewProps> = ({
@@ -50,7 +51,8 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
   bookings = [],
   setBookings,
   syncAllToMongoDB,
-  setActiveTab
+  setActiveTab,
+  generateNextBookingCode
 }) => {
   const isSuperAdmin = !currentRole || currentRole.toUpperCase().includes('SUPER') || currentRole.toUpperCase().includes('OWNER');
 
@@ -60,10 +62,15 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
     const seenVisitKeys = new Set<string>();
 
     const getContractKey = (item: any) => {
+      const pvaCode = (item.agreement_code || item.projectVisitAgreementId || item.pvaData?.projectVisitAgreementId || item.pvaId || '').toString().trim().toLowerCase();
+      if (pvaCode && pvaCode.includes('pva')) return `pva_${pvaCode}`;
+
       const vId = (item.visitScheduleId || item.visitId || '').toString().trim().toLowerCase();
-      const pTitle = (item.property_details || item.projectTitle || item.title || '').toString().split('—').pop().trim().toLowerCase();
-      const party = (item.party_name || item.customerName || item.customer_name || '').toString().trim().toLowerCase();
+      const pTitle = (item.property_details || item.projectTitle || item.title || item.propertyTitle || '').toString().split('—').pop().split('-').pop().trim().toLowerCase();
+      if (vId && pTitle) return `visit_${vId}_${pTitle}`;
       if (vId) return `visit_${vId}`;
+
+      const party = (item.party_name || item.customerName || item.customer_name || '').toString().trim().toLowerCase();
       if (party && pTitle) return `cust_${party}_${pTitle}`;
       return (item.agreement_code || item.projectVisitAgreementId || item.id || '').toString().toLowerCase();
     };
@@ -127,7 +134,7 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
     const rawTitle = a.title || pva.projectTitle || '';
     const projName = rawTitle.includes('—') ? rawTitle.split('—')[1].trim() : rawTitle;
     const custNum = pva.customerId || pva.customerNumber || a.customer_number || `SRM-CUS-2026-000${Date.now().toString().slice(-3)}`;
-    const bkgCode = `SRM-BKG-2026-${String((bookings?.length || 0) + 1).padStart(6, '0')}`;
+    const bkgCode = generateNextBookingCode ? generateNextBookingCode() : `SRM-BKG-2026-${String((bookings?.length || 0) + 1).padStart(6, '0')}`;
 
     const newBookingObj = {
       id: `BKG-${Date.now()}`,

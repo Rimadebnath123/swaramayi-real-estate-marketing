@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import mongoose from 'mongoose';
 
 import { loadData } from './db/database.js';
 import { connectMongoDB } from './db/mongoose.js';
@@ -59,6 +60,7 @@ app.get(['/api/v1/health', '/api/health'], (req, res) => {
     version: '1.0.0',
     company: 'SWARNAMAYI REAL ESTATE MARKETING',
     mongodb_uri: process.env.MONGODB_URI,
+    mongoose_ready_state: mongoose.connection.readyState,
     timestamp: new Date().toISOString()
   });
 });

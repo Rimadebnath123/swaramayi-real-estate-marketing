@@ -431,6 +431,7 @@ export interface Schema {
     invoice_seq: number;
     approval_seq: number;
   };
+  recycle_bin?: any[];
 }
 
 const initialData: Schema = {
@@ -576,8 +577,29 @@ export function generateID(type: 'SRM-CUS' | 'SRM-PROP' | 'SRM-UNIT' | 'SRM-LEAD
   let nextSeq = 1;
 
   if (type === 'SRM-CUS') {
-    dbStore.data.sequences.customer_seq += 1;
-    nextSeq = dbStore.data.sequences.customer_seq;
+    let maxSeq = dbStore.data.sequences?.customer_seq || 0;
+    if (Array.isArray(dbStore.data.customers)) {
+      dbStore.data.customers.forEach((c: any) => {
+        const match = String(c.customer_number || c.customerId || '').match(/SRM-CUS-(?:20\d{2}-)?(\d+)/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num < 10000 && num > maxSeq) maxSeq = num;
+        }
+      });
+    }
+    if (Array.isArray(dbStore.data.recycle_bin)) {
+      dbStore.data.recycle_bin.forEach((r: any) => {
+        const match = String(r.id || r.originalData?.customer_number || '').match(/SRM-CUS-(?:20\d{2}-)?(\d+)/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num < 10000 && num > maxSeq) maxSeq = num;
+        }
+      });
+    }
+    maxSeq += 1;
+    if (!dbStore.data.sequences) (dbStore.data as any).sequences = {} as any;
+    dbStore.data.sequences.customer_seq = maxSeq;
+    nextSeq = maxSeq;
     saveData();
     return `SRM-CUS-${year}-${String(nextSeq).padStart(6, '0')}`;
   } else if (type === 'SRM-PROP') {

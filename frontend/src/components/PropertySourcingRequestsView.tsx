@@ -113,8 +113,60 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
       return;
     }
 
+    const getNextCustomerCode = () => {
+      const allNums: number[] = [];
+      const extractNum = (str?: string) => {
+        if (!str || typeof str !== 'string') return;
+        const clean = str.trim();
+        const match = clean.match(/SRM-CUS-\d+-(\d+)/i) || clean.match(/SRM-CUS-(\d+)/i) || clean.match(/^CUS-(\d{1,6})$/i);
+        if (match) {
+          const val = parseInt(match[1], 10);
+          if (!isNaN(val) && val > 0 && val < 1000000) allNums.push(val);
+        } else if (/^\d{1,6}$/.test(clean)) {
+          const val = parseInt(clean, 10);
+          if (!isNaN(val) && val > 0 && val < 1000000) allNums.push(val);
+        }
+      };
+
+      (customers || []).forEach(c => {
+        if (!c) return;
+        extractNum(c.customer_number);
+        extractNum(c.customerNumber);
+        extractNum(c.customerId);
+        extractNum(c.id);
+      });
+
+      try {
+        const savedRec = localStorage.getItem('swaramayi_recycled_items');
+        if (savedRec) {
+          const parsed = JSON.parse(savedRec);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((r: any) => {
+              extractNum(r?.id);
+              extractNum(r?.customer_number);
+              extractNum(r?.originalData?.customer_number);
+              extractNum(r?.originalData?.customerId);
+            });
+          }
+        }
+        const savedSeq = localStorage.getItem('swaramayi_max_customer_seq');
+        if (savedSeq) {
+          const seq = parseInt(savedSeq, 10);
+          if (!isNaN(seq) && seq > 0 && seq < 1000000) allNums.push(seq);
+        }
+      } catch (e) {}
+
+      const maxVal = allNums.length > 0 ? Math.max(...allNums) : 0;
+      const nextVal = maxVal + 1;
+      try {
+        localStorage.setItem('swaramayi_max_customer_seq', String(nextVal));
+      } catch (e) {}
+
+      return `SRM-CUS-2026-${String(nextVal).padStart(6, '0')}`;
+    };
+
     const nextId = `SRM-SRC-2026-${String(sourcingRequests.length + 1).padStart(6, '0')}`;
-    const nextCustCode = `SRM-CUS-2026-${String(customers.length + 1).padStart(6, '0')}`;
+    const nextCustCode = getNextCustomerCode();
 
     const newReqObj = {
       id: nextId,

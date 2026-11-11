@@ -696,6 +696,13 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             if (cName && cName.length > 2) recycledNames.add(cName);
           });
 
+          const activeCustNums = new Set<string>();
+          (customers || []).forEach((c: any) => {
+            if (!c) return;
+            const cn = (c.customer_number || c.customerNumber || c.customerId || c.id || '').toString().trim().toLowerCase();
+            if (cn) activeCustNums.add(cn);
+          });
+
           const isRecycled = (reqId?: string, custNum?: string, custName?: string, mob?: string) => {
             const rId = (reqId || '').toString().trim().toLowerCase();
             const cNum = (custNum || '').toString().trim().toLowerCase();
@@ -703,9 +710,14 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             const cMob = (mob || '').toString().replace(/\D/g, '');
 
             if (rId && recycledReqIds.has(rId)) return true;
-            if (cNum && recycledCustNums.has(cNum)) return true;
-            if (cMob && cMob.length >= 7 && recycledMobiles.has(cMob)) return true;
-            if (cName && cName.length > 2 && recycledNames.has(cName)) return true;
+
+            const isCurrentlyActive = cNum && activeCustNums.has(cNum);
+            if (cNum && recycledCustNums.has(cNum) && !isCurrentlyActive) return true;
+
+            if (!isCurrentlyActive) {
+              if (cMob && cMob.length >= 7 && recycledMobiles.has(cMob)) return true;
+              if (cName && cName.length > 2 && recycledNames.has(cName)) return true;
+            }
             return false;
           };
 
@@ -860,8 +872,9 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             const numKey = custNum.toLowerCase().trim();
             const custName = c.name || c.full_name || '';
 
-            const numDigits = (c.id || custNum || '000001').toString().replace(/\D/g, '').slice(-6).padStart(6, '0');
-            const reqId = `SRM-MAT-2026-${numDigits || String(420 + idx)}`;
+            const matchCus = (custNum || '').match(/SRM-CUS-(?:20\d{2}-)?(\d+)/i) || (custNum || '').match(/\d+$/);
+            const numDigits = matchCus ? String(matchCus[1] || matchCus[0]).padStart(6, '0') : String(idx + 1).padStart(6, '0');
+            const reqId = c.matchingId || c.matchId || c.requestId || `SRM-MAT-2026-${numDigits}`;
 
             if (isShiftedToSourcing(reqId, custNum, custName, custMob)) return;
             if (isRecycled(reqId, custNum, custName, custMob)) return;
@@ -920,8 +933,9 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             const custNum = cs.customerNumber || cs.customerId || snap.customerNumber || snap.customerId || (cleanMob ? `SRM-CUS-2026-${cleanMob.slice(-6)}` : `SRM-CUS-2026-000${180 + idx}`);
             const numKey = custNum.toLowerCase().trim();
 
-            const numDigits = custNum.replace(/\D/g, '').slice(-6).padStart(6, '0');
-            const reqId = `SRM-MAT-2026-${numDigits || String(500 + idx)}`;
+            const matchCs = (custNum || '').match(/SRM-CUS-(?:20\d{2}-)?(\d+)/i) || (custNum || '').match(/\d+$/);
+            const numDigits = matchCs ? String(matchCs[1] || matchCs[0]).padStart(6, '0') : String(500 + idx).padStart(6, '0');
+            const reqId = cs.matchId || cs.matchingRequestId || cs.requestId || `SRM-MAT-2026-${numDigits}`;
 
             if (isShiftedToSourcing(reqId, custNum, custName, custMob)) return;
             if (isRecycled(reqId, custNum, custName, custMob, cs)) return;
@@ -975,8 +989,9 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             const custNum = v.customerNumber || v.customer_number || v.customerId || (cleanMob ? `SRM-CUS-2026-${cleanMob.slice(-6)}` : `SRM-CUS-2026-000${200 + idx}`);
             const numKey = custNum.toLowerCase().trim();
 
-            const numDigits = custNum.replace(/\D/g, '').slice(-6).padStart(6, '0');
-            const reqId = `SRM-MAT-2026-${numDigits || String(600 + idx)}`;
+            const matchV = (custNum || '').match(/SRM-CUS-(?:20\d{2}-)?(\d+)/i) || (custNum || '').match(/\d+$/);
+            const numDigits = matchV ? String(matchV[1] || matchV[0]).padStart(6, '0') : String(600 + idx).padStart(6, '0');
+            const reqId = v.matchId || v.matchingId || `SRM-MAT-2026-${numDigits}`;
 
             if (isShiftedToSourcing(reqId, custNum, custName, custMob)) return;
             if (isRecycled(reqId, custNum, custName, custMob, v)) return;
@@ -2141,7 +2156,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
                       type: 0,
                       condition: 0
                     }, 
-                    isStrictMatch: true,
+                    isStrictMatch: res.isStrictMatch !== false,
                     mismatchReasons: res.mismatchReasons || [],
                     mismatchReason: res.reason || ''
                   };

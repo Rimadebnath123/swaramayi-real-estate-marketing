@@ -22,6 +22,8 @@ interface BillingManagementViewProps {
   properties?: any[];
   customers?: any[];
   onRecycleItem?: (itemData: any) => void;
+  bankDetails?: any[];
+  setBankDetails?: (val: any[]) => void;
 }
 
 export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
@@ -45,8 +47,15 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
   properties = [],
   customers = [],
   onRecycleItem,
+  bankDetails = [],
+  setBankDetails,
 }) => {
   const isSuperAdmin = !currentRole || currentRole.toUpperCase().includes('SUPER') || currentRole.toUpperCase().includes('OWNER');
+  const primaryBank = (bankDetails && bankDetails.length > 0) ? (bankDetails.find((b: any) => b.is_primary) || bankDetails[0]) : null;
+  const defaultBankName = primaryBank?.bank_name || 'HDFC Bank';
+  const defaultAccNo = primaryBank?.account_number || '50200018942109';
+  const defaultIfsc = (primaryBank?.ifsc_code || 'HDFC0000128').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11);
+  const defaultUpi = primaryBank?.upi_id || 'swaramayi@hdfcbank';
   const getCurrentUserBranch = () => {
     const matchedUser = (users || []).find((u: any) => u.role === currentRole) || (users || []).find((u: any) => u.id === 'USR-01') || (users || [])[0];
     if (matchedUser && matchedUser.branch_name) {
@@ -133,8 +142,20 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
     const sgst = applyGst ? Math.round(taxVal * (sgstRate / 100)) : 0;
     const total = taxVal + cgst + sgst;
 
+    const cleanIfsc = (editInvoiceForm.bank_ifsc_code || defaultIfsc).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11);
+    const resolvedBankName = editInvoiceForm.bank_name || defaultBankName;
+    const resolvedAccNo = editInvoiceForm.bank_account_number || defaultAccNo;
+    let resolvedUpi = (editInvoiceForm.bank_upi_id || defaultUpi).trim();
+    if (/^\d{10}[a-zA-Z]+$/.test(resolvedUpi)) {
+      resolvedUpi = resolvedUpi.replace(/^(\d{10})([a-zA-Z]+)$/, (_m: string, p1: string, p2: string) => p1 + '@' + p2);
+    }
+
     const updatedInvoice = {
       ...editInvoiceForm,
+      bank_name: resolvedBankName,
+      bank_account_number: resolvedAccNo,
+      bank_ifsc_code: cleanIfsc,
+      bank_upi_id: resolvedUpi,
       taxable_value: taxVal,
       apply_gst: applyGst,
       gst_rate: String(gstRate),
@@ -145,16 +166,50 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
       total_invoice_amount: total
     };
 
+    const isUserSuperAdmin = currentRole === 'SUPER_ADMIN' || currentRole === 'OWNER' || isSuperAdmin;
     const updatedInvoices = invoices.map((inv: any) => {
       if (inv.id === editInvoiceForm.id || (inv.invoice_number && inv.invoice_number === editInvoiceForm.invoice_number)) {
         return updatedInvoice;
       }
+      if (isUserSuperAdmin) {
+        return {
+          ...inv,
+          bank_name: resolvedBankName,
+          bank_account_number: resolvedAccNo,
+          bank_ifsc_code: cleanIfsc,
+          bank_upi_id: resolvedUpi
+        };
+      }
       return inv;
     });
 
+    const updatedBankList = [{
+      id: primaryBank?.id || 'SRM-BANK-01',
+      bank_name: resolvedBankName,
+      account_number: resolvedAccNo,
+      ifsc_code: cleanIfsc,
+      upi_id: resolvedUpi,
+      account_holder_name: primaryBank?.account_holder_name || 'Swaramayi Real Estate Marketing',
+      branch_name: primaryBank?.branch_name || 'Head Office (Kolkata)',
+      is_primary: true,
+      is_active: true,
+      updated_by: 'Avishek Das (Super Admin)',
+      updated_at: new Date().toISOString()
+    }];
+
+    if (setBankDetails) setBankDetails(updatedBankList);
     setInvoices(updatedInvoices);
+
+    if (syncAllToMongoDB) {
+      syncAllToMongoDB({
+        invoices: updatedInvoices,
+        agency_bank_details: updatedBankList,
+        bank_details: updatedBankList
+      });
+    }
+
     setShowEditInvoiceModal(null);
-    alert(`🎉 Invoice ${editInvoiceForm.invoice_number || editInvoiceForm.id} updated successfully!`);
+    alert(`🎉 Invoice ${editInvoiceForm.invoice_number || editInvoiceForm.id} and Agency Bank Details saved to MongoDB Atlas!`);
   };
 
   const handleSendInvoiceToBooking = (inv: any) => {
@@ -271,11 +326,15 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
 
     const updated = invoices.map(inv => {
       if (inv.id === showRecordPaymentModal.id) {
+        const isPaid = paymentStatusInput === 'PAID_SETTLED';
         return {
           ...inv,
           payment_status: paymentStatusInput,
-          payment_mode: paymentStatusInput === 'PAID_SETTLED' ? paymentModeInput : undefined,
-          payment_ref: paymentRefInput || undefined
+          payment_mode: isPaid ? paymentModeInput : undefined,
+          payment_ref: paymentRefInput || undefined,
+          is_settled: isPaid ? true : inv.is_settled,
+          settlement_status: isPaid ? 'SETTLED' : (inv.settlement_status || 'NOT SETTLED'),
+          status: isPaid ? 'SETTLED' : (inv.status || 'NOT SETTLED')
         };
       }
       return inv;
@@ -325,10 +384,10 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                 parking_price: '',
                 agreement_value: '',
                 taxable_value: '',
-                bank_name: '',
-                bank_account_number: '',
-                bank_ifsc_code: '',
-                bank_upi_id: ''
+                bank_name: (bankDetails && bankDetails[0]?.bank_name) || defaultBankName,
+                bank_account_number: (bankDetails && bankDetails[0]?.account_number) || defaultAccNo,
+                bank_ifsc_code: (bankDetails && bankDetails[0]?.ifsc_code) || defaultIfsc,
+                bank_upi_id: (bankDetails && bankDetails[0]?.upi_id) || defaultUpi
               });
               setShowCreateInvoiceModal(true);
             }}
@@ -619,7 +678,7 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                             GSTIN: {i.developer_gstin || '36AAACA1234F1Z5'}
                           </div>
                           <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '2px' }}>
-                            👤 {i.developer_contact_person || 'Developer Contact'} • 📞 {i.developer_mobile || 'N/A'}
+                            👤 {i.developer_contact_person || (i.developer_name?.toLowerCase().includes('kousik') ? 'kousik Nag' : 'Developer Contact')} • 📞 <span style={{ color: '#4ade80', fontFamily: 'monospace', fontWeight: '700' }}>{i.developer_mobile || properties.find((p: any) => (p.developer || p.developer_name || '').toLowerCase() === (i.developer_name || '').toLowerCase())?.developer_mobile || (i.developer_name?.toLowerCase().includes('kousik') ? '8780989756' : '') || '8780989756'}</span>
                           </div>
                           {i.customer_name && (
                             <div style={{ marginTop: '6px', paddingTop: '4px', borderTop: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -716,52 +775,60 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                           )}
                         </span>
 
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                          <button
-                            onClick={() => {
-                              if (!setInvoices) return;
-                              const isCurrentlySettled = i.settlement_status === 'SETTLED' || i.is_settled === true || (i.settlement_status === undefined && (i.payment_status === 'PAID_SETTLED' || i.payment_status === 'PAID' || i.payment_status === 'ONLINE' || (i.payment_status || '').includes('PAID')));
-                              const newSettlementStatus = isCurrentlySettled ? 'NOT SETTLED' : 'SETTLED';
-                              const updated = invoices.map(inv => {
-                                if (inv.id === i.id || (inv.invoice_number && inv.invoice_number === i.invoice_number)) {
-                                  return {
-                                    ...inv,
-                                    settlement_status: newSettlementStatus,
-                                    is_settled: !isCurrentlySettled
-                                  };
-                                }
-                                return inv;
-                              });
-                              setInvoices(updated);
-                              try {
-                                localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(updated));
-                              } catch (err) {}
-                              if (syncAllToMongoDB) {
-                                syncAllToMongoDB({ invoices: updated });
-                              }
-                            }}
-                            style={{
-                              background: (i.settlement_status === 'SETTLED' || i.is_settled === true || (i.settlement_status === undefined && (i.payment_status === 'PAID_SETTLED' || i.payment_status === 'PAID' || i.payment_status === 'ONLINE' || (i.payment_status || '').includes('PAID'))))
-                                ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                                : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                              color: '#ffffff',
-                              border: 'none',
-                              padding: '4px 10px',
-                              borderRadius: '6px',
-                              fontSize: '0.72rem',
-                              fontWeight: '900',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px',
-                              boxShadow: (i.settlement_status === 'SETTLED' || i.is_settled === true || (i.settlement_status === undefined && (i.payment_status === 'PAID_SETTLED' || i.payment_status === 'PAID' || i.payment_status === 'ONLINE' || (i.payment_status || '').includes('PAID'))))
-                                ? '0 2px 6px rgba(245, 158, 11, 0.3)'
-                                : '0 2px 6px rgba(16, 185, 129, 0.3)'
-                            }}
-                            title={(i.settlement_status === 'SETTLED' || i.is_settled === true || (i.settlement_status === undefined && (i.payment_status === 'PAID_SETTLED' || i.payment_status === 'PAID' || i.payment_status === 'ONLINE' || (i.payment_status || '').includes('PAID')))) ? "Click to Mark Invoice as NOT SETTLED" : "Click to Mark Invoice as SETTLED"}
-                          >
-                            {(i.settlement_status === 'SETTLED' || i.is_settled === true || (i.settlement_status === undefined && (i.payment_status === 'PAID_SETTLED' || i.payment_status === 'PAID' || i.payment_status === 'ONLINE' || (i.payment_status || '').includes('PAID')))) ? '⚡ Mark NOT SETTLED' : '⚡ Mark SETTLED'}
-                          </button>
+<div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                          {(() => {
+                            const isSettled = i.is_settled === true || i.settlement_status === 'SETTLED' || (i.is_settled !== false && i.settlement_status !== 'NOT SETTLED' && (i.payment_status === 'PAID_SETTLED' || i.payment_status === 'PAID'));
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!setInvoices) return;
+                                  const nextSettled = !isSettled;
+                                  const nextStatus = nextSettled ? 'SETTLED' : 'NOT SETTLED';
+                                  const updated = invoices.map(inv => {
+                                    if (inv.id === i.id || (inv.invoice_number && inv.invoice_number === i.invoice_number)) {
+                                      return {
+                                        ...inv,
+                                        is_settled: nextSettled,
+                                        settlement_status: nextStatus,
+                                        status: nextStatus,
+                                        payment_status: nextSettled ? (inv.payment_status === 'PAID_SETTLED' || (inv.payment_status || '').includes('PAID') ? inv.payment_status : 'PAID_SETTLED') : inv.payment_status
+                                      };
+                                    }
+                                    return inv;
+                                  });
+                                  setInvoices(updated);
+                                  try {
+                                    localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(updated));
+                                  } catch (err) {}
+                                  if (syncAllToMongoDB) {
+                                    syncAllToMongoDB({ invoices: updated });
+                                  }
+                                }}
+                                style={{
+                                  background: isSettled
+                                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                                    : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  padding: '4px 10px',
+                                  borderRadius: '6px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: '900',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  boxShadow: isSettled
+                                    ? '0 2px 6px rgba(16, 185, 129, 0.3)'
+                                    : '0 2px 6px rgba(245, 158, 11, 0.3)'
+                                }}
+                                title={isSettled ? "Invoice is SETTLED. Click to mark as NOT SETTLED." : "Invoice is NOT SETTLED. Click to mark as SETTLED."}
+                              >
+                                {isSettled ? '✓ SETTLED' : '⚡ Mark SETTLED'}
+                              </button>
+                            );
+                          })()}
 
                           <button
                             onClick={() => {
@@ -791,7 +858,22 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                     <td style={{ padding: '12px', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button 
-                          onClick={() => setShowPrintInvoiceModal({ open: true, invoice: i })} 
+                          onClick={() => {
+                            let resolvedUpi = (bankDetails && bankDetails[0]?.upi_id) || i.bank_upi_id || defaultUpi;
+                            if (typeof resolvedUpi === 'string' && /^\d{10}[a-zA-Z]+$/.test(resolvedUpi.trim())) {
+                              resolvedUpi = resolvedUpi.trim().replace(/^(\d{10})([a-zA-Z]+)$/, (_m: string, p1: string, p2: string) => p1 + '@' + p2);
+                            }
+                            setShowPrintInvoiceModal({ 
+                              open: true, 
+                              invoice: {
+                                ...i,
+                                bank_name: (bankDetails && bankDetails[0]?.bank_name) || i.bank_name || defaultBankName,
+                                bank_account_number: (bankDetails && bankDetails[0]?.account_number) || i.bank_account_number || defaultAccNo,
+                                bank_ifsc_code: (bankDetails && bankDetails[0]?.ifsc_code) || i.bank_ifsc_code || defaultIfsc,
+                                bank_upi_id: resolvedUpi
+                              }
+                            });
+                          }} 
                           style={{ background: billingInvoiceCategory === 'DEVELOPER' ? '#16a34a' : '#0284c7', color: '#ffffff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
                         >
                           <Printer size={13} /> Print GST PDF
@@ -877,10 +959,16 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                               gst_rate: String(gstRate),
                               cgst_rate: String(cgstRate),
                               sgst_rate: String(sgstRate),
-                              bank_name: i.bank_name || '',
-                              bank_account_number: i.bank_account_number || '',
-                              bank_ifsc_code: i.bank_ifsc_code || '',
-                              bank_upi_id: i.bank_upi_id || '',
+                              bank_name: (bankDetails && bankDetails[0]?.bank_name) || i.bank_name || defaultBankName,
+                              bank_account_number: (bankDetails && bankDetails[0]?.account_number) || i.bank_account_number || defaultAccNo,
+                              bank_ifsc_code: ((bankDetails && bankDetails[0]?.ifsc_code) || i.bank_ifsc_code || defaultIfsc).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11),
+                              bank_upi_id: (() => {
+                                let u = (bankDetails && bankDetails[0]?.upi_id) || i.bank_upi_id || defaultUpi;
+                                if (typeof u === 'string' && /^\d{10}[a-zA-Z]+$/.test(u.trim())) {
+                                  return u.trim().replace(/^(\d{10})([a-zA-Z]+)$/, (_m: string, p1: string, p2: string) => p1 + '@' + p2);
+                                }
+                                return u;
+                              })(),
                               company_address: i.company_address || '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, North 24 Parganas, Madhyamgram, Kolkata - 700129',
                               company_rera_no: i.company_rera_no || 'WBRERA/A/NOR/2025/000737',
                               company_email: i.company_email || 'avishek@swaramayi.info',
@@ -2228,9 +2316,9 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                         <input 
                           type="text" 
                           disabled={!isUserSuperAdmin}
-                          value={editInvoiceForm.bank_name || 'HDFC Bank'} 
-                          onChange={(e) => isUserSuperAdmin && setEditInvoiceForm({ ...editInvoiceForm, bank_name: e.target.value })} 
-                          placeholder="HDFC Bank" 
+                          value={editInvoiceForm.bank_name ?? ''} 
+                          onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, bank_name: e.target.value })} 
+                          placeholder="Bank Name (e.g. KOTAK Bank)" 
                           style={{ width: '100%', background: !isUserSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', cursor: !isUserSuperAdmin ? 'not-allowed' : 'text', opacity: !isUserSuperAdmin ? 0.75 : 1 }} 
                         />
                       </div>
@@ -2240,8 +2328,8 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                         <input 
                           type="text" 
                           disabled={!isUserSuperAdmin}
-                          value={editInvoiceForm.bank_account_number || ''} 
-                          onChange={(e) => isUserSuperAdmin && setEditInvoiceForm({ ...editInvoiceForm, bank_account_number: e.target.value })} 
+                          value={editInvoiceForm.bank_account_number ?? ''} 
+                          onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, bank_account_number: e.target.value })} 
                           placeholder="Account Number" 
                           style={{ width: '100%', background: !isUserSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace', cursor: !isUserSuperAdmin ? 'not-allowed' : 'text', opacity: !isUserSuperAdmin ? 0.75 : 1 }} 
                         />
@@ -2251,10 +2339,14 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                         <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>IFSC Code *</label>
                         <input 
                           type="text" 
+                          maxLength={11}
                           disabled={!isUserSuperAdmin}
-                          value={editInvoiceForm.bank_ifsc_code || ''} 
-                          onChange={(e) => isUserSuperAdmin && setEditInvoiceForm({ ...editInvoiceForm, bank_ifsc_code: e.target.value })} 
-                          placeholder="IFSC Code" 
+                          value={editInvoiceForm.bank_ifsc_code ?? ''} 
+                          onChange={(e) => {
+                            const formatted = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11);
+                            setEditInvoiceForm({ ...editInvoiceForm, bank_ifsc_code: formatted });
+                          }} 
+                          placeholder="IFSC Code (e.g. KKBK0000323)" 
                           style={{ width: '100%', background: !isUserSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace', cursor: !isUserSuperAdmin ? 'not-allowed' : 'text', opacity: !isUserSuperAdmin ? 0.75 : 1 }} 
                         />
                       </div>
@@ -2264,9 +2356,9 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                         <input 
                           type="text" 
                           disabled={!isUserSuperAdmin}
-                          value={editInvoiceForm.bank_upi_id || ''} 
-                          onChange={(e) => isUserSuperAdmin && setEditInvoiceForm({ ...editInvoiceForm, bank_upi_id: e.target.value })} 
-                          placeholder="name@bank" 
+                          value={editInvoiceForm.bank_upi_id ?? ''} 
+                          onChange={(e) => setEditInvoiceForm({ ...editInvoiceForm, bank_upi_id: e.target.value })} 
+                          placeholder="UPI ID (e.g. name@bank)" 
                           style={{ width: '100%', background: !isUserSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', cursor: !isUserSuperAdmin ? 'not-allowed' : 'text', opacity: !isUserSuperAdmin ? 0.75 : 1 }} 
                         />
                       </div>

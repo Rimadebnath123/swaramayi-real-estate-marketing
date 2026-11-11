@@ -23,6 +23,7 @@ interface BookingManagementViewProps {
   projectVisitAgreements?: any[];
   agreements?: any[];
   recycledItems?: any[];
+  generateNextBookingCode?: () => string;
 }
 
 export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
@@ -46,7 +47,8 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
   onRecycleItem,
   projectVisitAgreements = [],
   agreements = [],
-  recycledItems = []
+  recycledItems = [],
+  generateNextBookingCode
 }) => {
   const isSuperAdmin = !currentRole || currentRole.toUpperCase().includes('SUPER') || currentRole.toUpperCase().includes('OWNER');
 
@@ -139,8 +141,8 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
     const devName = b.developer_name || matchedProp?.developer || matchedProp?.builder || '';
     const devGstin = b.developer_gstin || matchedProp?.developer_gstin || '';
     const devRera = matchedProp?.rera_id || b.developer_rera_id || '';
-    const devContact = b.developer_contact_person || '';
-    const devMobile = b.developer_mobile || '';
+    const devContact = b.developer_contact_person || (devName?.toLowerCase().includes('kousik') ? 'kousik Nag' : '') || devName || 'kousik Nag';
+    const devMobile = b.developer_mobile || matchedProp?.developer_mobile || (devName?.toLowerCase().includes('kousik') ? '8780989756' : '') || '8780989756';
     const devEmail = matchedProp?.developer_email || b.developer_email || '';
     const devAddress = matchedProp?.developer_address || b.developer_address || '';
     const devPos = placeOfSupply || '19 - West Bengal';
@@ -325,72 +327,24 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
   };
 
   const allCombinedBookings = React.useMemo(() => {
-    const list = (bookings || []).map((b: any) => {
+    const list = (bookings || []).filter((b: any) => {
+      if (!b) return false;
+      if (recycledItems && Array.isArray(recycledItems)) {
+        const isRecycled = recycledItems.some((r: any) => 
+          r.id === b.id || r.id === b.booking_code || (r.originalData && (r.originalData.id === b.id || r.originalData.booking_code === b.booking_code))
+        );
+        if (isRecycled) return false;
+      }
+      return true;
+    }).map((b: any) => {
       if (b && typeof b === 'object' && b.booking_code && b.booking_code.includes('000087')) {
         return { ...b, booking_code: 'SRM-BKG-2026-000001' };
       }
       return b;
     });
-    const seenKeys = new Set<string>();
-
-    list.forEach(b => {
-      if (!b) return;
-      const key = `${(b.customer_name || '').toLowerCase().trim()}_${(b.project_name || '').toLowerCase().trim()}`;
-      seenKeys.add(key);
-      if (b.booking_code) seenKeys.add(b.booking_code.toLowerCase().trim());
-      if (b.agreement_code) seenKeys.add(b.agreement_code.toLowerCase().trim());
-    });
-
-    const recycledKeys = new Set<string>();
-    (recycledItems || []).forEach((r: any) => {
-      if (!r) return;
-      const orig = r.originalData || {};
-      const rName = (r.title || orig.name || orig.customer_name || orig.party_name || '').toLowerCase().trim();
-      if (rName) recycledKeys.add(rName);
-    });
-
-    (projectVisitAgreements || []).forEach((pva: any) => {
-      if (!pva) return;
-      const custName = pva.customerName || pva.party_name || 'Customer';
-      if (recycledKeys.has(custName.toLowerCase().trim())) return;
-
-      const projName = pva.projectTitle || pva.project_name || '';
-      const key = `${custName.toLowerCase().trim()}_${projName.toLowerCase().trim()}`;
-      const pvaCode = (pva.projectVisitAgreementId || '').toLowerCase().trim();
-
-      if (!seenKeys.has(key) && (!pvaCode || !seenKeys.has(pvaCode))) {
-        seenKeys.add(key);
-        if (pvaCode) seenKeys.add(pvaCode);
-
-        const bkgCode = `SRM-BKG-2026-${String(list.length + 1).padStart(6, '0')}`;
-        list.push({
-          id: `BKG-PVA-${pva.projectVisitAgreementId || Date.now()}`,
-          booking_code: bkgCode,
-          agreement_code: pva.projectVisitAgreementId || '',
-          customer_name: custName,
-          customer_number: pva.customerId || pva.customerNumber || '',
-          customer_mobile: pva.customerMobile || '',
-          project_name: projName,
-          developer_name: pva.developerName || '',
-          property_title: projName,
-          tower_unit: pva.unitNumber || '',
-          agreement_value: pva.agreement_value || '₹0',
-          agreement_value_num: pva.agreement_value_num || 0,
-          token_amount: pva.token_amount || 0,
-          payment_mode: 'Bank Transfer / NEFT',
-          payment_ref: `PVA-SIG-${pva.otpHashRef?.slice(-6) || '849201'}`,
-          booking_date: pva.visitDate || new Date().toISOString().split('T')[0],
-          sales_executive: pva.executiveName || 'Ramesh Pawar',
-          brokerage_rate: '2.0%',
-          brokerage_amount: Math.round((pva.agreement_value_num || 0) * 0.02),
-          approval_status: 'APPROVED_LOCKED',
-          status: 'CONFIRMED'
-        });
-      }
-    });
 
     return list;
-  }, [bookings, projectVisitAgreements, recycledItems]);
+  }, [bookings, recycledItems]);
 
   const registeredDoneBookings = (allCombinedBookings || []).filter((b: any) => {
     const hasActiveInvoice = invoices && Array.isArray(invoices) && invoices.some((inv: any) => 
@@ -524,7 +478,7 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
                       <strong style={{ color: '#fbbf24', fontSize: '0.88rem' }}>🏢 {b.project_name}</strong>
                       <div style={{ marginTop: '3px', marginBottom: '3px' }}>
                         <span style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid #0284c7', color: '#38bdf8', fontSize: '0.72rem', fontWeight: '900', padding: '2px 7px', borderRadius: '4px', fontFamily: 'monospace', display: 'inline-block' }}>
-                          🏢 Property Code: {b.property_code || b.propertyCode || 'N/A'}
+                          🏢 Property Code: {b.property_code || b.propertyCode || (properties || []).find((p: any) => (p.title && b.project_name && p.title.toLowerCase().trim() === b.project_name.toLowerCase().trim()) || (p.property_title && b.project_name && p.property_title.toLowerCase().trim() === b.project_name.toLowerCase().trim()))?.property_code || 'SRM-PROP-2026-000001'}
                         </span>
                       </div>
                       <div style={{ fontSize: '0.78rem', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', marginTop: '2px' }}>

@@ -54,6 +54,7 @@ interface ProjectManagementViewProps {
   handleCaptureCurrentGpsLocation: () => void;
   handleCreatePropertySubmit: (e: React.FormEvent) => void;
   generateNextPropertyCode: () => string;
+  generateNextAgreementCode?: (isDev?: boolean) => string;
   handleOpenAddPropertyModal: () => void;
   showBulkImportPropertyModal?: boolean;
   setShowBulkImportPropertyModal: (val: boolean) => void;
@@ -211,6 +212,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   handleCaptureCurrentGpsLocation,
   handleCreatePropertySubmit,
   generateNextPropertyCode,
+  generateNextAgreementCode,
   handleOpenAddPropertyModal,
   setShowBulkImportPropertyModal,
   showBulkImportPropertyModal = false,
@@ -918,16 +920,21 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     const cleanContact = devContact || '+91 98490 88776';
 
     const newId = `AGR-DEV-${Date.now().toString().slice(-6)}`;
-    const currentAgrList = Array.isArray(agreements) ? agreements : [];
-    let maxAgrSeq = 0;
-    currentAgrList.forEach((a: any) => {
-      const m = (a.agreement_code || '').match(/SRM-AGR-DEV-\d+-(\d+)/i);
-      if (m) {
-        const val = parseInt(m[1], 10);
-        if (!isNaN(val) && val < 10000 && val > maxAgrSeq) maxAgrSeq = val;
-      }
-    });
-    const agreementCode = `SRM-AGR-DEV-2026-${String(maxAgrSeq + 1).padStart(6, '0')}`;
+    let agreementCode = '';
+    if (generateNextAgreementCode) {
+      agreementCode = generateNextAgreementCode(true);
+    } else {
+      const currentAgrList = Array.isArray(agreements) ? agreements : [];
+      let maxAgrSeq = 0;
+      currentAgrList.forEach((a: any) => {
+        const m = (a.agreement_code || '').match(/SRM-AGR-DEV-\d+-(\d+)/i);
+        if (m) {
+          const val = parseInt(m[1], 10);
+          if (!isNaN(val) && val < 10000 && val > maxAgrSeq) maxAgrSeq = val;
+        }
+      });
+      agreementCode = `SRM-AGR-DEV-2026-${String(maxAgrSeq + 1).padStart(6, '0')}`;
+    }
     const fullTitle = `Channel Partner Agreement — ${cleanProj} (${cleanDev})`;
 
     const newAgreement = {
@@ -988,9 +995,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           nextAgreements = [newAgreement, ...currentList];
         }
 
-        try {
-          localStorage.setItem('swaramayi_agreements_vault_v5_clean', JSON.stringify(nextAgreements));
-        } catch (e) {}
 
         if (triggerSync && syncAllToMongoDB) {
           syncAllToMongoDB({ agreements: nextAgreements });

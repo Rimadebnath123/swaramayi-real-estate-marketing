@@ -41,12 +41,114 @@ export const extractAllIdentifiers = (item: any): Set<string> => {
     item.originalLocation === 'Property Master / Live Inventory'
   );
 
+  const cat = (item.category || data.category || '').toString();
+
+  // Primary item ID and data ID
+  [item.id, data.id, data._id].forEach(val => {
+    if (val && typeof val === 'string' && val.trim()) {
+      const trimmed = val.trim();
+      ids.add(trimmed);
+      ids.add(trimmed.toLowerCase());
+      ids.add(trimmed.toUpperCase());
+    }
+  });
+
+  // SCOPED BY CATEGORY: If Visit Management or visit object, ONLY visit identifiers & cross-format codes
+  const isVisitItem = (
+    cat === 'Visit Management' ||
+    Boolean(data.visitId || item.visitId || data.visitPlanId || item.visitPlanId || data.visitScheduleId || item.visitScheduleId || data.site_visit_code)
+  );
+
+  if (isVisitItem) {
+    [
+      data.visitId,
+      data.visitScheduleId,
+      data.visitPlanId,
+      data.site_visit_code,
+      item.visitId,
+      item.visitScheduleId,
+      item.visitPlanId,
+      data.costSheetId,
+      item.costSheetId
+    ].forEach(val => {
+      if (val && typeof val === 'string' && val.trim()) {
+        const trimmed = val.trim();
+        ids.add(trimmed);
+        ids.add(trimmed.toLowerCase());
+        ids.add(trimmed.toUpperCase());
+        if (trimmed.startsWith('COST-SHEET-')) {
+          const vs = trimmed.replace('COST-SHEET-', 'SRM-VS-');
+          ids.add(vs);
+          ids.add(vs.toLowerCase());
+          ids.add(vs.toUpperCase());
+        } else if (trimmed.startsWith('SRM-VS-')) {
+          const cs = trimmed.replace('SRM-VS-', 'COST-SHEET-');
+          ids.add(cs);
+          ids.add(cs.toLowerCase());
+          ids.add(cs.toUpperCase());
+        }
+      }
+    });
+
+    const stops = data.stops || item.stops;
+    if (Array.isArray(stops)) {
+      stops.forEach((s: any) => {
+        if (s && s.costSheetId && typeof s.costSheetId === 'string') {
+          const cs = s.costSheetId.trim();
+          ids.add(cs);
+          ids.add(cs.toLowerCase());
+          ids.add(cs.toUpperCase());
+          const vs = cs.replace('COST-SHEET-', 'SRM-VS-');
+          ids.add(vs);
+          ids.add(vs.toLowerCase());
+          ids.add(vs.toUpperCase());
+        }
+      });
+    }
+
+    const titleAndDetails = `${item.title || ''} ${item.details || ''} ${data.title || ''} ${data.details || ''}`;
+    const vsMatches = titleAndDetails.match(/SRM-VS-(?:20\d{2}-)?\d+/gi);
+    if (vsMatches) {
+      vsMatches.forEach(m => {
+        const trimmed = m.trim();
+        ids.add(trimmed);
+        ids.add(trimmed.toLowerCase());
+        const cs = trimmed.replace(/SRM-VS-/i, 'COST-SHEET-');
+        ids.add(cs);
+        ids.add(cs.toLowerCase());
+      });
+    }
+    const csMatches = titleAndDetails.match(/COST-SHEET-(?:20\d{2}-)?\d+/gi);
+    if (csMatches) {
+      csMatches.forEach(m => {
+        const trimmed = m.trim();
+        ids.add(trimmed);
+        ids.add(trimmed.toLowerCase());
+        const vs = trimmed.replace(/COST-SHEET-/i, 'SRM-VS-');
+        ids.add(vs);
+        ids.add(vs.toLowerCase());
+      });
+    }
+
+    return ids;
+  }
+
+  // If Cost Sheet, only cost sheet IDs
+  if (cat === 'Cost Sheet') {
+    [data.costSheetId, data.cost_sheet_id, item.costSheetId].forEach(val => {
+      if (val && typeof val === 'string' && val.trim()) {
+        const trimmed = val.trim();
+        ids.add(trimmed);
+        ids.add(trimmed.toLowerCase());
+        ids.add(trimmed.toUpperCase());
+      }
+    });
+    return ids;
+  }
+
   [
-    item.id,
     item.customer_number,
     item.lead_number,
-    data.id,
-    data._id,
     data.property_code,
     data.code,
     data.lead_number,
@@ -1218,7 +1320,10 @@ function ScheduleVisitModalContent({
   setSelectedVisitPlanId,
   dynamicSalesExecutives = [],
   customers = [],
-  branches = []
+  branches = [],
+  recycledItems = [],
+  generateNextVisitCode,
+  syncAllToMongoDB
 }: any) {
   const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
 
@@ -1270,8 +1375,58 @@ function ScheduleVisitModalContent({
     return normalized;
   }, [dynamicSalesExecutives]);
 
+  // Isolate and validate cost sheets belonging strictly to target customer
+  const filteredCustomerCostSheets = React.useMemo(() => {
+    const targetCleanMob = String(targetCustMobile || '').replace(/\D/g, '');
+    const targetCleanId = String(targetCustomerId || '').trim().toLowerCase();
+    const targetCleanName = String(targetCustName || '').trim().toLowerCase();
+
+    const list = (eligibleCostSheets || []).filter((cs: any) => {
+      if (!cs) return false;
+      if (cs.status === 'CANCELLED' || cs.status === 'DELETED') return false;
+
+      // Always include the initially selected cost sheet
+      const isInitialMatch = Boolean(
+        initialCS && (
+          (cs.costSheetId && initialCS.costSheetId && cs.costSheetId === initialCS.costSheetId) ||
+          (cs.id && initialCS.id && cs.id === initialCS.id) ||
+          (cs.costSheetId && initialCS.id && cs.costSheetId === initialCS.id) ||
+          (cs.id && initialCS.costSheetId && cs.id === initialCS.costSheetId)
+        )
+      );
+      if (isInitialMatch) {
+        return true;
+      }
+
+      // Match by Customer ID / Customer Number
+      const csCustId = String(cs.customerId || cs.customerNumber || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber || '').trim().toLowerCase();
+      if (targetCleanId && csCustId && (csCustId === targetCleanId || csCustId.includes(targetCleanId) || targetCleanId.includes(csCustId))) {
+        return true;
+      }
+
+      // Match by Mobile
+      const csMob = String(cs.mobile || cs.customerSnapshot?.mobile || '').replace(/\D/g, '');
+      if (targetCleanMob && csMob && targetCleanMob.length >= 7 && csMob.length >= 7 && (csMob === targetCleanMob || csMob.endsWith(targetCleanMob) || targetCleanMob.endsWith(csMob))) {
+        return true;
+      }
+
+      // Match by Customer Name
+      const csName = String(cs.customerName || cs.customerSnapshot?.customerName || '').trim().toLowerCase();
+      if (targetCleanName && csName && targetCleanName !== 'valued customer' && targetCleanName !== 'customer' && csName === targetCleanName) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (list.length === 0 && initialCS) {
+      return [initialCS];
+    }
+    return list;
+  }, [eligibleCostSheets, initialCS, targetCustomerId, targetCustMobile, targetCustName]);
+
   const [selectedCsIds, setSelectedCsIds] = useState<string[]>(
-    initialCS ? [initialCS.costSheetId] : (eligibleCostSheets[0] ? [eligibleCostSheets[0].costSheetId] : [])
+    initialCS ? [initialCS.costSheetId] : (filteredCustomerCostSheets[0] ? [filteredCustomerCostSheets[0].costSheetId] : [])
   );
 
   const targetCust = (customers || []).find((c: any) =>
@@ -1325,7 +1480,7 @@ function ScheduleVisitModalContent({
   const [transportMode, setTransportMode] = useState<string>('🚗 Cab Pick & Drop Needed');
 
   const [orderedStops, setOrderedStops] = useState<any[]>(() => {
-    const initList = initialCS ? [initialCS] : (Array.isArray(eligibleCostSheets) ? eligibleCostSheets.slice(0, 1) : []);
+    const initList = initialCS ? [initialCS] : (Array.isArray(filteredCustomerCostSheets) ? filteredCustomerCostSheets.slice(0, 1) : []);
     return initList.map((cs: any, idx: number) => {
       if (!cs) return null;
       const pCode = cs?.propertyCode || cs?.propertySnapshot?.propertyCode;
@@ -1393,7 +1548,7 @@ function ScheduleVisitModalContent({
       setOrderedStops(orderedStops.filter(s => s && s.costSheetId !== csId));
     } else {
       setSelectedCsIds([...selectedCsIds, csId]);
-      const cs = (eligibleCostSheets || []).find((c: any) => c && (c.costSheetId === csId || c.id === csId));
+      const cs = (filteredCustomerCostSheets || []).find((c: any) => c && (c.costSheetId === csId || c.id === csId));
       if (cs) {
         const pCode = cs?.propertyCode || cs?.propertySnapshot?.propertyCode;
         const csTitle = (cs?.propertySnapshot?.propertyTitle || '').toLowerCase();
@@ -1437,8 +1592,8 @@ function ScheduleVisitModalContent({
             latitude: '22.722361° N',
             longitude: '88.493403° E'
           }];
-        } else if (Array.isArray(eligibleCostSheets) && eligibleCostSheets.length > 0 && eligibleCostSheets[0]) {
-          const firstCs = eligibleCostSheets[0];
+        } else if (Array.isArray(filteredCustomerCostSheets) && filteredCustomerCostSheets.length > 0 && filteredCustomerCostSheets[0]) {
+          const firstCs = filteredCustomerCostSheets[0];
           stopsToUse = [{
             stopNum: 1,
             costSheetId: firstCs.costSheetId || firstCs.id || 'CS-GEN-01',
@@ -1459,33 +1614,58 @@ function ScheduleVisitModalContent({
       }
 
       // 2. Generate Master Schedule ID safely
-      const existingVisitNumbers: number[] = [];
-      const extractSeq = (item: any) => {
-        if (!item) return;
-        const idStr = String(item.visitPlanId || item.visitScheduleId || item.visitId || item.id || '');
-        const match = idStr.match(/SRM-VS-2026-(\d+)/);
-        if (match && match[1]) {
-          const num = parseInt(match[1], 10);
-          if (!isNaN(num) && num > 0) {
-            if (num >= 87 && num <= 90) return; // ignore artificial legacy 87/88 offset
-            existingVisitNumbers.push(num);
-          }
-        }
-      };
+      const masterScheduleId = (typeof generateNextVisitCode === 'function')
+        ? generateNextVisitCode()
+        : (() => {
+            const existingVisitNumbers: number[] = [];
+            const extractSeq = (item: any) => {
+              if (!item) return;
+              const idStr = String(item.visitPlanId || item.visitScheduleId || item.visitId || item.id || '');
+              const match = idStr.match(/SRM-VS-(?:20\d{2}-)?(\d+)/i) || idStr.match(/^VS-(\d{1,6})$/i);
+              if (match && match[1]) {
+                const num = parseInt(match[1], 10);
+                if (!isNaN(num) && num > 0) {
+                  if (num >= 87 && num <= 90) return; // ignore artificial legacy 87/88 offset
+                  existingVisitNumbers.push(num);
+                }
+              }
+            };
 
-      if (Array.isArray(visitPlans)) visitPlans.forEach(extractSeq);
-      if (Array.isArray(scheduledVisits)) scheduledVisits.forEach(extractSeq);
+            if (Array.isArray(visitPlans)) visitPlans.forEach(extractSeq);
+            if (Array.isArray(scheduledVisits)) scheduledVisits.forEach(extractSeq);
 
-      try {
-        const storedPlans = JSON.parse(localStorage.getItem('swaramayi_visit_plans_v7_clean') || '[]');
-        if (Array.isArray(storedPlans)) storedPlans.forEach(extractSeq);
-        const storedVisits = JSON.parse(localStorage.getItem('swaramayi_scheduled_visits_v7_clean') || '[]');
-        if (Array.isArray(storedVisits)) storedVisits.forEach(extractSeq);
-      } catch (e) {}
+            // Check Recycle Bin items so deleted visits are never reused
+            (recycledItems || []).forEach((r: any) => {
+              if (!r) return;
+              extractSeq(r);
+              extractSeq(r.originalData);
+            });
 
-      const maxSeq = existingVisitNumbers.length > 0 ? Math.max(0, ...existingVisitNumbers) : 0;
-      const nextPlanNum = maxSeq + 1;
-      const masterScheduleId = `SRM-VS-2026-${String(nextPlanNum).padStart(6, '0')}`;
+            try {
+              const storedPlans = JSON.parse(localStorage.getItem('swaramayi_visit_plans_v7_clean') || '[]');
+              if (Array.isArray(storedPlans)) storedPlans.forEach(extractSeq);
+              const storedVisits = JSON.parse(localStorage.getItem('swaramayi_scheduled_visits_v7_clean') || '[]');
+              if (Array.isArray(storedVisits)) storedVisits.forEach(extractSeq);
+            } catch (e) {}
+
+            const curMax = existingVisitNumbers.length > 0 ? Math.max(...existingVisitNumbers) : 0;
+            try {
+              const savedSeq = localStorage.getItem('swaramayi_max_visit_seq');
+              if (savedSeq) {
+                const parsed = parseInt(savedSeq, 10);
+                if (!isNaN(parsed) && parsed > 0 && parsed <= curMax + 5) {
+                  existingVisitNumbers.push(parsed);
+                }
+              }
+            } catch (e) {}
+
+            const maxSeq = existingVisitNumbers.length > 0 ? Math.max(0, ...existingVisitNumbers) : 0;
+            const nextPlanNum = maxSeq + 1;
+            try {
+              localStorage.setItem('swaramayi_max_visit_seq', String(nextPlanNum));
+            } catch (e) {}
+            return `SRM-VS-2026-${String(nextPlanNum).padStart(6, '0')}`;
+          })();
 
       // 3. Construct Stop Details
       const stopsData = stopsToUse.map((stop: any, idx: number) => ({
@@ -1590,11 +1770,6 @@ function ScheduleVisitModalContent({
           const cur = Array.isArray(prev) ? prev : [];
           const filtered = cur.filter((p: any) => p && (p.visitPlanId !== masterScheduleId && p.visitScheduleId !== masterScheduleId));
           const updated = [newPlan, ...filtered];
-          try {
-            localStorage.setItem('swaramayi_visit_plans_v7_clean', JSON.stringify(updated));
-          } catch (e) {
-            console.error('Error persisting visit plans:', e);
-          }
           return updated;
         });
       }
@@ -1609,7 +1784,9 @@ function ScheduleVisitModalContent({
         : stopsData.map(s => s.costSheetId);
 
       const singleVisitSummary = {
+        id: masterScheduleId,
         visitId: masterScheduleId,
+        visitScheduleId: masterScheduleId,
         costSheetId: effectiveCsIds[0] || stopsData[0]?.costSheetId,
         customerName: targetCustName || 'Valued Customer',
         customerNumber: targetCustomerId || 'SRM-CUS-2026-000192',
@@ -1621,31 +1798,30 @@ function ScheduleVisitModalContent({
         visitTime: startTime || '10:00 AM',
         assignedExecutive: assignedExec || 'Avishek Das (Super Admin)',
         transport: transportMode || '🚗 Cab Pick & Drop Needed',
+        pickupAddress: pickupAddress || '',
+        dropAddress: dropAddress || '',
         status: 'ASSIGNED',
         conflictStatus: '🟢 NO OVERLAP CONFLICT',
         totalStops: stopsData.length,
         stops: stopsData
       };
 
+      let updatedScheduledVisits: any[] = [];
       if (setScheduledVisits) {
         setScheduledVisits((prev: any[]) => {
           const cur = Array.isArray(prev) ? prev : [];
           const filtered = cur.filter((v: any) => v && (v.visitId !== masterScheduleId && v.visitScheduleId !== masterScheduleId));
-          const updated = [singleVisitSummary, ...filtered];
-          try {
-            localStorage.setItem('swaramayi_scheduled_visits_v7_clean', JSON.stringify(updated));
-          } catch (e) {
-            console.error('Error persisting scheduled visits:', e);
-          }
-          return updated;
+          updatedScheduledVisits = [singleVisitSummary, ...filtered];
+          return updatedScheduledVisits;
         });
       }
 
       // 8. Update Individual Cost Sheets
+      let updatedCostSheets: any[] = [];
       if (setIndividualCostSheets) {
         setIndividualCostSheets((prev: any[]) => {
           const cur = Array.isArray(prev) ? prev : [];
-          const updated = cur.map((sheet: any) => {
+          updatedCostSheets = cur.map((sheet: any) => {
             if (!sheet) return sheet;
             if (effectiveCsIds.includes(sheet.costSheetId) || effectiveCsIds.includes(sheet.id)) {
               return { ...sheet, status: 'CONVERTED_TO_VISIT', visitId: masterScheduleId };
@@ -1653,21 +1829,22 @@ function ScheduleVisitModalContent({
             return sheet;
           });
           try {
-            localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updated));
-            localStorage.setItem('swaramayi_individual_cost_sheets_v7_clean', JSON.stringify(updated));
+            localStorage.setItem('swaramayi_indiv_cost_sheets_v7_clean', JSON.stringify(updatedCostSheets));
+            localStorage.setItem('swaramayi_individual_cost_sheets_v7_clean', JSON.stringify(updatedCostSheets));
           } catch (e) {
             console.error('Error persisting individual cost sheets:', e);
           }
-          return updated;
+          return updatedCostSheets;
         });
       }
 
       // 9. Update Matching Requests Queue
+      let updatedMatchingQueue: any[] = [];
       if (setMatchingRequestsQueue) {
         setMatchingRequestsQueue((prev: any[]) => {
           const cur = Array.isArray(prev) ? prev : [];
           const cleanTargetMob = String(targetCustMobile || '').replace(/\D/g, '');
-          const updated = cur.map((req: any) => {
+          updatedMatchingQueue = cur.map((req: any) => {
             if (!req) return req;
             const cleanCustNum = String(req.customerNumber || '');
             const cleanReqMob = String(req.mobile || '').replace(/\D/g, '');
@@ -1686,12 +1863,21 @@ function ScheduleVisitModalContent({
             return req;
           });
           try {
-            localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(updated));
-            localStorage.setItem('swaramayi_matching_queue_v3_clean', JSON.stringify(updated));
+            localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(updatedMatchingQueue));
+            localStorage.setItem('swaramayi_matching_queue_v3_clean', JSON.stringify(updatedMatchingQueue));
           } catch (e) {
             console.error('Error persisting matching queue:', e);
           }
-          return updated;
+          return updatedMatchingQueue;
+        });
+      }
+
+      // 9b. Sync Site Visits, Cost Sheets, and Matching Requests directly to MongoDB Atlas
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({
+          site_visits: updatedScheduledVisits.length > 0 ? updatedScheduledVisits : [singleVisitSummary, ...(scheduledVisits || [])],
+          cost_sheets: updatedCostSheets.length > 0 ? updatedCostSheets : undefined,
+          matching_requests: updatedMatchingQueue.length > 0 ? updatedMatchingQueue : undefined
         });
       }
 
@@ -1882,8 +2068,14 @@ function ScheduleVisitModalContent({
           </div>
           <div>
             <span style={{ fontSize: '0.7rem', color: '#fbbf24', fontWeight: '800', textTransform: 'uppercase' }}>ELIGIBLE COST SHEETS IN VAULT</span>
-            <h4 style={{ color: '#4ade80', fontWeight: '900', fontSize: '0.95rem', marginTop: '2px' }}>{(eligibleCostSheets || []).length} Cost Sheets Available</h4>
-            <span style={{ color: '#cbd5e1', fontSize: '0.75rem' }}>Select multiple properties below to include in single Visit Schedule ID</span>
+            <h4 style={{ color: '#4ade80', fontWeight: '900', fontSize: '0.95rem', marginTop: '2px' }}>
+              {(filteredCustomerCostSheets || []).length} {filteredCustomerCostSheets.length === 1 ? 'Cost Sheet' : 'Cost Sheets'} Available
+            </h4>
+            <span style={{ color: '#cbd5e1', fontSize: '0.75rem' }}>
+              {filteredCustomerCostSheets.length === 1 
+                ? 'Individual property cost sheet active for this customer' 
+                : 'Select multiple properties below to include in single Visit Schedule ID'}
+            </span>
           </div>
         </div>
 
@@ -1894,7 +2086,7 @@ function ScheduleVisitModalContent({
           </h4>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            {(eligibleCostSheets || []).map((cs: any) => {
+            {(filteredCustomerCostSheets || []).map((cs: any) => {
               if (!cs) return null;
               const csId = cs.costSheetId || cs.id;
               const isChecked = selectedCsIds.includes(csId);
@@ -2641,10 +2833,17 @@ function PvaVerificationModalContent({
   onClose,
   projectVisitAgreements = [],
   setProjectVisitAgreements,
+  agreements = [],
   setAgreements,
-  setVisitPlans,
+  syncAllToMongoDB,
+  scheduledVisits = [],
   setScheduledVisits,
-  setShowPvaDocumentModal
+  visitPlans = [],
+  setVisitPlans,
+  setShowPvaDocumentModal,
+  generateNextPvaCode,
+  properties = [],
+  developers = []
 }: any) {
   const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
   const safePlan = plan || {
@@ -2712,98 +2911,122 @@ function PvaVerificationModalContent({
   };
 
   const handleConfirmVerification = () => {
-    if (!otpVerified) {
-      alert('⚠️ Please complete Customer OTP Verification first.');
-      return;
-    }
-    if (!acceptedTerms) {
-      alert('⚠️ Customer must accept the Project Visit Acknowledgement terms.');
-      return;
-    }
+    try {
+      if (!otpVerified) {
+        alert('⚠️ Please complete Customer OTP Verification first.');
+        return;
+      }
+      if (!acceptedTerms) {
+        alert('⚠️ Customer must accept the Project Visit Acknowledgement terms.');
+        return;
+      }
 
-    const nextPvaNum = (projectVisitAgreements?.length || 0) + 1;
-    const pvaId = `SRM-PVA-2026-00000${nextPvaNum}`;
-    const todayStr = new Date().toISOString().split('T')[0];
-    const expDate = new Date();
-    expDate.setMonth(expDate.getMonth() + (protectionPeriodMonths || 6));
-    const expDateStr = expDate.toISOString().split('T')[0];
+      const pvaId = typeof generateNextPvaCode === 'function'
+        ? generateNextPvaCode()
+        : `SRM-PVA-2026-${String((projectVisitAgreements?.length || 0) + 1).padStart(6, '0')}`;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const expDate = new Date();
+      expDate.setMonth(expDate.getMonth() + (protectionPeriodMonths || 6));
+      const expDateStr = expDate.toISOString().split('T')[0];
+      const nextPvaNum = parseInt((pvaId.match(/\d+$/) || ['1'])[0], 10) || ((projectVisitAgreements?.length || 0) + 1);
 
-    const newPva = {
-      projectVisitAgreementId: pvaId,
-      visitScheduleId: safePlan.visitPlanId || safePlan.visitScheduleId || 'SRM-VS-2026-000001',
-      visitStopId: safeStop.stopId || 'SRM-VSTOP-2026-000001',
-      customerId: safePlan.customerNumber || '',
-      customerName: safePlan.customerName || 'Customer',
-      customerMobile: safePlan.mobile || '',
-      leadId: 'SRM-LEAD-2026-000001',
-      matchId: safePlan.matchingId || 'SRM-MAT-2026-000421',
-      propertyId: safeStop.propertyCode || safeStop.propertyId || '',
-      costSheetId: safeStop.costSheetId || 'SRM-CS-2026-000145',
-      projectId: `SRM-PROJ-2026-0000${20 + nextPvaNum}`,
-      projectTitle: (safeStop.propertyTitle || 'Project Property').split(/\s*\(\+/)[0].trim(),
-      locality: safeStop.locality || 'Barasat',
-      developerId: `DEV-0${nextPvaNum}`,
-      developerName: safeStop.developer || 'Partner Developer',
-      salesPersonId: 'USR-07',
-      salesPersonName: safePlan.assignedExecutive || 'Ramesh Pawar (Field Exec)',
-      visitDate: todayStr,
-      arrivalTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      departureTime: '',
-      geofenceStatus: 'GEOFENCE_VERIFIED',
-      gpsAccuracyMeters: `14m (Within ${geofenceRadiusMeters}m Allowed Radius)`,
-      salesPersonLat: safeStop.latitude || '22.722361° N',
-      salesPersonLng: safeStop.longitude || '88.493403° E',
-      customerOtpStatus: 'OTP_VERIFIED',
-      otpVerifiedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      otpHashRef: `SHA256:verified_otp_${otpInput}`,
-      digitalVerificationRef: `SHA256:verified_otp_${otpInput}`,
-      protectionPeriodMonths: protectionPeriodMonths || 12,
-      protectionEndDate: expDateStr,
-      customerAcknowledgementStatus: 'ACKNOWLEDGED',
-      customerSignature: signatureData,
-      developerRepName: devRepName,
-      developerRepMobile: devRepMobile,
-      status: 'VISIT_VERIFIED',
-      createdAt: new Date().toLocaleString(),
-      updatedAt: new Date().toLocaleString(),
-      auditLogs: [
-        { time: new Date().toLocaleTimeString(), user: safePlan.assignedExecutive || 'Field Exec', action: 'GEOFENCE_VERIFIED', details: `Geofence audit passed (${geofenceRadiusMeters}m radius).` },
-        { time: new Date().toLocaleTimeString(), user: safePlan.customerName || 'Customer', action: 'OTP_VERIFIED', details: 'Customer verified 6-digit OTP.' },
-        { time: new Date().toLocaleTimeString(), user: safePlan.customerName || 'Customer', action: 'CUSTOMER_ACKNOWLEDGED', details: `Accepted Project Visit Introduction Agreement V1.0 (${protectionPeriodMonths}-Month Protection).` },
-        { time: new Date().toLocaleTimeString(), user: 'System AI Engine', action: 'PROJECT_VISIT_AGREEMENT_GENERATED', details: `Generated Project Visit Agreement ID ${pvaId}.` }
-      ]
-    };
+      const matchedProp = (properties || []).find((p: any) => 
+        (safeStop.propertyCode && (p.property_code === safeStop.propertyCode || p.propertyCode === safeStop.propertyCode || p.id === safeStop.propertyCode)) ||
+        (safeStop.propertyId && (p.id === safeStop.propertyId || p.property_code === safeStop.propertyId)) ||
+        (safeStop.propertyTitle && (p.title === safeStop.propertyTitle || p.property_title === safeStop.propertyTitle))
+      );
+      const matchedDev = (developers || []).find((d: any) =>
+        (safeStop.developer && (d.name === safeStop.developer || d.id === safeStop.developer)) ||
+        (matchedProp && (d.id === matchedProp.developer_id || d.name === matchedProp.developer))
+      );
+      const realDevId = safeStop.developerId || matchedProp?.developer_id || matchedDev?.id || 'SRM-DEV-2026-000001';
+      const realDevName = safeStop.developer || matchedProp?.developer || matchedDev?.name || 'kousik Nag';
+      const realProjId = safeStop.projectId || matchedProp?.project_id || matchedDev?.projects?.[0]?.id || 'PRJ-1793798480253';
+      const realProjTitle = (safeStop.propertyTitle || matchedProp?.title || 'Abasa').split(/\s*\(\+/)[0].trim();
 
-    if (setProjectVisitAgreements) {
-      setProjectVisitAgreements((prev: any[]) => [newPva, ...(prev || [])]);
-    }
+      const newPva = {
+        projectVisitAgreementId: pvaId,
+        visitScheduleId: safePlan.visitPlanId || safePlan.visitScheduleId || 'SRM-VS-2026-000001',
+        visitStopId: safeStop.stopId || 'SRM-VSTOP-2026-000001',
+        customerId: safePlan.customerNumber || '',
+        customerName: safePlan.customerName || 'Customer',
+        customerMobile: safePlan.mobile || '',
+        leadId: 'SRM-LEAD-2026-000001',
+        matchId: safePlan.matchingId || 'SRM-MAT-2026-000421',
+        propertyId: safeStop.propertyCode || safeStop.propertyId || '',
+        costSheetId: safeStop.costSheetId || 'SRM-CS-2026-000145',
+        projectId: realProjId,
+        projectTitle: realProjTitle,
+        locality: safeStop.locality || matchedProp?.locality || 'Locality Hub',
+        developerId: realDevId,
+        developerName: realDevName,
+        salesPersonId: 'USR-07',
+        salesPersonName: safePlan.assignedExecutive || 'Ramesh Pawar (Field Exec)',
+        visitDate: todayStr,
+        arrivalTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        departureTime: '',
+        geofenceStatus: 'GEOFENCE_VERIFIED',
+        gpsAccuracyMeters: `14m (Within ${geofenceRadiusMeters}m Allowed Radius)`,
+        salesPersonLat: safeStop.latitude || '22.722361° N',
+        salesPersonLng: safeStop.longitude || '88.493403° E',
+        customerOtpStatus: 'OTP_VERIFIED',
+        otpVerifiedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        otpHashRef: `SHA256:verified_otp_${otpInput}`,
+        digitalVerificationRef: `SHA256:verified_otp_${otpInput}`,
+        protectionPeriodMonths: protectionPeriodMonths || 12,
+        protectionEndDate: expDateStr,
+        customerAcknowledgementStatus: 'ACKNOWLEDGED',
+        customerSignature: signatureData,
+        developerRepName: devRepName,
+        developerRepMobile: devRepMobile,
+        status: 'VISIT_VERIFIED',
+        createdAt: new Date().toLocaleString(),
+        updatedAt: new Date().toLocaleString(),
+        auditLogs: [
+          { time: new Date().toLocaleTimeString(), user: safePlan.assignedExecutive || 'Field Exec', action: 'GEOFENCE_VERIFIED', details: `Geofence audit passed (${geofenceRadiusMeters}m radius).` },
+          { time: new Date().toLocaleTimeString(), user: safePlan.customerName || 'Customer', action: 'OTP_VERIFIED', details: 'Customer verified 6-digit OTP.' },
+          { time: new Date().toLocaleTimeString(), user: safePlan.customerName || 'Customer', action: 'CUSTOMER_ACKNOWLEDGED', details: `Accepted Project Visit Introduction Agreement V1.0 (${protectionPeriodMonths}-Month Protection).` },
+          { time: new Date().toLocaleTimeString(), user: 'System AI Engine', action: 'PROJECT_VISIT_AGREEMENT_GENERATED', details: `Generated Project Visit Agreement ID ${pvaId}.` }
+        ]
+      };
 
-    const newAgrRecord = {
-      id: `AGR-PVA-${nextPvaNum}`,
-      agreement_code: pvaId,
-      visitScheduleId: safePlan.visitScheduleId || safePlan.visitPlanId || `SRM-VS-2026-${String(nextPvaNum).padStart(6, '0')}`,
-      visitId: safePlan.visitScheduleId || safePlan.visitPlanId || `SRM-VS-2026-${String(nextPvaNum).padStart(6, '0')}`,
-      agreement_type: 'CUSTOMER_SITE_VISIT',
-      title: `Customer Site Visit Agreement — ${safeStop.propertyTitle || 'Site Visit'}`,
-      party_name: safePlan.customerName || 'Customer',
-      party_contact: safePlan.mobile || '',
-      property_details: `${safeStop.propertyCode || ''} (${safeStop.propertyTitle || 'Site Visit'})`,
-      signed_status: 'EXECUTED_SIGNED',
-      signature_hash: `OTP-VERIFIED-#${otpInput}-DIGITAL-SIG`,
-      signed_at: `${todayStr} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-      pvaData: newPva
-    };
+      const updatedPvas = [newPva, ...(projectVisitAgreements || [])];
+      if (setProjectVisitAgreements) {
+        setProjectVisitAgreements(updatedPvas);
+      }
 
-    if (setAgreements) {
-      setAgreements((prev: any[]) => [newAgrRecord, ...(prev || [])]);
-    }
+      const newAgrRecord = {
+        id: `AGR-PVA-${nextPvaNum}`,
+        agreement_code: pvaId,
+        visitScheduleId: safePlan.visitScheduleId || safePlan.visitPlanId || `SRM-VS-2026-${String(nextPvaNum).padStart(6, '0')}`,
+        visitId: safePlan.visitScheduleId || safePlan.visitPlanId || `SRM-VS-2026-${String(nextPvaNum).padStart(6, '0')}`,
+        agreement_type: 'CUSTOMER_SITE_VISIT',
+        title: `Customer Site Visit Agreement — ${realProjTitle}`,
+        party_name: safePlan.customerName || 'Customer',
+        party_contact: safePlan.mobile || '',
+        property_details: `${safeStop.propertyCode || matchedProp?.property_code || 'SRM-PROP-2026-000001'} (${realProjTitle})`,
+        signed_status: 'EXECUTED_SIGNED',
+        signature_hash: `OTP-VERIFIED-#${otpInput}-DIGITAL-SIG`,
+        signed_at: `${todayStr} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+        pvaData: newPva
+      };
 
-    // Update stop status in visit plans
-    if (setVisitPlans) {
-      setVisitPlans((prevPlans: any[]) => (prevPlans || []).map(p => {
-        if (p && (p.visitPlanId === (safePlan.visitPlanId || safePlan.visitScheduleId) || p.visitScheduleId === (safePlan.visitPlanId || safePlan.visitScheduleId))) {
+      const updatedAgs = [newAgrRecord, ...(agreements || [])];
+      if (setAgreements) {
+        setAgreements(updatedAgs);
+      }
+
+      // Update stop status in visit plans
+      const updatedVisitPlansList = (visitPlans || []).map((p: any) => {
+        if (!p) return p;
+        const matchesPlan = (
+          (p.visitPlanId && (p.visitPlanId === safePlan.visitPlanId || p.visitPlanId === safePlan.visitScheduleId)) ||
+          (p.visitScheduleId && (p.visitScheduleId === safePlan.visitPlanId || p.visitScheduleId === safePlan.visitScheduleId)) ||
+          (safePlan.customerNumber && p.customerNumber && p.customerNumber === safePlan.customerNumber)
+        );
+        if (matchesPlan) {
           const updatedStops = (p.stops || []).map((s: any) => {
-            if (s.stopId === safeStop.stopId || s.propertyCode === safeStop.propertyCode) {
+            if (s.stopId === safeStop.stopId || s.propertyCode === safeStop.propertyCode || (safeStop.costSheetId && s.costSheetId === safeStop.costSheetId)) {
               return { ...s, status: 'VISIT_COMPLETED', otpVerified: true, geofenceVerified: true, pvaId: pvaId };
             }
             return s;
@@ -2821,13 +3044,23 @@ function PvaVerificationModalContent({
           };
         }
         return p;
-      }));
-    }
+      });
+      if (setVisitPlans) {
+        setVisitPlans(updatedVisitPlansList);
+      }
 
-    // Update scheduled visits state
-    if (setScheduledVisits) {
-      setScheduledVisits((prevVisits: any[]) => (prevVisits || []).map(v => {
-        if (v && (v.visitId === safePlan.visitPlanId || v.visitId === safePlan.visitScheduleId || (v.customerNumber && v.customerNumber === safePlan.customerNumber) || (v.mobile && safePlan.mobile && v.mobile.replace(/\D/g, '') === safePlan.mobile.replace(/\D/g, '')))) {
+      // Update scheduled visits state
+      const updatedScheduledVisitsList = (scheduledVisits || []).map((v: any) => {
+        if (!v) return v;
+        const matchesVisit = (
+          (v.visitId && (v.visitId === safePlan.visitPlanId || v.visitId === safePlan.visitScheduleId)) ||
+          (v.id && (v.id === safePlan.visitPlanId || v.id === safePlan.visitScheduleId)) ||
+          (v.visitScheduleId && (v.visitScheduleId === safePlan.visitPlanId || v.visitScheduleId === safePlan.visitScheduleId)) ||
+          (safeStop.costSheetId && (v.costSheetId === safeStop.costSheetId || v.id === safeStop.costSheetId)) ||
+          (safePlan.customerNumber && v.customerNumber && v.customerNumber === safePlan.customerNumber) ||
+          (safePlan.mobile && v.mobile && v.mobile.replace(/\D/g, '') === safePlan.mobile.replace(/\D/g, ''))
+        );
+        if (matchesVisit) {
           return {
             ...v,
             status: 'OTP_VERIFIED',
@@ -2836,12 +3069,26 @@ function PvaVerificationModalContent({
           };
         }
         return v;
-      }));
-    }
+      });
+      if (setScheduledVisits) {
+        setScheduledVisits(updatedScheduledVisitsList);
+      }
 
-    onClose();
-    if (setShowPvaDocumentModal) {
-      setShowPvaDocumentModal({ open: true, pva: newPva });
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({
+          pva_agreements: updatedPvas,
+          agreements: updatedAgs,
+          site_visits: updatedScheduledVisitsList.length > 0 ? updatedScheduledVisitsList : undefined
+        });
+      }
+
+      onClose();
+      if (setShowPvaDocumentModal) {
+        setShowPvaDocumentModal({ open: true, pva: newPva });
+      }
+    } catch (err: any) {
+      console.error('Error generating Project Visit Agreement:', err);
+      alert(`⚠️ Error generating agreement: ${err?.message || err}`);
     }
   };
 
@@ -4092,9 +4339,10 @@ export default function App() {
 
           if (!exists && name && name.toLowerCase() !== 'customer') {
             changed = true;
+            const fallbackCustNum = generateNextCustomerCode();
             updated.unshift({
               id: `CUS-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-              customer_number: custNo || `SRM-CUS-2026-${String(updated.length + 1).padStart(6, '0')}`,
+              customer_number: custNo || fallbackCustNum,
               name: name,
               full_name: name,
               mobile: m.mobile || m.phone || '',
@@ -4157,6 +4405,12 @@ export default function App() {
     let vSchedId = v.visitScheduleId;
     let vPlanId = v.visitPlanId;
 
+    if ((!vId || String(vId).startsWith('COST-SHEET-')) && v.costSheetId && typeof v.costSheetId === 'string' && v.costSheetId.startsWith('COST-SHEET-')) {
+      vId = v.costSheetId.replace('COST-SHEET-', 'SRM-VS-');
+    }
+    if (!vSchedId) vSchedId = vId;
+    if (!vPlanId) vPlanId = vId;
+
     const cleanStops = (v.stops || []).map((s: any) => {
       if (!s) return s;
       let sId = s.stopId || '';
@@ -4180,28 +4434,14 @@ export default function App() {
     };
   };
 
-  const [scheduledVisits, setScheduledVisits] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_scheduled_visits_v7_clean');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.map(sanitizeScheduledVisit);
-        }
-      }
-    } catch (e) {
-      console.error('Error reading scheduled visits from localStorage:', e);
-    }
-    return [];
-  });
+  const [scheduledVisits, setScheduledVisits] = useState<any[]>([]);
 
   useEffect(() => {
     try {
-      localStorage.setItem('swaramayi_scheduled_visits_v7_clean', JSON.stringify(scheduledVisits.map(sanitizeScheduledVisit)));
-    } catch (e) {
-      console.error('Error saving scheduled visits to localStorage:', e);
-    }
-  }, [scheduledVisits]);
+      localStorage.removeItem('swaramayi_scheduled_visits_v7_clean');
+      localStorage.removeItem('swaramayi_scheduled_visits_v4_clean');
+    } catch (e) {}
+  }, []);
 
   // --------------------------------------------------------------------------
   // MULTI-PROPERTY VISIT ROUTE PLANNER MASTER STATE (WITH LOCALSTORAGE PERSISTENCE)
@@ -4268,56 +4508,29 @@ export default function App() {
     };
   };
 
-  const [visitPlans, setVisitPlans] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_visit_plans_v7_clean');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.map(sanitizePlanObj);
-        }
-      }
-    } catch (e) {
-      console.error('Error reading visit plans from localStorage:', e);
-    }
-    return [];
-  });
+  const [visitPlans, setVisitPlans] = useState<any[]>([]);
 
   useEffect(() => {
     try {
-      localStorage.setItem('swaramayi_visit_plans_v7_clean', JSON.stringify(visitPlans.map(sanitizePlanObj)));
-    } catch (e) {
-      console.error('Error saving visit plans to localStorage:', e);
-    }
-  }, [visitPlans]);
+      localStorage.removeItem('swaramayi_visit_plans_v7_clean');
+      localStorage.removeItem('swaramayi_visit_plans_v4_clean');
+    } catch (e) {}
+  }, []);
 
   // PROJECT VISIT AGREEMENT (PVA) MASTER STATE & SETTINGS
   // --------------------------------------------------------------------------
   const [protectionPeriodMonths, setProtectionPeriodMonths] = useState<number>(12);
   const [geofenceRadiusMeters, setGeofenceRadiusMeters] = useState<number>(100);
 
-  const [projectVisitAgreements, setProjectVisitAgreements] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_project_visit_agreements_v7_clean');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error('Error loading project visit agreements from localStorage:', e);
-    }
-    return [];
-  });
+  const [projectVisitAgreements, setProjectVisitAgreements] = useState<any[]>([]);
 
   useEffect(() => {
     try {
-      localStorage.setItem('swaramayi_project_visit_agreements_v7_clean', JSON.stringify(projectVisitAgreements));
-    } catch (e) {
-      console.error('Error saving project visit agreements to localStorage:', e);
-    }
-  }, [projectVisitAgreements]);
+      localStorage.removeItem('swaramayi_project_visit_agreements_v7_clean');
+      localStorage.removeItem('swaramayi_max_pva_seq');
+      localStorage.removeItem('swaramayi_max_booking_seq');
+    } catch (e) {}
+  }, []);
 
   useEffect(() => {
     try {
@@ -4467,55 +4680,460 @@ export default function App() {
 
   const generateNextCustomerCode = () => {
     const allNums: number[] = [];
-    customers.forEach(c => {
-      if (c.customer_number) {
-        const match = c.customer_number.match(/SRM-CUS-\d+-(\d+)/i) || c.customer_number.match(/\d+$/);
-        if (match) {
-          const n = parseInt(match[1] || match[0], 10);
-          if (!isNaN(n)) allNums.push(n);
+
+    const extractNum = (str?: string) => {
+      if (!str || typeof str !== 'string') return;
+      const clean = str.trim();
+      const match = clean.match(/SRM-CUS-(?:20\d{2}-)?(\d+)/i) || clean.match(/^CUS-(\d{1,6})$/i);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > 0 && val < 10000) {
+          allNums.push(val);
         }
       }
+    };
+
+    // 1. Active customers
+    (customers || []).forEach((c: any) => {
+      if (!c) return;
+      extractNum(c.customer_number);
+      extractNum(c.customerNumber);
+      extractNum(c.customerId);
     });
-    matchingRequestsQueue.forEach(q => {
-      if (q.customerNumber) {
-        const match = q.customerNumber.match(/SRM-CUS-\d+-(\d+)/i) || q.customerNumber.match(/\d+$/);
-        if (match) {
-          const n = parseInt(match[1] || match[0], 10);
-          if (!isNaN(n)) allNums.push(n);
+
+    // 2. Recycle Bin items (only customer category)
+    (recycledItems || []).forEach((r: any) => {
+      if (!r) return;
+      const cat = (r.category || r.type || '').toString().toLowerCase();
+      if (cat && !cat.includes('customer')) return;
+      extractNum(r.id);
+      extractNum(r.customer_number);
+      extractNum(r.customerNumber);
+      extractNum(r.originalData?.customer_number);
+      extractNum(r.originalData?.customerNumber);
+      extractNum(r.originalData?.customerId);
+    });
+
+    // 3. Matching requests queue
+    (matchingRequestsQueue || []).forEach((q: any) => {
+      if (!q) return;
+      extractNum(q.customerNumber);
+      extractNum(q.customer_number);
+      extractNum(q.customerId);
+    });
+
+    // 4. Cost sheets
+    (individualCostSheets || []).forEach((cs: any) => {
+      if (!cs) return;
+      extractNum(cs.customerId);
+      extractNum(cs.customerNumber);
+      extractNum(cs.customerSnapshot?.customerId);
+      extractNum(cs.customerSnapshot?.customerNumber);
+    });
+    (costSheetShares || []).forEach((cs: any) => {
+      if (!cs) return;
+      extractNum(cs.customerId);
+      extractNum(cs.customerNumber);
+    });
+
+    // 5. Scheduled visits & Visit plans
+    (scheduledVisits || []).forEach((v: any) => {
+      if (!v) return;
+      extractNum(v.customerNumber);
+      extractNum(v.customerId);
+    });
+    (visitPlans || []).forEach((v: any) => {
+      if (!v) return;
+      extractNum(v.customerNumber);
+      extractNum(v.customerId);
+    });
+
+    // 6. Bookings & Invoices
+    (bookings || []).forEach((b: any) => {
+      if (!b) return;
+      extractNum(b.customer_number);
+      extractNum(b.customerId);
+    });
+    (invoices || []).forEach((inv: any) => {
+      if (!inv) return;
+      extractNum(inv.customer_number);
+      extractNum(inv.customerId);
+    });
+
+    // 7. Persistent sequence watermark from localStorage (guarded against rogue jumps)
+    const currentMax = allNums.length > 0 ? Math.max(...allNums) : 0;
+    try {
+      const savedSeq = localStorage.getItem('swaramayi_max_customer_seq');
+      if (savedSeq && currentMax > 0) {
+        const parsedSeq = parseInt(savedSeq, 10);
+        if (!isNaN(parsedSeq) && parsedSeq > 0 && parsedSeq <= currentMax + 3) {
+          allNums.push(parsedSeq);
         }
       }
-    });
+    } catch (e) {}
 
     const maxVal = allNums.length > 0 ? Math.max(...allNums) : 0;
     const nextVal = maxVal + 1;
+
+    // Persist new watermark to localStorage immediately
+    try {
+      localStorage.setItem('swaramayi_max_customer_seq', String(nextVal));
+    } catch (e) {}
+
     return `SRM-CUS-2026-${String(nextVal).padStart(6, '0')}`;
   };
 
-
-
-  const generateNextCostSheetCode = () => {
+  const generateNextMatchingCode = (): string => {
     const allNums: number[] = [];
-    costSheetShares.forEach(cs => {
-      if (cs.costSheetId) {
-        const match = cs.costSheetId.match(/\d+$/);
-        if (match) allNums.push(parseInt(match[0], 10));
+
+    const extractMatNum = (str?: string) => {
+      if (!str || typeof str !== 'string') return;
+      const clean = str.trim();
+      const match = clean.match(/SRM-MAT-(?:20\d{2}-)?(\d+)/i) || clean.match(/^MAT-(\d{1,6})$/i);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > 0 && val < 10000) allNums.push(val);
       }
+    };
+
+    (matchingRequestsQueue || []).forEach((m: any) => {
+      if (!m) return;
+      extractMatNum(m.requestId);
+      extractMatNum(m.matchingId);
+      extractMatNum(m.id);
     });
-    const maxVal = allNums.length > 0 ? Math.max(...allNums) : 147;
+
+    (customers || []).forEach((c: any) => {
+      if (!c) return;
+      extractMatNum(c.matchingId);
+      extractMatNum(c.matchId);
+      extractMatNum(c.requestId);
+    });
+
+    (individualCostSheets || []).forEach((cs: any) => {
+      if (!cs) return;
+      extractMatNum(cs.matchId);
+      extractMatNum(cs.matchingId);
+      extractMatNum(cs.matchingRequestId);
+    });
+
+    (costSheetShares || []).forEach((cs: any) => {
+      if (!cs) return;
+      extractMatNum(cs.matchId);
+      extractMatNum(cs.matchingId);
+    });
+
+    (recycledItems || []).forEach((r: any) => {
+      if (!r) return;
+      const cat = (r.category || r.type || '').toString().toLowerCase();
+      if (cat && !cat.includes('match') && !cat.includes('customer')) return;
+      extractMatNum(r.id);
+      extractMatNum(r.originalData?.requestId);
+      extractMatNum(r.originalData?.matchingId);
+      extractMatNum(r.originalData?.matchId);
+    });
+
+    const currentMax = allNums.length > 0 ? Math.max(...allNums) : 0;
+    try {
+      const savedWatermark = localStorage.getItem('swaramayi_max_matching_seq');
+      if (savedWatermark && currentMax > 0) {
+        const val = parseInt(savedWatermark, 10);
+        if (!isNaN(val) && val > 0 && val <= currentMax + 3) {
+          allNums.push(val);
+        }
+      }
+    } catch (e) {}
+
+    const maxVal = allNums.length > 0 ? Math.max(...allNums) : 0;
     const nextVal = maxVal + 1;
-    return `SRM-CS-2026-000${nextVal}`;
+
+    try {
+      localStorage.setItem('swaramayi_max_matching_seq', String(nextVal));
+    } catch (e) {}
+
+    return `SRM-MAT-2026-${String(nextVal).padStart(6, '0')}`;
   };
 
-  const generateNextPropertyCode = (offset: number = 0) => {
+  const generateNextCostSheetCode = () => {
+    return generateNextIndividualCostSheetCode();
+  };
+
+  const generateNextVisitCode = (): string => {
     const allNums: number[] = [];
-    properties.forEach(p => {
-      if (p.property_code) {
-        const match = p.property_code.match(/\d+$/);
-        if (match) allNums.push(parseInt(match[0], 10));
+
+    const extractSeq = (item: any) => {
+      if (!item) return;
+      const idStr = String(item.visitPlanId || item.visitScheduleId || item.visitId || item.id || '');
+      const match = idStr.match(/SRM-VS-(?:20\d{2}-)?(\d+)/i) || idStr.match(/^VS-(\d{1,6})$/i);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > 0) {
+          if (num >= 87 && num <= 90) return; // ignore legacy 87/88 offset
+          allNums.push(num);
+        }
       }
+    };
+
+    if (Array.isArray(visitPlans)) visitPlans.forEach(extractSeq);
+    if (Array.isArray(scheduledVisits)) scheduledVisits.forEach(extractSeq);
+
+    // Also check Recycle Bin so deleted visit IDs are never reused
+    (recycledItems || []).forEach((r: any) => {
+      if (!r) return;
+      extractSeq(r);
+      extractSeq(r.originalData);
     });
-    const maxVal = allNums.length > 0 ? Math.max(...allNums) : 0;
+
+    try {
+      const storedPlans = JSON.parse(localStorage.getItem('swaramayi_visit_plans_v7_clean') || '[]');
+      if (Array.isArray(storedPlans)) storedPlans.forEach(extractSeq);
+      const storedVisits = JSON.parse(localStorage.getItem('swaramayi_scheduled_visits_v7_clean') || '[]');
+      if (Array.isArray(storedVisits)) storedVisits.forEach(extractSeq);
+    } catch (e) {}
+
+    const curMax = allNums.length > 0 ? Math.max(...allNums) : 0;
+    try {
+      const savedSeq = localStorage.getItem('swaramayi_max_visit_seq');
+      if (savedSeq) {
+        const parsed = parseInt(savedSeq, 10);
+        if (!isNaN(parsed) && parsed > 0 && parsed <= curMax + 5) {
+          allNums.push(parsed);
+        }
+      }
+    } catch (e) {}
+
+    const maxVal = allNums.length > 0 ? Math.max(0, ...allNums) : 0;
+    const nextVal = maxVal + 1;
+
+    try {
+      localStorage.setItem('swaramayi_max_visit_seq', String(nextVal));
+    } catch (e) {}
+
+    return `SRM-VS-2026-${String(nextVal).padStart(6, '0')}`;
+  };
+
+  const generateNextBookingCode = (offset: number = 0): string => {
+    const allNums: number[] = [];
+
+    const extractSeq = (item: any) => {
+      if (!item) return;
+      const code = String(item.booking_code || item.bookingCode || item.id || '');
+      const match = code.match(/SRM-BKG-(?:20\d{2}-)?(\d+)/i) || code.match(/^BKG-(\d{1,6})$/i);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > 0 && num < 100000) {
+          if (num === 87 || num === 188) return;
+          allNums.push(num);
+        }
+      }
+    };
+
+    if (Array.isArray(bookings)) bookings.forEach(extractSeq);
+
+    (recycledItems || []).forEach((r: any) => {
+      if (!r) return;
+      const cat = (r.category || '').toLowerCase();
+      if (cat && !cat.includes('book')) return;
+      extractSeq(r);
+      extractSeq(r.originalData);
+    });
+
+    (invoices || []).forEach((inv: any) => {
+      if (!inv) return;
+      if (inv.booking_code) extractSeq({ booking_code: inv.booking_code });
+    });
+
+    const maxVal = allNums.length > 0 ? Math.max(0, ...allNums) : 0;
     const nextVal = maxVal + 1 + offset;
+
+    return `SRM-BKG-2026-${String(nextVal).padStart(6, '0')}`;
+  };
+
+  const generateNextInvoiceCode = (isDev: boolean = false, offset: number = 0): string => {
+    const allNums: number[] = [];
+    const prefix = isDev ? 'SRM-DEV-INV-2026-' : 'SRM-INV-2026-';
+    const storageKey = isDev ? 'swaramayi_max_dev_invoice_seq' : 'swaramayi_max_invoice_seq';
+
+    const extractSeq = (item: any) => {
+      if (!item) return;
+      const numStr = String(item.invoice_number || item.invoiceNumber || item.id || '');
+      const match = isDev
+        ? (numStr.match(/SRM-DEV-INV-(?:20\d{2}-)?(\d+)/i) || numStr.match(/^DEV-INV-(\d{1,6})$/i))
+        : (numStr.match(/SRM-INV-(?:20\d{2}-)?(\d+)/i) || numStr.match(/^INV-(\d{1,6})$/i));
+      if (match && match[1]) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > 0 && val < 100000) {
+          if (val === 88 || val === 188) return;
+          allNums.push(val);
+        }
+      }
+    };
+
+    if (Array.isArray(invoices)) invoices.forEach(extractSeq);
+
+    (recycledItems || []).forEach((r: any) => {
+      if (!r) return;
+      const cat = (r.category || '').toLowerCase();
+      if (cat && !cat.includes('bill') && !cat.includes('inv')) return;
+      extractSeq(r);
+      extractSeq(r.originalData);
+    });
+
+    (bookings || []).forEach((b: any) => {
+      if (!b) return;
+      if (isDev && b.developer_invoice_number) extractSeq({ invoice_number: b.developer_invoice_number });
+      if (!isDev && b.customer_invoice_number) extractSeq({ invoice_number: b.customer_invoice_number });
+    });
+
+    try {
+      const savedSeq = localStorage.getItem(storageKey);
+      if (savedSeq) {
+        const parsed = parseInt(savedSeq, 10);
+        const curMax = allNums.length > 0 ? Math.max(...allNums) : 0;
+        if (!isNaN(parsed) && parsed > 0 && parsed <= curMax + 5) {
+          allNums.push(parsed);
+        }
+      }
+    } catch (e) {}
+
+    const maxVal = allNums.length > 0 ? Math.max(0, ...allNums) : 0;
+    const nextVal = maxVal + 1 + offset;
+
+    try {
+      localStorage.setItem(storageKey, String(nextVal));
+    } catch (e) {}
+
+    return `${prefix}${String(nextVal).padStart(6, '0')}`;
+  };
+
+  const generateNextAgreementCode = (isDev: boolean = false, offset: number = 0): string => {
+    const allNums: number[] = [];
+    const prefix = isDev ? 'SRM-AGR-DEV-2026-' : 'SRM-AGR-2026-';
+    const storageKey = isDev ? 'swaramayi_max_dev_agr_seq' : 'swaramayi_max_agr_seq';
+
+    const extractSeq = (item: any) => {
+      if (!item) return;
+      const code = String(item.agreement_code || item.agreementCode || item.id || '');
+      const match = isDev
+        ? (code.match(/SRM-AGR-DEV-(?:20\d{2}-)?(\d+)/i) || code.match(/^AGR-DEV-(\d{1,6})$/i))
+        : (code.match(/SRM-AGR-(?:20\d{2}-)?(\d+)/i) || code.match(/^AGR-(\d{1,6})$/i));
+      if (match && match[1]) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > 0 && val < 100000) {
+          if (val === 595101) return;
+          allNums.push(val);
+        }
+      }
+    };
+
+    if (Array.isArray(agreements)) agreements.forEach(extractSeq);
+
+    (recycledItems || []).forEach((r: any) => {
+      if (!r) return;
+      const cat = (r.category || '').toLowerCase();
+      if (cat && !cat.includes('agr')) return;
+      extractSeq(r);
+      extractSeq(r.originalData);
+    });
+
+    try {
+      const savedSeq = localStorage.getItem(storageKey);
+      if (savedSeq) {
+        const parsed = parseInt(savedSeq, 10);
+        const curMax = allNums.length > 0 ? Math.max(...allNums) : 0;
+        if (!isNaN(parsed) && parsed > 0 && parsed <= curMax + 5) {
+          allNums.push(parsed);
+        }
+      }
+    } catch (e) {}
+
+    const maxVal = allNums.length > 0 ? Math.max(0, ...allNums) : 0;
+    const nextVal = maxVal + 1 + offset;
+
+    try {
+      localStorage.setItem(storageKey, String(nextVal));
+    } catch (e) {}
+
+    return `${prefix}${String(nextVal).padStart(6, '0')}`;
+  };
+
+  const generateNextPvaCode = (offset: number = 0): string => {
+    const allNums: number[] = [];
+
+    const extractSeq = (item: any) => {
+      if (!item) return;
+      const code = String(item.projectVisitAgreementId || item.pvaId || item.agreement_code || item.id || '');
+      const match = code.match(/SRM-PVA-(?:20\d{2}-)?(\d+)/i) || code.match(/^PVA-(\d{1,6})$/i);
+      if (match && match[1]) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > 0 && val < 100000) allNums.push(val);
+      }
+    };
+
+    if (Array.isArray(projectVisitAgreements)) projectVisitAgreements.forEach(extractSeq);
+    if (Array.isArray(agreements)) agreements.forEach(extractSeq);
+
+    (recycledItems || []).forEach((r: any) => {
+      if (!r) return;
+      const cat = (r.category || '').toLowerCase();
+      if (cat && !cat.includes('pva') && !cat.includes('visit') && !cat.includes('agr')) return;
+      extractSeq(r);
+      extractSeq(r.originalData);
+    });
+
+    (scheduledVisits || []).forEach((sv: any) => {
+      if (!sv) return;
+      extractSeq(sv);
+      if (Array.isArray(sv.stops)) sv.stops.forEach(extractSeq);
+    });
+
+    const maxVal = allNums.length > 0 ? Math.max(0, ...allNums) : 0;
+    const nextVal = maxVal + 1 + offset;
+
+    return `SRM-PVA-2026-${String(nextVal).padStart(6, '0')}`;
+  };
+
+  const generateNextPropertyCode = (offset: number = 0): string => {
+    const allNums: number[] = [];
+
+    const extractSeq = (item: any) => {
+      if (!item) return;
+      const code = String(item.property_code || item.code || item.propertyCode || item.id || '');
+      const match = code.match(/SRM-PROP-(?:20\d{2}-)?(\d+)/i) || code.match(/^PROP-(\d{1,6})$/i) || code.match(/\d+$/);
+      if (match && match[1]) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > 0 && val < 100000) allNums.push(val);
+      }
+    };
+
+    if (Array.isArray(properties)) properties.forEach(extractSeq);
+
+    (recycledItems || []).forEach((r: any) => {
+      if (!r) return;
+      const cat = (r.category || '').toLowerCase();
+      if (cat && !cat.includes('prop')) return;
+      extractSeq(r);
+      extractSeq(r.originalData);
+    });
+
+    try {
+      const savedSeq = localStorage.getItem('swaramayi_max_property_seq');
+      if (savedSeq) {
+        const parsed = parseInt(savedSeq, 10);
+        const curMax = allNums.length > 0 ? Math.max(...allNums) : 0;
+        if (!isNaN(parsed) && parsed > 0 && parsed <= curMax + 5) {
+          allNums.push(parsed);
+        }
+      }
+    } catch (e) {}
+
+    const maxVal = allNums.length > 0 ? Math.max(0, ...allNums) : 0;
+    const nextVal = maxVal + 1 + offset;
+
+    try {
+      localStorage.setItem('swaramayi_max_property_seq', String(nextVal));
+    } catch (e) {}
+
     return `SRM-PROP-2026-${String(nextVal).padStart(6, '0')}`;
   };
 
@@ -5310,19 +5928,14 @@ export default function App() {
     return [];
   });
 
-  // 6.6. DYNAMIC RECYCLE BIN VAULT (WITH LOCALSTORAGE PERSISTENCE)
-  const [recycledItems, setRecycledItems] = useState<any[]>(() => {
+  // 6.6. DYNAMIC RECYCLE BIN VAULT (DIRECT MONGODB ATLAS SYNCHRONIZATION)
+  const [recycledItems, setRecycledItems] = useState<any[]>([]);
+
+  useEffect(() => {
     try {
-      const saved = localStorage.getItem('swaramayi_recycled_items');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {
-      console.error('Error reading recycled items from localStorage:', e);
-    }
-    return [];
-  });
+      localStorage.removeItem('swaramayi_recycled_items');
+    } catch (e) {}
+  }, []);
 
   // Live Recycle Bin persistence is now strictly stored in MongoDB Atlas Cluster
 
@@ -5421,17 +6034,54 @@ export default function App() {
           return updated;
         });
         break;
-      case 'Visit Management':
-        if (data.stops || data.visitPlanId || data.visitScheduleId) {
-          setVisitPlans(prev => [data, ...prev.filter((p: any) => p.visitPlanId !== data.visitPlanId && p.visitScheduleId !== data.visitScheduleId)]);
-        } else {
-          setScheduledVisits(prev => {
-            const updated = [data, ...prev.filter((s: any) => s.visitId !== data.visitId && s.costSheetId !== data.costSheetId)];
-            syncAllToMongoDB({ site_visits: updated, recycled_items: updatedRecycled });
-            return updated;
-          });
-        }
-        break;
+      case 'Visit Management': {
+        const visitIdToRestore = data.visitId || data.visitScheduleId || data.visitPlanId || item.id || (item.title && (item.title.match(/SRM-VS-2026-\d+/i) || [])[0]);
+        const costSheetIdToRestore = data.costSheetId || item.costSheetId;
+
+        const remainingRecycled = recycledItems.filter(r => {
+          if (r.id === item.id) return false;
+          if (visitIdToRestore) {
+            if (r.id === visitIdToRestore) return false;
+            const rData = r.originalData || {};
+            if (rData.visitId === visitIdToRestore || rData.visitScheduleId === visitIdToRestore || rData.id === visitIdToRestore) return false;
+            if (r.title && r.title.includes(visitIdToRestore)) return false;
+          }
+          return true;
+        });
+
+        const restoredVisit = {
+          ...data,
+          id: visitIdToRestore || data.id || `VS-${Date.now()}`,
+          visitId: visitIdToRestore || `SRM-VS-2026-${String(Date.now()).slice(-6)}`,
+          visitScheduleId: data.visitScheduleId || visitIdToRestore,
+          visitPlanId: data.visitPlanId || visitIdToRestore,
+          costSheetId: costSheetIdToRestore || data.costSheetId,
+          status: (data.status === 'DELETED' || data.status === 'CANCELLED') ? 'ASSIGNED' : (data.status || 'ASSIGNED')
+        };
+
+        const updatedVisits = [restoredVisit, ...(scheduledVisits || []).filter((s: any) => 
+          s.visitId !== restoredVisit.visitId && 
+          s.visitScheduleId !== restoredVisit.visitId && 
+          s.id !== restoredVisit.id &&
+          (!restoredVisit.costSheetId || s.costSheetId !== restoredVisit.costSheetId)
+        )];
+        setScheduledVisits(updatedVisits);
+
+        const updatedPlans = [restoredVisit, ...(visitPlans || []).filter((p: any) => 
+          p.visitPlanId !== restoredVisit.visitId && 
+          p.visitScheduleId !== restoredVisit.visitId &&
+          p.id !== restoredVisit.id
+        )];
+        setVisitPlans(updatedPlans);
+
+        setRecycledItems(remainingRecycled);
+
+        syncAllToMongoDB({
+          site_visits: updatedVisits,
+          recycled_items: remainingRecycled
+        });
+        return;
+      }
       default:
         if (data.full_name || data.customer_name) {
           setCustomers(prev => {
@@ -6262,16 +6912,64 @@ export default function App() {
   // GENERATE UNIQUE COST SHEET ID
   const generateNextIndividualCostSheetCode = (offset: number = 0): string => {
     const numbers: number[] = [];
-    individualCostSheets.forEach((sheet: any) => {
-      if (sheet.costSheetId) {
-        const match = sheet.costSheetId.match(/COST-SHEET-2026-(\d+)/i) || sheet.costSheetId.match(/\d+$/);
-        if (match) {
-          numbers.push(parseInt(match[1] || match[0], 10));
-        }
+
+    const extractCsNum = (str?: string) => {
+      if (!str || typeof str !== 'string') return;
+      const clean = str.trim();
+      const match = clean.match(/COST-SHEET-(?:20\d{2}-)?(\d+)/i) || clean.match(/SRM-CS-(?:20\d{2}-)?(\d+)/i) || clean.match(/^CS-(\d{1,6})$/i);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > 0 && val < 10000) numbers.push(val);
+      }
+    };
+
+    (individualCostSheets || []).forEach((sheet: any) => {
+      if (!sheet) return;
+      extractCsNum(sheet.costSheetId);
+      extractCsNum(sheet.id);
+    });
+
+    (costSheetShares || []).forEach((cs: any) => {
+      if (!cs) return;
+      extractCsNum(cs.costSheetId);
+      extractCsNum(cs.id);
+    });
+
+    (recycledItems || []).forEach((r: any) => {
+      if (!r) return;
+      const cat = (r.category || r.type || '').toString().toLowerCase();
+      if (cat && !cat.includes('cost')) return;
+      extractCsNum(r.id);
+      extractCsNum(r.originalData?.costSheetId);
+      extractCsNum(r.originalData?.id);
+    });
+
+    (scheduledVisits || []).forEach((v: any) => {
+      if (!v) return;
+      extractCsNum(v.costSheetId);
+      if (Array.isArray(v.stops)) {
+        v.stops.forEach((s: any) => extractCsNum(s?.costSheetId));
       }
     });
+
+    const currentMax = numbers.length > 0 ? Math.max(...numbers) : 0;
+    try {
+      const savedWatermark = localStorage.getItem('swaramayi_max_costsheet_seq');
+      if (savedWatermark) {
+        const val = parseInt(savedWatermark, 10);
+        if (!isNaN(val) && val > 0 && val <= currentMax + 3) {
+          numbers.push(val);
+        }
+      }
+    } catch (e) {}
+
     const maxVal = numbers.length > 0 ? Math.max(...numbers) : 0;
     const nextVal = maxVal + 1 + offset;
+
+    try {
+      localStorage.setItem('swaramayi_max_costsheet_seq', String(nextVal));
+    } catch (e) {}
+
     return `COST-SHEET-2026-${String(nextVal).padStart(6, '0')}`;
   };
 
@@ -6921,11 +7619,6 @@ export default function App() {
         if (matchId && svMatchId && svMatchId === matchId.toLowerCase()) return false;
         return true;
       });
-      try {
-        localStorage.setItem('swaramayi_scheduled_visits_v7_clean', JSON.stringify(updated.map(sanitizeScheduledVisit)));
-      } catch (e) {
-        console.error('Error saving scheduled visits after shift to matching:', e);
-      }
       return updated;
     });
 
@@ -6941,11 +7634,6 @@ export default function App() {
         if (cleanMob && vpMob && vpMob.length >= 7 && (vpMob === cleanMob || vpMob.includes(cleanMob))) return false;
         return true;
       });
-      try {
-        localStorage.setItem('swaramayi_visit_plans_v7_clean', JSON.stringify(updated.map(sanitizePlanObj)));
-      } catch (e) {
-        console.error('Error saving visit plans after shift to matching:', e);
-      }
       return updated;
     });
 
@@ -7029,9 +7717,6 @@ export default function App() {
         if (cleanMob && svMob && svMob.length >= 7 && svMob === cleanMob) return false;
         return true;
       });
-      try {
-        localStorage.setItem('swaramayi_scheduled_visits_v7_clean', JSON.stringify(updated.map(sanitizeScheduledVisit)));
-      } catch (e) { console.error(e); }
       return updated;
     });
 
@@ -7047,9 +7732,6 @@ export default function App() {
         if (cleanMob && vpMob && vpMob.length >= 7 && vpMob === cleanMob) return false;
         return true;
       });
-      try {
-        localStorage.setItem('swaramayi_visit_plans_v7_clean', JSON.stringify(updated.map(sanitizePlanObj)));
-      } catch (e) { console.error(e); }
       return updated;
     });
 
@@ -7299,7 +7981,7 @@ export default function App() {
     );
 
     const leadNum = existingLead ? existingLead.lead_number : `SRM-LD-2026-000${leadsList.length + 101}`;
-    const finalCustomerCode = targetCustCode || (existingCustomer ? existingCustomer.customer_number : `SRM-CUS-2026-${String(customers.length + 1).padStart(6, '0')}`);
+    const finalCustomerCode = targetCustCode || (existingCustomer ? existingCustomer.customer_number : generateNextCustomerCode());
     const todayStr = new Date().toISOString().split('T')[0];
 
     const draftLeadObj = {
@@ -7452,7 +8134,7 @@ export default function App() {
     const whatsappVal = (lead.whatsapp && lead.whatsapp !== 'N/A') ? lead.whatsapp : phoneVal;
 
     setNewCustomerForm({
-      customer_number: lead.customer_number || lead.customer_id || `SRM-CUS-2026-${String(customers.length + 1).padStart(6, '0')}`,
+      customer_number: lead.customer_number || lead.customer_id || generateNextCustomerCode(),
       name: lead.customer_name || lead.name || '',
       phone: phoneVal,
       mobile: phoneVal,
@@ -7532,34 +8214,13 @@ export default function App() {
     developer_contact: ''
   });
 
-  const [agreements, setAgreements] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_agreements_vault_v5_clean');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.map((a: any, idx: number) => {
-            let code = a.agreement_code || '';
-            if (code.includes('595101') || /\bSRM-AGR-DEV-\d+-[1-9]\d{4,}\b/.test(code)) {
-              code = `SRM-AGR-DEV-2026-${String(idx + 1).padStart(6, '0')}`;
-            }
-            return { ...a, agreement_code: code };
-          });
-        }
-      }
-    } catch (e) {
-      console.error('Error reading agreements from localStorage:', e);
-    }
-    return [];
-  });
+  const [agreements, setAgreements] = useState<any[]>([]);
 
   useEffect(() => {
     try {
-      localStorage.setItem('swaramayi_agreements_vault_v5_clean', JSON.stringify(agreements));
-    } catch (e) {
-      console.error('Error saving agreements to localStorage:', e);
-    }
-  }, [agreements]);
+      localStorage.removeItem('swaramayi_agreements_vault_v5_clean');
+    } catch (e) {}
+  }, []);
 
   // DEVELOPER PROJECT-LEVEL OTP VERIFICATION STATE
   const [devProjectOtpSent, setDevProjectOtpSent] = useState<boolean>(false);
@@ -7691,14 +8352,25 @@ export default function App() {
       if (Array.isArray(overrideData.bookings)) payload.bookings = overrideData.bookings;
       if (Array.isArray(overrideData.invoices)) payload.invoices = overrideData.invoices;
       if (Array.isArray(overrideData.agreements)) payload.agreements = overrideData.agreements;
+      if (Array.isArray(overrideData.pva_agreements)) payload.pva_agreements = overrideData.pva_agreements;
+      if (Array.isArray(overrideData.project_visit_agreements)) payload.pva_agreements = overrideData.project_visit_agreements;
       if (Array.isArray(overrideData.cost_sheets)) payload.cost_sheets = overrideData.cost_sheets;
       if (Array.isArray(overrideData.matching_requests)) payload.matching_requests = overrideData.matching_requests;
-      if (Array.isArray(overrideData.site_visits)) payload.site_visits = overrideData.site_visits;
+      const incomingVisits = Array.isArray(overrideData.site_visits)
+        ? overrideData.site_visits
+        : (Array.isArray(overrideData.scheduledVisits)
+          ? overrideData.scheduledVisits
+          : (Array.isArray(overrideData.scheduled_visits) ? overrideData.scheduled_visits : null));
+      if (Array.isArray(incomingVisits)) payload.site_visits = incomingVisits;
       if (Array.isArray(overrideData.users)) payload.users = overrideData.users;
       if (Array.isArray(overrideData.teams)) payload.teams = overrideData.teams;
       if (Array.isArray(overrideData.branches)) payload.branches = overrideData.branches;
       if (Array.isArray(overrideData.rating_invites)) payload.rating_invites = overrideData.rating_invites;
       if (Array.isArray(overrideData.recycled_items)) payload.recycled_items = overrideData.recycled_items;
+      if (Array.isArray(overrideData.agency_bank_details) || Array.isArray(overrideData.bank_details)) {
+        payload.agency_bank_details = overrideData.agency_bank_details || overrideData.bank_details;
+        payload.bank_details = overrideData.agency_bank_details || overrideData.bank_details;
+      }
 
       if (Object.keys(payload).length === 0) {
         return;
@@ -7736,17 +8408,6 @@ export default function App() {
             if (Array.isArray(mData.recycled_items)) {
               activeRecycled = mData.recycled_items;
               setRecycledItems(mData.recycled_items);
-            } else {
-              try {
-                const savedRec = localStorage.getItem('swaramayi_recycled_items');
-                if (savedRec) {
-                  const parsed = JSON.parse(savedRec);
-                  if (Array.isArray(parsed) && parsed.length > 0) {
-                    activeRecycled = parsed;
-                    setRecycledItems(parsed);
-                  }
-                }
-              } catch (e) {}
             }
 
             const recycledSet = new Set<string>();
@@ -7835,6 +8496,11 @@ export default function App() {
             if (Array.isArray(mData.agreements)) {
               setAgreements(mData.agreements);
             }
+            if (Array.isArray(mData.agency_bank_details) && mData.agency_bank_details.length > 0) {
+              setBankDetails(mData.agency_bank_details);
+            } else if (Array.isArray(mData.bank_details) && mData.bank_details.length > 0) {
+              setBankDetails(mData.bank_details);
+            }
             if (Array.isArray(mData.invoices)) {
               const seen = new Set<string>();
               const dedupedInvoices: any[] = [];
@@ -7874,8 +8540,44 @@ export default function App() {
               setBookings(cleanBookings);
             }
             if (Array.isArray(mData.site_visits)) {
-              const cleanVisits = mData.site_visits.filter((v: any) => v && typeof v === 'object' && !isItemInRecycledSet(v, recycledSet));
+              const cleanVisits = mData.site_visits
+                .filter((v: any) => v && typeof v === 'object' && !isItemInRecycledSet(v, recycledSet))
+                .map((v: any) => {
+                  let vId = v.visitId || v.visitScheduleId || v.id;
+                  if ((!vId || String(vId).startsWith('COST-SHEET-')) && v.costSheetId && typeof v.costSheetId === 'string' && v.costSheetId.startsWith('COST-SHEET-')) {
+                    vId = v.costSheetId.replace('COST-SHEET-', 'SRM-VS-');
+                  }
+                  return {
+                    ...v,
+                    visitId: vId || v.visitId,
+                    visitScheduleId: v.visitScheduleId || vId
+                  };
+                });
               setScheduledVisits(cleanVisits);
+              const reconstructed = cleanVisits.map((v: any) => {
+                const resolvedVId = v.visitId || v.visitScheduleId || v.id || (v.costSheetId ? v.costSheetId.replace('COST-SHEET-', 'SRM-VS-') : '');
+                return {
+                  id: resolvedVId,
+                  visitId: resolvedVId,
+                  visitScheduleId: v.visitScheduleId || resolvedVId,
+                  visitPlanId: v.visitPlanId || resolvedVId,
+                  costSheetId: v.costSheetId,
+                  customerId: v.customerId || v.customerNumber,
+                  customerNumber: v.customerNumber || v.customerId,
+                  customerName: v.customerName,
+                  mobile: v.mobile,
+                  visitDate: v.visitDate,
+                  startTime: v.visitTime || v.startTime,
+                  assignedExecutive: v.assignedExecutive,
+                  transport: v.transport,
+                  pickupAddress: v.pickupAddress,
+                  dropAddress: v.dropAddress,
+                  totalStops: v.totalStops || (v.stops ? v.stops.length : 1),
+                  status: v.status || 'ASSIGNED',
+                  stops: v.stops || []
+                };
+              });
+              setVisitPlans(reconstructed);
             }
             if (Array.isArray(mData.matching_requests)) {
               const cleanMatching = mData.matching_requests.filter((r: any) => {
@@ -7893,6 +8595,111 @@ export default function App() {
             if (Array.isArray(mData.pva_agreements)) {
               setProjectVisitAgreements(mData.pva_agreements);
             }
+
+            // Re-align and heal local watermarks to match live MongoDB records (preventing rogue jumps like 24)
+            try {
+              let maxCus = 0;
+              (cleanDeduped || []).forEach((c: any) => {
+                const match = String(c.customer_number || '').match(/SRM-CUS-(?:20\d{2}-)?(\d+)/i);
+                if (match) {
+                  const val = parseInt(match[1], 10);
+                  if (!isNaN(val) && val > maxCus && val < 1000) maxCus = val;
+                }
+              });
+              localStorage.setItem('swaramayi_max_customer_seq', String(maxCus));
+
+              let maxMat = 0;
+              (cleanMatching || []).forEach((m: any) => {
+                const match = String(m.matchingId || m.requestId || m.id || '').match(/SRM-MAT-(?:20\d{2}-)?(\d+)/i);
+                if (match) {
+                  const val = parseInt(match[1], 10);
+                  if (!isNaN(val) && val > maxMat && val < 1000) maxMat = val;
+                }
+              });
+              localStorage.setItem('swaramayi_max_matching_seq', String(maxMat));
+
+              let maxCs = 0;
+              (cleanCostSheets || []).forEach((cs: any) => {
+                const match = String(cs.costSheetId || cs.id || '').match(/COST-SHEET-(?:20\d{2}-)?(\d+)/i);
+                if (match) {
+                  const val = parseInt(match[1], 10);
+                  if (!isNaN(val) && val > maxCs && val < 1000) maxCs = val;
+                }
+              });
+              localStorage.setItem('swaramayi_max_costsheet_seq', String(maxCs));
+
+              let maxVis = 0;
+              (cleanVisits || []).forEach((v: any) => {
+                const match = String(v.visitId || v.visitScheduleId || v.id || '').match(/SRM-VS-(?:20\d{2}-)?(\d+)/i);
+                if (match) {
+                  const val = parseInt(match[1], 10);
+                  if (!isNaN(val) && val > maxVis && val < 1000) maxVis = val;
+                }
+              });
+              localStorage.setItem('swaramayi_max_visit_seq', String(maxVis));
+
+              // Re-align Booking watermark
+              let maxBkg = 0;
+              (cleanBookings || []).forEach((b: any) => {
+                const match = String(b.booking_code || b.bookingCode || '').match(/SRM-BKG-(?:20\d{2}-)?(\d+)/i);
+                if (match) {
+                  const val = parseInt(match[1], 10);
+                  if (!isNaN(val) && val > maxBkg && val < 100000 && val !== 87 && val !== 188) maxBkg = val;
+                }
+              });
+              // Booking sequencing is derived dynamically from live records, no localStorage tracking
+
+              // Re-align Invoice watermarks
+              let maxInv = 0;
+              let maxDevInv = 0;
+              (dedupedInvoices || []).forEach((i: any) => {
+                const num = String(i.invoice_number || '');
+                const mCust = num.match(/SRM-INV-(?:20\d{2}-)?(\d+)/i);
+                if (mCust && !num.includes('DEV')) {
+                  const val = parseInt(mCust[1], 10);
+                  if (!isNaN(val) && val > maxInv && val < 100000 && val !== 88 && val !== 188) maxInv = val;
+                }
+                const mDev = num.match(/SRM-DEV-INV-(?:20\d{2}-)?(\d+)/i);
+                if (mDev) {
+                  const val = parseInt(mDev[1], 10);
+                  if (!isNaN(val) && val > maxDevInv && val < 100000 && val !== 88 && val !== 188) maxDevInv = val;
+                }
+              });
+              localStorage.setItem('swaramayi_max_invoice_seq', String(maxInv));
+              localStorage.setItem('swaramayi_max_dev_invoice_seq', String(maxDevInv));
+
+              // Re-align Agreement & PVA watermarks
+              let maxAgr = 0;
+              (mData.agreements || []).forEach((a: any) => {
+                const match = String(a.agreement_code || '').match(/SRM-AGR-DEV-(?:20\d{2}-)?(\d+)/i);
+                if (match) {
+                  const val = parseInt(match[1], 10);
+                  if (!isNaN(val) && val > maxAgr && val < 100000 && val !== 595101) maxAgr = val;
+                }
+              });
+              localStorage.setItem('swaramayi_max_dev_agr_seq', String(maxAgr));
+
+              let maxPva = 0;
+              (mData.pva_agreements || []).forEach((p: any) => {
+                const match = String(p.projectVisitAgreementId || p.pvaId || p.agreement_code || '').match(/SRM-PVA-(?:20\d{2}-)?(\d+)/i);
+                if (match) {
+                  const val = parseInt(match[1], 10);
+                  if (!isNaN(val) && val > maxPva && val < 100000) maxPva = val;
+                }
+              });
+              // PVA sequencing is derived dynamically from live records, no localStorage tracking
+
+              // Re-align Property watermark
+              let maxProp = 0;
+              (sanitizedProps || []).forEach((p: any) => {
+                const match = String(p.property_code || '').match(/SRM-PROP-(?:20\d{2}-)?(\d+)/i);
+                if (match) {
+                  const val = parseInt(match[1], 10);
+                  if (!isNaN(val) && val > maxProp && val < 100000) maxProp = val;
+                }
+              });
+              localStorage.setItem('swaramayi_max_property_seq', String(maxProp));
+            } catch (e) {}
             if (Array.isArray(mData.sourcing_requests)) {
               setSourcingRequests(mData.sourcing_requests);
               try {
@@ -8473,9 +9280,6 @@ export default function App() {
         }
         return sv;
       });
-      try {
-        localStorage.setItem('swaramayi_scheduled_visits_v7_clean', JSON.stringify(updated.map(sanitizeScheduledVisit)));
-      } catch (e) {}
       return updated;
     });
 
@@ -8516,9 +9320,6 @@ export default function App() {
         }
         return { ...vp, stops: updatedStops };
       });
-      try {
-        localStorage.setItem('swaramayi_visit_plans_v7_clean', JSON.stringify(updated.map(sanitizePlanObj)));
-      } catch (e) {}
       return updated;
     });
 
@@ -8593,6 +9394,7 @@ export default function App() {
     setCreateInvoiceForm(prev => ({ ...prev, branch_name: activeBranch }));
   }, [currentRole, users, branches]);
 
+  const [bankDetails, setBankDetails] = useState<any[]>([]);
   const [rawSelectedInvoice, setSelectedInvoice] = useState<any>(null);
   const selectedInvoice = rawSelectedInvoice || invoices[0] || {
     id: 'INV-EMPTY',
@@ -9747,17 +10549,8 @@ export default function App() {
       return updated;
     });
 
-    // Generate sequential Matching ID (starting from SRM-MAT-2026-000001)
-    let maxMatSeq = 0;
-    (matchingRequestsQueue || []).forEach((m: any) => {
-      const match = (m.requestId || m.id || m.matchingId || '').match(/SRM-MAT-\d+-(\d+)/i) || (m.requestId || m.id || '').match(/MAT-(\d+)/i);
-      if (match) {
-        const val = parseInt(match[1], 10);
-        if (!isNaN(val) && val < 10000 && val > maxMatSeq) maxMatSeq = val;
-      }
-    });
-    const nextMatSeq = maxMatSeq + 1;
-    const matchingId = `SRM-MAT-2026-${String(nextMatSeq).padStart(6, '0')}`;
+    // Generate unique sequential Matching ID
+    const matchingId = generateNextMatchingCode();
 
     const newMatchingRecord = {
       id: matchingId,
@@ -10045,33 +10838,52 @@ export default function App() {
     const waUrl = `https://api.whatsapp.com/send?phone=${cleanDevPhone}&text=${encodeURIComponent(msg)}`;
 
     // 1. Update Scheduled Visits State
-    setScheduledVisits(prev => prev.map(sv => (sv.visitId === visitIdStr || sv.id === v.id || sv.customerNumber === fullCustNo) ? {
-      ...sv,
-      status: 'COMPLETED',
-      visitDone: true,
-      visitCompletedTime: nowStr
-    } : sv));
+    let updatedScheduledVisits: any[] = [];
+    setScheduledVisits(prev => {
+      updatedScheduledVisits = prev.map(sv => (sv.visitId === visitIdStr || sv.id === v.id || sv.customerNumber === fullCustNo) ? {
+        ...sv,
+        status: 'COMPLETED',
+        visitDone: true,
+        visitCompletedTime: nowStr
+      } : sv);
+      return updatedScheduledVisits;
+    });
 
     // 2. Update Visit Plans State
-    setVisitPlans(prev => prev.map(vp => {
-      if (vp.customerNumber === fullCustNo || vp.visitPlanId === visitIdStr) {
-        return {
-          ...vp,
-          status: 'COMPLETED',
-          stops: vp.stops.map((s: any) => ({ ...s, status: 'VISIT_COMPLETED' }))
-        };
-      }
-      return vp;
-    }));
+    let updatedPlans: any[] = [];
+    setVisitPlans(prev => {
+      updatedPlans = prev.map(vp => {
+        if (vp.customerNumber === fullCustNo || vp.visitPlanId === visitIdStr) {
+          return {
+            ...vp,
+            status: 'COMPLETED',
+            stops: (vp.stops || []).map((s: any) => ({ ...s, status: 'VISIT_COMPLETED' }))
+          };
+        }
+        return vp;
+      });
+      return updatedPlans;
+    });
 
     // 3. Do not create new project visit agreement on visit done.
     // If an existing PVA was already created (e.g. during OTP verification), update its completion status.
-    setProjectVisitAgreements(prev => (prev || []).map(p => {
-      const isMatch = (v.visitScheduleId && (p.visitScheduleId === v.visitScheduleId || p.visitId === v.visitScheduleId)) ||
-                      (v.visitId && (p.visitScheduleId === v.visitId || p.visitId === v.visitId)) ||
-                      (p.customerId === fullCustNo && p.projectTitle === propTitle);
-      return isMatch ? { ...p, status: 'VISIT_COMPLETED', whatsappConfirmed: true, developerWhatsapp: devPhone } : p;
-    }));
+    let updatedPvas: any[] = [];
+    setProjectVisitAgreements(prev => {
+      updatedPvas = (prev || []).map(p => {
+        const isMatch = (v.visitScheduleId && (p.visitScheduleId === v.visitScheduleId || p.visitId === v.visitScheduleId)) ||
+                        (v.visitId && (p.visitScheduleId === v.visitId || p.visitId === v.visitId)) ||
+                        (p.customerId === fullCustNo && p.projectTitle === propTitle);
+        return isMatch ? { ...p, status: 'VISIT_COMPLETED', whatsappConfirmed: true, developerWhatsapp: devPhone } : p;
+      });
+      return updatedPvas;
+    });
+
+    if (syncAllToMongoDB) {
+      syncAllToMongoDB({
+        site_visits: updatedScheduledVisits,
+        pva_agreements: updatedPvas
+      });
+    }
 
     // 4. Trigger WhatsApp Developer Confirmation
     window.open(waUrl, '_blank');
@@ -10116,6 +10928,8 @@ export default function App() {
       type: 5,                 // 7. Property Category Type (5%)
       condition: 5             // 8. Property Condition & Furnishing (5%)
     };
+    let isStrictMatch = true;
+    const mismatchReasons: string[] = [];
 
     const parseSingleValToLakhs = (valStr: any): number => {
       if (valStr === undefined || valStr === null || valStr === '') return 0;
@@ -10270,7 +11084,9 @@ export default function App() {
       if (matchesBhk) {
         breakdown.bhk = 15;
       } else {
-        breakdown.bhk = 15;
+        breakdown.bhk = 0;
+        isStrictMatch = false;
+        mismatchReasons.push(`BHK Mismatch: Customer requested ${custBhkStr}, Property is ${propBhkStr}`);
       }
     } else {
       breakdown.bhk = 15;
@@ -10291,12 +11107,12 @@ export default function App() {
     // --- 8. PROPERTY CONDITION & FURNISHING MATCH (5%) ---
     breakdown.condition = 5;
 
-    const total = Math.min(100, breakdown.bud + breakdown.loc + breakdown.bhk + breakdown.sqft + breakdown.possession_facing + breakdown.floor_pref + breakdown.type + breakdown.condition);
+    const total = isStrictMatch ? Math.min(100, breakdown.bud + breakdown.loc + breakdown.bhk + breakdown.sqft + breakdown.possession_facing + breakdown.floor_pref + breakdown.type + breakdown.condition) : 0;
     return { 
       total, 
       breakdown, 
-      isStrictMatch: true,
-      mismatchReasons: []
+      isStrictMatch,
+      mismatchReasons
     };
   };
 
@@ -12857,6 +13673,7 @@ export default function App() {
               detectLocalityFromCoords={detectLocalityFromCoords}
               handleCreatePropertySubmit={handleCreatePropertySubmit}
               generateNextPropertyCode={generateNextPropertyCode}
+              generateNextAgreementCode={generateNextAgreementCode}
               handleOpenAddPropertyModal={handleOpenAddPropertyModal}
               setShowBulkImportPropertyModal={setShowBulkImportPropertyModal}
               setShowDeveloperIntroductionReportModal={setShowDeveloperIntroductionReportModal}
@@ -12877,6 +13694,8 @@ export default function App() {
               setAgreements={setAgreements}
               onRecycleItem={handleRecycleItem}
               recycledItems={recycledItems}
+              bankDetails={bankDetails}
+              setBankDetails={setBankDetails}
             />
           )}
 
@@ -13046,6 +13865,8 @@ export default function App() {
               scheduledVisits={scheduledVisits}
               onRecycleItem={handleRecycleItem}
               recycledItems={recycledItems}
+              bankDetails={bankDetails}
+              setBankDetails={setBankDetails}
             />
           )}
 
@@ -13156,6 +13977,7 @@ export default function App() {
               onRecycleItem={handleRecycleItem}
               recycledItems={recycledItems}
               users={users}
+              generateNextBookingCode={generateNextBookingCode}
             />
           )}
 
@@ -13183,6 +14005,8 @@ export default function App() {
               customers={customers}
               onRecycleItem={handleRecycleItem}
               recycledItems={recycledItems}
+              bankDetails={bankDetails}
+              setBankDetails={setBankDetails}
             />
           )}
 
@@ -13242,6 +14066,7 @@ export default function App() {
               setBookings={setBookings}
               syncAllToMongoDB={syncAllToMongoDB}
               setActiveTab={setActiveTab}
+              generateNextBookingCode={generateNextBookingCode}
             />
           )}
 
@@ -13269,6 +14094,7 @@ export default function App() {
               recycledItems={recycledItems}
               projectVisitAgreements={projectVisitAgreements}
               agreements={agreements}
+              generateNextBookingCode={generateNextBookingCode}
             />
           )}
 
@@ -13384,10 +14210,10 @@ export default function App() {
               <X size={22} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowCreateDevAgreementModal(false)} />
             </div>
 
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const newId = `AGR-DEV-${Date.now().toString().slice(-4)}`;
-              const newCode = `SRM-AGR-DEV-2026-${String(agreements.length + 1).padStart(6, '0')}`;
+              const newCode = generateNextAgreementCode(true);
               const fullTitle = `Channel Partner Agreement — ${newDevAgreementForm.project_name} (${newDevAgreementForm.developer_name})`;
 
               const newAgreement = {
@@ -13408,8 +14234,24 @@ export default function App() {
                 signed_at: new Date().toLocaleString()
               };
 
-              setAgreements([newAgreement, ...agreements]);
+              const updatedAgreements = [newAgreement, ...agreements];
+              setAgreements(updatedAgreements);
+              setAgreementCategory('developer');
               setShowCreateDevAgreementModal(false);
+
+              // Directly persist to MongoDB Atlas with immediate network fetch
+              try {
+                await fetch(getBackendApiUrl('/api/v1/crm/sync'), {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ agreements: updatedAgreements })
+                });
+              } catch (err) {
+                console.warn('Direct agreement fetch sync error:', err);
+              }
+              if (syncAllToMongoDB) {
+                await syncAllToMongoDB({ agreements: updatedAgreements });
+              }
             }} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -13783,10 +14625,17 @@ export default function App() {
           onClose={() => setShowPvaVerificationModal(null)}
           projectVisitAgreements={projectVisitAgreements}
           setProjectVisitAgreements={setProjectVisitAgreements}
+          agreements={agreements}
           setAgreements={setAgreements}
-          setVisitPlans={setVisitPlans}
+          syncAllToMongoDB={syncAllToMongoDB}
+          scheduledVisits={scheduledVisits}
           setScheduledVisits={setScheduledVisits}
+          visitPlans={visitPlans}
+          setVisitPlans={setVisitPlans}
           setShowPvaDocumentModal={setShowPvaDocumentModal}
+          generateNextPvaCode={generateNextPvaCode}
+          properties={properties}
+          developers={developers}
         />
       )}
 
@@ -15071,9 +15920,62 @@ export default function App() {
       {/* MODAL: CREATE MULTI-PROPERTY VISIT SCHEDULE */}
       {showScheduleVisitModal && showScheduleVisitModal.open && (() => {
         const initCs = showScheduleVisitModal.costSheet;
-        const targetCustId = initCs?.customerId || initCs?.customerSnapshot?.customerId || initCs?.customerSnapshot?.customerNumber || 'SRM-CUS-2026-000192';
+        const targetCustId = initCs?.customerId || initCs?.customerNumber || initCs?.customerSnapshot?.customerId || initCs?.customerSnapshot?.customerNumber || '';
         const targetCustName = initCs?.customerName || initCs?.customerSnapshot?.customerName || 'Valued Customer';
-        const targetCustMob = initCs?.mobile || initCs?.customerSnapshot?.mobile || '91-9593193209';
+        const targetCustMob = initCs?.mobile || initCs?.customerSnapshot?.mobile || '';
+
+        // Strict customer-specific filtering:
+        // A visit schedule is strictly for ONE customer, who can visit multiple properties.
+        // Other customers' cost sheets must NEVER be included.
+        const targetCleanMob = String(targetCustMob || '').replace(/\D/g, '');
+        const targetCleanId = String(targetCustId || '').trim().toLowerCase();
+        const targetCleanName = String(targetCustName || '').trim().toLowerCase();
+
+        const customerEligibleCostSheets = (individualCostSheets || []).filter((cs: any) => {
+          if (!cs) return false;
+          if (cs.status === 'CANCELLED' || cs.status === 'DELETED') return false;
+
+          // Always include the initially selected cost sheet
+          const isInitialMatch = Boolean(
+            initCs && (
+              (cs.costSheetId && initCs.costSheetId && cs.costSheetId === initCs.costSheetId) ||
+              (cs.id && initCs.id && cs.id === initCs.id) ||
+              (cs.costSheetId && initCs.id && cs.costSheetId === initCs.id) ||
+              (cs.id && initCs.costSheetId && cs.id === initCs.costSheetId)
+            )
+          );
+          if (isInitialMatch) {
+            return true;
+          }
+
+          // Match by Customer ID / Customer Number
+          const csCustId = String(cs.customerId || cs.customerNumber || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber || '').trim().toLowerCase();
+          if (targetCleanId && csCustId && (csCustId === targetCleanId || csCustId.includes(targetCleanId) || targetCleanId.includes(csCustId))) {
+            return true;
+          }
+
+          // Match by Mobile
+          const csMob = String(cs.mobile || cs.customerSnapshot?.mobile || '').replace(/\D/g, '');
+          if (targetCleanMob && csMob && targetCleanMob.length >= 7 && csMob.length >= 7 && (csMob === targetCleanMob || csMob.endsWith(targetCleanMob) || targetCleanMob.endsWith(csMob))) {
+            return true;
+          }
+
+          // Match by Customer Name
+          const csName = String(cs.customerName || cs.customerSnapshot?.customerName || '').trim().toLowerCase();
+          if (targetCleanName && csName && targetCleanName !== 'valued customer' && targetCleanName !== 'customer' && csName === targetCleanName) {
+            return true;
+          }
+
+          return false;
+        });
+
+        const sortedEligibleCostSheets = [...customerEligibleCostSheets].sort((a, b) => {
+          const isAInit = Boolean(initCs && ((initCs.costSheetId && a.costSheetId === initCs.costSheetId) || (initCs.id && a.id === initCs.id)));
+          const isBInit = Boolean(initCs && ((initCs.costSheetId && b.costSheetId === initCs.costSheetId) || (initCs.id && b.id === initCs.id)));
+          if (isAInit) return -1;
+          if (isBInit) return 1;
+          return 0;
+        });
 
         return (
           <ScheduleVisitModalContent
@@ -15082,7 +15984,7 @@ export default function App() {
             targetCustomerId={targetCustId}
             targetCustName={targetCustName}
             targetCustMobile={targetCustMob}
-            eligibleCostSheets={individualCostSheets}
+            eligibleCostSheets={sortedEligibleCostSheets}
             properties={properties}
             visitPlans={visitPlans}
             setVisitPlans={setVisitPlans}
@@ -15097,6 +15999,9 @@ export default function App() {
             dynamicSalesExecutives={users}
             customers={customers}
             branches={branches}
+            recycledItems={recycledItems}
+            generateNextVisitCode={generateNextVisitCode}
+            syncAllToMongoDB={syncAllToMongoDB}
           />
         );
       })()}
@@ -15896,7 +16801,7 @@ export default function App() {
 
             <form onSubmit={(e) => {
               e.preventDefault();
-              const newBkgCode = `SRM-BKG-2026-${String(bookings.length + 1).padStart(6, '0')}`;
+              const newBkgCode = generateNextBookingCode();
               const tokAmt = Number(newBookingForm.token_amount || 500000);
               const agrValNum = Number(newBookingForm.agreement_value || 8400000);
               const brokAmt = agrValNum * 0.02;
@@ -16343,7 +17248,7 @@ export default function App() {
                     🏦 OFFICIAL BANK ACCOUNT DETAILS FOR ALLOTMENT SETTLEMENT
                   </span>
                   <div style={{ fontWeight: '800', color: activeT.footerText, fontSize: '0.8rem', marginTop: '3px' }}>
-                    HDFC Bank • A/C: <span style={{ fontFamily: 'monospace' }}>50200018942109</span> • IFSC: <span style={{ fontFamily: 'monospace' }}>HDFC0000128</span> • UPI ID: swaramayi@hdfcbank
+                    {(bankDetails && bankDetails[0]?.bank_name) || 'HDFC Bank'} • A/C: <span style={{ fontFamily: 'monospace' }}>{(bankDetails && bankDetails[0]?.account_number) || '50200018942109'}</span> • IFSC: <span style={{ fontFamily: 'monospace' }}>{(bankDetails && bankDetails[0]?.ifsc_code) || 'HDFC0000128'}</span> • UPI ID: {(bankDetails && bankDetails[0]?.upi_id) || 'swaramayi@hdfcbank'}
                   </div>
                 </div>
 
@@ -16407,17 +17312,7 @@ export default function App() {
             <form onSubmit={(e) => {
               e.preventDefault();
               const isDev = createInvoiceForm.invoice_category === 'DEVELOPER';
-              const prefix = isDev ? 'SRM-DEV-INV-2026-' : 'SRM-INV-2026-';
-              const existingNums: number[] = [];
-              (invoices || []).forEach((i: any) => {
-                const num = (i.invoice_number || '').replace('000188', '000001');
-                if (num.startsWith(prefix)) {
-                  const parsed = parseInt(num.replace(prefix, ''), 10);
-                  if (!isNaN(parsed)) existingNums.push(parsed);
-                }
-              });
-              const nextSeq = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1;
-              const invNum = `${prefix}${String(nextSeq).padStart(6, '0')}`;
+              const invNum = generateNextInvoiceCode(isDev);
               const taxVal = Number(createInvoiceForm.taxable_value || 200000);
               const applyGst = createInvoiceForm.apply_gst !== false;
               const cgstRate = applyGst && createInvoiceForm.cgst_rate !== undefined && createInvoiceForm.cgst_rate !== '' ? Number(createInvoiceForm.cgst_rate) : (applyGst ? 9 : 0);
@@ -17212,7 +18107,7 @@ export default function App() {
                         <input 
                           type="text" 
                           disabled={!isSuperAdmin}
-                          value={createInvoiceForm.bank_name || 'HDFC Bank'} 
+                          value={createInvoiceForm.bank_name ?? ''} 
                           onChange={(e) => isSuperAdmin && setCreateInvoiceForm({ ...createInvoiceForm, bank_name: e.target.value })} 
                           placeholder="HDFC Bank" 
                           style={{ width: '100%', background: !isSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', cursor: !isSuperAdmin ? 'not-allowed' : 'text', opacity: !isSuperAdmin ? 0.75 : 1 }} 
@@ -17224,7 +18119,7 @@ export default function App() {
                         <input 
                           type="text" 
                           disabled={!isSuperAdmin}
-                          value={createInvoiceForm.bank_account_number || '50200018942109'} 
+                          value={createInvoiceForm.bank_account_number ?? ''} 
                           onChange={(e) => isSuperAdmin && setCreateInvoiceForm({ ...createInvoiceForm, bank_account_number: e.target.value })} 
                           placeholder="50200018942109" 
                           style={{ width: '100%', background: !isSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace', cursor: !isSuperAdmin ? 'not-allowed' : 'text', opacity: !isSuperAdmin ? 0.75 : 1 }} 
@@ -17235,9 +18130,14 @@ export default function App() {
                         <label style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>IFSC Code *</label>
                         <input 
                           type="text" 
+                          maxLength={11}
                           disabled={!isSuperAdmin}
-                          value={createInvoiceForm.bank_ifsc_code || 'HDFC0000128'} 
-                          onChange={(e) => isSuperAdmin && setCreateInvoiceForm({ ...createInvoiceForm, bank_ifsc_code: e.target.value })} 
+                          value={createInvoiceForm.bank_ifsc_code ?? ''} 
+                          onChange={(e) => {
+                            if (!isSuperAdmin) return;
+                            const clean = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11);
+                            setCreateInvoiceForm({ ...createInvoiceForm, bank_ifsc_code: clean });
+                          }} 
                           placeholder="HDFC0000128" 
                           style={{ width: '100%', background: !isSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', fontFamily: 'monospace', cursor: !isSuperAdmin ? 'not-allowed' : 'text', opacity: !isSuperAdmin ? 0.75 : 1 }} 
                         />
@@ -17248,7 +18148,7 @@ export default function App() {
                         <input 
                           type="text" 
                           disabled={!isSuperAdmin}
-                          value={createInvoiceForm.bank_upi_id || 'swaramayi@hdfcbank'} 
+                          value={createInvoiceForm.bank_upi_id ?? ''} 
                           onChange={(e) => isSuperAdmin && setCreateInvoiceForm({ ...createInvoiceForm, bank_upi_id: e.target.value })} 
                           placeholder="swaramayi@hdfcbank" 
                           style={{ width: '100%', background: !isSuperAdmin ? (isLight ? '#e2e8f0' : '#1e293b') : (isLight ? '#ffffff' : '#1e293b'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '7px', borderRadius: '6px', fontSize: '0.82rem', cursor: !isSuperAdmin ? 'not-allowed' : 'text', opacity: !isSuperAdmin ? 0.75 : 1 }} 
@@ -17855,8 +18755,23 @@ export default function App() {
                     🏦 OFFICIAL BANK ACCOUNT DETAILS FOR PAYOUT / SETTLEMENT
                   </span>
                   <div style={{ fontWeight: '800', color: activeT.footerText, fontSize: '0.8rem', marginTop: '3px' }}>
-                    {showPrintInvoiceModal.invoice.bank_name || 'HDFC Bank'} • A/C: <span style={{ fontFamily: 'monospace' }}>{showPrintInvoiceModal.invoice.bank_account_number || '50200018942109'}</span> • IFSC: <span style={{ fontFamily: 'monospace' }}>{showPrintInvoiceModal.invoice.bank_ifsc_code || 'HDFC0000128'}</span>
-                    {showPrintInvoiceModal.invoice.bank_upi_id ? ` • UPI ID: ${showPrintInvoiceModal.invoice.bank_upi_id}` : ''}
+                    {(() => {
+                      const bName = (bankDetails && bankDetails[0]?.bank_name) || showPrintInvoiceModal.invoice.bank_name || 'HDFC Bank';
+                      const bAcc = (bankDetails && bankDetails[0]?.account_number) || showPrintInvoiceModal.invoice.bank_account_number || '50200018942109';
+                      const bIfsc = (bankDetails && bankDetails[0]?.ifsc_code) || showPrintInvoiceModal.invoice.bank_ifsc_code || 'HDFC0000128';
+                      let bUpi = (bankDetails && bankDetails[0]?.upi_id) || showPrintInvoiceModal.invoice.bank_upi_id || 'swaramayi@hdfcbank';
+                      if (typeof bUpi === 'string' && /^\d{10}[a-zA-Z]+$/.test(bUpi.trim())) {
+                        bUpi = bUpi.trim().replace(/^(\d{10})([a-zA-Z]+)$/, (_m: string, p1: string, p2: string) => p1 + '@' + p2);
+                      }
+                      return (
+                        <>
+                          {bName} • A/C: <span style={{ fontFamily: 'monospace' }}>{bAcc}</span> • IFSC: <span style={{ fontFamily: 'monospace' }}>{bIfsc}</span>
+                          {bUpi ? (
+                            <span> • UPI ID: <span style={{ fontFamily: 'monospace' }}>{bUpi}</span></span>
+                          ) : null}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 

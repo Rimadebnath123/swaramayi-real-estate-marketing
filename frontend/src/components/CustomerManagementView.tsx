@@ -1068,11 +1068,8 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
     // Helper to evaluate if an invoice accounts settlement is marked settled (strictly for Item 16 Invoice ID)
     const isInvSettled = (inv: any) => {
       if (!inv) return false;
-      if (inv.is_settled === true) return true;
-      if (inv.is_settled === false) return false;
-      const sStatus = (inv.settlement_status || '').toString().trim().toUpperCase();
-      if (sStatus === 'SETTLED') return true;
-      if (sStatus === 'NOT SETTLED' || sStatus === 'NOT_SETTLED') return false;
+      if (inv.is_settled === true || inv.settlement_status === 'SETTLED') return true;
+      if (inv.is_settled === false || inv.settlement_status === 'NOT SETTLED') return false;
       const pStatus = (inv.payment_status || '').toString().trim().toUpperCase();
       return pStatus === 'PAID_SETTLED' || pStatus === 'PAID' || pStatus === 'ONLINE' || pStatus.includes('PAID');
     };

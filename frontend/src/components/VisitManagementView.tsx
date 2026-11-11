@@ -61,6 +61,8 @@ interface VisitManagementViewProps {
   handleReturnVisitToCostSheet?: (visit: any) => void;
   onRecycleItem?: (itemData: any) => void;
   users?: any[];
+  generateNextBookingCode?: () => string;
+  recycledItems?: any[];
 }
 
 export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
@@ -122,6 +124,8 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
   handleReturnVisitToCostSheet,
   onRecycleItem,
   users = [],
+  generateNextBookingCode,
+  recycledItems = [],
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER');
@@ -296,6 +300,15 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
 
   const [showEditVisitFollowupModal, setShowEditVisitFollowupModal] = useState<any>(null);
   const [showSelectBookingPropertyModal, setShowSelectBookingPropertyModal] = useState<{ open: boolean; visit: any; stops: any[] } | null>(null);
+  const [showPreBookingConfirmModal, setShowPreBookingConfirmModal] = useState<{
+    open: boolean;
+    visit: any;
+    propertyTitle: string;
+    costSheetId?: string;
+    developer?: string;
+    propertyCode?: string;
+    pvaId?: string;
+  } | null>(null);
   const [editVisitFollowupForm, setEditVisitFollowupForm] = useState<any>({
     followupDate: '',
     followupTime: '',
@@ -304,38 +317,147 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     notes: ''
   });
 
-  const executeCreateBooking = (v: any, targetPropTitle: string, targetCostSheetId?: string, targetDeveloper?: string) => {
-    const generatedBookingCode = (v.visitId && v.visitId.includes('SRM-VS-')) 
-      ? v.visitId.replace('SRM-VS-', 'SRM-BKG-') 
-      : `SRM-BKG-2026-0000${(bookings?.length || 0) + 88}`;
+  const executeCreateBooking = (
+    v: any, 
+    targetPropTitle: string, 
+    targetCostSheetId?: string, 
+    targetDeveloper?: string,
+    targetPropCode?: string,
+    targetPvaId?: string
+  ) => {
+    const alreadyBooked = (bookings || []).some((b: any) => 
+      (b.customer_number && v.customerNumber && b.customer_number === v.customerNumber) ||
+      (b.customer_name && v.customerName && b.customer_name.toLowerCase().trim() === v.customerName.toLowerCase().trim() && b.project_name?.toLowerCase().trim() === targetPropTitle.toLowerCase().trim())
+    );
+    if (alreadyBooked) {
+      alert(`ℹ️ Customer ${v.customerName || 'Customer'} already has an active booking for ${targetPropTitle}!`);
+      return;
+    }
+    const generatedBookingCode = generateNextBookingCode
+      ? generateNextBookingCode()
+      : ((v.visitId && v.visitId.includes('SRM-VS-')) 
+          ? v.visitId.replace('SRM-VS-', 'SRM-BKG-') 
+          : `SRM-BKG-2026-${String((bookings?.length || 0) + 1).padStart(6, "0")}`);
     
+    // Resolve Cost Sheet
+    const cs = (individualCostSheets || []).find((c: any) => 
+      (targetCostSheetId && (c.costSheetId === targetCostSheetId || c.id === targetCostSheetId)) ||
+      (targetPropCode && (c.propertyCode === targetPropCode || c.propertyId === targetPropCode)) ||
+      (targetPropTitle && c.propertySnapshot?.propertyTitle?.toLowerCase().trim() === targetPropTitle.toLowerCase().trim())
+    );
+
+    // Resolve Property
+    const matchedProp = (properties || []).find((p: any) => {
+      const pCode = (p.property_code || p.id || '').trim().toLowerCase();
+      const pTitle = (p.title || p.property_title || p.project_name || '').trim().toLowerCase();
+      if (targetPropCode && pCode === targetPropCode.trim().toLowerCase()) return true;
+      if (cs?.propertyCode && pCode === cs.propertyCode.trim().toLowerCase()) return true;
+      if (targetPropTitle && pTitle === targetPropTitle.trim().toLowerCase()) return true;
+      if (v.propertyCode && pCode === v.propertyCode.trim().toLowerCase()) return true;
+      return false;
+    });
+
+    // Resolve PVA
+    const matchedPva = (projectVisitAgreements || []).find((p: any) => {
+      if (targetPvaId && (p.projectVisitAgreementId === targetPvaId || p.id === targetPvaId)) return true;
+      if (targetCostSheetId && p.costSheetId === targetCostSheetId) return true;
+      const resCode = targetPropCode || cs?.propertyCode || matchedProp?.property_code;
+      if (resCode && (p.propertyCode === resCode || p.property_code === resCode || p.propertyId === resCode)) return true;
+      if (targetPropTitle && p.projectTitle && p.projectTitle.toLowerCase().trim() === targetPropTitle.toLowerCase().trim()) return true;
+      return false;
+    }) || (typeof getPvaMatch === 'function' ? getPvaMatch(v) : null);
+
+    const pvaAgreementCode = matchedPva?.projectVisitAgreementId || targetPvaId || (v.stops && v.stops.find((s: any) => s.pvaId)?.pvaId) || '';
+
+    const resolvedDeveloper = targetDeveloper || cs?.propertySnapshot?.developerName || matchedProp?.developer || matchedPva?.developerName || v.developerName || v.developer || 'Partner Developer';
+    const resolvedProjTitle = targetPropTitle || matchedPva?.projectTitle || matchedProp?.title || v.propertyTitle || 'Property Unit';
+    const resolvedPropCode = targetPropCode || cs?.propertyCode || cs?.propertySnapshot?.propertyCode || matchedProp?.property_code || v.propertyCode || 'SRM-PROP-2026-000001';
+
+    // Compute dynamic agreement value number and string
+    let computedAgreeValStr = '';
+    let computedAgreeValNum = 0;
+
+    if (cs) {
+      if (cs.formattedPriceBreakup?.subtotalStr) {
+        computedAgreeValStr = cs.formattedPriceBreakup.subtotalStr;
+      } else if (cs.formattedPriceBreakup?.basePriceStr) {
+        computedAgreeValStr = cs.formattedPriceBreakup.basePriceStr;
+      } else if (cs.pricingSnapshot?.subtotalBeforeTax) {
+        computedAgreeValNum = Number(cs.pricingSnapshot.subtotalBeforeTax);
+        computedAgreeValStr = `₹${computedAgreeValNum.toLocaleString('en-IN')}`;
+      } else if (cs.pricingSnapshot?.basePrice) {
+        computedAgreeValNum = Number(cs.pricingSnapshot.basePrice);
+        computedAgreeValStr = `₹${computedAgreeValNum.toLocaleString('en-IN')}`;
+      }
+      if (!computedAgreeValNum && computedAgreeValStr) {
+        computedAgreeValNum = Number(computedAgreeValStr.replace(/\D/g, '')) || 0;
+      }
+    }
+
+    if (!computedAgreeValNum && matchedProp) {
+      const rawP = matchedProp.total_base_price_with_other_charges || matchedProp.final_price || matchedProp.total_base_price || matchedProp.base_price;
+      const numP = typeof rawP === 'number' ? rawP : Number(String(rawP || '').replace(/\D/g, '')) || 0;
+      if (numP > 0) {
+        computedAgreeValNum = numP;
+        computedAgreeValStr = `₹${numP.toLocaleString('en-IN')}`;
+      }
+    }
+
+    if (!computedAgreeValNum) {
+      const rawVal = v.agreement_value_num || v.agreement_value || matchedPva?.agreement_value_num || matchedPva?.agreement_value;
+      if (rawVal) {
+        computedAgreeValNum = typeof rawVal === 'number' ? rawVal : Number(String(rawVal).replace(/\D/g, '')) || 0;
+        computedAgreeValStr = typeof rawVal === 'string' && rawVal.startsWith('₹') ? rawVal : `₹${computedAgreeValNum.toLocaleString('en-IN')}`;
+      }
+    }
+
+    const resolvedAgreementVal = computedAgreeValStr || (computedAgreeValNum ? `₹${computedAgreeValNum.toLocaleString('en-IN')}` : (matchedProp?.final_price || '₹0'));
+    const resolvedAgreementValNum = computedAgreeValNum || Number(resolvedAgreementVal.replace(/\D/g, '')) || 0;
+    const computedBrokerage = Math.round(resolvedAgreementValNum * 0.02);
+
     const newBookingObj = {
       id: `bkg-${Date.now()}`,
       booking_code: generatedBookingCode,
+      agreement_code: pvaAgreementCode,
       booking_date: new Date().toISOString().split('T')[0],
-      customer_name: v.customerName || 'Customer',
-      customer_mobile: v.mobile || '',
-      customer_number: v.customerNumber || '',
-      project_name: targetPropTitle,
+      customer_name: v.customerName || matchedPva?.customerName || 'Customer',
+      customer_mobile: v.mobile || matchedPva?.customerMobile || '',
+      customer_number: v.customerNumber || matchedPva?.customerId || '',
+      project_name: resolvedProjTitle,
+      property_title: resolvedProjTitle,
+      property_code: resolvedPropCode,
+      propertyCode: resolvedPropCode,
       cost_sheet_id: targetCostSheetId || v.costSheetId || '',
-      developer_name: targetDeveloper || v.developerName || v.developer || 'Swaramayi Partner Developer',
-      tower_unit: 'Unit TBD',
-      agreement_value: '₹51,14,880',
-      token_amount: 100000,
+      developer_name: resolvedDeveloper,
+      developer_mobile: matchedProp?.developer_mobile || matchedProp?.developer_contact || '8780989756',
+      developer_contact_person: resolvedDeveloper,
+      tower_unit: v.unitNumber || 'Unit TBD',
+      agreement_value: resolvedAgreementVal,
+      agreement_value_num: resolvedAgreementValNum,
+      token_amount: v.token_amount || 100000,
       payment_mode: 'UPI / Online Bank Transfer',
-      payment_ref: `TXN-SRM-${Math.floor(100000 + Math.random() * 900000)}`,
+      payment_ref: matchedPva?.otpHashRef ? `PVA-SIG-${matchedPva.otpHashRef.slice(-6)}` : `TXN-SRM-${Math.floor(100000 + Math.random() * 900000)}`,
       brokerage_rate: '2.0%',
-      brokerage_amount: Math.round(((v?.agreement_value_num || 5114880) || 0) * 0.02),
+      brokerage_amount: computedBrokerage,
       approval_status: 'APPROVED_LOCKED',
+      status: 'CONFIRMED',
       sales_executive: v.assignedExecutive || 'Unassigned'
     };
 
     const updatedBookings = [newBookingObj, ...(bookings || [])];
-    const updatedVisits = (scheduledVisits || []).filter((sv: any) => 
-      sv.visitId !== v.visitId && 
-      sv.costSheetId !== v.costSheetId && 
-      (!v.id || sv.id !== v.id)
-    );
+    const updatedVisits = (scheduledVisits || []).map((sv: any) => {
+      const isMatch = (v.visitId && (sv.visitId === v.visitId || sv.id === v.visitId)) || 
+                      (v.id && (sv.id === v.id || sv.visitId === v.id)) || 
+                      (v.costSheetId && sv.costSheetId === v.costSheetId);
+      if (isMatch) {
+        return {
+          ...sv,
+          bookingStatus: 'BOOKED',
+          bookingCode: generatedBookingCode
+        };
+      }
+      return sv;
+    });
     const updatedPlans = (visitPlans || []).filter((plan: any) => 
       plan.visitScheduleId !== v.visitId && 
       plan.visitPlanId !== v.visitId && 
@@ -360,10 +482,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     }
 
     if (setScheduledVisits) setScheduledVisits(updatedVisits);
-    try { localStorage.setItem('swaramayi_scheduled_visits_v4_clean', JSON.stringify(updatedVisits)); } catch (e) {}
-
     if (setVisitPlans) setVisitPlans(updatedPlans);
-    try { localStorage.setItem('swaramayi_visit_plans_v4_clean', JSON.stringify(updatedPlans)); } catch (e) {}
 
     if (syncAllToMongoDB) {
       syncAllToMongoDB({
@@ -419,9 +538,80 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     return Array.from(map.values());
   }, [ratingInvitesList]);
 
+  const recycledVisitIds = React.useMemo(() => {
+    const s = new Set<string>();
+    (recycledItems || []).forEach((r: any) => {
+      if (r.category === 'Visit Management') {
+        const addId = (idVal?: any) => {
+          if (!idVal || typeof idVal !== 'string') return;
+          const trimmed = idVal.trim();
+          if (!trimmed) return;
+          s.add(trimmed.toLowerCase());
+          if (trimmed.startsWith('COST-SHEET-')) {
+            s.add(trimmed.replace('COST-SHEET-', 'SRM-VS-').toLowerCase());
+          } else if (trimmed.startsWith('SRM-VS-')) {
+            s.add(trimmed.replace('SRM-VS-', 'COST-SHEET-').toLowerCase());
+          }
+        };
+
+        addId(r.id);
+        const d = r.originalData || {};
+        addId(d.id);
+        addId(d.visitId);
+        addId(d.visitScheduleId);
+        addId(d.visitPlanId);
+        addId(d.costSheetId);
+        addId(d.site_visit_code);
+        if (Array.isArray(d.stops)) {
+          d.stops.forEach((st: any) => addId(st?.costSheetId));
+        }
+
+        const textToScan = `${r.title || ''} ${r.details || ''} ${r.id || ''} ${d.title || ''} ${d.details || ''}`;
+        const mVis = textToScan.match(/SRM-VS-(?:20\d{2}-)?\d+/gi);
+        if (mVis) mVis.forEach(m => addId(m));
+        const mCs = textToScan.match(/COST-SHEET-(?:20\d{2}-)?\d+/gi);
+        if (mCs) mCs.forEach(m => addId(m));
+      }
+    });
+    return s;
+  }, [recycledItems]);
+
+  const isVisitRecycled = React.useCallback((v: any) => {
+    if (!v || recycledVisitIds.size === 0) return false;
+    const checkId = (val?: any) => {
+      if (!val || typeof val !== 'string') return false;
+      const t = val.trim().toLowerCase();
+      if (!t) return false;
+      if (recycledVisitIds.has(t)) return true;
+      if (t.startsWith('cost-sheet-') && recycledVisitIds.has(t.replace('cost-sheet-', 'srm-vs-'))) return true;
+      if (t.startsWith('srm-vs-') && recycledVisitIds.has(t.replace('srm-vs-', 'cost-sheet-'))) return true;
+      return false;
+    };
+
+    if (checkId(v.id)) return true;
+    if (checkId(v.visitId)) return true;
+    if (checkId(v.visitScheduleId)) return true;
+    if (checkId(v.visitPlanId)) return true;
+    if (checkId(v.costSheetId)) return true;
+    if (checkId(v.site_visit_code)) return true;
+
+    if (Array.isArray(v.stops)) {
+      for (const st of v.stops) {
+        if (st && checkId(st.costSheetId)) return true;
+      }
+    }
+    return false;
+  }, [recycledVisitIds]);
+
   const unifiedVisits = React.useMemo(() => {
     let list: any[] = [...(scheduledVisits || [])].map((v: any) => {
-      let vId = v.visitId || v.id || v.site_visit_code || v.visitScheduleId || v.costSheetId;
+      let vId = v.visitId || v.visitScheduleId || v.visitPlanId || v.site_visit_code || v.id;
+      if (typeof vId === 'string' && vId.startsWith('COST-SHEET-')) {
+        vId = v.visitScheduleId || v.visitPlanId || v.site_visit_code || '';
+      }
+      if (!vId && v.costSheetId && typeof v.costSheetId === 'string' && v.costSheetId.startsWith('COST-SHEET-')) {
+        vId = v.costSheetId.replace('COST-SHEET-', 'SRM-VS-');
+      }
       if (typeof vId === 'string' && vId.includes('000087')) {
         vId = vId.replace('000087', '000001');
       }
@@ -430,6 +620,10 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
         visitId: vId || v.visitId
       };
     }).filter(v => {
+      if (isVisitRecycled(v)) {
+        return false;
+      }
+
       const vId = v.visitId || v.id || v.site_visit_code || v.visitScheduleId || v.costSheetId;
       const vMob = (v.mobile || v.customerMobile || '').replace(/\D/g, '');
       const vCustNo = v.customerNumber || v.customerId;
@@ -442,31 +636,41 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       );
       if (isSent || v.status === 'SENT_TO_FOLLOWUP' || v.visit_status === 'SENT_TO_FOLLOWUP' || v.status === 'SHIFTED_TO_MATCHING' || v.status === 'RETURNED_TO_COST_SHEET' || v.status === 'CANCELLED') return false;
 
-      // STRICT 1-PLACE CHECK: If customer is currently PENDING in Matching Management, remove from Visit
+      // STRICT 1-PLACE PIPELINE CHECK: Exclude visits that have already graduated to Booking
+      if (v.bookingStatus === 'BOOKED' || v.status === 'BOOKED' || v.visit_status === 'BOOKED') {
+        return false;
+      }
+      const isAlreadyBooked = (bookings || []).some((b: any) => {
+        const bMob = (b.customer_mobile || '').replace(/\D/g, '');
+        const bCustNo = (b.customer_number || '').trim().toLowerCase();
+        const vCustNoClean = (vCustNo || '').trim().toLowerCase();
+        if (vCustNoClean && bCustNo && vCustNoClean === bCustNo) return true;
+        if (vMob && bMob && vMob.length >= 7 && vMob === bMob) return true;
+        if (v.bookingCode && b.booking_code && v.bookingCode === b.booking_code) return true;
+        return false;
+      });
+      if (isAlreadyBooked) {
+        return false;
+      }
+
+      // STRICT 1-PLACE CHECK: Only remove from Visit if THIS SPECIFIC visit was shifted back to Matching
       const isShiftedToMatching = (matchingRequestsQueue || []).some((r: any) => {
         if (r.status !== 'PENDING') return false;
-        const rCustNo = (r.customerNumber || r.customerId || '').toLowerCase().trim();
-        const rMob = (r.mobile || '').replace(/\D/g, '');
-        const rName = (r.customerName || r.name || '').toLowerCase().trim();
-        const targetCustNo = (vCustNo || '').toLowerCase().trim();
-
-        if (targetCustNo && rCustNo && targetCustNo === rCustNo) return true;
-        if (vMob && rMob && vMob.length >= 7 && vMob === rMob) return true;
-        if (vCustName && rName && vCustName.length > 2 && vCustName === rName && (r.handoffNote || (r.notes && r.notes.includes('Shifted')))) return true;
+        if (r.visitId && (r.visitId === vId || r.visitId === v.visitScheduleId)) return true;
+        const isShiftNote = Boolean((r.handoffNote && r.handoffNote.includes('Shifted from Visit')) || (r.notes && r.notes.includes('Shifted from Visit')));
+        if (isShiftNote) {
+          const rCustNo = (r.customerNumber || r.customerId || '').toLowerCase().trim();
+          const targetCustNo = (vCustNo || '').toLowerCase().trim();
+          if (targetCustNo && rCustNo && targetCustNo === rCustNo) return true;
+        }
         return false;
       });
       if (isShiftedToMatching) return false;
 
-      // STRICT 1-PLACE CHECK: If customer's cost sheet is SHARED/ACTIVE (returned to Cost Sheet Sharing), remove from Visit
+      // STRICT 1-PLACE CHECK: If THIS SPECIFIC cost sheet is SHARED/ACTIVE (returned to Cost Sheet Sharing), remove from Visit
       const isCostSheetActiveInSharing = (individualCostSheets || []).some((cs: any) => {
         if (cs.status !== 'SHARED' && cs.status !== 'ACTIVE') return false;
-        const csCustNo = (cs.customerId || cs.customerNumber || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber || '').toLowerCase().trim();
-        const csMob = (cs.mobile || cs.customerSnapshot?.mobile || '').replace(/\D/g, '');
-        const targetCustNo = (vCustNo || '').toLowerCase().trim();
-
         if (v.costSheetId && (cs.costSheetId === v.costSheetId || cs.id === v.costSheetId)) return true;
-        if (targetCustNo && csCustNo && targetCustNo === csCustNo) return true;
-        if (vMob && csMob && vMob.length >= 7 && vMob === csMob) return true;
         return false;
       });
       if (isCostSheetActiveInSharing) return false;
@@ -474,85 +678,18 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       return true;
     });
 
-    (visitPlans || []).forEach(plan => {
-      const planId = plan.visitPlanId || plan.visitScheduleId;
-      const planMob = (plan.mobile || '').replace(/\D/g, '');
-      const planCustNo = plan.customerNumber;
-      const planCustName = (plan.customerName || plan.name || '').toLowerCase().trim();
-
-      const isSent = sentToFollowupVisitIds.some(id => 
-        (planId && (id === planId || String(planId).includes(String(id)) || String(id).includes(String(planId)))) ||
-        (planCustNo && (id === planCustNo || String(planCustNo).includes(String(id)) || String(id).includes(String(planCustNo)))) ||
-        (planMob && planMob.length >= 7 && (id === planMob || String(id).includes(planMob) || planMob.includes(String(id))))
-      );
-
-      if (isSent || plan.status === 'SENT_TO_FOLLOWUP' || plan.status === 'SHIFTED_TO_MATCHING' || plan.status === 'RETURNED_TO_COST_SHEET' || plan.status === 'CANCELLED') return;
-
-      const isShiftedToMatching = (matchingRequestsQueue || []).some((r: any) => {
-        if (r.status !== 'PENDING') return false;
-        const rCustNo = (r.customerNumber || r.customerId || '').toLowerCase().trim();
-        const rMob = (r.mobile || '').replace(/\D/g, '');
-        const rName = (r.customerName || r.name || '').toLowerCase().trim();
-        const targetCustNo = (planCustNo || '').toLowerCase().trim();
-
-        if (targetCustNo && rCustNo && targetCustNo === rCustNo) return true;
-        if (planMob && rMob && planMob.length >= 7 && planMob === rMob) return true;
-        if (planCustName && rName && planCustName.length > 2 && planCustName === rName && (r.handoffNote || (r.notes && r.notes.includes('Shifted')))) return true;
-        return false;
-      });
-      if (isShiftedToMatching) return;
-
-      const isCostSheetActiveInSharing = (individualCostSheets || []).some((cs: any) => {
-        if (cs.status !== 'SHARED' && cs.status !== 'ACTIVE') return false;
-        const csCustNo = (cs.customerId || cs.customerNumber || cs.customerSnapshot?.customerId || cs.customerSnapshot?.customerNumber || '').toLowerCase().trim();
-        const csMob = (cs.mobile || cs.customerSnapshot?.mobile || '').replace(/\D/g, '');
-        const targetCustNo = (planCustNo || '').toLowerCase().trim();
-
-        if (targetCustNo && csCustNo && targetCustNo === csCustNo) return true;
-        if (planMob && csMob && planMob.length >= 7 && planMob === csMob) return true;
-        return false;
-      });
-      if (isCostSheetActiveInSharing) return;
-
-      let pVisitId = plan.visitPlanId || plan.visitScheduleId;
-      if (typeof pVisitId === 'string' && pVisitId.includes('000087')) {
-        pVisitId = pVisitId.replace('000087', '000001');
-      }
-      const exists = list.some(sv => sv.visitId === pVisitId || sv.visitId === plan.visitPlanId || sv.visitId === plan.visitScheduleId);
-      if (!exists) {
-        const firstStop = (plan.stops && plan.stops[0]) || {};
-        const propTitle = plan.stops && plan.stops.length === 1 
-          ? plan.stops[0].propertyTitle 
-          : (plan.stops && plan.stops.length > 1 ? `${plan.stops[0].propertyTitle} (+${plan.stops.length - 1} more)` : (firstStop.propertyTitle || 'Property Visit'));
-        list.push({
-          visitId: pVisitId,
-          costSheetId: firstStop.costSheetId,
-          customerName: plan.customerName,
-          customerNumber: plan.customerNumber,
-          mobile: plan.mobile,
-          propertyTitle: propTitle,
-          propertyCode: firstStop.propertyCode,
-          locality: firstStop.locality,
-          visitDate: plan.visitDate,
-          visitTime: plan.startTime || (firstStop.scheduledTime || '10:00 AM'),
-          assignedExecutive: plan.assignedExecutive,
-          transport: plan.transport || '🚗 Cab Pick & Drop Needed',
-          status: plan.status || 'ASSIGNED',
-          totalStops: plan.stops ? plan.stops.length : 1,
-          stops: plan.stops
-        });
-      }
-    });
     return list;
-  }, [scheduledVisits, visitPlans, sentToFollowupVisitIds, matchingRequestsQueue, individualCostSheets]);
+  }, [scheduledVisits, isVisitRecycled, sentToFollowupVisitIds, matchingRequestsQueue, individualCostSheets, bookings]);
 
   const effectiveVisitPlans = React.useMemo(() => {
     const list: any[] = [...(visitPlans || [])].filter(plan => {
+      if (isVisitRecycled(plan)) return false;
       const planCustNo = (plan.customerNumber || plan.customerId || '').toLowerCase().trim();
       const planMob = (plan.mobile || '').replace(/\D/g, '');
       const planCustName = (plan.customerName || plan.name || '').toLowerCase().trim();
 
-      if (plan.status === 'SENT_TO_FOLLOWUP' || plan.status === 'SHIFTED_TO_MATCHING' || plan.status === 'RETURNED_TO_COST_SHEET' || plan.status === 'CANCELLED') return false;
+      if (plan.status === 'SENT_TO_FOLLOWUP' || plan.status === 'SHIFTED_TO_MATCHING' || plan.status === 'RETURNED_TO_COST_SHEET' || plan.status === 'CANCELLED' || plan.status === 'BOOKED' || plan.bookingStatus === 'BOOKED') return false;
+      if ((bookings || []).some((b: any) => (planCustNo && b.customer_number && planCustNo === b.customer_number.toLowerCase().trim()) || (planMob && b.customer_mobile && planMob === b.customer_mobile.replace(/\D/g, '')))) return false;
 
       const isShiftedToMatching = (matchingRequestsQueue || []).some((r: any) => {
         if (r.status !== 'PENDING') return false;
@@ -582,6 +719,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     });
 
     (scheduledVisits || []).forEach((sv: any) => {
+      if (isVisitRecycled(sv)) return;
       const svId = sv.visitPlanId || sv.visitScheduleId || sv.visitId || sv.id || (sv.costSheetId ? `SRM-VS-${sv.costSheetId}` : null);
       if (!svId) return;
 
@@ -590,11 +728,13 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
         (sv.customerNumber && (id === sv.customerNumber || String(sv.customerNumber).includes(String(id)))) ||
         (sv.mobile && (id === sv.mobile.replace(/\D/g, '')))
       );
-      if (isSent || sv.status === 'SENT_TO_FOLLOWUP' || sv.visit_status === 'SENT_TO_FOLLOWUP' || sv.status === 'SHIFTED_TO_MATCHING' || sv.status === 'RETURNED_TO_COST_SHEET' || sv.status === 'CANCELLED') return;
+      if (isSent || sv.status === 'SENT_TO_FOLLOWUP' || sv.visit_status === 'SENT_TO_FOLLOWUP' || sv.status === 'SHIFTED_TO_MATCHING' || sv.status === 'RETURNED_TO_COST_SHEET' || sv.status === 'CANCELLED' || sv.bookingStatus === 'BOOKED' || sv.status === 'BOOKED') return;
 
       const svCustNo = (sv.customerNumber || sv.customerId || '').toLowerCase().trim();
       const svMob = (sv.mobile || '').replace(/\D/g, '');
       const svCustName = (sv.customerName || sv.name || '').toLowerCase().trim();
+
+      if ((bookings || []).some((b: any) => (svCustNo && b.customer_number && svCustNo === b.customer_number.toLowerCase().trim()) || (svMob && b.customer_mobile && svMob === b.customer_mobile.replace(/\D/g, '')))) return;
 
       const isShiftedToMatching = (matchingRequestsQueue || []).some((r: any) => {
         if (r.status !== 'PENDING') return false;
@@ -691,13 +831,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     });
 
     return list;
-  }, [visitPlans, scheduledVisits, sentToFollowupVisitIds, matchingRequestsQueue, individualCostSheets]);
-
-  React.useEffect(() => {
-    if (setVisitPlans && effectiveVisitPlans.length > (visitPlans || []).length) {
-      setVisitPlans(effectiveVisitPlans);
-    }
-  }, [effectiveVisitPlans, visitPlans, setVisitPlans]);
+  }, [visitPlans, scheduledVisits, isVisitRecycled, sentToFollowupVisitIds, matchingRequestsQueue, individualCostSheets]);
 
   const getPvaMatch = (v: any) => {
     const cleanMob = (v?.mobile || '').replace(/\D/g, '');
@@ -821,18 +955,11 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
         return vp;
       });
       setVisitPlans(updatedPlans);
-      try {
-        localStorage.setItem('swaramayi_visit_plans_v4_clean', JSON.stringify(updatedPlans));
-      } catch (e) {}
     }
-
-    try {
-      localStorage.setItem('swaramayi_scheduled_visits_v7_clean', JSON.stringify(updatedScheduledVisits));
-    } catch (e) {}
 
     if (syncAllToMongoDB) {
       try {
-        await syncAllToMongoDB({ scheduledVisits: updatedScheduledVisits });
+        await syncAllToMongoDB({ site_visits: updatedScheduledVisits, scheduledVisits: updatedScheduledVisits });
       } catch (err) {
         console.warn('Sync to mongo failed:', err);
       }
@@ -1179,6 +1306,27 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                 <button 
                                   onClick={() => {
                                     if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Visit Route Plan ${plan.visitPlanId || plan.visitScheduleId} for ${plan.customerName || 'Customer'}? It will be moved to Recycle Bin.`)) {
+                                      const matchIds = new Set<string>();
+                                      const addMatch = (val?: string) => {
+                                        if (!val || typeof val !== 'string') return;
+                                        const t = val.trim().toLowerCase();
+                                        if (!t) return;
+                                        matchIds.add(t);
+                                        if (t.startsWith('cost-sheet-')) {
+                                          matchIds.add(t.replace('cost-sheet-', 'srm-vs-'));
+                                        } else if (t.startsWith('srm-vs-')) {
+                                          matchIds.add(t.replace('srm-vs-', 'cost-sheet-'));
+                                        }
+                                      };
+
+                                      addMatch(plan.visitPlanId);
+                                      addMatch(plan.visitScheduleId);
+                                      addMatch(plan.id);
+                                      addMatch(plan.costSheetId);
+                                      if (Array.isArray(plan.stops)) {
+                                        plan.stops.forEach((st: any) => addMatch(st?.costSheetId));
+                                      }
+
                                       if (onRecycleItem) {
                                         onRecycleItem({
                                           id: plan.visitPlanId || plan.visitScheduleId || `VS-${Date.now()}`,
@@ -1189,32 +1337,47 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                           originalData: plan
                                         });
                                       }
-                                      const updatedPlans = (visitPlans || []).filter((p: any) => 
-                                        p.visitPlanId !== plan.visitPlanId && 
-                                        p.visitScheduleId !== plan.visitPlanId && 
-                                        p.visitPlanId !== plan.visitScheduleId && 
-                                        p.visitScheduleId !== plan.visitScheduleId && 
-                                        (!plan.id || p.id !== plan.id)
-                                      );
-                                      const updatedVisits = (scheduledVisits || []).filter((sv: any) => 
-                                        sv.visitId !== plan.visitPlanId && 
-                                        sv.costSheetId !== plan.visitPlanId && 
-                                        sv.visitId !== plan.visitScheduleId && 
-                                        sv.costSheetId !== plan.visitScheduleId && 
-                                        (!plan.id || sv.id !== plan.id)
-                                      );
+
+                                      const updatedPlans = (visitPlans || []).filter((p: any) => {
+                                        if (!p) return false;
+                                        const pPlanId = String(p.visitPlanId || '').toLowerCase().trim();
+                                        const pSchedId = String(p.visitScheduleId || '').toLowerCase().trim();
+                                        const pId = String(p.id || '').toLowerCase().trim();
+                                        const pCsIds = (p.stops || []).map((s: any) => String(s.costSheetId || '').toLowerCase().trim());
+
+                                        if (
+                                          (pPlanId && matchIds.has(pPlanId)) ||
+                                          (pSchedId && matchIds.has(pSchedId)) ||
+                                          (pId && matchIds.has(pId)) ||
+                                          pCsIds.some(cid => cid && matchIds.has(cid))
+                                        ) return false;
+                                        return true;
+                                      });
+
+                                      const updatedVisits = (scheduledVisits || []).filter((sv: any) => {
+                                        if (!sv) return false;
+                                        const svVId = String(sv.visitId || '').toLowerCase().trim();
+                                        const svSchedId = String(sv.visitScheduleId || '').toLowerCase().trim();
+                                        const svPlanId = String(sv.visitPlanId || '').toLowerCase().trim();
+                                        const svId = String(sv.id || '').toLowerCase().trim();
+                                        const svCsId = String(sv.costSheetId || '').toLowerCase().trim();
+
+                                        if (
+                                          (svVId && matchIds.has(svVId)) ||
+                                          (svSchedId && matchIds.has(svSchedId)) ||
+                                          (svPlanId && matchIds.has(svPlanId)) ||
+                                          (svId && matchIds.has(svId)) ||
+                                          (svCsId && matchIds.has(svCsId))
+                                        ) return false;
+                                        return true;
+                                      });
+
                                       if (setVisitPlans) {
                                         setVisitPlans(updatedPlans);
                                       }
-                                      try {
-                                        localStorage.setItem('swaramayi_visit_plans_v4_clean', JSON.stringify(updatedPlans));
-                                      } catch (e) {}
                                       if (setScheduledVisits) {
                                         setScheduledVisits(updatedVisits);
                                       }
-                                      try {
-                                        localStorage.setItem('swaramayi_scheduled_visits_v4_clean', JSON.stringify(updatedVisits));
-                                      } catch (e) {}
                                       if (syncAllToMongoDB) {
                                         syncAllToMongoDB({
                                           site_visits: updatedVisits
@@ -1711,12 +1874,27 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   return (
                     <tr key={idx} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
                       <td style={{ padding: '10px' }}>
-                        <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900' }}>{v.visitId}</span>
-                        {v.costSheetId && (
-                          <>
-                            <br /><span style={{ fontFamily: 'monospace', color: '#fbbf24', fontSize: '0.72rem', fontWeight: '800' }}>{v.costSheetId}</span>
-                          </>
-                        )}
+                        {(() => {
+                          let finalVisitId = v.visitId;
+                          if (!finalVisitId || (typeof finalVisitId === 'string' && finalVisitId.startsWith('COST-SHEET-'))) {
+                            finalVisitId = v.visitScheduleId || v.visitPlanId || matchedPlan?.visitPlanId || matchedPlan?.visitScheduleId || '';
+                          }
+                          if (!finalVisitId && v.costSheetId && typeof v.costSheetId === 'string' && v.costSheetId.startsWith('COST-SHEET-')) {
+                            finalVisitId = v.costSheetId.replace('COST-SHEET-', 'SRM-VS-');
+                          }
+                          return (
+                            <>
+                              <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900' }}>
+                                {finalVisitId || v.visitId || 'SRM-VS-2026-000002'}
+                              </span>
+                              {v.costSheetId && (
+                                <>
+                                  <br /><span style={{ fontFamily: 'monospace', color: '#fbbf24', fontSize: '0.72rem', fontWeight: '800' }}>{v.costSheetId}</span>
+                                </>
+                              )}
+                            </>
+                          );
+                        })()}
                       </td>
                       <td style={{ padding: '10px' }}>
                         <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.88rem' }}>{v.customerName}</strong>
@@ -2156,7 +2334,14 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                 setShowSelectBookingPropertyModal({ open: true, visit: v, stops: stopsList });
                               } else {
                                 const singleTitle = (v.propertyTitle || 'Property Visit').split(/\s*\(\+/)[0].trim();
-                                executeCreateBooking(v, singleTitle, v.costSheetId, v.developer);
+                                setShowPreBookingConfirmModal({
+                                  open: true,
+                                  visit: v,
+                                  propertyTitle: singleTitle,
+                                  costSheetId: v.costSheetId,
+                                  developer: v.developer,
+                                  propertyCode: v.propertyCode
+                                });
                               }
                             }}
                             style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}
@@ -2168,44 +2353,87 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                           {isSuperAdmin && (
                             <button 
                               onClick={() => {
-                                if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Scheduled Visit record ${v.visitId || v.costSheetId || 'this visit'} for ${v.customerName || 'Customer'}? It will be moved to Recycle Bin.`)) {
+                                const targetVisitId = v.visitId || v.visitScheduleId || v.visitPlanId || v.id || '';
+                                const targetCostSheetId = v.costSheetId || '';
+                                const targetCustNumber = v.customerNumber || '';
+                                const targetCustName = v.customerName || 'Customer';
+
+                                if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Scheduled Visit record ${targetVisitId || targetCostSheetId || 'this visit'} for ${targetCustName}? It will be moved to Recycle Bin.`)) {
+                                  const matchIds = new Set<string>();
+                                  const addMatch = (val?: string) => {
+                                    if (!val || typeof val !== 'string') return;
+                                    const t = val.trim().toLowerCase();
+                                    if (!t) return;
+                                    matchIds.add(t);
+                                    if (t.startsWith('cost-sheet-')) {
+                                      matchIds.add(t.replace('cost-sheet-', 'srm-vs-'));
+                                    } else if (t.startsWith('srm-vs-')) {
+                                      matchIds.add(t.replace('srm-vs-', 'cost-sheet-'));
+                                    }
+                                  };
+
+                                  [targetVisitId, targetCostSheetId, v.visitId, v.visitScheduleId, v.visitPlanId, v.id, v.costSheetId]
+                                    .filter(Boolean)
+                                    .forEach(x => addMatch(String(x)));
+                                  if (Array.isArray(v.stops)) {
+                                    v.stops.forEach((st: any) => addMatch(st?.costSheetId));
+                                  }
+
                                   if (onRecycleItem) {
                                     onRecycleItem({
-                                      id: v.visitId || v.costSheetId || `VIS-${Date.now()}`,
-                                      title: `Site Visit - ${v.customerName || 'Client'} (${v.visitId || v.costSheetId})`,
+                                      id: targetVisitId || targetCostSheetId || `VIS-${Date.now()}`,
+                                      title: `Site Visit - ${targetCustName} (${targetVisitId || targetCostSheetId})`,
                                       category: 'Visit Management',
                                       originalLocation: 'Scheduled Site Visits Vault',
                                       details: `Property: ${v.propertyTitle || 'N/A'}, Date: ${v.visitDate || 'N/A'}`,
-                                      originalData: v
+                                      originalData: { ...v, visitId: targetVisitId, costSheetId: targetCostSheetId }
                                     });
                                   }
-                                  const updatedVisits = (scheduledVisits || []).filter((sv: any) => 
-                                    sv.visitId !== v.visitId && 
-                                    sv.costSheetId !== v.costSheetId && 
-                                    (!v.id || sv.id !== v.id) &&
-                                    (!v.visitId || sv.visitId !== v.visitId) &&
-                                    (!v.costSheetId || sv.costSheetId !== v.costSheetId)
-                                  );
-                                  const updatedPlans = (visitPlans || []).filter((plan: any) => 
-                                    plan.visitScheduleId !== v.visitId && 
-                                    plan.visitPlanId !== v.visitId && 
-                                    (!v.id || plan.id !== v.id) &&
-                                    (!v.visitId || (plan.visitScheduleId !== v.visitId && plan.visitPlanId !== v.visitId))
-                                  );
+
+                                  const updatedVisits = (scheduledVisits || []).filter((sv: any) => {
+                                    if (!sv) return false;
+                                    const svVId = String(sv.visitId || '').toLowerCase().trim();
+                                    const svSchedId = String(sv.visitScheduleId || '').toLowerCase().trim();
+                                    const svPlanId = String(sv.visitPlanId || '').toLowerCase().trim();
+                                    const svId = String(sv.id || '').toLowerCase().trim();
+                                    const svCsId = String(sv.costSheetId || '').toLowerCase().trim();
+
+                                    if (
+                                      (svVId && matchIds.has(svVId)) ||
+                                      (svSchedId && matchIds.has(svSchedId)) ||
+                                      (svPlanId && matchIds.has(svPlanId)) ||
+                                      (svId && matchIds.has(svId)) ||
+                                      (svCsId && matchIds.has(svCsId))
+                                    ) return false;
+
+                                    if (targetCustNumber && sv.customerNumber && sv.customerNumber === targetCustNumber && sv.propertyCode === v.propertyCode) return false;
+                                    return true;
+                                  });
+
+                                  const updatedPlans = (visitPlans || []).filter((plan: any) => {
+                                    if (!plan) return false;
+                                    const pPlanId = String(plan.visitPlanId || '').toLowerCase().trim();
+                                    const pSchedId = String(plan.visitScheduleId || '').toLowerCase().trim();
+                                    const pId = String(plan.id || '').toLowerCase().trim();
+                                    const pCsIds = (plan.stops || []).map((s: any) => String(s.costSheetId || '').toLowerCase().trim());
+
+                                    if (
+                                      (pPlanId && matchIds.has(pPlanId)) ||
+                                      (pSchedId && matchIds.has(pSchedId)) ||
+                                      (pId && matchIds.has(pId)) ||
+                                      pCsIds.some(cid => cid && matchIds.has(cid))
+                                    ) return false;
+
+                                    if (targetCustNumber && plan.customerNumber && plan.customerNumber === targetCustNumber) return false;
+                                    return true;
+                                  });
 
                                   if (setScheduledVisits) {
                                     setScheduledVisits(updatedVisits);
                                   }
-                                  try {
-                                    localStorage.setItem('swaramayi_scheduled_visits_v4_clean', JSON.stringify(updatedVisits));
-                                  } catch (e) {}
-
                                   if (setVisitPlans) {
                                     setVisitPlans(updatedPlans);
                                   }
-                                  try {
-                                    localStorage.setItem('swaramayi_visit_plans_v4_clean', JSON.stringify(updatedPlans));
-                                  } catch (e) {}
 
                                   if (syncAllToMongoDB) {
                                     syncAllToMongoDB({
@@ -2213,7 +2441,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                                     });
                                   }
 
-                                  alert(`🗑️ Scheduled Visit record ${v.visitId || v.costSheetId || ''} moved to Recycle Bin.`);
+                                  alert(`🗑️ Scheduled Visit record ${targetVisitId || targetCostSheetId || ''} moved to Recycle Bin.`);
                                 }
                               }}
                               style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}
@@ -4623,6 +4851,152 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
       );
     })()}
 
+    {/* PRE-BOOKING CONFIRMATION MODAL WITH CANCEL AND CONFIRM OPTIONS */}
+    {showPreBookingConfirmModal && showPreBookingConfirmModal.open && (() => {
+      const v = showPreBookingConfirmModal.visit || {};
+      const targetCostSheetId = showPreBookingConfirmModal.costSheetId || v.costSheetId;
+      const targetPropCode = showPreBookingConfirmModal.propertyCode;
+      const targetPropTitle = showPreBookingConfirmModal.propertyTitle || v.propertyTitle || 'Property Unit';
+      const targetPvaId = showPreBookingConfirmModal.pvaId;
+
+      const cs = (individualCostSheets || []).find((c: any) => 
+        (targetCostSheetId && (c.costSheetId === targetCostSheetId || c.id === targetCostSheetId)) ||
+        (targetPropCode && (c.propertyCode === targetPropCode || c.propertyId === targetPropCode)) ||
+        (targetPropTitle && c.propertySnapshot?.propertyTitle?.toLowerCase().trim() === targetPropTitle.toLowerCase().trim())
+      );
+
+      const matchedProp = (properties || []).find((p: any) => {
+        const pCode = (p.property_code || p.id || '').trim().toLowerCase();
+        const pTitle = (p.title || p.property_title || p.project_name || '').trim().toLowerCase();
+        if (targetPropCode && pCode === targetPropCode.trim().toLowerCase()) return true;
+        if (cs?.propertyCode && pCode === cs.propertyCode.trim().toLowerCase()) return true;
+        if (targetPropTitle && pTitle === targetPropTitle.trim().toLowerCase()) return true;
+        if (v.propertyCode && pCode === v.propertyCode.trim().toLowerCase()) return true;
+        return false;
+      });
+
+      const matchedPva = (projectVisitAgreements || []).find((p: any) => {
+        if (targetPvaId && (p.projectVisitAgreementId === targetPvaId || p.id === targetPvaId)) return true;
+        if (targetCostSheetId && p.costSheetId === targetCostSheetId) return true;
+        const resCode = targetPropCode || cs?.propertyCode || matchedProp?.property_code;
+        if (resCode && (p.propertyCode === resCode || p.property_code === resCode || p.propertyId === resCode)) return true;
+        if (targetPropTitle && p.projectTitle && p.projectTitle.toLowerCase().trim() === targetPropTitle.toLowerCase().trim()) return true;
+        return false;
+      }) || (typeof getPvaMatch === 'function' ? getPvaMatch(v) : null);
+
+      const propTitle = targetPropTitle;
+      const custName = v.customerName || v.name || matchedPva?.customerName || 'Customer';
+      const custMobile = v.mobile || v.customerMobile || matchedPva?.customerMobile || '';
+      const custId = v.customerNumber || v.customerId || matchedPva?.customerId || '';
+      
+      const devName = showPreBookingConfirmModal.developer || cs?.propertySnapshot?.developerName || matchedProp?.developer || matchedPva?.developerName || v.developerName || v.developer || 'Partner Developer';
+      const propCode = targetPropCode || cs?.propertyCode || cs?.propertySnapshot?.propertyCode || matchedProp?.property_code || v.propertyCode || 'SRM-PROP-2026-000001';
+
+      let computedValStr = '';
+      if (cs) {
+        computedValStr = cs.formattedPriceBreakup?.subtotalStr || cs.formattedPriceBreakup?.basePriceStr || (cs.pricingSnapshot?.subtotalBeforeTax ? `₹${Number(cs.pricingSnapshot.subtotalBeforeTax).toLocaleString('en-IN')}` : '');
+      }
+      if (!computedValStr && matchedProp) {
+        const rawP = matchedProp.total_base_price_with_other_charges || matchedProp.final_price || matchedProp.total_base_price || matchedProp.base_price;
+        const numP = typeof rawP === 'number' ? rawP : Number(String(rawP || '').replace(/\D/g, '')) || 0;
+        if (numP > 0) computedValStr = `₹${numP.toLocaleString('en-IN')}`;
+      }
+      if (!computedValStr) {
+        const vAgree = v.agreement_value || matchedPva?.agreement_value;
+        if (vAgree) computedValStr = typeof vAgree === 'string' && vAgree.startsWith('₹') ? vAgree : `₹${Number(String(vAgree).replace(/\D/g, '') || 0).toLocaleString('en-IN')}`;
+      }
+      if (!computedValStr || computedValStr === '₹0') {
+        computedValStr = matchedProp?.final_price || '₹0';
+      }
+      const agreementVal = computedValStr;
+      const tokenAmt = v.token_amount || 100000;
+
+      const handleClose = () => {
+        setShowPreBookingConfirmModal(null);
+      };
+
+      const handleConfirm = () => {
+        setShowPreBookingConfirmModal(null);
+        executeCreateBooking(v, propTitle, targetCostSheetId, devName, propCode, targetPvaId);
+      };
+
+      return (
+        <div 
+          onClick={handleClose}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '16px' }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #a855f7', borderRadius: '20px', width: '100%', maxWidth: '560px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+          >
+            {/* MODAL HEADER WITH CANCEL / CROSS (X) BUTTON */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: '900', flexShrink: 0, boxShadow: '0 4px 12px rgba(168, 85, 247, 0.35)' }}>
+                  🛍️
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0, lineHeight: '1.3' }}>
+                    CONFIRM UNIT BOOKING INITIATION
+                  </h3>
+                  <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', margin: '3px 0 0 0' }}>
+                    Graduate Customer from Visit Management to Booking Management
+                  </p>
+                </div>
+              </div>
+              
+              {/* CROSS (X) CANCEL BUTTON */}
+              <button
+                type="button"
+                onClick={handleClose}
+                aria-label="Cancel"
+                title="Cancel"
+                style={{ background: isLight ? '#f1f5f9' : '#334155', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', color: isLight ? '#64748b' : '#94a3b8', width: '34px', height: '34px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = isLight ? '#64748b' : '#94a3b8'; e.currentTarget.style.borderColor = isLight ? '#cbd5e1' : '#475569'; }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* DETAILS BODY CARD */}
+            <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.88rem' }}>
+              <div>👤 Customer: <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', marginLeft: '6px' }}>{custName}</strong> {custMobile && <span style={{ color: '#4ade80', fontSize: '0.8rem', marginLeft: '6px', fontFamily: 'monospace' }}>({custMobile})</span>} {custId && <span style={{ color: '#38bdf8', fontSize: '0.76rem', marginLeft: '6px', fontFamily: 'monospace' }}>[{custId}]</span>}</div>
+              <div>🏢 Property Booked: <strong style={{ color: '#fbbf24', fontWeight: '800', marginLeft: '6px' }}>{propTitle}</strong></div>
+              <div>🏷️ Property Code: <strong style={{ color: '#38bdf8', fontFamily: 'monospace', fontWeight: '900', marginLeft: '6px' }}>{propCode}</strong></div>
+              <div>🏗️ Developer / Builder: <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', marginLeft: '6px' }}>{devName}</strong></div>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                <div>💰 Agreement Value: <strong style={{ color: '#22c55e', fontWeight: '900', marginLeft: '4px' }}>{agreementVal}</strong></div>
+                <div>💸 Advance Token: <strong style={{ color: '#38bdf8', fontWeight: '900', marginLeft: '4px' }}>₹{Number(tokenAmt).toLocaleString('en-IN')}</strong></div>
+              </div>
+              <div style={{ borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '10px', marginTop: '4px', color: isLight ? '#475569' : '#cbd5e1', fontSize: '0.82rem', lineHeight: '1.45' }}>
+                ℹ️ <strong>CRM Pipeline Notice:</strong> Confirming will generate a new Booking Code and transfer this customer record to <strong>Booking Management</strong>. It will be removed from the active Single Site Visit Scheduler table so it does not appear in both places.
+              </div>
+            </div>
+
+            {/* MODAL FOOTER WITH CANCEL AND CONFIRM BUTTONS */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '16px' }}>
+              <button
+                type="button"
+                onClick={handleClose}
+                style={{ background: isLight ? '#f1f5f9' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', padding: '10px 20px', borderRadius: '8px', fontWeight: '800', fontSize: '0.88rem', cursor: 'pointer', transition: 'all 0.2s' }}
+              >
+                ✕ Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '10px 24px', borderRadius: '8px', fontWeight: '900', fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(168, 85, 247, 0.35)', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                🛍️ Confirm & Move to Booking
+              </button>
+            </div>
+
+          </div>
+        </div>
+      );
+    })()}
+
     {/* MODAL: BOOKING CREATED SUCCESSFULLY POPUP WITH CROSS (X) AND OK OPTIONS */}
     {showConfirmBookingModal && showConfirmBookingModal.open && (() => {
       const bookingCode = showConfirmBookingModal.bookingCode || 'SRM-BKG-2026-000001';
@@ -4659,7 +5033,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                     BOOKING CREATED SUCCESSFULLY FOR {propTitle.toUpperCase()}!
                   </h3>
                   <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', margin: '3px 0 0 0' }}>
-                    Unit Booking Confirmed & Permanent Transfer
+                    Unit Booking Confirmed & Stored in Booking Management
                   </p>
                 </div>
               </div>
@@ -4684,7 +5058,7 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
               <div>Customer: <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontWeight: '800', marginLeft: '6px' }}>{custName}</strong></div>
               <div>Property Booked: <strong style={{ color: '#fbbf24', fontWeight: '800', marginLeft: '6px' }}>{propTitle}</strong></div>
               <div style={{ borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '10px', marginTop: '4px', color: isLight ? '#475569' : '#cbd5e1', fontSize: '0.82rem', lineHeight: '1.45' }}>
-                Record removed from Visit Management and permanently transferred to Booking Management.
+                Unit booking confirmed. Details are preserved in Single Site Visit Scheduler and registered into Booking Management.
               </div>
             </div>
 
@@ -4876,7 +5250,19 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
                   </div>
 
                   <button
-                    onClick={() => executeCreateBooking(showSelectBookingPropertyModal.visit, propTitle, stop.costSheetId, devStr)}
+                    onClick={() => {
+                      const vTarget = showSelectBookingPropertyModal.visit;
+                      setShowSelectBookingPropertyModal(null);
+                      setShowPreBookingConfirmModal({
+                        open: true,
+                        visit: vTarget,
+                        propertyTitle: propTitle,
+                        costSheetId: stop.costSheetId,
+                        developer: devStr,
+                        propertyCode: stop.propertyCode || stop.propertyId,
+                        pvaId: stop.pvaId || stop.projectVisitAgreementId
+                      });
+                    }}
                     style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '10px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)' }}
                   >
                     👉 BOOK THIS PROPERTY

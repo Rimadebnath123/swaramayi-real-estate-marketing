@@ -10,8 +10,8 @@ export const CustomerSchema = new mongoose.Schema({ id: { type: String, unique: 
 export const LeadSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const BookingSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const InvoiceSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
-export const AgreementSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
-export const SiteVisitSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
+export const AgreementSchema = new mongoose.Schema({ id: { type: String, unique: true, sparse: true } }, options);
+export const SiteVisitSchema = new mongoose.Schema({ id: { type: String, unique: true, sparse: true } }, options);
 export const BrokerageSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const FollowupSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const TeamSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
@@ -19,12 +19,13 @@ export const BranchSchema = new mongoose.Schema({ id: { type: String, unique: tr
 
 export const CostSheetSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const MatchingRequestSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
-export const ProjectVisitAgreementSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
+export const ProjectVisitAgreementSchema = new mongoose.Schema({ id: { type: String, unique: true, sparse: true } }, options);
 export const SourcingRequestSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const DeveloperSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const RatingInviteSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const RecycleBinSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const FileSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
+export const AgencyBankDetailSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 
 export const UserModel = mongoose.models.User || mongoose.model('User', UserSchema);
 export const PropertyModel = mongoose.models.Property || mongoose.model('Property', PropertySchema);
@@ -46,6 +47,7 @@ export const DeveloperModel = mongoose.models.Developer || mongoose.model('Devel
 export const RatingInviteModel = mongoose.models.RatingInvite || mongoose.model('RatingInvite', RatingInviteSchema);
 export const RecycleBinModel = mongoose.models.RecycleBin || mongoose.model('RecycleBin', RecycleBinSchema);
 export const FileModel = mongoose.models.File || mongoose.model('File', FileSchema);
+export const AgencyBankDetailModel = mongoose.models.AgencyBankDetail || mongoose.model('AgencyBankDetail', AgencyBankDetailSchema, 'agency_bank_details');
 
 // Helper function to sync array of records into a model (handles permanent deletions)
 async function syncCollection(model: mongoose.Model<any>, records: any[]) {
@@ -98,12 +100,19 @@ async function syncCollection(model: mongoose.Model<any>, records: any[]) {
         filter = { lead_number: String(rec.lead_number) };
       } else if (model.modelName === 'Property' && rec.property_code) {
         filter = { property_code: String(rec.property_code) };
-      } else if (model.modelName === 'Booking' && rec.booking_code) {
-        filter = { booking_code: String(rec.booking_code) };
+      } else if (model.modelName === 'Booking') {
+        filter = rec.id ? { $or: [{ id: String(rec.id) }, { booking_code: String(rec.booking_code) }] } : { booking_code: String(rec.booking_code) };
       } else if (model.modelName === 'Invoice' && rec.invoice_number) {
         filter = { invoice_number: String(rec.invoice_number) };
-      } else if (model.modelName === 'Agreement' && rec.agreement_code) {
-        filter = { agreement_code: String(rec.agreement_code) };
+      } else if (model.modelName === 'Agreement' && (rec.agreement_code || rec.id)) {
+        filter = { $or: [{ agreement_code: String(rec.agreement_code || rec.id) }, { id: String(rec.id || rec.agreement_code) }] };
+      } else if (model.modelName === 'ProjectVisitAgreement' && (rec.projectVisitAgreementId || rec.id)) {
+        filter = { $or: [{ projectVisitAgreementId: String(rec.projectVisitAgreementId || rec.id) }, { id: String(rec.id || rec.projectVisitAgreementId) }] };
+      } else if (model.modelName === 'SiteVisit') {
+        const vKey = rec.visitId || rec.visitScheduleId || rec.site_visit_code || rec.id;
+        filter = vKey
+          ? { $or: [{ visitId: String(vKey) }, { visitScheduleId: String(vKey) }, { id: String(vKey) }] }
+          : (rec._id ? { _id: rec._id } : rec);
       } else if (rec.id) {
         filter = { id: String(rec.id) };
       } else {
@@ -121,6 +130,20 @@ async function syncCollection(model: mongoose.Model<any>, records: any[]) {
       }
       if (model.modelName === 'CostSheet' && !toSet.id && toSet.costSheetId) {
         toSet.id = String(toSet.costSheetId);
+      }
+      if (model.modelName === 'SiteVisit') {
+        const vKey = rec.visitId || rec.visitScheduleId || rec.site_visit_code || rec.id || `VISIT-${Date.now()}`;
+        if (!toSet.id) toSet.id = String(vKey);
+        if (!toSet.visitId) toSet.visitId = String(vKey);
+        if (!toSet.visitScheduleId) toSet.visitScheduleId = String(vKey);
+      }
+      if (model.modelName === 'Agreement') {
+        if (!toSet.id) toSet.id = String(toSet.agreement_code || `AGR-${Date.now()}`);
+        if (!toSet.agreement_code) toSet.agreement_code = String(toSet.id);
+      }
+      if (model.modelName === 'ProjectVisitAgreement') {
+        if (!toSet.id) toSet.id = String(toSet.projectVisitAgreementId || `PVA-${Date.now()}`);
+        if (!toSet.projectVisitAgreementId) toSet.projectVisitAgreementId = String(toSet.id);
       }
 
       return {
@@ -169,19 +192,7 @@ export async function syncToMongoDB(data: any) {
 
   try {
     if (Array.isArray(data.users)) await syncCollection(UserModel, data.users);
-    if (Array.isArray(data.properties)) {
-      if (data.properties.length === 0) {
-        await PropertyModel.deleteMany({});
-      } else {
-        const activePropCodes = data.properties.map((p: any) => String(p.property_code || p.code || '')).filter(Boolean);
-        const activePropIds = data.properties.map((p: any) => String(p.id || p._id || '')).filter(Boolean);
-        await PropertyModel.deleteMany({
-          $and: [
-            { property_code: { $nin: activePropCodes } },
-            { id: { $nin: [...activePropCodes, ...activePropIds] } }
-          ]
-        }).catch(() => {});
-      }
+    if (Array.isArray(data.properties) && data.properties.length > 0) {
       await syncCollection(PropertyModel, data.properties);
     }
     if (Array.isArray(data.customers)) {
@@ -211,10 +222,66 @@ export async function syncToMongoDB(data: any) {
       }
       await syncCollection(LeadModel, data.leads);
     }
-    if (Array.isArray(data.bookings)) await syncCollection(BookingModel, data.bookings);
+    if (Array.isArray(data.bookings)) {
+      if (data.bookings.length === 0) {
+        await BookingModel.deleteMany({});
+      } else {
+        const activeBkgCodes = data.bookings.map((b: any) => String(b.booking_code || b.id || '')).filter(Boolean);
+        const activeBkgIds = data.bookings.map((b: any) => String(b.id || b.booking_code || '')).filter(Boolean);
+        await BookingModel.deleteMany({
+          $and: [
+            { booking_code: { $nin: activeBkgCodes } },
+            { id: { $nin: activeBkgIds } }
+          ]
+        }).catch(() => {});
+      }
+      await syncCollection(BookingModel, data.bookings);
+    }
     if (Array.isArray(data.invoices)) await syncCollection(InvoiceModel, data.invoices);
-    if (Array.isArray(data.agreements)) await syncCollection(AgreementModel, data.agreements);
-    if (Array.isArray(data.site_visits)) await syncCollection(SiteVisitModel, data.site_visits);
+    if (Array.isArray(data.agency_bank_details) || Array.isArray(data.bank_details)) {
+      const bList = data.agency_bank_details || data.bank_details;
+      await syncCollection(AgencyBankDetailModel, bList);
+    }
+    if (Array.isArray(data.agreements)) {
+      if (data.agreements.length === 0) {
+        await AgreementModel.deleteMany({});
+      } else {
+        const activeCodes = data.agreements.map((a: any) => String(a.agreement_code || a.id || '')).filter(Boolean);
+        const activeIds = data.agreements.map((a: any) => String(a.id || a.agreement_code || '')).filter(Boolean);
+        await AgreementModel.deleteMany({
+          $and: [
+            { agreement_code: { $nin: activeCodes } },
+            { id: { $nin: activeIds } }
+          ]
+        }).catch(() => {});
+      }
+      await syncCollection(AgreementModel, data.agreements);
+    }
+    const siteVisitsList = Array.isArray(data.site_visits)
+      ? data.site_visits
+      : (Array.isArray(data.scheduledVisits)
+        ? data.scheduledVisits
+        : (Array.isArray(data.scheduled_visits) ? data.scheduled_visits : null));
+
+    if (Array.isArray(siteVisitsList)) {
+      if (siteVisitsList.length === 0) {
+        await SiteVisitModel.deleteMany({});
+      } else {
+        const activeVisitIds = siteVisitsList
+          .map((v: any) => String(v.visitId || v.visitScheduleId || v.site_visit_code || v.id || ''))
+          .filter(Boolean);
+        if (activeVisitIds.length > 0) {
+          await SiteVisitModel.deleteMany({
+            $and: [
+              { visitId: { $nin: activeVisitIds } },
+              { visitScheduleId: { $nin: activeVisitIds } },
+              { id: { $nin: activeVisitIds } }
+            ]
+          }).catch(() => {});
+        }
+      }
+      await syncCollection(SiteVisitModel, siteVisitsList);
+    }
     if (Array.isArray(data.brokerage_records)) await syncCollection(BrokerageModel, data.brokerage_records);
     if (Array.isArray(data.followups)) await syncCollection(FollowupModel, data.followups);
     if (Array.isArray(data.teams)) await syncCollection(TeamModel, data.teams);
@@ -236,7 +303,22 @@ export async function syncToMongoDB(data: any) {
       }
       await syncCollection(MatchingRequestModel, data.matching_requests);
     }
-    if (Array.isArray(data.pva_agreements)) await syncCollection(ProjectVisitAgreementModel, data.pva_agreements);
+    const pvaList = Array.isArray(data.pva_agreements) ? data.pva_agreements : (Array.isArray(data.project_visit_agreements) ? data.project_visit_agreements : null);
+    if (Array.isArray(pvaList)) {
+      if (pvaList.length === 0) {
+        await ProjectVisitAgreementModel.deleteMany({});
+      } else {
+        const activePvaIds = pvaList.map((p: any) => String(p.projectVisitAgreementId || p.id || '')).filter(Boolean);
+        const activeIds = pvaList.map((p: any) => String(p.id || p.projectVisitAgreementId || '')).filter(Boolean);
+        await ProjectVisitAgreementModel.deleteMany({
+          $and: [
+            { projectVisitAgreementId: { $nin: activePvaIds } },
+            { id: { $nin: activeIds } }
+          ]
+        }).catch(() => {});
+      }
+      await syncCollection(ProjectVisitAgreementModel, pvaList);
+    }
     if (Array.isArray(data.sourcing_requests)) await syncCollection(SourcingRequestModel, data.sourcing_requests);
     if (Array.isArray(data.developers)) {
       if (data.developers.length === 0) {
@@ -305,7 +387,8 @@ export async function loadDataFromMongoDB() {
       mongoDevelopers,
       mongoRatingInvites,
       mongoRecycledItems,
-      mongoFiles
+      mongoFiles,
+      mongoAgencyBankDetails
     ] = await Promise.all([
       UserModel.find({}).lean(),
       PropertyModel.find({}).lean(),
@@ -326,7 +409,8 @@ export async function loadDataFromMongoDB() {
       DeveloperModel.find({}).lean(),
       RatingInviteModel.find({}).lean(),
       RecycleBinModel.find({}).lean(),
-      FileModel.find({}).lean()
+      FileModel.find({}).lean(),
+      AgencyBankDetailModel.find({}).lean()
     ]);
 
     console.log(`📥 Loaded existing data from MongoDB Atlas: ${mongoUsers.length} users, ${mongoTeams.length} teams, ${mongoBranches.length} branches, ${mongoProperties.length} properties, ${mongoCustomers.length} customers, ${mongoDevelopers.length} developers, ${mongoRatingInvites.length} rating invites`);
@@ -444,7 +528,9 @@ export async function loadDataFromMongoDB() {
       developers: mongoDevelopers,
       rating_invites: mongoRatingInvites,
       recycled_items: mongoRecycledItems,
-      files: mongoFiles
+      files: mongoFiles,
+      agency_bank_details: mongoAgencyBankDetails || [],
+      bank_details: mongoAgencyBankDetails || []
     };
   } catch (e: any) {
     console.warn('MongoDB Data Loading Warning:', e.message);

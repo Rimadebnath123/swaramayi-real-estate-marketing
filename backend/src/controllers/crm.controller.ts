@@ -435,7 +435,7 @@ export async function smartSearch(req: AuthRequest, res: Response) {
 
 import { 
   syncToMongoDB, loadDataFromMongoDB, PropertyModel, DeveloperModel, 
-  CustomerModel, LeadModel, AgreementModel, CostSheetModel, 
+  CustomerModel, LeadModel, AgreementModel, ProjectVisitAgreementModel, CostSheetModel, 
   InvoiceModel, SiteVisitModel, MatchingRequestModel, RecycleBinModel
 } from '../db/mongoPersistence.js';
 
@@ -497,39 +497,86 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
     if (Array.isArray(payload.branches)) dbStore.data.branches = payload.branches;
     if (Array.isArray(payload.invoices)) dbStore.data.invoices = payload.invoices;
     if (Array.isArray(payload.bookings)) dbStore.data.bookings = payload.bookings;
-    if (Array.isArray(payload.site_visits)) dbStore.data.site_visits = payload.site_visits;
+    const incomingVisits = Array.isArray(payload.site_visits)
+      ? payload.site_visits
+      : (Array.isArray(payload.scheduledVisits)
+        ? payload.scheduledVisits
+        : (Array.isArray(payload.scheduled_visits) ? payload.scheduled_visits : null));
+    if (Array.isArray(incomingVisits)) {
+      dbStore.data.site_visits = incomingVisits;
+      payload.site_visits = incomingVisits;
+    }
     if (Array.isArray(payload.cost_sheets)) (dbStore.data as any).cost_sheets = payload.cost_sheets;
     if (Array.isArray(payload.matching_requests)) (dbStore.data as any).matching_requests = payload.matching_requests;
     if (Array.isArray(payload.pva_agreements)) (dbStore.data as any).pva_agreements = payload.pva_agreements;
+    if (Array.isArray(payload.project_visit_agreements)) (dbStore.data as any).pva_agreements = payload.project_visit_agreements;
     if (Array.isArray(payload.sourcing_requests)) (dbStore.data as any).sourcing_requests = payload.sourcing_requests;
     if (Array.isArray(payload.developers)) (dbStore.data as any).developers = payload.developers;
     if (Array.isArray(payload.rating_invites)) (dbStore.data as any).rating_invites = payload.rating_invites;
     if (Array.isArray(payload.files)) (dbStore.data as any).files = payload.files;
+    if (Array.isArray(payload.agency_bank_details) || Array.isArray(payload.bank_details)) {
+      const bList = payload.agency_bank_details || payload.bank_details;
+      (dbStore.data as any).agency_bank_details = bList;
+      (dbStore.data as any).bank_details = bList;
+      payload.agency_bank_details = bList;
+      payload.bank_details = bList;
+    }
     if (Array.isArray(payload.recycled_items)) {
       (dbStore.data as any).recycled_items = payload.recycled_items;
-      const recSet = new Set<string>();
+      const recPropSet = new Set<string>();
+      const recCustSet = new Set<string>();
+      const recVisitSet = new Set<string>();
       payload.recycled_items.forEach((r: any) => {
-        if (r.id) recSet.add(String(r.id).toLowerCase());
         const orig = r.originalData || {};
-        if (orig.property_code) recSet.add(String(orig.property_code).toLowerCase());
-        if (orig.code) recSet.add(String(orig.code).toLowerCase());
-        if (orig.id) recSet.add(String(orig.id).toLowerCase());
-        if (orig._id) recSet.add(String(orig._id).toLowerCase());
-        if (orig.customer_number) recSet.add(String(orig.customer_number).toLowerCase());
-        if (orig.customerNumber) recSet.add(String(orig.customerNumber).toLowerCase());
+        if (r.category === 'Project' || r.category === 'Property') {
+          if (r.id) recPropSet.add(String(r.id).toLowerCase());
+          if (orig.property_code) recPropSet.add(String(orig.property_code).toLowerCase());
+          if (orig.code) recPropSet.add(String(orig.code).toLowerCase());
+          if (orig.id) recPropSet.add(String(orig.id).toLowerCase());
+        }
+        if (r.category === 'Customer') {
+          if (r.id) recCustSet.add(String(r.id).toLowerCase());
+          if (orig.id) recCustSet.add(String(orig.id).toLowerCase());
+          if (orig.customer_number) recCustSet.add(String(orig.customer_number).toLowerCase());
+          if (orig.customerNumber) recCustSet.add(String(orig.customerNumber).toLowerCase());
+        }
+        if (r.category === 'Visit Management') {
+          const addVId = (val?: string) => {
+            if (!val || typeof val !== 'string') return;
+            const t = val.trim().toLowerCase();
+            if (!t) return;
+            recVisitSet.add(t);
+            if (t.startsWith('cost-sheet-')) recVisitSet.add(t.replace('cost-sheet-', 'srm-vs-'));
+            if (t.startsWith('srm-vs-')) recVisitSet.add(t.replace('srm-vs-', 'cost-sheet-'));
+          };
+          addVId(r.id);
+          addVId(orig.id);
+          addVId(orig.visitId);
+          addVId(orig.visitScheduleId);
+          addVId(orig.visitPlanId);
+          addVId(orig.costSheetId);
+        }
       });
+      if (Array.isArray(dbStore.data.site_visits) && recVisitSet.size > 0) {
+        dbStore.data.site_visits = dbStore.data.site_visits.filter((v: any) => {
+          const vId = String(v.visitId || v.visitScheduleId || v.visitPlanId || v.id || '').toLowerCase().trim();
+          const csId = String(v.costSheetId || '').toLowerCase().trim();
+          if (recVisitSet.has(vId) || (csId && recVisitSet.has(csId))) return false;
+          return true;
+        });
+      }
       if (Array.isArray(dbStore.data.properties)) {
         dbStore.data.properties = dbStore.data.properties.filter((p: any) => {
           const pCode = String(p.property_code || p.code || '').toLowerCase();
           const pId = String(p.id || p._id || '').toLowerCase();
-          return !recSet.has(pCode) && !recSet.has(pId);
+          return !recPropSet.has(pCode) && !recPropSet.has(pId);
         });
       }
       if (Array.isArray(dbStore.data.customers)) {
         dbStore.data.customers = dbStore.data.customers.filter((c: any) => {
           const cNum = String(c.customer_number || c.customerNumber || '').toLowerCase();
           const cId = String(c.id || c._id || '').toLowerCase();
-          return !recSet.has(cNum) && !recSet.has(cId);
+          return !recCustSet.has(cNum) && !recCustSet.has(cId);
         });
       }
     }
@@ -761,8 +808,12 @@ export async function purgeSingleItemFromDB(item: any) {
 
     if (cat.includes('agreement')) {
       await AgreementModel.deleteMany(query);
+      await ProjectVisitAgreementModel.deleteMany(query);
       if (Array.isArray(dbStore.data.agreements)) {
         dbStore.data.agreements = dbStore.data.agreements.filter((a: any) => !extractItemIdentifiers(a).ids.some(id => ids.includes(id)));
+      }
+      if (Array.isArray((dbStore.data as any).pva_agreements)) {
+        (dbStore.data as any).pva_agreements = (dbStore.data as any).pva_agreements.filter((a: any) => !extractItemIdentifiers(a).ids.some(id => ids.includes(id)));
       }
     }
 

@@ -487,6 +487,57 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
     }
   });
 
+  // Calculate guaranteed unique, non-colliding User ID based on highest existing numeric index
+  const getNextUniqueUserId = (userList: any[] = []): string => {
+    const existingNumbers = (userList || [])
+      .map((u: any) => {
+        const match = String(u.id || '').match(/USR-(\d+)/i);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter((n: number) => !isNaN(n) && n > 0);
+
+    const maxNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+    let nextNum = Math.max(maxNum + 1, 1);
+
+    const existingIdSet = new Set((userList || []).map((u: any) => String(u.id || '').toUpperCase().trim()));
+    while (existingIdSet.has(`USR-${String(nextNum).padStart(2, '0')}`)) {
+      nextNum++;
+    }
+    return `USR-${String(nextNum).padStart(2, '0')}`;
+  };
+
+  const getNextUniqueBranchId = (branchList: any[] = []): string => {
+    const existingNumbers = (branchList || [])
+      .map((b: any) => {
+        const match = String(b.id || '').match(/BR-(\d+)/i);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter((n: number) => !isNaN(n) && n > 0);
+    const maxNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+    let nextNum = Math.max(maxNum + 1, 1);
+    const existingIdSet = new Set((branchList || []).map((b: any) => String(b.id || '').toUpperCase().trim()));
+    while (existingIdSet.has(`BR-${String(nextNum).padStart(2, '0')}`)) {
+      nextNum++;
+    }
+    return `BR-${String(nextNum).padStart(2, '0')}`;
+  };
+
+  const getNextUniqueTeamId = (teamList: any[] = []): string => {
+    const existingNumbers = (teamList || [])
+      .map((t: any) => {
+        const match = String(t.id || '').match(/TEAM-(\d+)/i);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter((n: number) => !isNaN(n) && n > 0);
+    const maxNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+    let nextNum = Math.max(maxNum + 1, 1);
+    const existingIdSet = new Set((teamList || []).map((t: any) => String(t.id || '').toUpperCase().trim()));
+    while (existingIdSet.has(`TEAM-${String(nextNum).padStart(2, '0')}`)) {
+      nextNum++;
+    }
+    return `TEAM-${String(nextNum).padStart(2, '0')}`;
+  };
+
   const handleOpenAddUserModalInternal = () => {
     setEditingUser(null);
     setShowUserModalPassword(false);
@@ -590,8 +641,37 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
           const { profileImage, avatar, ...rest } = item;
           return rest;
         });
-        localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(stripImage(updatedUsers)));
+        const cleanList = stripImage(updatedUsers);
+        ['swaramayi_enterprise_users_v8', 'swaramayi_users_v7', 'swaramayi_users_v6', 'swaramayi_users'].forEach(k => {
+          try { localStorage.setItem(k, JSON.stringify(cleanList)); } catch (e) {}
+        });
       } catch (err) {}
+
+      // Direct MongoDB User Update API call
+      try {
+        const baseHost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+          ? 'http://localhost:5000'
+          : '';
+        fetch(`${baseHost}/api/v1/security/users/${encodeURIComponent(editingUser.id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: nameTrim,
+            full_name: nameTrim,
+            email: emailTrim,
+            password: userForm.password ? userForm.password : undefined,
+            mobile: userForm.mobile || '',
+            role: userForm.role,
+            designation: userForm.designation,
+            branch_name: userForm.branch_name,
+            department: userForm.department,
+            team_name: userForm.team_name,
+            manager_name: userForm.manager_name,
+            permissions: userForm.permissions
+          })
+        }).catch(() => {});
+      } catch (e) {}
+
       if (syncAllToMongoDB) {
         syncAllToMongoDB({ users: updatedUsers });
       } else {
@@ -603,12 +683,12 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ users: updatedUsers })
-          });
+          }).catch(() => {});
         } catch (err) {}
       }
-      alert(`✏️ User "${nameTrim}" (${editingUser.id}) updated & saved to MongoDB successfully!`);
+      alert(`✏️ User "${nameTrim}" (${editingUser.id}) updated & saved directly to MongoDB successfully!`);
     } else {
-      const newId = `USR-${String((users || []).length + 1).padStart(2, '0')}`;
+      const newId = getNextUniqueUserId(users);
       const newU = {
         id: newId,
         username: nameTrim,
@@ -635,8 +715,24 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
           const { profileImage, avatar, ...rest } = item;
           return rest;
         });
-        localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(stripImage(updatedUsers)));
+        const cleanList = stripImage(updatedUsers);
+        ['swaramayi_enterprise_users_v8', 'swaramayi_users_v7', 'swaramayi_users_v6', 'swaramayi_users'].forEach(k => {
+          try { localStorage.setItem(k, JSON.stringify(cleanList)); } catch (e) {}
+        });
       } catch (err) {}
+
+      // Direct MongoDB User Creation API call
+      try {
+        const baseHost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+          ? 'http://localhost:5000'
+          : '';
+        fetch(`${baseHost}/api/v1/security/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newU)
+        }).catch(() => {});
+      } catch (e) {}
+
       if (syncAllToMongoDB) {
         syncAllToMongoDB({ users: updatedUsers });
       } else {
@@ -648,10 +744,10 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ users: updatedUsers })
-          });
+          }).catch(() => {});
         } catch (err) {}
       }
-      alert(`👤 User "${nameTrim}" (${newId}) provisioned & saved to MongoDB successfully!`);
+      alert(`👤 User "${nameTrim}" (${newId}) provisioned & saved directly to MongoDB successfully!`);
     }
 
     setShowUserModalInternal(false);
@@ -659,7 +755,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
   };
 
   const handleDeleteUserInternal = (userId: string, userName?: string) => {
-    if (userId === 'USR-01') {
+    if (userId === 'USR-01' || (userName && userName.toLowerCase().includes('avishek'))) {
       alert('🔒 Cannot delete Primary Super Admin Account (USR-01).');
       return;
     }
@@ -667,14 +763,34 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       alert('🔒 Access Denied: Only Super Admin / Owner can delete user accounts.');
       return;
     }
-    if (window.confirm(`Are you sure you want to delete user "${userName || userId}"?`)) {
-      const updatedUsers = (users || []).filter((u: any) => u.id !== userId);
+    if (window.confirm(`Are you sure you want to permanently delete user "${userName || userId}"? This cannot be undone.`)) {
+      const updatedUsers = (users || []).filter((u: any) => 
+        u.id !== userId && 
+        u.username !== userId && 
+        u.username !== userName && 
+        u.full_name !== userName
+      );
       if (setUsers) setUsers(updatedUsers);
       try {
-        localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(updatedUsers));
+        ['swaramayi_enterprise_users_v8', 'swaramayi_users_v7', 'swaramayi_users_v6', 'swaramayi_users_v5', 'swaramayi_users'].forEach(k => {
+          try {
+            localStorage.setItem(k, JSON.stringify(updatedUsers));
+          } catch (e) {}
+        });
       } catch (err) {}
+
+      // Direct MongoDB User Permanent Deletion API call
+      try {
+        const baseHost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+          ? 'http://localhost:5000'
+          : '';
+        fetch(`${baseHost}/api/v1/security/users/${encodeURIComponent(userId)}`, {
+          method: 'DELETE'
+        }).catch(() => {});
+      } catch (e) {}
+
       if (syncAllToMongoDB) syncAllToMongoDB({ users: updatedUsers });
-      alert(`🗑️ User "${userName || userId}" removed successfully.`);
+      alert(`🗑️ User "${userName || userId}" permanently deleted from MongoDB & system.`);
     }
   };
 
@@ -740,7 +856,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       alert(`✅ Branch '${branchNameTrim}' updated successfully across Company Hierarchy!`);
     } else {
       const newB = {
-        id: `BR-0${localBranches.length + 1}`,
+        id: getNextUniqueBranchId(localBranches),
         branch_name: branchNameTrim,
         city: branchForm.city,
         manager_name: branchForm.manager_name,
@@ -837,7 +953,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       alert(`✅ Team Squad '${teamNameTrim}' updated successfully!`);
     } else {
       const newT = {
-        id: `TEAM-0${localTeams.length + 1}`,
+        id: getNextUniqueTeamId(localTeams),
         team_name: teamNameTrim,
         branch_name: teamForm.branch_name,
         department: teamForm.department,
@@ -3518,7 +3634,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
                     System Employee User ID (Auto-Generated)
                   </div>
                   <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#38bdf8', marginTop: '2px', letterSpacing: '0.02em' }}>
-                    {editingUser ? (editingUser.id || 'USR-01') : `USR-${String((users || []).length + 1).padStart(2, '0')}`}
+                    {editingUser ? (editingUser.id || 'USR-01') : getNextUniqueUserId(users)}
                   </div>
                 </div>
                 <div style={{

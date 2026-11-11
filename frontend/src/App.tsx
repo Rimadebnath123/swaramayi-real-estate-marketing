@@ -8416,11 +8416,11 @@ export default function App() {
             });
 
             if (Array.isArray(mData.users) && mData.users.length > 0) {
-              setUsers(prev => {
-                const map = new Map();
-                (prev || []).forEach((u: any) => map.set(u.id || u.username, u));
-                (mData.users || []).forEach((u: any) => map.set(u.id || u.username, u));
-                return Array.from(map.values());
+              setUsers(mData.users);
+              ['swaramayi_users_v7', 'swaramayi_enterprise_users_v8'].forEach(k => {
+                try {
+                  localStorage.setItem(k, JSON.stringify(mData.users));
+                } catch (e) {}
               });
             }
             if (Array.isArray(mData.teams) && mData.teams.length > 0) setTeams(mData.teams);
@@ -10293,7 +10293,11 @@ export default function App() {
       const updated = users.filter(u => u.id !== id && u.username !== displayName && u.full_name !== displayName);
       setUsers(updated);
       try {
-        localStorage.setItem('swaramayi_users_v7', JSON.stringify(updated));
+        ['swaramayi_users_v7', 'swaramayi_enterprise_users_v8', 'swaramayi_users_v6', 'swaramayi_users_v5', 'swaramayi_users'].forEach(k => {
+          try {
+            localStorage.setItem(k, JSON.stringify(updated));
+          } catch (e) {}
+        });
       } catch (e) {
         console.error(e);
       }

@@ -58,6 +58,8 @@ interface ProjectManagementViewProps {
   handleOpenAddPropertyModal: () => void;
   showBulkImportPropertyModal?: boolean;
   setShowBulkImportPropertyModal: (val: boolean) => void;
+  showBulkImportDeveloperModal?: boolean;
+  setShowBulkImportDeveloperModal?: (val: boolean) => void;
   setShowDeveloperIntroductionReportModal: (val: boolean) => void;
   setShowPvaDocumentModal: (val: any) => void;
   handleStartEditProperty: (prop: any) => void;
@@ -216,6 +218,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   handleOpenAddPropertyModal,
   setShowBulkImportPropertyModal,
   showBulkImportPropertyModal = false,
+  setShowBulkImportDeveloperModal,
+  showBulkImportDeveloperModal = false,
   setShowDeveloperIntroductionReportModal,
   setShowPvaDocumentModal,
   handleStartEditProperty,
@@ -874,6 +878,542 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       alert(`⚠️ Ingestion failed: ${err.message || 'Could not sync to database'}`);
     } finally {
       setIsIngestingStock(false);
+    }
+  };
+
+  // ==========================================
+  // BULK DEVELOPER STOCK IMPORT & EXCEL ENGINE
+  // ==========================================
+  const BULK_DEVELOPER_COLUMNS = [
+    // 1. Project & Developer Identification (from Register New Project & Developer Master)
+    { header: 'Developer / Builder Name', key: 'developer', section: '1. Project & Developer Identification', sample1: 'Godrej Properties', sample2: 'Ambuja Neotia', desc: 'Company / Builder / Developer Entity Name *' },
+    { header: 'Project Title & Name', key: 'title', section: '1. Project & Developer Identification', sample1: 'Godrej Prakriti', sample2: 'Utalika Luxury', desc: 'Project or Society Master Name *' },
+    { header: 'Master Project ID', key: 'project_id', section: '1. Project & Developer Identification', sample1: 'SRM-PROJ-2026-000001', sample2: 'SRM-PROJ-2026-000002', desc: 'Unique Project Master Code (Leave blank or AUTO to auto-generate)' },
+    { header: 'Developer Master ID', key: 'developer_id', section: '1. Project & Developer Identification', sample1: 'SRM-DEV-2026-000001', sample2: 'SRM-DEV-2026-000002', desc: 'Unique Developer Vault ID (Auto-links to existing developer or auto-generates)' },
+    { header: 'Developer Mobile Phone (for OTP)', key: 'developer_mobile', section: '1. Project & Developer Identification', sample1: '+91 98833 95102', sample2: '+91 98300 12345', desc: 'Primary Developer Mobile Contact for OTP verification *' },
+    { header: 'Alternative Phone Number', key: 'developer_alt_mobile', section: '1. Project & Developer Identification', sample1: '+91 70442 93951', sample2: '+91 98311 54321', desc: 'Secondary Developer / Sales Contact Phone' },
+    { header: 'Developer Email Address', key: 'developer_email', section: '1. Project & Developer Identification', sample1: 'sales@godrejproperties.com', sample2: 'info@ambujaneotia.com', desc: 'Official Builder Email Address' },
+    { header: 'Locality Hub / Sector', key: 'locality', section: '1. Project & Developer Identification', sample1: 'BT Road, Sodepur, Kolkata', sample2: 'EM Bypass, Mukundapur, Kolkata', desc: 'Project Location Hub / Sector / Zone *' },
+    { header: 'RERA Registration No. (RERA ID)', key: 'rera_id', section: '1. Project & Developer Identification', sample1: 'WBRERA/P/NOR/2024/000128', sample2: 'WBRERA/P/SOU/2024/000215', desc: 'State RERA Registration Number' },
+    { header: 'HERA Registration No. (HERA ID)', key: 'hera_no', section: '1. Project & Developer Identification', sample1: 'WBHERA/REG/2024/0045', sample2: 'WBHERA/REG/2024/0088', desc: 'State Housing Authority HERA Number' },
+    { header: 'Total Floors in Building', key: 'total_floors', section: '1. Project & Developer Identification', sample1: 'G+14 Floors (Highrise)', sample2: '2B+G+30 Floors (Mega Highrise)', desc: 'Storey structure (e.g. G+4 Floors, G+14 Floors, B+G+30 Floors) *' },
+    { header: 'Number Of Towers in Project / Complex', key: 'number_of_towers', section: '1. Project & Developer Identification', sample1: '8 Towers Complex', sample2: '4 Luxury Towers', desc: 'Standalone Tower / Multiple Towers Complex *' },
+
+    // 2. GPS Location Coordinates & Device Auto-Capture
+    { header: 'GPS Latitude', key: 'latitude', section: '2. GPS Location Coordinates', sample1: 22.698021, sample2: 22.492150, desc: 'Exact Map Latitude coordinate' },
+    { header: 'GPS Longitude', key: 'longitude', section: '2. GPS Location Coordinates', sample1: 88.463723, sample2: 88.398412, desc: 'Exact Map Longitude coordinate' },
+
+    // 3. Project & Developer Amenities & Infrastructure Features
+    { header: 'Project Amenities', key: 'amenities', section: '3. Amenities & Features', sample1: '24/7 Power Backup, Water Supply, Security, CCTV cameras, Elevators, Gymnasium, Swimming Pool, Clubhouse, Children\'s Play Area, Landscaped Gardens', sample2: '24/7 Power Backup, Water Supply, Security, CCTV cameras, Elevators, Gymnasium, Swimming Pool, Clubhouse, Sports Courts, Jogging Track, Yoga Deck', desc: 'Comma-separated project amenities' },
+
+    // 4. Project Parking Stock Capacity & Default Rates Management System
+    { header: 'Covered Parking Slot Capacity', key: 'total_covered_parking_capacity', section: '4. Parking Stock & Rates', sample1: 120, sample2: 200, desc: 'Total allocated covered basement/stilt parking slots' },
+    { header: 'Covered Parking Default Rate (INR)', key: 'covered_parking_rate', section: '4. Parking Stock & Rates', sample1: 350000, sample2: 450000, desc: 'Builder quotation price for covered parking slot' },
+    { header: 'EV Fast Charging Station Slots', key: 'total_ev_parking_capacity', section: '4. Parking Stock & Rates', sample1: 16, sample2: 25, desc: 'Total allocated EV fast-charging parking slots' },
+    { header: 'EV Slot Default Rate (INR)', key: 'ev_parking_rate', section: '4. Parking Stock & Rates', sample1: 450000, sample2: 550000, desc: 'Builder quotation price for EV parking slot' },
+    { header: 'Open Surface Ground Parking Slots', key: 'total_open_parking_capacity', section: '4. Parking Stock & Rates', sample1: 40, sample2: 30, desc: 'Total allocated open surface parking slots' },
+    { header: 'Open Surface Slot Default Rate (INR)', key: 'open_parking_rate', section: '4. Parking Stock & Rates', sample1: 200000, sample2: 250000, desc: 'Builder quotation price for open surface parking slot' },
+
+    // 5. Keys Custody & Architectural Description
+    { header: 'Key Custody Location / Handler', key: 'key_custody', section: '5. Custody & Architecture', sample1: 'Builder Site Office & Security Gate', sample2: 'Central Clubhouse Reception Desk', desc: 'Location of keys or site caretaker handler' },
+    { header: 'Architectural & Structural Description', key: 'architectural_description', section: '5. Custody & Architecture', sample1: 'RCC Earthquake resistant structure, premium vitrified tiles, 3-tier security system with wide landscape open spaces.', sample2: 'IGBC Gold Certified eco-luxury towers, German sanitary fittings, acoustic glazed windows and private sky lounges.', desc: 'Architectural construction, structural framework, design & materials' }
+  ];
+
+  const [isBulkImportDeveloperOpen, setIsBulkImportDeveloperOpen] = React.useState<boolean>(false);
+  const [bulkDevImportMode, setBulkDevImportMode] = React.useState<'upload' | 'paste'>('upload');
+  const [bulkDevFileName, setBulkDevFileName] = React.useState<string>('');
+  const [bulkDevPasteContent, setBulkDevPasteContent] = React.useState<string>('');
+  const [parsedBulkDevelopers, setParsedBulkDevelopers] = React.useState<any[]>([]);
+  const [bulkDevImportErrors, setBulkDevImportErrors] = React.useState<string[]>([]);
+  const [isProcessingBulkDevFile, setIsProcessingBulkDevFile] = React.useState<boolean>(false);
+  const [isIngestingDevStock, setIsIngestingDevStock] = React.useState<boolean>(false);
+  const [showBulkDevColumnsGuide, setShowBulkDevColumnsGuide] = React.useState<boolean>(false);
+  const [bulkDevPreviewFilter, setBulkDevPreviewFilter] = React.useState<string>('');
+
+  React.useEffect(() => {
+    if (showBulkImportDeveloperModal) {
+      setIsBulkImportDeveloperOpen(true);
+    }
+  }, [showBulkImportDeveloperModal]);
+
+  const closeBulkDeveloperImportModal = () => {
+    setIsBulkImportDeveloperOpen(false);
+    if (setShowBulkImportDeveloperModal) {
+      setShowBulkImportDeveloperModal(false);
+    }
+  };
+
+  const getNextSequentialDeveloperId = (offset: number = 0, currentList: any[] = developerMasterList) => {
+    let maxDevSeq = 0;
+    (currentList || []).forEach((d: any) => {
+      const m = (d.id || '').match(/SRM-DEV-\d+-(\d+)/i) || (d.id || '').match(/DEV-(\d+)/i);
+      if (m) {
+        const val = parseInt(m[1], 10);
+        if (!isNaN(val) && val < 10000 && val > maxDevSeq) maxDevSeq = val;
+      }
+    });
+    const yr = new Date().getFullYear();
+    const nextNum = maxDevSeq + 1 + offset;
+    return `SRM-DEV-${yr}-${String(nextNum).padStart(6, '0')}`;
+  };
+
+  const getNextSequentialProjectId = (offset: number = 0, currentDevs: any[] = developerMasterList, currentProps: any[] = properties) => {
+    const yr = new Date().getFullYear();
+    let maxSeq = 0;
+
+    (currentProps || []).forEach((p: any) => {
+      const pCode = p.project_id || p.code || p.id || '';
+      const m = pCode.match(/SRM-PROJ-\d+-(\d+)/i) || pCode.match(/PROJ-\d+-(\d+)/i);
+      if (m) {
+        const num = parseInt(m[1], 10);
+        if (!isNaN(num) && num < 88 && num > maxSeq) maxSeq = num;
+      }
+    });
+
+    (currentDevs || []).forEach((dev: any) => {
+      (dev.projects || []).forEach((proj: any) => {
+        const pCode = proj.code || proj.id || '';
+        const m = pCode.match(/SRM-PROJ-\d+-(\d+)/i) || pCode.match(/PROJ-\d+-(\d+)/i);
+        if (m) {
+          const num = parseInt(m[1], 10);
+          if (!isNaN(num) && num < 88 && num > maxSeq) maxSeq = num;
+        }
+      });
+    });
+
+    const nextNum = maxSeq + 1 + offset;
+    return `SRM-PROJ-${yr}-${String(nextNum).padStart(6, '0')}`;
+  };
+
+  const handleDownloadDeveloperExcelTemplate = () => {
+    try {
+      const headers = BULK_DEVELOPER_COLUMNS.map(c => c.header);
+      const row1 = BULK_DEVELOPER_COLUMNS.map(c => c.sample1);
+      const row2 = BULK_DEVELOPER_COLUMNS.map(c => c.sample2);
+      const ws = XLSX.utils.aoa_to_sheet([headers, row1, row2]);
+      ws['!cols'] = BULK_DEVELOPER_COLUMNS.map(c => ({ wch: Math.max(c.header.length + 4, 20) }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Developer_Master_Stock');
+      XLSX.writeFile(wb, 'Swaramayi_Bulk_Developer_Stock_Template.xlsx');
+    } catch (err: any) {
+      alert(`⚠️ Could not generate Excel template: ${err.message}`);
+    }
+  };
+
+  const handleDownloadDeveloperCsvTemplate = () => {
+    try {
+      const headers = BULK_DEVELOPER_COLUMNS.map(c => c.header);
+      const row1 = BULK_DEVELOPER_COLUMNS.map(c => c.sample1);
+      const row2 = BULK_DEVELOPER_COLUMNS.map(c => c.sample2);
+      const ws = XLSX.utils.aoa_to_sheet([headers, row1, row2]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Developer_Master_Stock');
+      XLSX.writeFile(wb, 'Swaramayi_Bulk_Developer_Stock_Template.csv', { bookType: 'csv' });
+    } catch (err: any) {
+      alert(`⚠️ Could not generate CSV template: ${err.message}`);
+    }
+  };
+
+  const handleExportDeveloperExcel = () => {
+    try {
+      const activeDevs = (developerMasterList || []).filter((d: any) => !isItemInRecycledSet(d, recycledSet));
+      const exportRows: any[][] = [];
+
+      activeDevs.forEach(dev => {
+        (dev.projects || []).forEach((proj: any) => {
+          if (isItemInRecycledSet(proj, recycledSet)) return;
+          const row = BULK_DEVELOPER_COLUMNS.map(c => {
+            switch (c.key) {
+              case 'developer': return dev.name || '';
+              case 'title': return proj.title || '';
+              case 'project_id': return proj.code || proj.id || '';
+              case 'developer_id': return dev.id || '';
+              case 'developer_mobile': return dev.mobile || '';
+              case 'developer_alt_mobile': return dev.altMobile || '';
+              case 'developer_email': return dev.email || proj.developer_email || '';
+              case 'locality': return proj.locality || '';
+              case 'rera_id': return proj.rera_id || dev.rera_id || '';
+              case 'hera_no': return proj.hera_no || dev.hera_no || '';
+              case 'total_floors': return proj.total_floors || '';
+              case 'number_of_towers': return proj.number_of_towers || '';
+              case 'latitude': return proj.lat || proj.latitude || '';
+              case 'longitude': return proj.lng || proj.longitude || '';
+              case 'amenities': return Array.isArray(proj.amenities) ? proj.amenities.join(', ') : (proj.amenities || '');
+              case 'total_covered_parking_capacity': return proj.total_covered_parking_capacity !== undefined ? proj.total_covered_parking_capacity : '';
+              case 'covered_parking_rate': return proj.covered_parking_rate || '';
+              case 'total_ev_parking_capacity': return proj.total_ev_parking_capacity !== undefined ? proj.total_ev_parking_capacity : '';
+              case 'ev_parking_rate': return proj.ev_parking_rate || '';
+              case 'total_open_parking_capacity': return proj.total_open_parking_capacity !== undefined ? proj.total_open_parking_capacity : '';
+              case 'open_parking_rate': return proj.open_parking_rate || '';
+              case 'key_custody': return proj.key_custody || proj.keys_custody || '';
+              case 'architectural_description': return proj.architectural_description || proj.description || '';
+              default: return proj[c.key] !== undefined ? proj[c.key] : (dev[c.key] !== undefined ? dev[c.key] : '');
+            }
+          });
+          exportRows.push(row);
+        });
+      });
+
+      if (exportRows.length === 0) {
+        alert('⚠️ No developer projects in vault to export. Downloading sample template instead.');
+        handleDownloadDeveloperExcelTemplate();
+        return;
+      }
+
+      const headers = BULK_DEVELOPER_COLUMNS.map(c => c.header);
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...exportRows]);
+      ws['!cols'] = BULK_DEVELOPER_COLUMNS.map(c => ({ wch: Math.max(c.header.length + 4, 20) }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Developer_Master_Vault');
+      const nowStr = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `Swaramayi_Developer_Master_Stock_${nowStr}.xlsx`);
+    } catch (err: any) {
+      alert(`⚠️ Export failed: ${err.message}`);
+    }
+  };
+
+  const normalizeDevHeaderKey = (rawHeader: any): string => {
+    if (!rawHeader) return '';
+    const clean = String(rawHeader).toLowerCase().trim().replace(/[\r\n]+/g, ' ');
+    const directCol = BULK_DEVELOPER_COLUMNS.find(c => c.header.toLowerCase() === clean);
+    if (directCol) return directCol.key;
+
+    const aliases: { [key: string]: string[] } = {
+      developer: ['developer / builder name', 'developer name', 'builder name', 'developer', 'builder', 'company', 'developer_name', 'builder_name'],
+      title: ['project title & name', 'project title', 'project name', 'project', 'title', 'society name', 'complex name', 'project_title'],
+      project_id: ['master project id', 'project id', 'project_id', 'proj id', 'proj_id', 'project code', 'project_code'],
+      developer_id: ['developer master id', 'developer id', 'developer_id', 'dev id', 'dev_id', 'dev code'],
+      developer_mobile: ['developer mobile phone (for otp)', 'developer mobile phone', 'developer mobile', 'mobile', 'dev mobile', 'phone', 'contact', 'primary mobile'],
+      developer_alt_mobile: ['alternative phone number', 'alternative phone', 'alt phone', 'alt mobile', 'developer alt mobile', 'secondary mobile', 'secondary contact'],
+      developer_email: ['developer email address', 'developer email', 'email', 'builder email', 'dev email'],
+      locality: ['locality hub / sector', 'locality hub', 'locality', 'location', 'sector', 'area', 'address'],
+      rera_id: ['rera registration no. (rera id)', 'rera registration no.', 'rera registration no', 'rera id', 'rera no', 'rera_id', 'rera_no'],
+      hera_no: ['hera registration no. (hera id)', 'hera registration no.', 'hera registration no', 'hera id', 'hera no', 'hera_no'],
+      total_floors: ['total floors in building', 'total floors', 'floors in building', 'total_floors', 'floors', 'storey'],
+      number_of_towers: ['number of towers in project / complex', 'number of towers in project', 'number of towers', 'towers', 'total towers', 'number_of_towers'],
+      latitude: ['gps latitude', 'latitude', 'lat'],
+      longitude: ['gps longitude', 'longitude', 'lng', 'long'],
+      amenities: ['project amenities', 'amenities', 'features', 'facilities', 'selected_amenities'],
+      total_covered_parking_capacity: ['covered parking slot capacity', 'covered parking capacity', 'covered slots', 'total covered parking capacity', 'total_covered_parking_capacity'],
+      covered_parking_rate: ['covered parking default rate (inr)', 'covered parking rate', 'covered parking default rate', 'covered parking price', 'covered_parking_rate'],
+      total_ev_parking_capacity: ['ev fast charging station slots', 'ev parking capacity', 'ev slots', 'total ev parking capacity', 'total_ev_parking_capacity'],
+      ev_parking_rate: ['ev slot default rate (inr)', 'ev parking rate', 'ev slot default rate', 'ev parking price', 'ev_parking_rate'],
+      total_open_parking_capacity: ['open surface ground parking slots', 'open surface parking capacity', 'open parking capacity', 'open slots', 'total_open_parking_capacity'],
+      open_parking_rate: ['open surface slot default rate (inr)', 'open surface parking rate', 'open parking rate', 'open surface default rate', 'open_parking_rate'],
+      key_custody: ['key custody location / handler', 'key custody location', 'key custody handler', 'key custody', 'keys custody', 'keys_custody'],
+      architectural_description: ['architectural & structural description', 'architectural & structural design description', 'architectural description', 'structural description', 'description', 'architectural_description']
+    };
+
+    for (const [key, aliasList] of Object.entries(aliases)) {
+      if (aliasList.some(a => clean === a || clean.replace(/[^a-z0-9]/g, '') === a.replace(/[^a-z0-9]/g, ''))) {
+        return key;
+      }
+    }
+    return clean.replace(/[^a-z0-9_]/g, '_');
+  };
+
+  const processRawRowsToDevelopers = (sheetRows: any[][]) => {
+    if (!sheetRows || sheetRows.length < 2) {
+      setBulkDevImportErrors(['The uploaded file is empty or does not contain data rows below the header row.']);
+      return;
+    }
+
+    const rawHeaders = sheetRows[0];
+    const headerKeys = rawHeaders.map(h => normalizeDevHeaderKey(h));
+    const errors: string[] = [];
+    const parsedList: any[] = [];
+
+    const createdDevsMap = new Map<string, string>();
+    let nextProjSeqOffset = 0;
+    let nextDevSeqOffset = 0;
+
+    for (let r = 1; r < sheetRows.length; r++) {
+      const row = sheetRows[r];
+      if (!row || row.every((c: any) => c === null || c === undefined || String(c).trim() === '')) {
+        continue;
+      }
+
+      const rawObj: any = {};
+      headerKeys.forEach((key, colIdx) => {
+        if (key && colIdx < row.length) {
+          rawObj[key] = row[colIdx];
+        }
+      });
+
+      const devName = rawObj.developer ? String(rawObj.developer).trim() : 'Swaramayi Developer';
+      const projTitle = rawObj.title ? String(rawObj.title).trim() : `Master Project ${parsedList.length + 1}`;
+
+      const existingDev = (developerMasterList || []).find((d: any) => d.name.toLowerCase().trim() === devName.toLowerCase().trim());
+
+      let assignedDevId = rawObj.developer_id ? String(rawObj.developer_id).trim() : '';
+      if (!assignedDevId || assignedDevId.toUpperCase() === 'AUTO') {
+        if (existingDev) {
+          assignedDevId = existingDev.id;
+        } else if (createdDevsMap.has(devName.toLowerCase())) {
+          assignedDevId = createdDevsMap.get(devName.toLowerCase())!;
+        } else {
+          assignedDevId = getNextSequentialDeveloperId(nextDevSeqOffset, developerMasterList);
+          createdDevsMap.set(devName.toLowerCase(), assignedDevId);
+          nextDevSeqOffset++;
+        }
+      }
+
+      let assignedProjId = rawObj.project_id ? String(rawObj.project_id).trim() : '';
+      if (!assignedProjId || assignedProjId.toUpperCase() === 'AUTO') {
+        assignedProjId = getNextSequentialProjectId(nextProjSeqOffset, developerMasterList, properties);
+        nextProjSeqOffset++;
+      }
+
+      const primaryMobile = rawObj.developer_mobile ? String(rawObj.developer_mobile).trim() : (existingDev?.mobile || '+91 98833 95102');
+      const altMobile = rawObj.developer_alt_mobile ? String(rawObj.developer_alt_mobile).trim() : (existingDev?.altMobile || '');
+      const devEmail = rawObj.developer_email ? String(rawObj.developer_email).trim() : (existingDev?.email || 'developer@swaramayi.com');
+      const locality = rawObj.locality ? String(rawObj.locality).trim() : 'Greater Kolkata';
+      const totalFloors = normalizeTotalFloors(rawObj.total_floors || 'G+4 Floors (5 Storey)');
+      const numberOfTowers = rawObj.number_of_towers ? String(rawObj.number_of_towers).trim() : '1 Standalone Tower';
+
+      let lat = rawObj.latitude !== undefined && rawObj.latitude !== null && String(rawObj.latitude).trim() !== '' ? String(rawObj.latitude).trim() : '';
+      let lng = rawObj.longitude !== undefined && rawObj.longitude !== null && String(rawObj.longitude).trim() !== '' ? String(rawObj.longitude).trim() : '';
+      if (!lat || !lng) {
+        const gps = getGpsForProject(projTitle, lat, lng);
+        if (gps) {
+          lat = lat || gps.lat;
+          lng = lng || gps.lng;
+        }
+      }
+
+      let amenitiesList: string[] = [];
+      if (rawObj.amenities) {
+        if (Array.isArray(rawObj.amenities)) {
+          amenitiesList = rawObj.amenities;
+        } else {
+          amenitiesList = String(rawObj.amenities).split(',').map((s: string) => s.trim()).filter(Boolean);
+        }
+      }
+      if (amenitiesList.length === 0) {
+        amenitiesList = ['24/7 Power Backup', 'Water Supply', 'Security', 'CCTV cameras', 'Elevators'];
+      }
+
+      const coveredCap = cleanNum(rawObj.total_covered_parking_capacity, 12);
+      const coveredRate = rawObj.covered_parking_rate ? String(rawObj.covered_parking_rate).trim() : '250000';
+      const evCap = cleanNum(rawObj.total_ev_parking_capacity, 4);
+      const evRate = rawObj.ev_parking_rate ? String(rawObj.ev_parking_rate).trim() : '350000';
+      const openCap = cleanNum(rawObj.total_open_parking_capacity, 6);
+      const openRate = rawObj.open_parking_rate ? String(rawObj.open_parking_rate).trim() : '150000';
+
+      const keyCustody = rawObj.key_custody ? String(rawObj.key_custody).trim() : 'Builder Site Office';
+      const archDesc = rawObj.architectural_description ? String(rawObj.architectural_description).trim() : 'Modern RCC Frame Structure, Vastu compliant layouts, Premium vitrified tiles flooring.';
+
+      const parsedItem = {
+        id: assignedProjId,
+        project_id: assignedProjId,
+        developer: devName,
+        developer_id: assignedDevId,
+        title: projTitle,
+        developer_mobile: primaryMobile,
+        developer_alt_mobile: altMobile,
+        developer_email: devEmail,
+        locality,
+        rera_id: rawObj.rera_id ? String(rawObj.rera_id).trim() : '',
+        hera_no: rawObj.hera_no ? String(rawObj.hera_no).trim() : '',
+        total_floors: totalFloors,
+        number_of_towers: numberOfTowers,
+        latitude: lat || '22.722361',
+        longitude: lng || '88.493403',
+        amenities: amenitiesList,
+        total_covered_parking_capacity: coveredCap,
+        covered_parking_rate: coveredRate,
+        total_ev_parking_capacity: evCap,
+        ev_parking_rate: evRate,
+        total_open_parking_capacity: openCap,
+        open_parking_rate: openRate,
+        key_custody: keyCustody,
+        architectural_description: archDesc
+      };
+
+      parsedList.push(parsedItem);
+    }
+
+    if (parsedList.length === 0) {
+      errors.push('No valid developer & master project rows could be parsed from the file.');
+    }
+
+    setBulkDevImportErrors(errors);
+    setParsedBulkDevelopers(parsedList);
+  };
+
+  const handleBulkDevFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setBulkDevFileName(file.name);
+    setIsProcessingBulkDevFile(true);
+    setBulkDevImportErrors([]);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheet];
+        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        processRawRowsToDevelopers(rows);
+      } catch (err: any) {
+        setBulkDevImportErrors([`Failed to parse file: ${err.message || 'Unknown error'}`]);
+      } finally {
+        setIsProcessingBulkDevFile(false);
+      }
+    };
+    reader.onerror = () => {
+      setBulkDevImportErrors(['Error reading file. Please check file permissions.']);
+      setIsProcessingBulkDevFile(false);
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleProcessPastedDevCsv = () => {
+    if (!bulkDevPasteContent.trim()) {
+      alert('⚠️ Please paste CSV or TSV content into the text box first.');
+      return;
+    }
+    setIsProcessingBulkDevFile(true);
+    setBulkDevImportErrors([]);
+    try {
+      const workbook = XLSX.read(bulkDevPasteContent, { type: 'string' });
+      const firstSheet = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[firstSheet];
+      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      processRawRowsToDevelopers(rows);
+    } catch (err: any) {
+      setBulkDevImportErrors([`Failed to parse pasted text: ${err.message || 'Invalid CSV/TSV format'}`]);
+    } finally {
+      setIsProcessingBulkDevFile(false);
+    }
+  };
+
+  const handleRemoveParsedDevRow = (index: number) => {
+    setParsedBulkDevelopers(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleClearParsedDevRows = () => {
+    setParsedBulkDevelopers([]);
+    setBulkDevFileName('');
+    setBulkDevPasteContent('');
+    setBulkDevImportErrors([]);
+  };
+
+  const handleConfirmBulkDeveloperImport = async () => {
+    if (parsedBulkDevelopers.length === 0) {
+      alert('⚠️ No parsed developer projects to import. Please upload or paste records first.');
+      return;
+    }
+
+    setIsIngestingDevStock(true);
+    try {
+      let updatedDevs = [...developerMasterList];
+      const verifiedListToAdd: any[] = [];
+
+      parsedBulkDevelopers.forEach(item => {
+        const devName = item.developer || 'Builder';
+        const projTitle = item.title || 'Project';
+        const assignedProjCode = item.project_id;
+        const assignedDevId = item.developer_id;
+
+        const newProjEntry = {
+          id: assignedProjCode,
+          code: assignedProjCode,
+          title: projTitle,
+          developer_email: item.developer_email || '',
+          locality: item.locality || '',
+          lat: item.latitude || '',
+          lng: item.longitude || '',
+          rera_id: item.rera_id || '',
+          hera_no: item.hera_no || '',
+          total_floors: item.total_floors || 'G+4 Floors (5 Storey)',
+          number_of_towers: item.number_of_towers || '',
+          key_custody: item.key_custody || '',
+          keys_custody: item.key_custody || '',
+          architectural_description: item.architectural_description || '',
+          description: item.architectural_description || '',
+          amenities: Array.isArray(item.amenities) ? item.amenities : (item.amenities ? String(item.amenities).split(',').map((s: string) => s.trim()).filter(Boolean) : []),
+          building_photos: [],
+          total_covered_parking_capacity: item.total_covered_parking_capacity !== undefined ? item.total_covered_parking_capacity : 0,
+          covered_parking_rate: item.covered_parking_rate || '',
+          total_ev_parking_capacity: item.total_ev_parking_capacity !== undefined ? item.total_ev_parking_capacity : 0,
+          ev_parking_rate: item.ev_parking_rate || '',
+          total_open_parking_capacity: item.total_open_parking_capacity !== undefined ? item.total_open_parking_capacity : 0,
+          open_parking_rate: item.open_parking_rate || ''
+        };
+
+        const existingDevIdx = updatedDevs.findIndex(d => d.name.toLowerCase().trim() === devName.toLowerCase().trim());
+        if (existingDevIdx >= 0) {
+          const devObj = updatedDevs[existingDevIdx];
+          if (item.developer_email) devObj.email = item.developer_email;
+          if (item.developer_mobile && !devObj.mobile) devObj.mobile = item.developer_mobile;
+          if (item.developer_alt_mobile && !devObj.altMobile) devObj.altMobile = item.developer_alt_mobile;
+          const projList = devObj.projects || [];
+          const existingProjIdx = projList.findIndex((p: any) => (p.id === assignedProjCode || p.code === assignedProjCode || p.title?.toLowerCase().trim() === projTitle.toLowerCase().trim()));
+          if (existingProjIdx >= 0) {
+            projList[existingProjIdx] = { ...projList[existingProjIdx], ...newProjEntry };
+          } else {
+            devObj.projects = [newProjEntry, ...projList];
+          }
+        } else {
+          const newDevObj = {
+            id: assignedDevId,
+            name: devName,
+            mobile: item.developer_mobile || '+91 98490 88776',
+            altMobile: item.developer_alt_mobile || '',
+            email: item.developer_email || '',
+            projects: [newProjEntry]
+          };
+          updatedDevs = [newDevObj, ...updatedDevs];
+        }
+
+        // Auto-create Project-Wise Developer Channel Partner Agreement
+        createOrUpdateDevAgreement(
+          devName,
+          projTitle,
+          item.developer_mobile,
+          item.locality,
+          undefined,
+          true
+        );
+
+        verifiedListToAdd.push({
+          developer: devName,
+          project: projTitle,
+          mobile: item.developer_mobile || 'Registered Mobile',
+          verifiedAt: new Date().toLocaleString(),
+          hash: `SHA256-DEV-OTP-VERIFIED-#${Math.floor(100000 + Math.random() * 900000)}`
+        });
+      });
+
+      setDeveloperMasterList(updatedDevs);
+      if (setDevelopers) {
+        setDevelopers(updatedDevs);
+      }
+      try {
+        localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
+      } catch (e) {}
+
+      if (setVerifiedDevProjectsList && verifiedListToAdd.length > 0) {
+        setVerifiedDevProjectsList(prev => [...verifiedListToAdd, ...(prev || [])]);
+      }
+
+      if (syncAllToMongoDB) {
+        await syncAllToMongoDB({ developers: updatedDevs, properties });
+      }
+
+      alert(`🎉 BULK DEVELOPER STOCK IMPORT SUCCESSFUL!\n\n• Successfully imported and registered ${parsedBulkDevelopers.length} Developer Master Projects!\n• Updated Developer Master Vault & MongoDB Atlas.\n• Project Codes assigned: ${parsedBulkDevelopers[0]?.project_id} to ${parsedBulkDevelopers[parsedBulkDevelopers.length - 1]?.project_id}`);
+
+      handleClearParsedDevRows();
+      setIsBulkImportDeveloperOpen(false);
+      setShowDevVaultModal(true);
+    } catch (err: any) {
+      alert(`⚠️ Ingestion failed: ${err.message || 'Could not save developers'}`);
+    } finally {
+      setIsIngestingDevStock(false);
     }
   };
 
@@ -2269,6 +2809,12 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           >
             <Upload size={15} /> 🏠 📥 Import Bulk Property Stock
           </button>
+          <button 
+            onClick={() => { setIsBulkImportDeveloperOpen(true); if (setShowBulkImportDeveloperModal) setShowBulkImportDeveloperModal(true); }} 
+            style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none', boxShadow: '0 2px 8px rgba(168, 85, 247, 0.3)' }}
+          >
+            <Upload size={15} /> 🏢 📥 Import Bulk Developer Stock
+          </button>
           <button onClick={handleExportInventoryExcel} style={{ background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#cbd5e1', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}>
             <Share2 size={15} /> Export Inventory
           </button>
@@ -2445,6 +2991,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => { setIsBulkImportDeveloperOpen(true); if (setShowBulkImportDeveloperModal) setShowBulkImportDeveloperModal(true); }}
+                style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: '900', fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 14px rgba(34, 197, 94, 0.3)' }}
+              >
+                <Upload size={16} /> 🏢 📥 IMPORT BULK DEVELOPER STOCK
+              </button>
               <button
                 type="button"
                 onClick={handleSaveProjectMaster}
@@ -5222,9 +5775,18 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   Unique Developer ID (SRM-DEV) Master Index • Associated Projects & Mobile OTP Credentials
                 </p>
               </div>
-              <button onClick={() => setShowDevVaultModal(false)} style={{ background: 'none', border: 'none', color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer' }}>
-                <X size={20} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => { setIsBulkImportDeveloperOpen(true); if (setShowBulkImportDeveloperModal) setShowBulkImportDeveloperModal(true); }} 
+                  style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '7px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(168, 85, 247, 0.3)' }}
+                >
+                  <Upload size={14} /> 🏢 📥 Import Bulk Developer Stock
+                </button>
+                <button onClick={() => setShowDevVaultModal(false)} style={{ background: 'none', border: 'none', color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer' }}>
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* ADD NEW DEVELOPER FORM */}
@@ -7546,6 +8108,594 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                 >
                   {isIngestingStock ? <RefreshCw size={18} className="spin" /> : <Upload size={18} />}
                   {isIngestingStock ? 'Ingesting into Database...' : `Confirm & Import ${parsedBulkProperties.length} Properties`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🏢 📥 BULK DEVELOPER MASTER STOCK IMPORT & EXCEL ENGINE MODAL */}
+      {(isBulkImportDeveloperOpen || showBulkImportDeveloperModal) && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.88)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: windowWidth <= 640 ? '10px' : '20px'
+        }}>
+          <div style={{
+            background: isLight ? '#ffffff' : '#1e293b',
+            border: isLight ? '1px solid #cbd5e1' : '1.5px solid #a855f7',
+            borderRadius: windowWidth <= 640 ? '16px' : '24px',
+            width: '100%',
+            maxWidth: '1200px',
+            maxHeight: '92vh',
+            overflowY: 'auto',
+            padding: windowWidth <= 640 ? '16px' : '28px',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px'
+          }}>
+            {/* MODAL HEADER */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              borderBottom: isLight ? '2px solid #e2e8f0' : '2px solid #334155',
+              paddingBottom: '16px'
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{
+                    background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)',
+                    color: '#ffffff',
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: '900',
+                    letterSpacing: '0.5px'
+                  }}>
+                    EXCEL & CSV DEVELOPER INGESTION
+                  </span>
+                  <span style={{
+                    background: isLight ? '#f1f5f9' : '#0f172a',
+                    color: isLight ? '#64748b' : '#94a3b8',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: '700'
+                  }}>
+                    {BULK_DEVELOPER_COLUMNS.length} Master Project & Developer Columns Supported
+                  </span>
+                </div>
+                <h3 style={{
+                  fontSize: '1.35rem',
+                  fontWeight: '900',
+                  color: isLight ? '#7e22ce' : '#c084fc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  margin: 0
+                }}>
+                  <Upload size={24} color="#a855f7" /> IMPORT BULK DEVELOPER MASTER STOCK
+                </h3>
+                <p style={{
+                  fontSize: '0.82rem',
+                  color: isLight ? '#64748b' : '#94a3b8',
+                  margin: '4px 0 0 0'
+                }}>
+                  Upload or paste your developer & master project sheets. All {BULK_DEVELOPER_COLUMNS.length} fields from "Register New Project & Developer Master" (Developer details, Project codes, Locality, RERA/HERA IDs, Floors, Towers, GPS coords, Amenities, Parking capacities & Key custody) are supported with automatic ID generation, Channel Partner Agreements, and Developer Vault registration.
+                </p>
+              </div>
+              <button
+                onClick={closeBulkDeveloperImportModal}
+                style={{
+                  background: isLight ? '#f1f5f9' : '#0f172a',
+                  border: 'none',
+                  color: isLight ? '#64748b' : '#94a3b8',
+                  padding: '8px',
+                  borderRadius: '10px',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* QUICK ACTIONS & TEMPLATE DOWNLOADS BANNER */}
+            <div style={{
+              background: isLight ? '#faf5ff' : 'rgba(168, 85, 247, 0.08)',
+              border: '1.5px solid #a855f7',
+              borderRadius: '14px',
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <strong style={{ color: isLight ? '#6b21a8' : '#e9d5ff', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CheckCircle2 size={18} color="#a855f7" /> Step 1: Download Standard Pre-Formatted Template
+                  </strong>
+                  <span style={{ fontSize: '0.78rem', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginTop: '2px' }}>
+                    Template includes all {BULK_DEVELOPER_COLUMNS.length} columns covering Developer Master and Project specifications with 2 complete sample records.
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={handleDownloadDeveloperExcelTemplate}
+                    style={{
+                      background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      fontWeight: '900',
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 4px 12px rgba(168, 85, 247, 0.3)'
+                    }}
+                  >
+                    <Download size={15} /> 📥 Download Excel Template (.xlsx)
+                  </button>
+                  <button
+                    onClick={handleDownloadDeveloperCsvTemplate}
+                    style={{
+                      background: isLight ? '#ffffff' : '#1e293b',
+                      color: isLight ? '#0f172a' : '#f8fafc',
+                      border: '1px solid #a855f7',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      fontWeight: '800',
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FileText size={15} /> 📄 Download CSV Template (.csv)
+                  </button>
+                  <button
+                    onClick={handleExportDeveloperExcel}
+                    style={{
+                      background: isLight ? '#ffffff' : '#0f172a',
+                      color: '#a855f7',
+                      border: '1px solid #a855f7',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      fontWeight: '800',
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FileSpreadsheet size={15} /> 📊 Export Live Developer Projects
+                  </button>
+                  <button
+                    onClick={() => setShowBulkDevColumnsGuide(prev => !prev)}
+                    style={{
+                      background: 'none',
+                      border: isLight ? '1px solid #cbd5e1' : '1px solid #475569',
+                      color: isLight ? '#475569' : '#cbd5e1',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      fontWeight: '800',
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    {showBulkDevColumnsGuide ? <EyeOff size={14} /> : <Eye size={14} />} {showBulkDevColumnsGuide ? 'Hide Column Guide' : `View ${BULK_DEVELOPER_COLUMNS.length} Column Guide`}
+                  </button>
+                </div>
+              </div>
+
+              {/* COLLAPSIBLE COLUMN GUIDE */}
+              {showBulkDevColumnsGuide && (
+                <div style={{
+                  background: isLight ? '#ffffff' : '#0f172a',
+                  border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                  borderRadius: '10px',
+                  padding: '14px',
+                  maxHeight: '260px',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ fontSize: '0.82rem', color: isLight ? '#7e22ce' : '#c084fc' }}>
+                      📋 Full {BULK_DEVELOPER_COLUMNS.length} Column Specification (Directly from "Register New Project & Developer Master")
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                      Column headers match these names (or intelligent synonyms)
+                    </span>
+                  </div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                      <thead>
+                        <tr style={{ background: isLight ? '#f1f5f9' : '#1e293b', borderBottom: '1px solid #334155', textAlign: 'left' }}>
+                          <th style={{ padding: '6px 10px', color: isLight ? '#475569' : '#94a3b8' }}>#</th>
+                          <th style={{ padding: '6px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Excel Header</th>
+                          <th style={{ padding: '6px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Form Section</th>
+                          <th style={{ padding: '6px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Sample Value 1</th>
+                          <th style={{ padding: '6px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Description</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {BULK_DEVELOPER_COLUMNS.map((col, idx) => (
+                          <tr key={col.key} style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #1e293b' }}>
+                            <td style={{ padding: '6px 10px', fontWeight: '800', color: '#a855f7' }}>{idx + 1}</td>
+                            <td style={{ padding: '6px 10px', fontWeight: '700', color: isLight ? '#0f172a' : '#ffffff' }}>{col.header}</td>
+                            <td style={{ padding: '6px 10px', color: isLight ? '#64748b' : '#94a3b8' }}>{col.section}</td>
+                            <td style={{ padding: '6px 10px', color: '#38bdf8', fontFamily: 'monospace' }}>{String(col.sample1)}</td>
+                            <td style={{ padding: '6px 10px', color: isLight ? '#64748b' : '#94a3b8' }}>{col.desc}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* STEP 2: UPLOAD OR PASTE INPUT AREA */}
+            <div style={{
+              background: isLight ? '#f8fafc' : '#0f172a',
+              border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+              borderRadius: '14px',
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <strong style={{ color: isLight ? '#0f172a' : '#f8fafc', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Upload size={18} color="#a855f7" /> Step 2: Upload File or Paste Spreadsheet Data
+                </strong>
+                <div style={{ display: 'flex', gap: '6px', background: isLight ? '#e2e8f0' : '#1e293b', padding: '3px', borderRadius: '8px' }}>
+                  <button
+                    onClick={() => setBulkDevImportMode('upload')}
+                    style={{
+                      background: bulkDevImportMode === 'upload' ? '#a855f7' : 'transparent',
+                      color: bulkDevImportMode === 'upload' ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'),
+                      border: 'none',
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📁 Upload Excel / CSV
+                  </button>
+                  <button
+                    onClick={() => setBulkDevImportMode('paste')}
+                    style={{
+                      background: bulkDevImportMode === 'paste' ? '#a855f7' : 'transparent',
+                      color: bulkDevImportMode === 'paste' ? '#ffffff' : (isLight ? '#475569' : '#94a3b8'),
+                      border: 'none',
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📝 Paste CSV / TSV Text
+                  </button>
+                </div>
+              </div>
+
+              {bulkDevImportMode === 'upload' ? (
+                <div style={{
+                  border: '2px dashed #a855f7',
+                  borderRadius: '12px',
+                  padding: '24px 16px',
+                  textAlign: 'center',
+                  background: isLight ? '#faf5ff' : 'rgba(168, 85, 247, 0.05)',
+                  cursor: 'pointer',
+                  position: 'relative'
+                }}>
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls, .csv"
+                    onChange={handleBulkDevFileSelected}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      opacity: 0,
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', pointerEvents: 'none' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
+                      <Upload size={24} />
+                    </div>
+                    <strong style={{ fontSize: '0.95rem', color: isLight ? '#7e22ce' : '#c084fc' }}>
+                      {bulkDevFileName ? `Selected: ${bulkDevFileName}` : 'Click or Drag & Drop Excel (.xlsx, .xls) or CSV File Here'}
+                    </strong>
+                    <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                      Supports all {BULK_DEVELOPER_COLUMNS.length} columns. Auto-generates sequential Project IDs & Developer IDs if left blank.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <textarea
+                    rows={6}
+                    value={bulkDevPasteContent}
+                    onChange={(e) => setBulkDevPasteContent(e.target.value)}
+                    placeholder="Paste CSV or Tab-separated rows here (including header row)...&#10;e.g.&#10;Developer / Builder Name,Project Title & Name,Master Project ID,Developer Mobile Phone (for OTP),Locality Hub / Sector,Total Floors in Building,Number Of Towers in Project / Complex&#10;Godrej Properties,Godrej Prakriti,SRM-PROJ-2026-000001,+91 98833 95102,BT Road Sodepur,G+14 Floors (Highrise),8 Towers Complex"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      background: isLight ? '#ffffff' : '#1e293b',
+                      color: isLight ? '#0f172a' : '#ffffff',
+                      border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                      fontFamily: 'monospace',
+                      fontSize: '0.78rem',
+                      resize: 'vertical'
+                    }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                    <button
+                      onClick={() => setBulkDevPasteContent('')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: isLight ? '#64748b' : '#94a3b8',
+                        cursor: 'pointer',
+                        fontSize: '0.78rem'
+                      }}
+                    >
+                      Clear Text
+                    </button>
+                    <button
+                      onClick={handleProcessPastedDevCsv}
+                      disabled={isProcessingBulkDevFile}
+                      style={{
+                        background: '#a855f7',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        fontWeight: '800',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      {isProcessingBulkDevFile ? <RefreshCw size={14} className="spin" /> : <CheckCircle2 size={14} />} Parse & Preview Data
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* PROCESSING INDICATOR */}
+              {isProcessingBulkDevFile && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a855f7', fontSize: '0.82rem', fontWeight: '800' }}>
+                  <RefreshCw size={16} className="spin" /> Parsing developer project columns and validating master parameters...
+                </div>
+              )}
+
+              {/* ERROR MESSAGES */}
+              {bulkDevImportErrors.length > 0 && (
+                <div style={{
+                  background: isLight ? '#fef2f2' : '#450a0a',
+                  border: '1px solid #ef4444',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px'
+                }}>
+                  <strong style={{ color: '#ef4444', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertTriangle size={16} /> Import Notice / Warnings
+                  </strong>
+                  {bulkDevImportErrors.map((err, i) => (
+                    <span key={i} style={{ color: isLight ? '#991b1b' : '#fca5a5', fontSize: '0.78rem' }}>
+                      • {err}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* STEP 3: LIVE PARSED DATA PREVIEW */}
+            {parsedBulkDevelopers.length > 0 && (
+              <div style={{
+                background: isLight ? '#f8fafc' : '#0f172a',
+                border: '1.5px solid #a855f7',
+                borderRadius: '14px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <strong style={{ color: '#a855f7', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CheckCircle2 size={18} /> Step 3: Verified {parsedBulkDevelopers.length} Developer Projects Ready for Master Vault
+                    </strong>
+                    <span style={{ fontSize: '0.75rem', background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', padding: '2px 8px', borderRadius: '4px', fontWeight: '800' }}>
+                      Parameters Validated
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input
+                      type="text"
+                      placeholder="Filter preview rows..."
+                      value={bulkDevPreviewFilter}
+                      onChange={(e) => setBulkDevPreviewFilter(e.target.value)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                        background: isLight ? '#ffffff' : '#1e293b',
+                        color: isLight ? '#0f172a' : '#ffffff',
+                        fontSize: '0.78rem'
+                      }}
+                    />
+                    <button
+                      onClick={handleClearParsedDevRows}
+                      style={{
+                        background: '#ef444422',
+                        color: '#ef4444',
+                        border: '1px solid #ef4444',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                        fontWeight: '800',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Reset All
+                    </button>
+                  </div>
+                </div>
+
+                {/* PREVIEW TABLE */}
+                <div style={{ overflowX: 'auto', maxHeight: '340px', overflowY: 'auto', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', borderRadius: '8px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                    <thead style={{ position: 'sticky', top: 0, background: isLight ? '#e2e8f0' : '#1e293b', zIndex: 10 }}>
+                      <tr style={{ textAlign: 'left', borderBottom: '1.5px solid #334155' }}>
+                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>#</th>
+                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Master Project ID</th>
+                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Developer / Builder</th>
+                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Developer ID</th>
+                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Project Title</th>
+                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Locality Hub</th>
+                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Contact Mobile</th>
+                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Floors & Towers</th>
+                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>RERA / HERA</th>
+                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>GPS Coords</th>
+                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Parking (Cov/EV/Open)</th>
+                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parsedBulkDevelopers
+                        .filter(p => {
+                          if (!bulkDevPreviewFilter.trim()) return true;
+                          const q = bulkDevPreviewFilter.toLowerCase();
+                          return (
+                            String(p.project_id || '').toLowerCase().includes(q) ||
+                            String(p.developer || '').toLowerCase().includes(q) ||
+                            String(p.developer_id || '').toLowerCase().includes(q) ||
+                            String(p.title || '').toLowerCase().includes(q) ||
+                            String(p.locality || '').toLowerCase().includes(q) ||
+                            String(p.developer_mobile || '').toLowerCase().includes(q)
+                          );
+                        })
+                        .map((p, idx) => (
+                          <tr key={p.id || idx} style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #1e293b' }}>
+                            <td style={{ padding: '8px 10px', color: isLight ? '#64748b' : '#94a3b8' }}>{idx + 1}</td>
+                            <td style={{ padding: '8px 10px', fontWeight: '900', color: '#a855f7', fontFamily: 'monospace' }}>{p.project_id}</td>
+                            <td style={{ padding: '8px 10px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{p.developer}</td>
+                            <td style={{ padding: '8px 10px', color: '#fbbf24', fontFamily: 'monospace', fontWeight: '800' }}>{p.developer_id}</td>
+                            <td style={{ padding: '8px 10px', fontWeight: '800', color: isLight ? '#0f172a' : '#38bdf8' }}>{p.title}</td>
+                            <td style={{ padding: '8px 10px', color: isLight ? '#475569' : '#cbd5e1' }}>{p.locality}</td>
+                            <td style={{ padding: '8px 10px', color: '#4ade80', fontFamily: 'monospace', fontWeight: '700' }}>{p.developer_mobile}</td>
+                            <td style={{ padding: '8px 10px', color: isLight ? '#475569' : '#cbd5e1' }}>{p.total_floors} • {p.number_of_towers}</td>
+                            <td style={{ padding: '8px 10px', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace', fontSize: '0.7rem' }}>{p.rera_id || p.hera_no || 'N/A'}</td>
+                            <td style={{ padding: '8px 10px', color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.7rem' }}>{p.latitude}, {p.longitude}</td>
+                            <td style={{ padding: '8px 10px', color: '#eab308', fontWeight: '700' }}>{p.total_covered_parking_capacity} / {p.total_ev_parking_capacity} / {p.total_open_parking_capacity} slots</td>
+                            <td style={{ padding: '8px 10px' }}>
+                              <button
+                                onClick={() => handleRemoveParsedDevRow(idx)}
+                                title="Remove row from import"
+                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px' }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL FOOTER */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+              paddingTop: '16px',
+              flexWrap: 'wrap',
+              gap: '10px'
+            }}>
+              <div style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                {parsedBulkDevelopers.length > 0 ? (
+                  <span>
+                    Ready to register <strong style={{ color: '#a855f7' }}>{parsedBulkDevelopers.length}</strong> developer projects into Developer Master Vault.
+                  </span>
+                ) : (
+                  <span>Select an Excel/CSV file or paste data above to preview.</span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={closeBulkDeveloperImportModal}
+                  style={{
+                    background: '#334155',
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    fontWeight: '800',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmBulkDeveloperImport}
+                  disabled={parsedBulkDevelopers.length === 0 || isIngestingDevStock}
+                  style={{
+                    background: parsedBulkDevelopers.length > 0 ? 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)' : '#475569',
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '10px 24px',
+                    borderRadius: '8px',
+                    fontWeight: '900',
+                    fontSize: '0.9rem',
+                    cursor: parsedBulkDevelopers.length > 0 && !isIngestingDevStock ? 'pointer' : 'not-allowed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: parsedBulkDevelopers.length > 0 ? '0 4px 14px rgba(168, 85, 247, 0.4)' : 'none'
+                  }}
+                >
+                  {isIngestingDevStock ? <RefreshCw size={18} className="spin" /> : <Upload size={18} />}
+                  {isIngestingDevStock ? 'Ingesting into Database...' : `Confirm & Import ${parsedBulkDevelopers.length} Developer Projects`}
                 </button>
               </div>
             </div>

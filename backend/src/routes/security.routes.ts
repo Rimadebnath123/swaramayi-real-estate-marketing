@@ -8,6 +8,7 @@ import {
   deleteTeam,
   getUsers, 
   createUser, 
+  updateUser,
   updateUserStatus,
   deleteUser,
   syncSecurityData,
@@ -35,6 +36,7 @@ router.delete('/teams/:id', authenticateToken, deleteTeam);
 
 router.get('/users', authenticateToken, getUsers);
 router.post('/users', authenticateToken, createUser);
+router.put('/users/:id', authenticateToken, updateUser);
 router.delete('/users/:id', authenticateToken, deleteUser);
 router.patch('/users/:id/status', authenticateToken, updateUserStatus);
 router.post('/users/handover', authenticateToken, reassignEmployeeExit);

@@ -446,7 +446,10 @@ export async function getMongoDBSync(req: AuthRequest, res: Response) {
   res.setHeader('Surrogate-Control', 'no-store');
   const mongoData = await loadDataFromMongoDB();
   const data = mongoData || dbStore.data;
-  if (data && Array.isArray(dbStore.data.users) && dbStore.data.users.length > 0) {
+  if (mongoData && Array.isArray(mongoData.users) && mongoData.users.length > 0) {
+    dbStore.data.users = mongoData.users;
+    data.users = mongoData.users;
+  } else if (data && Array.isArray(dbStore.data.users) && dbStore.data.users.length > 0) {
     data.users = dbStore.data.users;
   }
   if (data && Array.isArray((dbStore.data as any).files)) {
@@ -483,15 +486,8 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
       dbStore.data.customers = payload.customers;
     }
     if (Array.isArray(payload.agreements)) dbStore.data.agreements = payload.agreements;
-    if (Array.isArray(payload.users) && payload.users.length > 0) {
-      const mergedUsers = [...payload.users];
-      (dbStore.data.users || []).forEach((u: any) => {
-        if (!mergedUsers.some((mu: any) => mu.id === u.id || mu.email === u.email)) {
-          mergedUsers.push(u);
-        }
-      });
-      dbStore.data.users = mergedUsers;
-      payload.users = mergedUsers;
+    if (Array.isArray(payload.users)) {
+      dbStore.data.users = payload.users;
     }
     if (Array.isArray(payload.teams)) dbStore.data.teams = payload.teams;
     if (Array.isArray(payload.branches)) dbStore.data.branches = payload.branches;

@@ -191,7 +191,28 @@ export async function syncToMongoDB(data: any) {
   }
 
   try {
-    if (Array.isArray(data.users)) await syncCollection(UserModel, data.users);
+    if (Array.isArray(data.users)) {
+      if (data.users.length === 0) {
+        await UserModel.deleteMany({
+          id: { $ne: 'USR-01' },
+          username: { $nin: ['admin', 'Avishek Das (Super Admin)'] }
+        }).catch(() => {});
+      } else {
+        const activeIds = data.users.map((u: any) => String(u.id || '')).filter(Boolean);
+        const activeUsernames = data.users.map((u: any) => String(u.username || '')).filter(Boolean);
+        const activeEmails = data.users.map((u: any) => String(u.email || '')).filter(Boolean);
+        await UserModel.deleteMany({
+          $and: [
+            { id: { $nin: activeIds } },
+            { username: { $nin: activeUsernames } },
+            { email: { $nin: activeEmails } },
+            { id: { $ne: 'USR-01' } },
+            { username: { $nin: ['admin', 'Avishek Das (Super Admin)'] } }
+          ]
+        }).catch(() => {});
+      }
+      await syncCollection(UserModel, data.users);
+    }
     if (Array.isArray(data.properties) && data.properties.length > 0) {
       await syncCollection(PropertyModel, data.properties);
     }

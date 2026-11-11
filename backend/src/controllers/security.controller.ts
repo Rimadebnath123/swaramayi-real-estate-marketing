@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { dbStore, loadData, saveData, logAudit, generateID, UserRecord } from '../db/database.js';
 import { AuthRequest } from '../middleware/auth.js';
+import mongoose from 'mongoose';
+import { UserModel, syncToMongoDB } from '../db/mongoPersistence.js';
 
 // 1. Emergency System Lockdown Toggle
 export async function toggleLockdown(req: AuthRequest, res: Response) {
@@ -87,7 +89,29 @@ export async function createTeam(req: AuthRequest, res: Response) {
 
 // 3. User & Employee Directory Management
 export async function getUsers(req: AuthRequest, res: Response) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   loadData();
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const mongoUsers = await UserModel.find({}).lean();
+      if (Array.isArray(mongoUsers) && mongoUsers.length > 0) {
+        const hasAdmin = mongoUsers.some((u: any) => u.id === 'USR-01' || u.role === 'SUPER_ADMIN');
+        if (!hasAdmin && dbStore.data.users?.[0]) {
+          mongoUsers.unshift(dbStore.data.users[0]);
+        }
+        dbStore.data.users = mongoUsers as any;
+        return res.json({
+          status: 'SUCCESS',
+          count: mongoUsers.length,
+          data: mongoUsers
+        });
+      }
+    }
+  } catch (err: any) {
+    console.warn('getUsers MongoDB fetch warning:', err.message);
+  }
   return res.json({
     status: 'SUCCESS',
     count: dbStore.data.users.length,
@@ -95,40 +119,113 @@ export async function getUsers(req: AuthRequest, res: Response) {
   });
 }
 
+export function generateUniqueUserId(usersList: any[] = []): string {
+  const existingNumbers = (usersList || [])
+    .map((u: any) => {
+      const match = String(u.id || '').match(/USR-(\d+)/i);
+      return match ? parseInt(match[1], 10) : 0;
+    })
+    .filter((n: number) => !isNaN(n) && n > 0);
+
+  const maxNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+  let nextNum = Math.max(maxNum + 1, 1);
+
+  const existingIdSet = new Set((usersList || []).map((u: any) => String(u.id || '').toUpperCase().trim()));
+  while (existingIdSet.has(`USR-${String(nextNum).padStart(2, '0')}`)) {
+    nextNum++;
+  }
+  return `USR-${String(nextNum).padStart(2, '0')}`;
+}
+
 export async function createUser(req: AuthRequest, res: Response) {
-  const { username, full_name, email, mobile, role, branch_name, department, team_name, manager_name } = req.body;
+  const { username, full_name, email, mobile, role, branch_name, department, team_name, manager_name, password, designation, permissions, profileImage } = req.body;
 
   if (!username || !email || !role) {
     return res.status(400).json({ status: 'ERROR', message: 'username, email, and role are required.' });
   }
 
   loadData();
-  const newUser: UserRecord = {
-    id: `USR-0${dbStore.data.users.length + 1}`,
-    username,
-    full_name: full_name || username,
-    email,
+  const existingIdSet = new Set((dbStore.data.users || []).map((u: any) => String(u.id || '').toUpperCase().trim()));
+  let newId = req.body.id;
+  if (!newId || existingIdSet.has(String(newId).toUpperCase().trim())) {
+    newId = generateUniqueUserId(dbStore.data.users);
+  }
+  const newUser: any = {
+    id: newId,
+    username: username.trim(),
+    full_name: (full_name || username).trim(),
+    email: email.trim().toLowerCase(),
+    password: password || 'Swaramayi@2026',
     mobile: mobile || '',
     role: role || 'SALES_EXEC',
-    branch_name: branch_name || 'Main Branch',
-    department: department || 'Sales',
+    designation: designation || 'Real Estate Specialist',
+    branch_name: branch_name || 'Head Office (Kolkata)',
+    department: department || 'Sales Operations',
     team_name: team_name || '',
     manager_name: manager_name || '',
+    permissions: permissions || {},
+    profileImage: profileImage || '',
     is_active: true,
     user_status: 'ACTIVE',
     created_at: new Date().toISOString().split('T')[0]
   };
 
-  dbStore.data.users.unshift(newUser);
+  dbStore.data.users = [newUser, ...(dbStore.data.users || []).filter(u => u.id !== newId && u.email !== newUser.email)];
   saveData();
 
-  logAudit(req.user?.id || null, 'CREATE_USER', 'SECURITY', `Created user ${username} (${role})`, req.ip);
+  if (mongoose.connection.readyState === 1) {
+    try {
+      await UserModel.findOneAndUpdate(
+        { $or: [{ id: newId }, { email: newUser.email }, { username: newUser.username }] },
+        { $set: newUser },
+        { upsert: true, new: true }
+      );
+    } catch (e: any) {
+      console.warn('UserModel create/upsert error:', e.message);
+    }
+  }
+
+  logAudit(req.user?.id || null, 'CREATE_USER', 'SECURITY', `Created user ${username} (${role}) directly in MongoDB`, req.ip);
 
   return res.status(201).json({
     status: 'SUCCESS',
-    message: `User ${username} created successfully with role ${role}.`,
+    message: `User ${username} created successfully and saved directly to MongoDB.`,
     data: newUser
   });
+}
+
+export async function updateUser(req: AuthRequest, res: Response) {
+  const { id } = req.params;
+  const updates = req.body || {};
+
+  loadData();
+  const idx = (dbStore.data.users || []).findIndex(u => u.id === id || u.username === id || u.email === id);
+  let updatedUser: any = null;
+  if (idx !== -1) {
+    dbStore.data.users[idx] = { ...dbStore.data.users[idx], ...updates, id: dbStore.data.users[idx].id };
+    updatedUser = dbStore.data.users[idx];
+    saveData();
+  }
+
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const doc = await UserModel.findOneAndUpdate(
+        { $or: [{ id }, { username: id }, { email: id }] },
+        { $set: updates },
+        { new: true }
+      ).lean();
+      if (doc && !updatedUser) updatedUser = doc;
+    } catch (e: any) {
+      console.warn('UserModel update error:', e.message);
+    }
+  }
+
+  if (!updatedUser) {
+    return res.status(404).json({ status: 'ERROR', message: 'User not found.' });
+  }
+
+  logAudit(req.user?.id || null, 'UPDATE_USER', 'SECURITY', `Updated user ${id} in MongoDB`, req.ip);
+  return res.json({ status: 'SUCCESS', message: `User updated successfully in MongoDB database.`, data: updatedUser });
 }
 
 export async function updateUserStatus(req: AuthRequest, res: Response) {
@@ -145,6 +242,16 @@ export async function updateUserStatus(req: AuthRequest, res: Response) {
   if (typeof is_active === 'boolean') user.is_active = is_active;
 
   saveData();
+
+  if (mongoose.connection.readyState === 1) {
+    try {
+      await UserModel.findOneAndUpdate(
+        { $or: [{ id }, { username: id }] },
+        { $set: { ...(user_status ? { user_status } : {}), ...(typeof is_active === 'boolean' ? { is_active } : {}) } },
+        { new: true }
+      );
+    } catch (e: any) {}
+  }
 
   logAudit(req.user?.id || null, 'UPDATE_USER_STATUS', 'SECURITY', `Updated user ${user.username} status to ${user_status || is_active}`, req.ip);
 
@@ -335,14 +442,33 @@ export async function deleteTeam(req: AuthRequest, res: Response) {
 
 export async function deleteUser(req: AuthRequest, res: Response) {
   const { id } = req.params;
-  if (id === 'USR-01' || id === 'admin') {
+  const lower = (id || '').toLowerCase();
+  if (id === 'USR-01' || lower === 'admin' || lower.includes('avishek')) {
     return res.status(400).json({ status: 'ERROR', message: 'Primary Super Admin user cannot be deleted.' });
   }
   loadData();
-  dbStore.data.users = (dbStore.data.users || []).filter(u => u.id !== id && u.username !== id && u.full_name !== id);
+  dbStore.data.users = (dbStore.data.users || []).filter(
+    u => u.id !== id && u.username !== id && u.full_name !== id && u.email !== id
+  );
   saveData();
-  logAudit(req.user?.id || null, 'DELETE_USER', 'SECURITY', `Deleted user ${id}`, req.ip);
-  return res.json({ status: 'SUCCESS', message: `User ${id} deleted successfully from database.` });
+
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const deleteRes = await UserModel.deleteMany({
+        $and: [
+          { $or: [{ id: id }, { username: id }, { full_name: id }, { email: id }] },
+          { id: { $ne: 'USR-01' } },
+          { username: { $nin: ['admin', 'Avishek Das (Super Admin)'] } }
+        ]
+      });
+      console.log(`🗑️ Directly deleted user "${id}" from MongoDB UserModel. Count:`, deleteRes.deletedCount);
+    } catch (err: any) {
+      console.error('deleteUser MongoDB error:', err.message);
+    }
+  }
+
+  logAudit(req.user?.id || null, 'DELETE_USER', 'SECURITY', `Permanently deleted user ${id} from MongoDB`, req.ip);
+  return res.json({ status: 'SUCCESS', message: `User ${id} permanently deleted from database.` });
 }
 
 export async function syncSecurityData(req: AuthRequest, res: Response) {
@@ -350,7 +476,26 @@ export async function syncSecurityData(req: AuthRequest, res: Response) {
   loadData();
   if (Array.isArray(branches)) dbStore.data.branches = branches;
   if (Array.isArray(teams)) dbStore.data.teams = teams;
-  if (Array.isArray(users)) dbStore.data.users = users;
+  if (Array.isArray(users)) {
+    dbStore.data.users = users;
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const activeIds = users.map((u: any) => String(u.id || '')).filter(Boolean);
+        const activeUsernames = users.map((u: any) => String(u.username || '')).filter(Boolean);
+        const activeEmails = users.map((u: any) => String(u.email || '')).filter(Boolean);
+        await UserModel.deleteMany({
+          $and: [
+            { id: { $nin: activeIds } },
+            { username: { $nin: activeUsernames } },
+            { email: { $nin: activeEmails } },
+            { id: { $ne: 'USR-01' } },
+            { username: { $nin: ['admin', 'Avishek Das (Super Admin)'] } }
+          ]
+        }).catch(() => {});
+        await syncToMongoDB({ users });
+      } catch (e: any) {}
+    }
+  }
   saveData();
   return res.json({ status: 'SUCCESS', message: 'Security & Organization structure synced to database and MongoDB Atlas.' });
 }

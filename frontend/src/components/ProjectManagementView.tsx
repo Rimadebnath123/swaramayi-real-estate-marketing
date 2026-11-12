@@ -338,20 +338,26 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
         const projId = proj.code || proj.id || `PROJ-${(proj.title || 'PROJECT').replace(/\s+/g, '-').toUpperCase()}`;
         if (!masterProjectsMap.has(projId)) {
+          const rawDevMobile = String(dev.mobile || '').trim();
+          const splitParts = rawDevMobile.includes('/') ? rawDevMobile.split('/').map((s: string) => s.trim()).filter(Boolean) : [];
+          const primaryMob = proj.developer_mobile || (splitParts.length > 1 ? splitParts[0] : rawDevMobile);
+          const altMob = proj.developer_alt_mobile || proj.altMobile || dev.altMobile || (splitParts.length > 1 ? splitParts[1] : '');
           masterProjectsMap.set(projId, {
             id: projId,
             code: proj.code || projId,
             title: proj.title,
             developer: dev.name,
             developer_id: dev.id,
-            mobile: dev.mobile || '',
-            altMobile: dev.altMobile || '',
+            mobile: primaryMob,
+            altMobile: altMob,
+            developer_email: proj.developer_email || dev.email || '',
             locality: proj.locality || '',
+            full_address: proj.full_address || proj.address || '',
             latitude: proj.lat || proj.latitude || '',
             longitude: proj.lng || proj.longitude || '',
             rera_id: proj.rera_id || proj.reraId || proj.rera || dev.rera_id || dev.reraId || dev.rera || dev.developer_rera_id || '',
             hera_no: proj.hera_no || proj.heraId || proj.hera || dev.hera_no || dev.heraId || dev.hera || dev.developer_hera_no || '',
-            amenities: proj.amenities || [],
+            amenities: Array.isArray(proj.selected_amenities) && proj.selected_amenities.length > 0 ? proj.selected_amenities : (proj.amenities || []),
             building_photos: proj.building_photos || [],
             total_covered_parking_capacity: proj.total_covered_parking_capacity !== undefined ? proj.total_covered_parking_capacity : 0,
             covered_parking_rate: proj.covered_parking_rate || proj.parking_rate || proj.builder_default_rate || proj.builderDefaultRate || proj.parking_price || proj.car_parking_charge || '',
@@ -364,7 +370,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             architectural_description: proj.architectural_description || proj.description || '',
             description: proj.architectural_description || proj.description || '',
             total_floors: proj.total_floors || '',
-            number_of_towers: proj.number_of_towers || ''
+            number_of_towers: proj.number_of_towers || '',
+            otp_verified: Boolean(proj.otp_verified || proj.devProjectOtpVerified || dev.otp_verified)
           });
         }
       });
@@ -383,11 +390,39 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
       if (projId && masterProjectsMap.has(projId)) {
         const existing = masterProjectsMap.get(projId);
+        if ((!existing.locality || existing.locality === 'Locality Hub') && prop.locality) existing.locality = prop.locality;
+        if (!existing.full_address && (prop.full_address || prop.address)) existing.full_address = prop.full_address || prop.address;
+        if (!existing.developer_email && prop.developer_email) existing.developer_email = prop.developer_email;
+        if (!existing.altMobile && prop.developer_alt_mobile) existing.altMobile = prop.developer_alt_mobile;
+        if (!existing.latitude && prop.latitude) existing.latitude = prop.latitude;
+        if (!existing.longitude && prop.longitude) existing.longitude = prop.longitude;
+        if (!existing.rera_id && (prop.rera_id || prop.reraId || prop.rera)) existing.rera_id = prop.rera_id || prop.reraId || prop.rera;
+        if (!existing.hera_no && (prop.hera_no || prop.heraId || prop.hera)) existing.hera_no = prop.hera_no || prop.heraId || prop.hera;
+        if (!existing.total_floors && prop.total_floors) existing.total_floors = prop.total_floors;
+        if (!existing.number_of_towers && prop.number_of_towers) existing.number_of_towers = prop.number_of_towers;
+        if ((!existing.amenities || existing.amenities.length === 0) && Array.isArray(prop.selected_amenities) && prop.selected_amenities.length > 0) {
+          existing.amenities = prop.selected_amenities;
+        }
+        if ((!existing.building_photos || existing.building_photos.length === 0) && Array.isArray(prop.building_photos) && prop.building_photos.length > 0) {
+          existing.building_photos = prop.building_photos;
+        }
         if (!existing.covered_parking_rate && (prop.covered_parking_rate || prop.parking_rate || prop.builder_default_rate)) {
           existing.covered_parking_rate = prop.covered_parking_rate || prop.parking_rate || prop.builder_default_rate;
         }
         if (!existing.total_covered_parking_capacity && prop.total_covered_parking_capacity) {
           existing.total_covered_parking_capacity = prop.total_covered_parking_capacity;
+        }
+        if (!existing.ev_parking_rate && prop.ev_parking_rate) existing.ev_parking_rate = prop.ev_parking_rate;
+        if (!existing.total_ev_parking_capacity && prop.total_ev_parking_capacity) existing.total_ev_parking_capacity = prop.total_ev_parking_capacity;
+        if (!existing.open_parking_rate && prop.open_parking_rate) existing.open_parking_rate = prop.open_parking_rate;
+        if (!existing.total_open_parking_capacity && prop.total_open_parking_capacity) existing.total_open_parking_capacity = prop.total_open_parking_capacity;
+        if (!existing.key_custody && (prop.key_custody || prop.keys_custody)) {
+          existing.key_custody = prop.key_custody || prop.keys_custody;
+          existing.keys_custody = existing.key_custody;
+        }
+        if (!existing.architectural_description && (prop.architectural_description || prop.description)) {
+          existing.architectural_description = prop.architectural_description || prop.description;
+          existing.description = existing.architectural_description;
         }
       }
 
@@ -1676,6 +1711,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const [devSearchQuery, setDevSearchQuery] = React.useState<string>('');
   const [projectSearchQuery, setProjectSearchQuery] = React.useState<string>('');
   const [showDevVaultModal, setShowDevVaultModal] = React.useState<boolean>(false);
+  const [showDevVaultSearch, setShowDevVaultSearch] = React.useState<boolean>(false);
+  const [devVaultSearchQuery, setDevVaultSearchQuery] = React.useState<string>('');
   const [newDevNameInput, setNewDevNameInput] = React.useState<string>('');
   const [newDevMobileInput, setNewDevMobileInput] = React.useState<string>('');
   const [newDevAltMobileInput, setNewDevAltMobileInput] = React.useState<string>('');
@@ -1808,57 +1845,454 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     };
   }, []);
 
-  const handleStartEditProjectDeveloper = React.useCallback((p: any) => {
+  const [editingProjectMaster, setEditingProjectMaster] = React.useState<any | null>(null);
+  const [editProjectReturnToVault, setEditProjectReturnToVault] = React.useState<boolean>(false);
+
+  const resolveProjectDetailsById = React.useCallback((p: any, devHint?: any) => {
+    if (!p) return null;
+
+    const pickStr = (...vals: any[]): string => {
+      for (const v of vals) {
+        if (v !== undefined && v !== null && String(v).trim() !== '') {
+          return String(v).trim();
+        }
+      }
+      return '';
+    };
+
+    const pickNumCap = (...vals: any[]): number => {
+      for (const v of vals) {
+        if (v !== undefined && v !== null && v !== '') {
+          const n = Number(v);
+          if (!isNaN(n) && n > 0) return n;
+        }
+      }
+      for (const v of vals) {
+        if (v !== undefined && v !== null && v !== '') {
+          const n = Number(v);
+          if (!isNaN(n)) return n;
+        }
+      }
+      return 0;
+    };
+
+    const pickArr = (...vals: any[]): any[] => {
+      for (const v of vals) {
+        if (Array.isArray(v) && v.length > 0) return v;
+      }
+      return [];
+    };
+
+    const rawPassedTitle = pickStr(p.title, p.project_name, p.project_title);
+    let projCode = pickStr(
+      p.project_id && !String(p.project_id).startsWith('SRM-DEV-') ? p.project_id : '',
+      p.project_code,
+      p.code && !String(p.code).startsWith('SRM-PROP-') ? p.code : '',
+      p.id && /^(SRM-PROJ-|PROJ-|PRJ-)/i.test(String(p.id)) ? p.id : ''
+    );
+
+    const allMasters = getAllMasterProjects();
+    const matchedMaster = allMasters.find((m: any) =>
+      (projCode && (m.id === projCode || m.code === projCode)) ||
+      (rawPassedTitle && m.title && m.title.toLowerCase().trim() === rawPassedTitle.toLowerCase().trim())
+    );
+    if (!projCode && matchedMaster) {
+      projCode = pickStr(matchedMaster.code, matchedMaster.id);
+    }
+
+    const devNameCandidate = pickStr(devHint?.name, p.developer, p.developer_name, matchedMaster?.developer);
+    const devIdCandidate = pickStr(devHint?.id, p.developer_id, p.developerId, matchedMaster?.developer_id);
+
+    const devObj = devHint || (developerMasterList || []).find((d: any) =>
+      (devIdCandidate && d.id === devIdCandidate) ||
+      (devNameCandidate && d.name && d.name.toLowerCase().trim() === devNameCandidate.toLowerCase().trim()) ||
+      (projCode && (d.projects || []).some((proj: any) => proj.id === projCode || proj.code === projCode))
+    );
+
+    let vaultProj: any = null;
+    if (devObj && Array.isArray(devObj.projects)) {
+      vaultProj = devObj.projects.find((proj: any) =>
+        (projCode && (proj.code === projCode || proj.id === projCode)) ||
+        (rawPassedTitle && proj.title && proj.title.toLowerCase().trim() === rawPassedTitle.toLowerCase().trim())
+      ) || null;
+    }
+    if (!vaultProj) {
+      for (const d of (developerMasterList || [])) {
+        const hit = (d.projects || []).find((proj: any) =>
+          (projCode && (proj.code === projCode || proj.id === projCode)) ||
+          (rawPassedTitle && proj.title && proj.title.toLowerCase().trim() === rawPassedTitle.toLowerCase().trim())
+        );
+        if (hit) {
+          vaultProj = hit;
+          break;
+        }
+      }
+    }
+
+    if (!projCode && vaultProj) {
+      projCode = pickStr(vaultProj.code, vaultProj.id);
+    }
+
+    const resolvedTitle = pickStr(vaultProj?.title, rawPassedTitle, matchedMaster?.title);
+
+    const projUnits = (properties || []).filter((prop: any) =>
+      (projCode && prop.project_id && prop.project_id === projCode) ||
+      (projCode && prop.property_code && prop.property_code === projCode) ||
+      (resolvedTitle && prop.title && prop.title.toLowerCase().trim() === resolvedTitle.toLowerCase().trim())
+    );
+
+    const pickFromUnits = (...keys: string[]): string => {
+      for (const unit of projUnits) {
+        for (const k of keys) {
+          if (unit && unit[k] !== undefined && unit[k] !== null && String(unit[k]).trim() !== '') {
+            return String(unit[k]).trim();
+          }
+        }
+      }
+      return '';
+    };
+
+    const pickNumFromUnits = (...keys: string[]): number => {
+      for (const unit of projUnits) {
+        for (const k of keys) {
+          if (unit && unit[k] !== undefined && unit[k] !== null && unit[k] !== '') {
+            const n = Number(unit[k]);
+            if (!isNaN(n) && n > 0) return n;
+          }
+        }
+      }
+      return 0;
+    };
+
+    const pickArrFromUnits = (...keys: string[]): any[] => {
+      for (const unit of projUnits) {
+        for (const k of keys) {
+          if (unit && Array.isArray(unit[k]) && unit[k].length > 0) {
+            return unit[k];
+          }
+        }
+      }
+      return [];
+    };
+
+    const rawMobile = pickStr(
+      vaultProj?.developer_mobile,
+      devObj?.mobile,
+      p.developer_mobile,
+      p.mobile,
+      matchedMaster?.mobile,
+      pickFromUnits('developer_mobile', 'mobile')
+    );
+    const mobileParts = rawMobile.includes('/') ? rawMobile.split('/').map((s: string) => s.trim()).filter(Boolean) : [];
+    const primaryMobile = mobileParts.length > 1 ? mobileParts[0] : rawMobile;
+    const altMobile = pickStr(
+      vaultProj?.developer_alt_mobile,
+      vaultProj?.altMobile,
+      devObj?.altMobile,
+      p.developer_alt_mobile,
+      p.altMobile,
+      matchedMaster?.altMobile,
+      mobileParts.length > 1 ? mobileParts[1] : '',
+      pickFromUnits('developer_alt_mobile', 'altMobile')
+    );
+
+    const resolvedDeveloper = pickStr(devObj?.name, devNameCandidate, pickFromUnits('developer'));
+    const resolvedDeveloperId = pickStr(devObj?.id, devIdCandidate, pickFromUnits('developer_id'));
+    const resolvedEmail = pickStr(
+      vaultProj?.developer_email,
+      devObj?.email,
+      p.developer_email,
+      p.email,
+      matchedMaster?.developer_email,
+      pickFromUnits('developer_email', 'email')
+    );
+
+    const localityCandidates = [
+      vaultProj?.locality,
+      p.locality,
+      matchedMaster?.locality,
+      pickFromUnits('locality')
+    ].map((v: any) => (v ? String(v).trim() : '')).filter(Boolean);
+    const resolvedLocality = localityCandidates.find(l => l.toLowerCase() !== 'locality hub') || localityCandidates[0] || '';
+
+    const resolvedFullAddress = pickStr(
+      vaultProj?.full_address,
+      vaultProj?.address,
+      p.full_address,
+      p.address,
+      matchedMaster?.full_address,
+      pickFromUnits('full_address', 'address'),
+      resolvedLocality
+    );
+
+    const resolvedLat = pickStr(
+      vaultProj?.latitude,
+      vaultProj?.lat,
+      p.latitude,
+      p.lat,
+      matchedMaster?.latitude,
+      pickFromUnits('latitude', 'lat')
+    );
+    const resolvedLng = pickStr(
+      vaultProj?.longitude,
+      vaultProj?.lng,
+      p.longitude,
+      p.lng,
+      matchedMaster?.longitude,
+      pickFromUnits('longitude', 'lng')
+    );
+
+    const resolvedRera = pickStr(
+      vaultProj?.rera_id,
+      vaultProj?.reraId,
+      vaultProj?.rera,
+      p.rera_id,
+      p.reraId,
+      p.rera,
+      matchedMaster?.rera_id,
+      devObj?.rera_id,
+      devObj?.reraId,
+      devObj?.rera,
+      pickFromUnits('rera_id', 'reraId', 'rera')
+    );
+    const resolvedHera = pickStr(
+      vaultProj?.hera_no,
+      vaultProj?.heraId,
+      vaultProj?.hera,
+      p.hera_no,
+      p.heraId,
+      p.hera,
+      matchedMaster?.hera_no,
+      devObj?.hera_no,
+      devObj?.heraId,
+      devObj?.hera,
+      pickFromUnits('hera_no', 'heraId', 'hera')
+    );
+
+    const rawTotalFloors = pickStr(
+      vaultProj?.total_floors,
+      vaultProj?.total_floors_in_building,
+      p.total_floors,
+      p.total_floors_in_building,
+      matchedMaster?.total_floors,
+      pickFromUnits('total_floors', 'total_floors_in_building'),
+      'G+4 Floors (5 Storey)'
+    );
+    const resolvedTotalFloors = normalizeTotalFloors(rawTotalFloors);
+
+    const resolvedTowers = pickStr(
+      vaultProj?.number_of_towers,
+      p.number_of_towers,
+      matchedMaster?.number_of_towers,
+      pickFromUnits('number_of_towers')
+    );
+
+    const resolvedAmenities = pickArr(
+      vaultProj?.selected_amenities,
+      vaultProj?.amenities,
+      p.selected_amenities,
+      p.amenities,
+      matchedMaster?.amenities,
+      pickArrFromUnits('selected_amenities', 'amenities')
+    );
+
+    const resolvedBuildingPhotos = pickArr(
+      vaultProj?.building_photos,
+      vaultProj?.building_photo ? [vaultProj.building_photo] : [],
+      p.building_photos,
+      p.building_photo ? [p.building_photo] : [],
+      matchedMaster?.building_photos,
+      pickArrFromUnits('building_photos')
+    );
+
+    const resolvedLayoutPhotos = pickArr(
+      vaultProj?.layout_photos,
+      p.layout_photos,
+      matchedMaster?.layout_photos,
+      pickArrFromUnits('layout_photos')
+    );
+
+    const resolvedCoveredCap = pickNumCap(
+      vaultProj?.total_covered_parking_capacity,
+      p.total_covered_parking_capacity,
+      matchedMaster?.total_covered_parking_capacity,
+      pickNumFromUnits('total_covered_parking_capacity')
+    );
+    const resolvedCoveredRate = pickStr(
+      vaultProj?.covered_parking_rate,
+      p.covered_parking_rate,
+      matchedMaster?.covered_parking_rate,
+      pickFromUnits('covered_parking_rate', 'parking_rate', 'builder_default_rate')
+    );
+
+    const resolvedEvCap = pickNumCap(
+      vaultProj?.total_ev_parking_capacity,
+      p.total_ev_parking_capacity,
+      matchedMaster?.total_ev_parking_capacity,
+      pickNumFromUnits('total_ev_parking_capacity')
+    );
+    const resolvedEvRate = pickStr(
+      vaultProj?.ev_parking_rate,
+      p.ev_parking_rate,
+      matchedMaster?.ev_parking_rate,
+      pickFromUnits('ev_parking_rate')
+    );
+
+    const resolvedOpenCap = pickNumCap(
+      vaultProj?.total_open_parking_capacity,
+      p.total_open_parking_capacity,
+      matchedMaster?.total_open_parking_capacity,
+      pickNumFromUnits('total_open_parking_capacity')
+    );
+    const resolvedOpenRate = pickStr(
+      vaultProj?.open_parking_rate,
+      p.open_parking_rate,
+      matchedMaster?.open_parking_rate,
+      pickFromUnits('open_parking_rate')
+    );
+
+    const resolvedKeyCustody = pickStr(
+      vaultProj?.key_custody,
+      vaultProj?.keys_custody,
+      p.key_custody,
+      p.keys_custody,
+      p.keysCustody,
+      matchedMaster?.key_custody,
+      pickFromUnits('key_custody', 'keys_custody', 'keysCustody')
+    );
+
+    const resolvedArchDesc = pickStr(
+      vaultProj?.architectural_description,
+      vaultProj?.description,
+      p.architectural_description,
+      p.architecturalDescription,
+      p.description,
+      matchedMaster?.architectural_description,
+      matchedMaster?.description,
+      pickFromUnits('architectural_description', 'architecturalDescription', 'description')
+    );
+
+    const resolvedPostingId = pickStr(
+      vaultProj?.project_posting_id,
+      p.project_posting_id,
+      p.campaign_id,
+      pickFromUnits('project_posting_id', 'campaign_id')
+    );
+
+    const isOtpVerified = Boolean(
+      vaultProj?.otp_verified ||
+      vaultProj?.devProjectOtpVerified ||
+      p.otp_verified ||
+      p.devProjectOtpVerified ||
+      devObj?.otp_verified ||
+      matchedMaster?.otp_verified ||
+      (verifiedDevProjectsList || []).some((vp: any) =>
+        (vp.developer && resolvedDeveloper && vp.developer.toLowerCase().trim() === resolvedDeveloper.toLowerCase().trim()) &&
+        (vp.project && resolvedTitle && vp.project.toLowerCase().trim() === resolvedTitle.toLowerCase().trim())
+      )
+    );
+
+    return {
+      project_id: projCode,
+      code: projCode,
+      developer_id: resolvedDeveloperId,
+      developer: resolvedDeveloper,
+      developer_mobile: primaryMobile,
+      developer_alt_mobile: altMobile,
+      developer_email: resolvedEmail,
+      title: resolvedTitle,
+      locality: resolvedLocality,
+      full_address: resolvedFullAddress,
+      latitude: resolvedLat,
+      longitude: resolvedLng,
+      rera_id: resolvedRera,
+      hera_no: resolvedHera,
+      total_floors: resolvedTotalFloors,
+      number_of_towers: resolvedTowers,
+      selected_amenities: resolvedAmenities,
+      amenities: resolvedAmenities,
+      building_photos: resolvedBuildingPhotos,
+      building_photo: resolvedBuildingPhotos[0] || '',
+      layout_photos: resolvedLayoutPhotos,
+      layout_photo: resolvedLayoutPhotos[0] || '',
+      total_covered_parking_capacity: resolvedCoveredCap,
+      covered_parking_rate: resolvedCoveredRate,
+      total_ev_parking_capacity: resolvedEvCap,
+      ev_parking_rate: resolvedEvRate,
+      total_open_parking_capacity: resolvedOpenCap,
+      open_parking_rate: resolvedOpenRate,
+      key_custody: resolvedKeyCustody,
+      keys_custody: resolvedKeyCustody,
+      architectural_description: resolvedArchDesc,
+      description: resolvedArchDesc,
+      project_posting_id: resolvedPostingId,
+      otp_verified: isOtpVerified,
+      devProjectOtpVerified: isOtpVerified,
+      linkedUnits: projUnits
+    };
+  }, [developerMasterList, properties, verifiedDevProjectsList, getAllMasterProjects]);
+
+  const handleStartEditProjectDeveloper = React.useCallback((p: any, fromVault: boolean = false) => {
     if (!p) return;
-    const devMobile = p.developer_mobile || p.mobile || '';
-    const altMobile = p.developer_alt_mobile || p.altMobile || '';
+    const resolved = resolveProjectDetailsById(p);
+    if (!resolved) return;
+
+    setEditingProjectMaster(resolved);
+    setEditProjectReturnToVault(Boolean(fromVault));
 
     setNewPropertyForm((prev: any) => ({
       ...prev,
-      project_id: p.project_id || p.project_code || p.code || p.id || '',
-      property_code: p.property_code || p.code || '',
-      developer_id: p.developer_id || p.developerId || '',
-      developer: p.developer || p.developer_name || p.name || '',
-      developer_email: p.developer_email || p.email || '',
-      title: p.title || p.project_name || '',
-      locality: p.locality || '',
+      project_id: resolved.project_id || '',
+      property_code: p.property_code || '',
+      developer_id: resolved.developer_id || '',
+      developer: resolved.developer || '',
+      developer_mobile: resolved.developer_mobile || '',
+      developer_alt_mobile: resolved.developer_alt_mobile || '',
+      developer_email: resolved.developer_email || '',
+      title: resolved.title || '',
+      locality: resolved.locality || '',
       city: p.city || '',
-      full_address: p.full_address || p.address || '',
-      latitude: p.latitude || '',
-      longitude: p.longitude || '',
+      full_address: resolved.full_address || '',
+      latitude: resolved.latitude || '',
+      longitude: resolved.longitude || '',
       possession_status: p.possession_status || '',
       handover_month: p.handover_month || '',
       handover_year: p.handover_year || '',
       handover_month_year: p.handover_month_year || '',
-      total_covered_parking_capacity: p.total_covered_parking_capacity !== undefined ? p.total_covered_parking_capacity : 0,
-      covered_parking_rate: p.covered_parking_rate || '',
-      total_ev_parking_capacity: p.total_ev_parking_capacity !== undefined ? p.total_ev_parking_capacity : 0,
-      ev_parking_rate: p.ev_parking_rate || '',
-      total_open_parking_capacity: p.total_open_parking_capacity !== undefined ? p.total_open_parking_capacity : 0,
-      open_parking_rate: p.open_parking_rate || '',
-      selected_amenities: Array.isArray(p.selected_amenities) ? p.selected_amenities : [],
-      building_photos: Array.isArray(p.building_photos) ? p.building_photos : (p.building_photo ? [p.building_photo] : []),
-      building_photo: p.building_photo || '',
-      rera_id: p.rera_id || '',
-      hera_no: p.hera_no || '',
-      total_floors: p.total_floors || p.total_floors_in_building || 'G+4 Floors (5 Storey)',
-      number_of_towers: p.number_of_towers || '',
-      key_custody: p.key_custody || p.keys_custody || p.keysCustody || '',
-      keys_custody: p.key_custody || p.keys_custody || p.keysCustody || '',
-      architectural_description: p.architectural_description || p.architecturalDescription || p.description || '',
-      description: p.description || p.architectural_description || p.architecturalDescription || ''
+      total_covered_parking_capacity: resolved.total_covered_parking_capacity,
+      covered_parking_rate: resolved.covered_parking_rate || '',
+      total_ev_parking_capacity: resolved.total_ev_parking_capacity,
+      ev_parking_rate: resolved.ev_parking_rate || '',
+      total_open_parking_capacity: resolved.total_open_parking_capacity,
+      open_parking_rate: resolved.open_parking_rate || '',
+      selected_amenities: resolved.selected_amenities,
+      amenities: resolved.amenities,
+      building_photos: resolved.building_photos,
+      building_photo: resolved.building_photo || '',
+      layout_photos: resolved.layout_photos,
+      layout_photo: resolved.layout_photo || '',
+      project_posting_id: resolved.project_posting_id || '',
+      rera_id: resolved.rera_id || '',
+      hera_no: resolved.hera_no || '',
+      total_floors: resolved.total_floors || 'G+4 Floors (5 Storey)',
+      number_of_towers: resolved.number_of_towers || '',
+      key_custody: resolved.key_custody || '',
+      keys_custody: resolved.keys_custody || '',
+      architectural_description: resolved.architectural_description || '',
+      description: resolved.description || ''
     }));
 
-    if (setDevProjectMobile) setDevProjectMobile(devMobile);
-    if (setDevProjectAltMobile) setDevProjectAltMobile(altMobile);
-    if (setDevProjectOtpVerified) setDevProjectOtpVerified(true);
-    if (setDevProjectOtpSent) setDevProjectOtpSent(true);
+    if (setDevProjectMobile) setDevProjectMobile(resolved.developer_mobile || '');
+    if (setDevProjectAltMobile) setDevProjectAltMobile(resolved.developer_alt_mobile || '');
+    if (setDevProjectOtpVerified) setDevProjectOtpVerified(Boolean(resolved.otp_verified));
+    if (setDevProjectOtpSent) setDevProjectOtpSent(false);
+    if (setDevProjectOtpInput) setDevProjectOtpInput('');
 
     setViewPropertyModal(null);
     setShowDevVaultModal(false);
     setActiveProjectSubTab('add_project_developer');
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [setNewPropertyForm, setDevProjectMobile, setDevProjectAltMobile, setDevProjectOtpVerified, setDevProjectOtpSent, setActiveProjectSubTab]);
+  }, [resolveProjectDetailsById, setNewPropertyForm, setDevProjectMobile, setDevProjectAltMobile, setDevProjectOtpVerified, setDevProjectOtpSent, setDevProjectOtpInput, setActiveProjectSubTab]);
   const [projectUnitsList, setProjectUnitsList] = React.useState<any[]>(() => {
     try {
       const saved = localStorage.getItem('swaramayi_project_units_v1');
@@ -2197,18 +2631,27 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     if (!newPropertyForm.developer || !newPropertyForm.title) {
       return alert('Please enter Developer/Builder Name & Project Title!');
     }
-    const assignedProjCode = newPropertyForm.project_id || generateNextProjectId();
+    const isEditingMode = Boolean(editingProjectMaster);
+    const assignedProjCode = newPropertyForm.project_id || editingProjectMaster?.project_id || generateNextProjectId();
     const assignedPropCode = generateDynamicPropertyCode();
+    const resolvedAltMobile = devProjectAltMobile || newPropertyForm.developer_alt_mobile || '';
 
     // SAVE MASTER PROJECT RECORD INTO DEVELOPER VAULT LIST
     const newProjEntry = {
       id: assignedProjCode,
       code: assignedProjCode,
+      project_id: assignedProjCode,
       title: newPropertyForm.title,
+      developer_mobile: devProjectMobile || '',
+      developer_alt_mobile: resolvedAltMobile,
+      altMobile: resolvedAltMobile,
       developer_email: newPropertyForm.developer_email || '',
       locality: newPropertyForm.locality || '',
+      full_address: newPropertyForm.full_address || newPropertyForm.locality || '',
       lat: newPropertyForm.latitude || '',
       lng: newPropertyForm.longitude || '',
+      latitude: newPropertyForm.latitude || '',
+      longitude: newPropertyForm.longitude || '',
       rera_id: newPropertyForm.rera_id || '',
       hera_no: newPropertyForm.hera_no || '',
       total_floors: newPropertyForm.total_floors || 'G+4 Floors (5 Storey)',
@@ -2218,28 +2661,62 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       architectural_description: newPropertyForm.architectural_description || newPropertyForm.description || '',
       description: newPropertyForm.architectural_description || newPropertyForm.description || '',
       amenities: newPropertyForm.selected_amenities || [],
+      selected_amenities: newPropertyForm.selected_amenities || [],
       building_photos: newPropertyForm.building_photos || [],
+      layout_photos: newPropertyForm.layout_photos || [],
+      project_posting_id: newPropertyForm.project_posting_id || '',
       total_covered_parking_capacity: newPropertyForm.total_covered_parking_capacity !== undefined ? newPropertyForm.total_covered_parking_capacity : 0,
       covered_parking_rate: newPropertyForm.covered_parking_rate || '',
       total_ev_parking_capacity: newPropertyForm.total_ev_parking_capacity !== undefined ? newPropertyForm.total_ev_parking_capacity : 0,
       ev_parking_rate: newPropertyForm.ev_parking_rate || '',
       total_open_parking_capacity: newPropertyForm.total_open_parking_capacity !== undefined ? newPropertyForm.total_open_parking_capacity : 0,
-      open_parking_rate: newPropertyForm.open_parking_rate || ''
+      open_parking_rate: newPropertyForm.open_parking_rate || '',
+      otp_verified: Boolean(devProjectOtpVerified),
+      devProjectOtpVerified: Boolean(devProjectOtpVerified)
     };
 
     let updatedDevs = [...developerMasterList];
-    const existingDevIdx = updatedDevs.findIndex(d => d.name.toLowerCase().trim() === (newPropertyForm.developer || '').toLowerCase().trim());
-    
+    const targetDevId = newPropertyForm.developer_id || editingProjectMaster?.developer_id || '';
+    const origDevName = editingProjectMaster?.developer || '';
+    const origProjTitle = editingProjectMaster?.title || '';
+
+    let existingDevIdx = updatedDevs.findIndex(d =>
+      d.name?.toLowerCase().trim() === (newPropertyForm.developer || '').toLowerCase().trim()
+    );
+    if (existingDevIdx < 0 && isEditingMode) {
+      existingDevIdx = updatedDevs.findIndex(d =>
+        (targetDevId && d.id === targetDevId) ||
+        (origDevName && d.name?.toLowerCase().trim() === origDevName.toLowerCase().trim()) ||
+        (d.projects || []).some((p: any) => p.id === assignedProjCode || p.code === assignedProjCode)
+      );
+    }
+
     if (existingDevIdx >= 0) {
-      const devObj = updatedDevs[existingDevIdx];
-      if (newPropertyForm.developer_email) devObj.email = newPropertyForm.developer_email;
-      const projList = devObj.projects || [];
-      const existingProjIdx = projList.findIndex((p: any) => (p.id === assignedProjCode || p.code === assignedProjCode || p.title?.toLowerCase().trim() === newPropertyForm.title.toLowerCase().trim()));
+      const devObj = { ...updatedDevs[existingDevIdx] };
+      if (isEditingMode && newPropertyForm.developer) devObj.name = newPropertyForm.developer;
+      if (devProjectMobile) devObj.mobile = devProjectMobile;
+      if (isEditingMode) {
+        devObj.altMobile = resolvedAltMobile;
+        devObj.email = newPropertyForm.developer_email || '';
+      } else {
+        if (resolvedAltMobile) devObj.altMobile = resolvedAltMobile;
+        if (newPropertyForm.developer_email) devObj.email = newPropertyForm.developer_email;
+      }
+      const projList = [...(devObj.projects || [])];
+      let existingProjIdx = projList.findIndex((p: any) => (p.id === assignedProjCode || p.code === assignedProjCode));
+      if (existingProjIdx < 0) {
+        existingProjIdx = projList.findIndex((p: any) =>
+          (origProjTitle && p.title?.toLowerCase().trim() === origProjTitle.toLowerCase().trim()) ||
+          p.title?.toLowerCase().trim() === newPropertyForm.title.toLowerCase().trim()
+        );
+      }
       if (existingProjIdx >= 0) {
         projList[existingProjIdx] = { ...projList[existingProjIdx], ...newProjEntry };
       } else {
-        devObj.projects = [newProjEntry, ...projList];
+        projList.unshift(newProjEntry);
       }
+      devObj.projects = projList;
+      updatedDevs[existingDevIdx] = devObj;
     } else {
       let maxDevSeq = 0;
       updatedDevs.forEach((d: any) => {
@@ -2250,9 +2727,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         }
       });
       const newDevObj = {
-        id: `SRM-DEV-2026-${String(maxDevSeq + 1).padStart(6, '0')}`,
+        id: targetDevId || `SRM-DEV-2026-${String(maxDevSeq + 1).padStart(6, '0')}`,
         name: newPropertyForm.developer,
         mobile: devProjectMobile || '+91 98490 88776',
+        altMobile: resolvedAltMobile,
         email: newPropertyForm.developer_email || '',
         projects: [newProjEntry]
       };
@@ -2260,9 +2738,54 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     }
 
     setDeveloperMasterList(updatedDevs);
+    if (setDevelopers) {
+      setDevelopers(updatedDevs);
+    }
     try {
       localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
     } catch (e) {}
+
+    let updatedProperties = properties;
+    if (isEditingMode && setProperties && Array.isArray(properties)) {
+      updatedProperties = properties.map((prop: any) => {
+        const matchesProj =
+          (prop.project_id && prop.project_id === assignedProjCode) ||
+          (origProjTitle && prop.title && prop.title.toLowerCase().trim() === origProjTitle.toLowerCase().trim() &&
+            (!origDevName || !prop.developer || prop.developer.toLowerCase().trim() === origDevName.toLowerCase().trim()));
+        if (!matchesProj) return prop;
+        return {
+          ...prop,
+          project_id: assignedProjCode,
+          developer: newPropertyForm.developer,
+          developer_mobile: devProjectMobile || prop.developer_mobile || '',
+          developer_alt_mobile: resolvedAltMobile,
+          developer_email: newPropertyForm.developer_email || '',
+          title: newPropertyForm.title,
+          locality: newPropertyForm.locality || prop.locality || '',
+          full_address: newPropertyForm.full_address || newPropertyForm.locality || prop.full_address || '',
+          latitude: newPropertyForm.latitude || '',
+          longitude: newPropertyForm.longitude || '',
+          rera_id: newPropertyForm.rera_id || '',
+          hera_no: newPropertyForm.hera_no || '',
+          total_floors: newPropertyForm.total_floors || prop.total_floors || 'G+4 Floors (5 Storey)',
+          number_of_towers: newPropertyForm.number_of_towers || '',
+          selected_amenities: newPropertyForm.selected_amenities || [],
+          amenities: newPropertyForm.selected_amenities || [],
+          building_photos: newPropertyForm.building_photos || prop.building_photos || [],
+          total_covered_parking_capacity: newPropertyForm.total_covered_parking_capacity !== undefined ? newPropertyForm.total_covered_parking_capacity : 0,
+          covered_parking_rate: newPropertyForm.covered_parking_rate || '',
+          total_ev_parking_capacity: newPropertyForm.total_ev_parking_capacity !== undefined ? newPropertyForm.total_ev_parking_capacity : 0,
+          ev_parking_rate: newPropertyForm.ev_parking_rate || '',
+          total_open_parking_capacity: newPropertyForm.total_open_parking_capacity !== undefined ? newPropertyForm.total_open_parking_capacity : 0,
+          open_parking_rate: newPropertyForm.open_parking_rate || '',
+          key_custody: newPropertyForm.key_custody || newPropertyForm.keys_custody || '',
+          keys_custody: newPropertyForm.key_custody || newPropertyForm.keys_custody || '',
+          architectural_description: newPropertyForm.architectural_description || newPropertyForm.description || '',
+          description: newPropertyForm.architectural_description || newPropertyForm.description || ''
+        };
+      });
+      setProperties(updatedProperties);
+    }
 
     // Auto-create Project-Wise Developer Channel Partner Agreement
     createOrUpdateDevAgreement(
@@ -2277,9 +2800,21 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     // ALSO IMMEDIATELY SYNC RECORD TO MONGODB ATLAS CLUSTER
     try {
       if (syncAllToMongoDB) {
-        syncAllToMongoDB({ developers: updatedDevs, properties: properties });
+        syncAllToMongoDB({ developers: updatedDevs, properties: updatedProperties });
       }
     } catch (e) {}
+
+    if (isEditingMode) {
+      const shouldReturnToVault = editProjectReturnToVault;
+      setEditingProjectMaster(null);
+      setEditProjectReturnToVault(false);
+      alert(`✅ PROJECT & DEVELOPER DETAILS UPDATED SUCCESSFULLY!\n\n• Master Project Code / ID: ${assignedProjCode}\n• Project Title: ${newPropertyForm.title}\n• Developer: ${newPropertyForm.developer}\n• Locality Hub: ${newPropertyForm.locality || 'N/A'}\n• RERA ID: ${newPropertyForm.rera_id || 'N/A'} • HERA ID: ${newPropertyForm.hera_no || 'N/A'}\n• Total Floors: ${newPropertyForm.total_floors || 'G+4 Floors (5 Storey)'} • Towers: ${newPropertyForm.number_of_towers || 'N/A'}`);
+      setActiveProjectSubTab('property_master');
+      if (shouldReturnToVault) {
+        setShowDevVaultModal(true);
+      }
+      return;
+    }
 
     // UPDATE FORM WITH PROJECT CODE & PRE-GENERATE UNIQUE PROPERTY CODE
     setNewPropertyForm((prev: any) => ({
@@ -2312,7 +2847,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
     alert(`🎉 MASTER PROJECT CREATED & REGISTERED IN VAULT!\n\n• Master Project Code / ID: ${assignedProjCode}\n• Project Title: ${newPropertyForm.title}\n• Developer: ${newPropertyForm.developer}\n• Locality Hub: ${newPropertyForm.locality}\n• Total Floors: ${newPropertyForm.total_floors || 'G+4 Floors (5 Storey)'}\n• Towers: ${newPropertyForm.number_of_towers || 'N/A'}\n\n👉 Now creating individual property unit under Project Code ${assignedProjCode}!`);
     setActiveProjectSubTab('add_property_master');
-  }, [newPropertyForm, developerMasterList, devProjectMobile, generateNextProjectId, generateDynamicPropertyCode]);
+  }, [newPropertyForm, developerMasterList, properties, devProjectMobile, devProjectAltMobile, devProjectOtpVerified, editingProjectMaster, editProjectReturnToVault, setDevelopers, setProperties, syncAllToMongoDB, generateNextProjectId, generateDynamicPropertyCode]);
 
   const filteredDevs = developerMasterList.filter(dev => {
     if (!devSearchQuery.trim()) return true;
@@ -2452,6 +2987,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   });
 
   const handleOpenNewProjectDeveloperForm = React.useCallback(() => {
+    setEditingProjectMaster(null);
+    setEditProjectReturnToVault(false);
     setNewPropertyForm({
       project_id: '',
       property_code: '',
@@ -2970,41 +3507,75 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
           {/* FULL PAGE NAVIGATION HEADER */}
-          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', boxShadow: isLight ? '0 4px 16px rgba(0,0,0,0.04)' : 'none' }}>
+          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: editingProjectMaster ? '2px solid #f59e0b' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), borderRadius: '16px', padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', boxShadow: isLight ? '0 4px 16px rgba(0,0,0,0.04)' : 'none' }}>
             <div>
-              <button 
-                type="button" 
-                onClick={() => {
-                  lastHydratedPropertyIdRef.current = null;
-                  setActiveProjectSubTab('property_master');
-                }}
-                style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: '#0284c7', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}
-              >
-                <ArrowRightLeft size={16} /> ⬅️ Back to Property Inventory Registry
-              </button>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                {editingProjectMaster && editProjectReturnToVault && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      lastHydratedPropertyIdRef.current = null;
+                      setEditingProjectMaster(null);
+                      setEditProjectReturnToVault(false);
+                      setActiveProjectSubTab('property_master');
+                      setShowDevVaultModal(true);
+                    }}
+                    style={{ background: isLight ? '#fef3c7' : 'rgba(245, 158, 11, 0.15)', color: '#d97706', border: '1px solid #f59e0b', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <ArrowRightLeft size={16} /> ⬅️ Back to Developer Master Vault
+                  </button>
+                )}
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    lastHydratedPropertyIdRef.current = null;
+                    setEditingProjectMaster(null);
+                    setEditProjectReturnToVault(false);
+                    setActiveProjectSubTab('property_master');
+                  }}
+                  style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: '#0284c7', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 16px', borderRadius: '8px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <ArrowRightLeft size={16} /> ⬅️ Back to Property Inventory Registry
+                </button>
+              </div>
               <h2 style={{ fontSize: '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                🏢 Register New Project & Developer Master
+                {editingProjectMaster
+                  ? `✏️ Edit Project & Developer Details (${newPropertyForm.project_id || editingProjectMaster.project_id || ''})`
+                  : '🏢 Register New Project & Developer Master'}
               </h2>
               <p style={{ fontSize: '0.82rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
-                Register Master Project Title, Builder/Developer Name, Contact OTP credentials, GPS locality coordinates & Amenities.
+                {editingProjectMaster
+                  ? `Modify all saved details for Project ID ${newPropertyForm.project_id || editingProjectMaster.project_id || ''}: Builder info, OTP contacts, RERA/HERA IDs, GPS coordinates, amenities, parking stock & architectural specs.`
+                  : 'Register Master Project Title, Builder/Developer Name, Contact OTP credentials, GPS locality coordinates & Amenities.'}
               </p>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => { setIsBulkImportDeveloperOpen(true); if (setShowBulkImportDeveloperModal) setShowBulkImportDeveloperModal(true); }}
-                style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: '900', fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 14px rgba(34, 197, 94, 0.3)' }}
-              >
-                <Upload size={16} /> 🏢 📥 IMPORT BULK DEVELOPER STOCK
-              </button>
+              {!editingProjectMaster && (
+                <button
+                  type="button"
+                  onClick={() => { setIsBulkImportDeveloperOpen(true); if (setShowBulkImportDeveloperModal) setShowBulkImportDeveloperModal(true); }}
+                  style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: '900', fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 14px rgba(34, 197, 94, 0.3)' }}
+                >
+                  <Upload size={16} /> 🏢 📥 IMPORT BULK DEVELOPER STOCK
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleSaveProjectMaster}
-                style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: '900', fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(168, 85, 247, 0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                style={{ background: editingProjectMaster ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: '900', fontSize: '0.92rem', cursor: 'pointer', boxShadow: editingProjectMaster ? '0 4px 14px rgba(245, 158, 11, 0.4)' : '0 4px 14px rgba(168, 85, 247, 0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                💾 SAVE PROJECT & DEVELOPER MASTER
+                {editingProjectMaster ? '💾 SAVE & UPDATE PROJECT DETAILS' : '💾 SAVE PROJECT & DEVELOPER MASTER'}
               </button>
+
+              {newPropertyForm.developer_id && (
+                <div style={{ background: 'rgba(251, 191, 36, 0.15)', border: '1.5px solid #fbbf24', borderRadius: '10px', padding: '8px 16px', textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.68rem', color: '#fbbf24', fontWeight: '900', textTransform: 'uppercase', display: 'block' }}>🆔 Developer ID</span>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '900', color: '#fbbf24', fontFamily: 'monospace', margin: '2px 0 0 0' }}>
+                    {newPropertyForm.developer_id}
+                  </h3>
+                </div>
+              )}
 
               <div style={{ background: 'rgba(168, 85, 247, 0.15)', border: '1.5px solid #a855f7', borderRadius: '10px', padding: '8px 16px', textAlign: 'right' }}>
                 <span style={{ fontSize: '0.68rem', color: '#a855f7', fontWeight: '900', textTransform: 'uppercase', display: 'block' }}>🔑 Master Project ID</span>
@@ -3177,7 +3748,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     🏬 Total Floors in Building *
                   </label>
                   <select 
-                    value={newPropertyForm.total_floors || 'G+4 Floors (5 Storey)'} 
+                    value={normalizeTotalFloors(newPropertyForm.total_floors || 'G+4 Floors (5 Storey)')} 
                     onChange={(e) => {
                       const tFloors = e.target.value;
                       const uFloor = newPropertyForm.unit_floor || '2nd Floor';
@@ -3204,6 +3775,22 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     <option value="B+G+14 Floors (Highrise)">B+G+14 Floors (Highrise)</option>
                     <option value="B+G+30 Floors (Ultra Highrise)">B+G+30 Floors (Ultra Highrise)</option>
                     <option value="2B+G+30 Floors (Mega Highrise)">2B+G+30 Floors (Mega Highrise)</option>
+                    {(() => {
+                      const curNorm = normalizeTotalFloors(newPropertyForm.total_floors);
+                      const standardOptions = [
+                        'Ground Floor Only (G)',
+                        ...Array.from({ length: 30 }, (_, i) => `G+${i + 1} Floors (${i + 2} Storey)`),
+                        'B+G (Basement + Ground)',
+                        'B+G+4 Floors (Midrise)',
+                        'B+G+14 Floors (Highrise)',
+                        'B+G+30 Floors (Ultra Highrise)',
+                        '2B+G+30 Floors (Mega Highrise)'
+                      ];
+                      if (curNorm && !standardOptions.includes(curNorm)) {
+                        return <option value={curNorm}>{curNorm}</option>;
+                      }
+                      return null;
+                    })()}
                   </select>
                 </div>
 
@@ -3223,10 +3810,15 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
               {/* DEVELOPER 1-TIME PROJECT OTP VERIFICATION CONTAINER */}
               {(() => {
-                const isAlreadyVerified = verifiedDevProjectsList.some(p => 
-                  p.developer.toLowerCase().includes((newPropertyForm.developer || '').toLowerCase().trim()) &&
-                  p.project.toLowerCase().includes((newPropertyForm.title || '').toLowerCase().trim())
-                ) || devProjectOtpVerified;
+                const devSearch = (newPropertyForm.developer || '').toLowerCase().trim();
+                const projSearch = (newPropertyForm.title || '').toLowerCase().trim();
+                const isAlreadyVerified = Boolean(
+                  devProjectOtpVerified ||
+                  (devSearch && projSearch && verifiedDevProjectsList.some(p =>
+                    p.developer?.toLowerCase().includes(devSearch) &&
+                    p.project?.toLowerCase().includes(projSearch)
+                  ))
+                );
 
                 return (
                   <div style={{ background: isAlreadyVerified ? 'rgba(34, 197, 94, 0.12)' : (isLight ? '#ffffff' : '#1e293b'), border: `2px solid ${isAlreadyVerified ? '#22c55e' : '#a855f7'}`, borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -3699,17 +4291,114 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
 
 
-              {/* BOTTOM ACTION FOOTER FOR ADD PROJECT & DEVELOPER MASTER */}
+              {/* LINKED PROPERTY UNITS & MEDIA OVERVIEW FOR THIS PROJECT ID (EDIT PROJECT MODE) */}
+              {editingProjectMaster && (() => {
+                const currentProjId = newPropertyForm.project_id || editingProjectMaster.project_id || '';
+                const currentProjTitle = (newPropertyForm.title || editingProjectMaster.title || '').toLowerCase().trim();
+                const linkedUnits = (properties || []).filter((prop: any) =>
+                  (currentProjId && prop.project_id === currentProjId) ||
+                  (currentProjId && prop.property_code === currentProjId) ||
+                  (currentProjTitle && prop.title && prop.title.toLowerCase().trim() === currentProjTitle)
+                );
+                const projectPhotos = Array.isArray(newPropertyForm.building_photos) ? newPropertyForm.building_photos.filter(Boolean) : [];
+
+                return (
+                  <div style={{ background: isLight ? '#f0f9ff' : '#0f172a', border: '1.5px solid #0284c7', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
+                      <div>
+                        <h4 style={{ fontSize: '1rem', fontWeight: '900', color: '#0284c7', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          🔑 Linked Property Units & Project Media for {currentProjId || 'Master Project'} ({linkedUnits.length} Unit{linkedUnits.length === 1 ? '' : 's'})
+                        </h4>
+                        <p style={{ fontSize: '0.76rem', color: isLight ? '#64748b' : '#94a3b8', margin: '2px 0 0 0' }}>
+                          All individual inventory units registered under Project ID {currentProjId}. Click View or Edit Unit to inspect/modify unit-specific pricing & floor plans.
+                        </p>
+                      </div>
+                      <span style={{ fontSize: '0.74rem', background: 'rgba(2, 132, 199, 0.15)', color: '#0284c7', border: '1px solid #0284c7', padding: '3px 10px', borderRadius: '20px', fontWeight: '900' }}>
+                        {linkedUnits.length} UNIT{linkedUnits.length === 1 ? '' : 'S'} LINKED
+                      </span>
+                    </div>
+
+                    {projectPhotos.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#eab308' }}>🏢 Project Building Elevation Photos ({projectPhotos.length}):</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '10px' }}>
+                          {projectPhotos.map((url: string, idx: number) => (
+                            <div key={idx} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid #0284c7', height: '90px', background: '#000' }}>
+                              <img src={url} alt={`Building ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {linkedUnits.length === 0 ? (
+                      <div style={{ padding: '14px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.82rem', background: isLight ? '#ffffff' : '#1e293b', borderRadius: '8px', border: '1px dashed #0284c7' }}>
+                        No individual property units linked to Project ID {currentProjId} yet.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(2, 1fr)', gap: '10px' }}>
+                        {linkedUnits.map((u: any, uIdx: number) => {
+                          const uCode = u.property_code || u.code || u.id || `UNIT-${uIdx + 1}`;
+                          return (
+                            <div key={u.id || uCode || uIdx} style={{ background: isLight ? '#ffffff' : '#1e293b', border: '1px solid #0284c7', borderRadius: '8px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                  <span style={{ fontSize: '0.78rem', fontWeight: '900', color: '#0284c7', fontFamily: 'monospace' }}>🔑 {uCode}</span>
+                                  {(u.configuration || u.bhk) && (
+                                    <span style={{ fontSize: '0.72rem', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '1px 6px', borderRadius: '4px', fontWeight: '800' }}>{u.configuration || u.bhk}</span>
+                                  )}
+                                  {u.status && (
+                                    <span style={{ fontSize: '0.68rem', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', padding: '1px 6px', borderRadius: '4px', fontWeight: '800' }}>{u.status}</span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '0.74rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
+                                  {u.super_builtup_area ? `SBA: ${u.super_builtup_area}` : ''} {u.carpet_area ? `• Carpet: ${u.carpet_area}` : ''} {u.floor_num || u.unit_floor ? `• Floor: ${u.floor_num || u.unit_floor}` : ''} {u.final_price ? `• ${u.final_price}` : ''}
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setViewPropertyModal(u)}
+                                  style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer' }}
+                                >
+                                  👁️ View
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingProjectMaster(null);
+                                    setEditProjectReturnToVault(false);
+                                    handleStartEditPropertyEnhanced(u);
+                                  }}
+                                  style={{ background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer' }}
+                                >
+                                  ✏️ Edit Unit
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* BOTTOM ACTION FOOTER FOR ADD / EDIT PROJECT & DEVELOPER MASTER */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: isLight ? '2px solid #cbd5e1' : '2px solid #334155', paddingTop: '20px', flexWrap: 'wrap', gap: '14px', marginTop: '10px' }}>
                 <button 
                   type="button" 
                   onClick={() => {
+                    const shouldReturn = Boolean(editingProjectMaster && editProjectReturnToVault);
                     lastHydratedPropertyIdRef.current = null;
+                    setEditingProjectMaster(null);
+                    setEditProjectReturnToVault(false);
                     setActiveProjectSubTab('property_master');
+                    if (shouldReturn) setShowDevVaultModal(true);
                   }} 
                   style={{ background: isLight ? '#f1f5f9' : '#334155', color: isLight ? '#0f172a' : '#ffffff', border: isLight ? '1px solid #cbd5e1' : 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer' }}
                 >
-                  Cancel & Return to Property Inventory Registry
+                  {editingProjectMaster && editProjectReturnToVault ? 'Cancel & Return to Developer Master Vault' : 'Cancel & Return to Property Inventory Registry'}
                 </button>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
@@ -3723,9 +4412,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   <button
                     type="button"
                     onClick={handleSaveProjectMaster}
-                    style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '14px 32px', borderRadius: '10px', fontWeight: '900', fontSize: '0.96rem', cursor: 'pointer', boxShadow: '0 6px 20px rgba(168, 85, 247, 0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    style={{ background: editingProjectMaster ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '14px 32px', borderRadius: '10px', fontWeight: '900', fontSize: '0.96rem', cursor: 'pointer', boxShadow: editingProjectMaster ? '0 6px 20px rgba(245, 158, 11, 0.4)' : '0 6px 20px rgba(168, 85, 247, 0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
-                    💾 SAVE & CREATE PROJECT CODE ({newPropertyForm.project_id || generateNextProjectId()})
+                    {editingProjectMaster
+                      ? `💾 SAVE & UPDATE PROJECT (${newPropertyForm.project_id || editingProjectMaster.project_id || ''})`
+                      : `💾 SAVE & CREATE PROJECT CODE (${newPropertyForm.project_id || generateNextProjectId()})`}
                   </button>
                 </div>
               </div>
@@ -5775,7 +6466,34 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   Unique Developer ID (SRM-DEV) Master Index • Associated Projects & Mobile OTP Credentials
                 </p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDevVaultSearch((prev) => {
+                      if (prev) setDevVaultSearchQuery('');
+                      return !prev;
+                    });
+                  }}
+                  style={{
+                    background: showDevVaultSearch
+                      ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
+                      : (isLight ? '#e0f2fe' : '#0f172a'),
+                    color: showDevVaultSearch ? '#ffffff' : '#38bdf8',
+                    border: '1px solid #0284c7',
+                    padding: '7px 14px',
+                    borderRadius: '8px',
+                    fontWeight: '800',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: showDevVaultSearch ? '0 2px 8px rgba(2, 132, 199, 0.35)' : 'none'
+                  }}
+                >
+                  <Search size={14} /> Developer Search
+                </button>
                 <button 
                   type="button" 
                   onClick={() => { setIsBulkImportDeveloperOpen(true); if (setShowBulkImportDeveloperModal) setShowBulkImportDeveloperModal(true); }} 
@@ -5783,11 +6501,56 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                 >
                   <Upload size={14} /> 🏢 📥 Import Bulk Developer Stock
                 </button>
-                <button onClick={() => setShowDevVaultModal(false)} style={{ background: 'none', border: 'none', color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer' }}>
+                <button onClick={() => { setShowDevVaultModal(false); setShowDevVaultSearch(false); setDevVaultSearchQuery(''); }} style={{ background: 'none', border: 'none', color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer' }}>
                   <X size={20} />
                 </button>
               </div>
             </div>
+
+            {showDevVaultSearch && (
+              <div style={{ background: isLight ? '#f0f9ff' : '#0f172a', border: '1px solid #0284c7', borderRadius: '10px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <Search size={16} color="#38bdf8" style={{ flexShrink: 0 }} />
+                <input
+                  type="text"
+                  autoFocus
+                  value={devVaultSearchQuery}
+                  onChange={(e) => setDevVaultSearchQuery(e.target.value)}
+                  placeholder="Search by Developer ID (e.g. SRM-DEV-...), Name, or Mobile Number..."
+                  style={{
+                    flex: 1,
+                    minWidth: '200px',
+                    background: isLight ? '#ffffff' : '#1e293b',
+                    border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                    color: isLight ? '#0f172a' : '#ffffff',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    fontSize: '0.82rem',
+                    fontWeight: '700'
+                  }}
+                />
+                {devVaultSearchQuery.trim() !== '' && (
+                  <button
+                    type="button"
+                    onClick={() => setDevVaultSearchQuery('')}
+                    style={{
+                      background: isLight ? '#e2e8f0' : '#334155',
+                      color: isLight ? '#0f172a' : '#f8fafc',
+                      border: 'none',
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <X size={13} /> Clear
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* ADD NEW DEVELOPER FORM */}
             <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '12px', padding: windowWidth <= 768 ? '12px' : '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -5882,7 +6645,37 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                   );
                 }
-                return activeDevelopers.map((dev) => (
+                const searchTerm = devVaultSearchQuery.trim().toLowerCase();
+                const searchDigits = searchTerm.replace(/\D/g, '');
+                const filteredDevelopers = searchTerm
+                  ? activeDevelopers.filter((d: any) => {
+                      const idStr = String(d.id || d.developerId || '').toLowerCase();
+                      const nameStr = String(d.name || d.developerName || '').toLowerCase();
+                      const mobileStr = String(d.mobile || d.phone || d.altMobile || '').toLowerCase();
+                      const mobileDigits = mobileStr.replace(/\D/g, '');
+                      return (
+                        idStr.includes(searchTerm) ||
+                        nameStr.includes(searchTerm) ||
+                        mobileStr.includes(searchTerm) ||
+                        (searchDigits.length > 0 && mobileDigits.includes(searchDigits))
+                      );
+                    })
+                  : activeDevelopers;
+                if (filteredDevelopers.length === 0) {
+                  return (
+                    <div style={{ padding: '24px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <span>🔍 No developers found matching "{devVaultSearchQuery.trim()}" by Developer ID, Name, or Mobile Number.</span>
+                      <button
+                        type="button"
+                        onClick={() => setDevVaultSearchQuery('')}
+                        style={{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '800', cursor: 'pointer' }}
+                      >
+                        Reset Search
+                      </button>
+                    </div>
+                  );
+                }
+                return filteredDevelopers.map((dev) => (
                   <div key={dev.id} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 768 ? '12px' : '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {editingDevId === dev.id ? (
                       <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #f59e0b', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -6077,27 +6870,35 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           (prop.title && p.title && prop.title.toLowerCase().trim() === p.title.toLowerCase().trim())
                         );
 
-                        const matchedProp = {
+                        const resolvedProj = resolveProjectDetailsById({
+                          ...p,
                           id: projCodeStr,
-                          property_code: projCodeStr,
-                          title: p.title,
+                          code: projCodeStr,
+                          project_id: projCodeStr,
                           developer: dev.name,
                           developer_id: dev.id,
                           developer_mobile: dev.mobile,
-                          developer_email: dev.email,
-                          locality: p.locality || rawMatchedProp?.locality || 'Barasat, Kolkata',
-                          full_address: rawMatchedProp?.full_address || `${p.title}, ${p.locality || 'Barasat'}, North 24 Parganas, Kolkata, West Bengal`,
-                          latitude: rawMatchedProp?.latitude || matchedMaster?.latitude || '22.722361',
-                          longitude: rawMatchedProp?.longitude || matchedMaster?.longitude || '88.493403',
+                          developer_alt_mobile: dev.altMobile,
+                          developer_email: p.developer_email || dev.email
+                        }, dev);
+
+                        const matchedProp = {
+                          ...(rawMatchedProp || {}),
+                          ...resolvedProj,
+                          id: projCodeStr,
+                          project_id: projCodeStr,
+                          code: projCodeStr,
+                          property_code: rawMatchedProp?.property_code || projCodeStr,
+                          locality: resolvedProj?.locality || p.locality || rawMatchedProp?.locality || 'Barasat, Kolkata',
+                          full_address: resolvedProj?.full_address || rawMatchedProp?.full_address || `${p.title}, ${p.locality || 'Barasat'}, North 24 Parganas, Kolkata, West Bengal`,
+                          latitude: resolvedProj?.latitude || rawMatchedProp?.latitude || matchedMaster?.latitude || '22.722361',
+                          longitude: resolvedProj?.longitude || rawMatchedProp?.longitude || matchedMaster?.longitude || '88.493403',
                           configuration: rawMatchedProp?.configuration || rawMatchedProp?.bhk || '',
                           carpet_area: rawMatchedProp?.carpet_area || '700 Sq.Ft.',
                           super_builtup_area: rawMatchedProp?.super_builtup_area || '950 Sq.Ft.',
                           final_price: rawMatchedProp?.final_price || '₹35,00,000',
                           price_sqft: rawMatchedProp?.price_sqft || '₹3,684',
                           status: rawMatchedProp?.status || 'LIVE',
-                          total_floors: p.total_floors || rawMatchedProp?.total_floors || matchedMaster?.total_floors || 'G+4 Floors (5 Storey)',
-                          number_of_towers: p.number_of_towers || rawMatchedProp?.number_of_towers || matchedMaster?.number_of_towers || '',
-                          ...rawMatchedProp,
                           otp_verified: isDevOtpVerified,
                           devProjectOtpVerified: isDevOtpVerified
                         };
@@ -6199,7 +7000,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                 <button
                                   onClick={() => {
                                     setShowDevVaultModal(false);
-                                    handleStartEditProjectDeveloper(matchedProp);
+                                    handleStartEditProjectDeveloper(resolvedProj || matchedProp, true);
                                   }}
                                   style={{ background: '#f59e0b', color: isLight ? '#0f172a' : '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '4px' }}
                                   title="Edit project & developer details"

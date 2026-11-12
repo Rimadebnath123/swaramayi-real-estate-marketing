@@ -13,8 +13,11 @@ export const parseSqftValue = (val: any): number => {
 export const parseDeductionPct = (val: any, superArea?: any, carpetArea?: any): number => {
   if (val !== null && val !== undefined && String(val).trim() !== '') {
     const cleaned = String(val).replace(/[^0-9.]/g, '');
-    const num = parseFloat(cleaned);
-    if (!isNaN(num) && num >= 0 && num <= 100) return num;
+    let num = parseFloat(cleaned);
+    if (!isNaN(num)) {
+      if (num > 0 && num < 1) num = Math.round(num * 10000) / 100;
+      if (num >= 0 && num <= 100) return num;
+    }
   }
   const sNum = parseSqftValue(superArea);
   const cNum = parseSqftValue(carpetArea);
@@ -485,9 +488,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     // 3. Pricing, Commercials, Parking & All-Inclusive Final Valuation (17 fields)
     { header: 'Asking Rate per Sq.Ft.', key: 'price_sqft', section: '3. Pricing & Commercials', sample1: 4000, sample2: 4200, desc: 'Base quotation rate per super built-up sq.ft.' },
     { header: 'Base Property Asking Price (INR)', key: 'final_price', section: '3. Pricing & Commercials', sample1: 2820000, sample2: 4830000, desc: 'Base asking price = Super Built-up Area x Rate' },
-    { header: 'Goods & Services Tax GST Rate (%)', key: 'gst_pct', section: '3. Pricing & Commercials', sample1: '0% (Ready to Move)', sample2: '5% (Under Construction Standard)', desc: 'Applicable GST percentage' },
-    { header: 'Stamp Duty Charges Rate (%)', key: 'stamp_duty_pct', section: '3. Pricing & Commercials', sample1: '5%', sample2: '5%', desc: 'State Government Stamp Duty percentage' },
-    { header: 'Registration Fee Rate (%)', key: 'registration_fee_pct', section: '3. Pricing & Commercials', sample1: '1%', sample2: '1%', desc: 'Government Registry fee percentage' },
+    { header: 'Goods & Services Tax GST Rate (%)', key: 'gst_pct', section: '3. Pricing & Commercials', sample1: '0%', sample2: '5%', desc: 'Applicable GST percentage (e.g. 0%, 1%, 5%, 12%)' },
+    { header: 'Stamp Duty Charges Rate (%)', key: 'stamp_duty_pct', section: '3. Pricing & Commercials', sample1: '5%', sample2: '5%', desc: 'State Government Stamp Duty percentage (e.g. 5%, 6%, 7%)' },
+    { header: 'Registration Fee Rate (%)', key: 'registration_fee_pct', section: '3. Pricing & Commercials', sample1: '1%', sample2: '1%', desc: 'Government Registry fee percentage (e.g. 1%, 2%)' },
     { header: 'Floor Rise Charge (INR)', key: 'floor_rise_charge', section: '3. Pricing & Commercials', sample1: 0, sample2: 50000, desc: 'Additional floor rise charge' },
     { header: 'Preferential Location Charge PLC (INR)', key: 'plc_charge', section: '3. Pricing & Commercials', sample1: 0, sample2: 75000, desc: 'PLC for park, pool or road-facing units' },
     { header: 'Covered Car Parking Slot Charge (INR)', key: 'parking_price', section: '3. Pricing & Commercials', sample1: 250000, sample2: 350000, desc: 'Dedicated covered vehicle parking cost' },
@@ -531,6 +534,29 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     const str = String(val).replace(/,/g, '').replace(/[^0-9.-]/g, '');
     const num = parseFloat(str);
     return isNaN(num) ? fallback : num;
+  };
+
+  const parsePercentValue = (val: any, fallback: number = 0): number => {
+    if (val === null || val === undefined || String(val).trim() === '') return fallback;
+    const str = String(val).trim();
+
+    // Check if string has a description or starts with a percentage like "5% (Under Construction)" or "0% (Ready to Move)"
+    const match = str.match(/^([0-9]+(?:\.[0-9]+)?)\s*%/);
+    if (match) {
+      const n = parseFloat(match[1]);
+      return !isNaN(n) ? n : fallback;
+    }
+
+    const cleanStr = str.replace(/,/g, '').replace(/[^0-9.-]/g, '');
+    const num = parseFloat(cleanStr);
+    if (isNaN(num)) return fallback;
+
+    // Excel stores percentages formatted as % as decimals (e.g. 0.05 for 5%, 0.20 for 20%, 0.01 for 1%)
+    if (num > 0 && num < 1) {
+      return Math.round(num * 10000) / 100;
+    }
+
+    return num;
   };
 
   const getNextSequentialPropertyCode = (offset: number = 0, currentList: any[] = properties) => {
@@ -604,8 +630,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
   const normalizeHeaderKey = (rawHeader: any): string => {
     if (!rawHeader) return '';
-    const clean = String(rawHeader).toLowerCase().trim().replace(/[\r\n]+/g, ' ');
-    const directCol = BULK_PROPERTY_COLUMNS.find(c => c.header.toLowerCase() === clean);
+    const clean = String(rawHeader).toLowerCase().trim().replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ');
+    const directCol = BULK_PROPERTY_COLUMNS.find(c => c.header.toLowerCase().trim().replace(/\s+/g, ' ') === clean);
     if (directCol) return directCol.key;
 
     // Fuzzy alias dictionary
@@ -629,7 +655,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       property_type: ['property category type', 'property category', 'property type', 'type', 'category', 'property_type'],
       configuration: ['bhk configuration', 'bhk config', 'configuration', 'bhk', 'config'],
       super_builtup_area: ['super built-up area (sq.ft.)', 'super built-up area', 'super builtup area', 'super area', 'sbua', 'super_builtup_area'],
-      deduction_pct: ['deduction / loading (%)', 'deduction / loading %', 'deduction %', 'loading %', 'loading', 'deduction_pct'],
+      deduction_pct: [
+        'deduction / loading (%)', 'deduction/loading (%)', 'deduction / loading %', 'deduction/loading %',
+        'deduction / loading', 'deduction/loading', 'loading / deduction (%)', 'loading/deduction (%)',
+        'loading / deduction %', 'loading/deduction %', 'loading / deduction', 'loading/deduction',
+        'deduction (%)', 'deduction %', 'deduction', 'loading (%)', 'loading %', 'loading',
+        'deduction percentage', 'loading percentage', 'deduction pct', 'loading pct', 'deduction_pct'
+      ],
       carpet_area: ['carpet area (sq.ft.)', 'carpet area', 'carpet', 'carpet_area'],
       facing: ['vastu facing', 'facing', 'orientation', 'direction'],
       furnishing: ['furnishing', 'furnishing status', 'furnish'],
@@ -642,9 +674,34 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       unit_number: ['unit / flat number', 'unit number', 'flat number', 'flat no', 'unit no', 'unit_number'],
       price_sqft: ['asking rate per sq.ft.', 'asking rate / sq.ft.', 'rate per sq.ft.', 'rate / sq.ft.', 'price per sqft', 'rate/sqft', 'price_sqft'],
       final_price: ['base property asking price (inr)', 'base property asking price', 'base asking price', 'base price', 'asking price', 'final_price'],
-      gst_pct: ['goods & services tax gst rate (%)', 'gst rate (%)', 'gst rate', 'gst %', 'gst', 'gst_pct'],
-      stamp_duty_pct: ['stamp duty charges rate (%)', 'stamp duty rate (%)', 'stamp duty %', 'stamp duty', 'stamp_duty_pct'],
-      registration_fee_pct: ['registration fee rate (%)', 'registration fee %', 'registration fee', 'registration_fee_pct'],
+      gst_pct: [
+        'goods & services tax gst rate (%)', 'goods & services tax gst rate %', 'goods & services tax gst rate',
+        'goods & services tax (gst) rate (%)', 'goods & services tax (gst) rate %', 'goods & services tax (gst) rate',
+        'goods and services tax gst rate (%)', 'goods and services tax (gst) rate (%)',
+        'goods & services tax rate (%)', 'goods and services tax rate (%)',
+        'goods & services tax (%)', 'goods and services tax (%)',
+        'goods & services tax', 'goods and services tax',
+        'gst rate (%)', 'gst rate %', 'gst rate', 'gst (%)', 'gst %', 'gst', 'gst_pct'
+      ],
+      stamp_duty_pct: [
+        'stamp duty charges rate (%)', 'stamp duty charges rate %', 'stamp duty charges rate',
+        'stamp duty charge rate (%)', 'stamp duty charge rate %', 'stamp duty charge rate',
+        'stamp duty charges (%)', 'stamp duty charges %', 'stamp duty charges',
+        'stamp duty charge (%)', 'stamp duty charge %', 'stamp duty charge',
+        'stamp duty rate (%)', 'stamp duty rate %', 'stamp duty rate',
+        'stamp duty (%)', 'stamp duty %', 'stamp duty', 'stamp_duty_pct'
+      ],
+      registration_fee_pct: [
+        'registration fee rate (%)', 'registration fee rate %', 'registration fee rate',
+        'registration fee (%)', 'registration fee %', 'registration fee',
+        'registration charges rate (%)', 'registration charges rate %', 'registration charges rate',
+        'registration charges (%)', 'registration charges %', 'registration charges',
+        'registration & property transfer fee rate (%)', 'registration & property transfer fee rate',
+        'registration rate (%)', 'registration rate %', 'registration rate',
+        'registration (%)', 'registration %', 'registration',
+        'registry fee rate (%)', 'registry fee (%)', 'registry fee', 'registry rate (%)', 'registry rate',
+        'registration_fee_pct'
+      ],
       floor_rise_charge: ['floor rise charge (inr)', 'floor rise charge', 'floor rise', 'floor_rise_charge', 'floorrise'],
       plc_charge: ['preferential location charge plc (inr)', 'preferential location charge', 'plc charge', 'plc', 'plc_charge'],
       parking_price: ['covered car parking slot charge (inr)', 'car parking slot charge', 'covered parking charge', 'parking charge', 'parking price', 'parking_price', 'car_parking_charge'],
@@ -692,7 +749,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       });
 
       const superArea = cleanNum(rawObj.super_builtup_area, 0);
-      const deductionPct = cleanNum(rawObj.deduction_pct, 20);
+      const deductionPct = parsePercentValue(rawObj.deduction_pct, 20);
       let carpetArea = cleanNum(rawObj.carpet_area, 0);
       if (carpetArea === 0 && superArea > 0) {
         carpetArea = Math.round(superArea * (1 - deductionPct / 100));
@@ -719,14 +776,15 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         totalBaseWithOthers = baseAskingPrice + floorRise + plc + parking + amenity + advanceMaint + legal;
       }
 
+      const gstNum = parsePercentValue(rawObj.gst_pct, 5);
+      const stampNum = parsePercentValue(rawObj.stamp_duty_pct, 5);
+      const regNum = parsePercentValue(rawObj.registration_fee_pct, 1);
+
       let totalAllInclusive = cleanNum(rawObj.total_all_inclusive_price, 0);
       if (totalAllInclusive === 0 && totalBaseWithOthers > 0) {
-        const gstPct = parseFloat(String(rawObj.gst_pct || '5%').replace(/[^0-9.]/g, '')) || 0;
-        const stampPct = parseFloat(String(rawObj.stamp_duty_pct || '5%').replace(/[^0-9.]/g, '')) || 0;
-        const regPct = parseFloat(String(rawObj.registration_fee_pct || '1%').replace(/[^0-9.]/g, '')) || 0;
-        const gstVal = Math.round((baseAskingPrice + floorRise + plc) * (gstPct / 100));
-        const stampVal = Math.round(totalBaseWithOthers * (stampPct / 100));
-        const regVal = Math.round(totalBaseWithOthers * (regPct / 100));
+        const gstVal = Math.round((baseAskingPrice + floorRise + plc) * (gstNum / 100));
+        const stampVal = Math.round(totalBaseWithOthers * (stampNum / 100));
+        const regVal = Math.round(totalBaseWithOthers * (regNum / 100));
         totalAllInclusive = totalBaseWithOthers + gstVal + stampVal + regVal;
       }
 
@@ -778,7 +836,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         property_type: propType,
         configuration: config,
         super_builtup_area: superArea > 0 ? superArea : 750,
-        deduction_pct: deductionPct,
+        deduction_pct: `${deductionPct}%`,
         carpet_area: carpetArea > 0 ? carpetArea : Math.round((superArea || 750) * 0.8),
         facing: rawObj.facing || 'East Facing',
         furnishing: rawObj.furnishing || 'Semi-Furnished',
@@ -793,9 +851,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         unit_number: rawObj.unit_number || `Unit ${parsedList.length + 1}`,
         price_sqft: rateSqft > 0 ? rateSqft : 3800,
         final_price: baseAskingPrice > 0 ? baseAskingPrice : (rateSqft > 0 ? (superArea || 750) * rateSqft : 2850000),
-        gst_pct: rawObj.gst_pct || '5%',
-        stamp_duty_pct: rawObj.stamp_duty_pct || '5%',
-        registration_fee_pct: rawObj.registration_fee_pct || '1%',
+        gst_pct: `${gstNum}%`,
+        stamp_duty_pct: `${stampNum}%`,
+        registration_fee_pct: `${regNum}%`,
         floor_rise_charge: floorRise,
         plc_charge: plc,
         parking_price: parking,
@@ -923,12 +981,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     // 1. Project & Developer Identification (from Register New Project & Developer Master)
     { header: 'Developer / Builder Name', key: 'developer', section: '1. Project & Developer Identification', sample1: 'Godrej Properties', sample2: 'Ambuja Neotia', desc: 'Company / Builder / Developer Entity Name *' },
     { header: 'Project Title & Name', key: 'title', section: '1. Project & Developer Identification', sample1: 'Godrej Prakriti', sample2: 'Utalika Luxury', desc: 'Project or Society Master Name *' },
-    { header: 'Master Project ID', key: 'project_id', section: '1. Project & Developer Identification', sample1: 'SRM-PROJ-2026-000001', sample2: 'SRM-PROJ-2026-000002', desc: 'Unique Project Master Code (Leave blank or AUTO to auto-generate)' },
-    { header: 'Developer Master ID', key: 'developer_id', section: '1. Project & Developer Identification', sample1: 'SRM-DEV-2026-000001', sample2: 'SRM-DEV-2026-000002', desc: 'Unique Developer Vault ID (Auto-links to existing developer or auto-generates)' },
     { header: 'Developer Mobile Phone (for OTP)', key: 'developer_mobile', section: '1. Project & Developer Identification', sample1: '+91 98833 95102', sample2: '+91 98300 12345', desc: 'Primary Developer Mobile Contact for OTP verification *' },
     { header: 'Alternative Phone Number', key: 'developer_alt_mobile', section: '1. Project & Developer Identification', sample1: '+91 70442 93951', sample2: '+91 98311 54321', desc: 'Secondary Developer / Sales Contact Phone' },
     { header: 'Developer Email Address', key: 'developer_email', section: '1. Project & Developer Identification', sample1: 'sales@godrejproperties.com', sample2: 'info@ambujaneotia.com', desc: 'Official Builder Email Address' },
-    { header: 'Locality Hub / Sector', key: 'locality', section: '1. Project & Developer Identification', sample1: 'BT Road, Sodepur, Kolkata', sample2: 'EM Bypass, Mukundapur, Kolkata', desc: 'Project Location Hub / Sector / Zone *' },
     { header: 'RERA Registration No. (RERA ID)', key: 'rera_id', section: '1. Project & Developer Identification', sample1: 'WBRERA/P/NOR/2024/000128', sample2: 'WBRERA/P/SOU/2024/000215', desc: 'State RERA Registration Number' },
     { header: 'HERA Registration No. (HERA ID)', key: 'hera_no', section: '1. Project & Developer Identification', sample1: 'WBHERA/REG/2024/0045', sample2: 'WBHERA/REG/2024/0088', desc: 'State Housing Authority HERA Number' },
     { header: 'Total Floors in Building', key: 'total_floors', section: '1. Project & Developer Identification', sample1: 'G+14 Floors (Highrise)', sample2: '2B+G+30 Floors (Mega Highrise)', desc: 'Storey structure (e.g. G+4 Floors, G+14 Floors, B+G+30 Floors) *' },
@@ -8832,10 +8887,20 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             <td style={{ padding: '8px 10px', color: isLight ? '#475569' : '#cbd5e1' }}>{p.developer}</td>
                             <td style={{ padding: '8px 10px', color: isLight ? '#475569' : '#cbd5e1' }}>{p.locality}</td>
                             <td style={{ padding: '8px 10px', fontWeight: '700', color: '#a855f7' }}>{p.configuration} ({p.property_type})</td>
-                            <td style={{ padding: '8px 10px', color: isLight ? '#0f172a' : '#ffffff', fontFamily: 'monospace' }}>{p.super_builtup_area} sq.ft.</td>
+                            <td style={{ padding: '8px 10px', color: isLight ? '#0f172a' : '#ffffff', fontFamily: 'monospace' }}>
+                              {p.super_builtup_area} sq.ft.
+                              <span style={{ display: 'block', fontSize: '0.68rem', color: '#eab308' }}>
+                                Loading: {p.deduction_pct} (Carpet: {p.carpet_area})
+                              </span>
+                            </td>
                             <td style={{ padding: '8px 10px', color: isLight ? '#0f172a' : '#ffffff', fontFamily: 'monospace' }}>₹{p.price_sqft}</td>
                             <td style={{ padding: '8px 10px', fontWeight: '900', color: '#22c55e', fontFamily: 'monospace' }}>{formatIndianRupees(cleanNum(p.final_price, 0))}</td>
-                            <td style={{ padding: '8px 10px', fontWeight: '900', color: '#38bdf8', fontFamily: 'monospace' }}>{formatIndianRupees(cleanNum(p.total_all_inclusive_price, 0))}</td>
+                            <td style={{ padding: '8px 10px', fontWeight: '900', color: '#38bdf8', fontFamily: 'monospace' }}>
+                              {formatIndianRupees(cleanNum(p.total_all_inclusive_price, 0))}
+                              <span style={{ display: 'block', fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: 'normal' }}>
+                                GST: {p.gst_pct} • Stamp: {p.stamp_duty_pct} • Reg: {p.registration_fee_pct}
+                              </span>
+                            </td>
                             <td style={{ padding: '8px 10px', color: isLight ? '#64748b' : '#94a3b8' }}>{p.unit_floor} • {p.facing}</td>
                             <td style={{ padding: '8px 10px' }}>
                               <button
@@ -8994,7 +9059,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   color: isLight ? '#64748b' : '#94a3b8',
                   margin: '4px 0 0 0'
                 }}>
-                  Upload or paste your developer & master project sheets. All {BULK_DEVELOPER_COLUMNS.length} fields from "Register New Project & Developer Master" (Developer details, Project codes, Locality, RERA/HERA IDs, Floors, Towers, GPS coords, Amenities, Parking capacities & Key custody) are supported with automatic ID generation, Channel Partner Agreements, and Developer Vault registration.
+                  Upload or paste your developer & master project sheets. All {BULK_DEVELOPER_COLUMNS.length} fields from "Register New Project & Developer Master" (Developer details, RERA/HERA IDs, Floors, Towers, GPS coords, Amenities, Parking capacities & Key custody) are supported with automatic ID generation, Channel Partner Agreements, and Developer Vault registration.
                 </p>
               </div>
               <button
@@ -9247,7 +9312,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     rows={6}
                     value={bulkDevPasteContent}
                     onChange={(e) => setBulkDevPasteContent(e.target.value)}
-                    placeholder="Paste CSV or Tab-separated rows here (including header row)...&#10;e.g.&#10;Developer / Builder Name,Project Title & Name,Master Project ID,Developer Mobile Phone (for OTP),Locality Hub / Sector,Total Floors in Building,Number Of Towers in Project / Complex&#10;Godrej Properties,Godrej Prakriti,SRM-PROJ-2026-000001,+91 98833 95102,BT Road Sodepur,G+14 Floors (Highrise),8 Towers Complex"
+                    placeholder="Paste CSV or Tab-separated rows here (including header row)...&#10;e.g.&#10;Developer / Builder Name,Project Title & Name,Developer Mobile Phone (for OTP),Total Floors in Building,Number Of Towers in Project / Complex&#10;Godrej Properties,Godrej Prakriti,+91 98833 95102,G+14 Floors (Highrise),8 Towers Complex"
                     style={{
                       width: '100%',
                       padding: '12px',
@@ -9385,11 +9450,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     <thead style={{ position: 'sticky', top: 0, background: isLight ? '#e2e8f0' : '#1e293b', zIndex: 10 }}>
                       <tr style={{ textAlign: 'left', borderBottom: '1.5px solid #334155' }}>
                         <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>#</th>
-                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Master Project ID</th>
                         <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Developer / Builder</th>
-                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Developer ID</th>
                         <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Project Title</th>
-                        <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Locality Hub</th>
                         <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Contact Mobile</th>
                         <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>Floors & Towers</th>
                         <th style={{ padding: '8px 10px', color: isLight ? '#475569' : '#94a3b8' }}>RERA / HERA</th>
@@ -9404,22 +9466,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           if (!bulkDevPreviewFilter.trim()) return true;
                           const q = bulkDevPreviewFilter.toLowerCase();
                           return (
-                            String(p.project_id || '').toLowerCase().includes(q) ||
                             String(p.developer || '').toLowerCase().includes(q) ||
-                            String(p.developer_id || '').toLowerCase().includes(q) ||
                             String(p.title || '').toLowerCase().includes(q) ||
-                            String(p.locality || '').toLowerCase().includes(q) ||
                             String(p.developer_mobile || '').toLowerCase().includes(q)
                           );
                         })
                         .map((p, idx) => (
                           <tr key={p.id || idx} style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #1e293b' }}>
                             <td style={{ padding: '8px 10px', color: isLight ? '#64748b' : '#94a3b8' }}>{idx + 1}</td>
-                            <td style={{ padding: '8px 10px', fontWeight: '900', color: '#a855f7', fontFamily: 'monospace' }}>{p.project_id}</td>
                             <td style={{ padding: '8px 10px', fontWeight: '800', color: isLight ? '#0f172a' : '#ffffff' }}>{p.developer}</td>
-                            <td style={{ padding: '8px 10px', color: '#fbbf24', fontFamily: 'monospace', fontWeight: '800' }}>{p.developer_id}</td>
                             <td style={{ padding: '8px 10px', fontWeight: '800', color: isLight ? '#0f172a' : '#38bdf8' }}>{p.title}</td>
-                            <td style={{ padding: '8px 10px', color: isLight ? '#475569' : '#cbd5e1' }}>{p.locality}</td>
                             <td style={{ padding: '8px 10px', color: '#4ade80', fontFamily: 'monospace', fontWeight: '700' }}>{p.developer_mobile}</td>
                             <td style={{ padding: '8px 10px', color: isLight ? '#475569' : '#cbd5e1' }}>{p.total_floors} • {p.number_of_towers}</td>
                             <td style={{ padding: '8px 10px', color: isLight ? '#64748b' : '#94a3b8', fontFamily: 'monospace', fontSize: '0.7rem' }}>{p.rera_id || p.hera_no || 'N/A'}</td>

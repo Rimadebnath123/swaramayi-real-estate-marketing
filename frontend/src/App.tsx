@@ -11208,7 +11208,13 @@ export default function App() {
       const isPasswordValid = 
         passToTest === expectedPassword ||
         passToTest.toLowerCase() === expectedPassword.toLowerCase() ||
-        (isSuperAdmin && (passToTest === 'swaramayi2026' || passToTest.toLowerCase() === 'swaramayi2026' || passToTest === 'admin'));
+        (isSuperAdmin && (
+          passToTest === 'swaramayi2026' || 
+          passToTest.toLowerCase() === 'swaramayi2026' || 
+          passToTest === 'admin' ||
+          passToTest === 'avishek@123' ||
+          passToTest.toLowerCase() === 'avishek@123'
+        ));
 
       if (!isPasswordValid) {
         setLoginErrorMsg(`❌ Access Denied: Incorrect password provided for '${emailToTest}'. Default password is Swaramayi@2026.`);

@@ -7,7 +7,7 @@ import {
 export interface RecycleBinItem {
   id: string;
   title: string;
-  category: 'Lead' | 'Customer' | 'Project' | 'Agreement' | 'Cost Sheet' | 'Billing' | 'Visit Management';
+  category: 'Lead' | 'Customer' | 'Project' | 'Developer' | 'Agreement' | 'Cost Sheet' | 'Billing' | 'Visit Management';
   deletedBy: string;
   deletedAt: string;
   originalLocation: string;
@@ -20,7 +20,9 @@ interface RecycleBinViewProps {
   recycledItems: RecycleBinItem[];
   windowWidth?: number;
   onRestoreItem: (item: RecycleBinItem) => void;
+  onBulkRestoreItems?: (items: RecycleBinItem[]) => void;
   onPurgeItem: (item: RecycleBinItem) => void;
+  onBulkPurgeItems?: (items: RecycleBinItem[]) => void;
   onEmptyBin: () => void;
 }
 
@@ -29,7 +31,9 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
   recycledItems = [],
   windowWidth,
   onRestoreItem,
+  onBulkRestoreItems,
   onPurgeItem,
+  onBulkPurgeItems,
   onEmptyBin
 }) => {
   const [winWidth, setWinWidth] = useState<number>(windowWidth || (typeof window !== 'undefined' ? window.innerWidth : 1200));
@@ -87,7 +91,11 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
   const handleBulkRestore = () => {
     const itemsToRestore = recycledItems.filter(i => selectedItemIds.includes(i.id));
     if (itemsToRestore.length === 0) return;
-    itemsToRestore.forEach(item => onRestoreItem(item));
+    if (onBulkRestoreItems) {
+      onBulkRestoreItems(itemsToRestore);
+    } else {
+      itemsToRestore.forEach(item => onRestoreItem(item));
+    }
     showToast(`✅ Restored ${itemsToRestore.length} selected item(s)!`);
     setSelectedItemIds([]);
   };
@@ -96,7 +104,11 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
     const itemsToPurge = recycledItems.filter(i => selectedItemIds.includes(i.id));
     if (itemsToPurge.length === 0) return;
     if (window.confirm(`⚠️ PERMANENT DELETION CONFIRMATION:\n\nAre you sure you want to permanently purge ${itemsToPurge.length} selected item(s) from the Recycle Bin? This action CANNOT be undone.`)) {
-      itemsToPurge.forEach(item => onPurgeItem(item));
+      if (onBulkPurgeItems) {
+        onBulkPurgeItems(itemsToPurge);
+      } else {
+        itemsToPurge.forEach(item => onPurgeItem(item));
+      }
       showToast(`🗑️ Permanently purged ${itemsToPurge.length} selected item(s).`);
       setSelectedItemIds([]);
     }
@@ -125,6 +137,7 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
       case 'Lead': return <Users size={16} color="#38bdf8" />;
       case 'Customer': return <UserCheck size={16} color="#10b981" />;
       case 'Project': return <Building2 size={16} color="#f59e0b" />;
+      case 'Developer': return <Building2 size={16} color="#a855f7" />;
       case 'Agreement': return <FileText size={16} color="#ec4899" />;
       case 'Cost Sheet': return <DollarSign size={16} color="#8b5cf6" />;
       case 'Billing': return <CreditCard size={16} color="#06b6d4" />;
@@ -252,7 +265,7 @@ export const RecycleBinView: React.FC<RecycleBinViewProps> = ({
             WebkitOverflowScrolling: 'touch'
           }}
         >
-          {['ALL', 'Lead', 'Customer', 'Project', 'Agreement', 'Cost Sheet', 'Billing', 'Visit Management'].map(cat => {
+          {['ALL', 'Lead', 'Customer', 'Project', 'Developer', 'Agreement', 'Cost Sheet', 'Billing', 'Visit Management'].map(cat => {
             const count = cat === 'ALL'
               ? recycledItems.length
               : recycledItems.filter(i => i.category === cat).length;

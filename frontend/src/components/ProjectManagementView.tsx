@@ -85,7 +85,9 @@ interface ProjectManagementViewProps {
   agreements?: any[];
   setAgreements?: React.Dispatch<React.SetStateAction<any[]>>;
   onRecycleItem?: (itemData: any) => void;
+  onBulkRecycleProperties?: (selectedKeys: string[]) => void;
   recycledItems?: any[];
+  setRecycledItems?: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 export const normalizeTotalFloors = (val: any): string => {
@@ -236,7 +238,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   detectLocalityFromCoords,
   setPropertyUnits,
   onRecycleItem,
+  onBulkRecycleProperties,
   recycledItems = [],
+  setRecycledItems,
 }) => {
   const roleUpper = (currentRole || '').toUpperCase().replace(/_/g, ' ');
   const isStrictSuperAdmin = !currentRole || roleUpper.includes('SUPER') || roleUpper.includes('OWNER') || roleUpper.includes('ADMIN');
@@ -1034,44 +1038,101 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   };
 
   const getNextSequentialDeveloperId = (offset: number = 0, currentList: any[] = developerMasterList) => {
-    let maxDevSeq = 0;
-    (currentList || []).forEach((d: any) => {
-      const m = (d.id || '').match(/SRM-DEV-\d+-(\d+)/i) || (d.id || '').match(/DEV-(\d+)/i);
-      if (m) {
+    const allNums: number[] = [];
+    const extractDevSeq = (item: any) => {
+      if (!item) return;
+      const strId = String(item.id || item.developer_id || item.code || item._id || '');
+      const m = strId.match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i) || strId.match(/DEV-(\d+)/i);
+      if (m && m[1]) {
         const val = parseInt(m[1], 10);
-        if (!isNaN(val) && val < 10000 && val > maxDevSeq) maxDevSeq = val;
+        if (!isNaN(val) && val > 0 && val < 100000) allNums.push(val);
       }
+    };
+
+    // 1. Active developers in currentList & developerMasterList & props developers
+    (currentList || []).forEach(extractDevSeq);
+    (developerMasterList || []).forEach(extractDevSeq);
+    if (Array.isArray(developers)) developers.forEach(extractDevSeq);
+
+    // 2. Recycled developers in Recycle Bin (so deleted developer IDs are NEVER reused)
+    (recycledItems || []).forEach((r: any) => {
+      if (!r) return;
+      extractDevSeq(r);
+      extractDevSeq(r.originalData);
     });
+
+    // 3. Persistent sequence watermark in localStorage
+    try {
+      const savedSeq = localStorage.getItem('swaramayi_max_dev_seq');
+      if (savedSeq) {
+        const parsed = parseInt(savedSeq, 10);
+        if (!isNaN(parsed) && parsed > 0 && parsed < 100000) {
+          allNums.push(parsed);
+        }
+      }
+    } catch (e) {}
+
+    const maxDevSeq = allNums.length > 0 ? Math.max(0, ...allNums) : 0;
     const yr = new Date().getFullYear();
     const nextNum = maxDevSeq + 1 + offset;
+
+    try {
+      localStorage.setItem('swaramayi_max_dev_seq', String(nextNum));
+    } catch (e) {}
+
     return `SRM-DEV-${yr}-${String(nextNum).padStart(6, '0')}`;
   };
 
   const getNextSequentialProjectId = (offset: number = 0, currentDevs: any[] = developerMasterList, currentProps: any[] = properties) => {
     const yr = new Date().getFullYear();
-    let maxSeq = 0;
-
-    (currentProps || []).forEach((p: any) => {
-      const pCode = p.project_id || p.code || p.id || '';
-      const m = pCode.match(/SRM-PROJ-\d+-(\d+)/i) || pCode.match(/PROJ-\d+-(\d+)/i);
-      if (m) {
+    const allNums: number[] = [];
+    const extractProjSeq = (item: any) => {
+      if (!item) return;
+      const pCode = String(item.project_id || item.code || item.property_code || item.id || item._id || '');
+      const m = pCode.match(/SRM-PROJ-(?:20\d{2}-)?(\d+)/i) || pCode.match(/PROJ-(\d+)/i);
+      if (m && m[1]) {
         const num = parseInt(m[1], 10);
-        if (!isNaN(num) && num < 88 && num > maxSeq) maxSeq = num;
+        if (!isNaN(num) && num > 0 && num < 100000 && num !== 88) allNums.push(num);
+      }
+    };
+
+    // 1. Active properties
+    (currentProps || []).forEach(extractProjSeq);
+    if (Array.isArray(properties)) properties.forEach(extractProjSeq);
+
+    // 2. Active dev projects
+    (currentDevs || []).forEach((dev: any) => {
+      (dev.projects || []).forEach(extractProjSeq);
+    });
+
+    // 3. Recycled projects / properties
+    (recycledItems || []).forEach((r: any) => {
+      if (!r) return;
+      extractProjSeq(r);
+      extractProjSeq(r.originalData);
+      if (r.originalData && Array.isArray(r.originalData.projects)) {
+        r.originalData.projects.forEach(extractProjSeq);
       }
     });
 
-    (currentDevs || []).forEach((dev: any) => {
-      (dev.projects || []).forEach((proj: any) => {
-        const pCode = proj.code || proj.id || '';
-        const m = pCode.match(/SRM-PROJ-\d+-(\d+)/i) || pCode.match(/PROJ-\d+-(\d+)/i);
-        if (m) {
-          const num = parseInt(m[1], 10);
-          if (!isNaN(num) && num < 88 && num > maxSeq) maxSeq = num;
+    // 4. Persistent sequence watermark in localStorage
+    try {
+      const savedSeq = localStorage.getItem('swaramayi_max_project_seq');
+      if (savedSeq) {
+        const parsed = parseInt(savedSeq, 10);
+        if (!isNaN(parsed) && parsed > 0 && parsed < 100000 && parsed !== 88) {
+          allNums.push(parsed);
         }
-      });
-    });
+      }
+    } catch (e) {}
 
+    const maxSeq = allNums.length > 0 ? Math.max(0, ...allNums) : 0;
     const nextNum = maxSeq + 1 + offset;
+
+    try {
+      localStorage.setItem('swaramayi_max_project_seq', String(nextNum));
+    } catch (e) {}
+
     return `SRM-PROJ-${yr}-${String(nextNum).padStart(6, '0')}`;
   };
 
@@ -1402,21 +1463,46 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     try {
       let updatedDevs = [...developerMasterList];
       const verifiedListToAdd: any[] = [];
+      const idsToUnrecycle = new Set<string>();
 
       parsedBulkDevelopers.forEach(item => {
-        const devName = item.developer || 'Builder';
-        const projTitle = item.title || 'Project';
+        const devName = (item.developer || 'Builder').trim();
+        const projTitle = (item.title || 'Project').trim();
         const assignedProjCode = item.project_id;
         const assignedDevId = item.developer_id;
+
+        if (devName) {
+          idsToUnrecycle.add(devName.toLowerCase());
+          idsToUnrecycle.add(devName);
+        }
+        if (projTitle) {
+          idsToUnrecycle.add(projTitle.toLowerCase());
+          idsToUnrecycle.add(projTitle);
+        }
+        if (assignedProjCode) {
+          idsToUnrecycle.add(String(assignedProjCode).toLowerCase());
+          idsToUnrecycle.add(String(assignedProjCode));
+        }
+        if (assignedDevId) {
+          idsToUnrecycle.add(String(assignedDevId).toLowerCase());
+          idsToUnrecycle.add(String(assignedDevId));
+        }
 
         const newProjEntry = {
           id: assignedProjCode,
           code: assignedProjCode,
+          project_id: assignedProjCode,
           title: projTitle,
+          developer: devName,
+          developer_id: assignedDevId,
           developer_email: item.developer_email || '',
+          developer_mobile: item.developer_mobile || '',
+          developer_alt_mobile: item.developer_alt_mobile || '',
           locality: item.locality || '',
           lat: item.latitude || '',
           lng: item.longitude || '',
+          latitude: item.latitude || '',
+          longitude: item.longitude || '',
           rera_id: item.rera_id || '',
           hera_no: item.hera_no || '',
           total_floors: item.total_floors || 'G+4 Floors (5 Storey)',
@@ -1432,22 +1518,38 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           total_ev_parking_capacity: item.total_ev_parking_capacity !== undefined ? item.total_ev_parking_capacity : 0,
           ev_parking_rate: item.ev_parking_rate || '',
           total_open_parking_capacity: item.total_open_parking_capacity !== undefined ? item.total_open_parking_capacity : 0,
-          open_parking_rate: item.open_parking_rate || ''
+          open_parking_rate: item.open_parking_rate || '',
+          otp_verified: false,
+          devProjectOtpVerified: false
         };
 
-        const existingDevIdx = updatedDevs.findIndex(d => d.name.toLowerCase().trim() === devName.toLowerCase().trim());
+        const existingDevIdx = updatedDevs.findIndex(d => (d.name || '').toLowerCase().trim() === devName.toLowerCase().trim());
         if (existingDevIdx >= 0) {
           const devObj = updatedDevs[existingDevIdx];
-          if (item.developer_email) devObj.email = item.developer_email;
-          if (item.developer_mobile && !devObj.mobile) devObj.mobile = item.developer_mobile;
-          if (item.developer_alt_mobile && !devObj.altMobile) devObj.altMobile = item.developer_alt_mobile;
-          const projList = devObj.projects || [];
-          const existingProjIdx = projList.findIndex((p: any) => (p.id === assignedProjCode || p.code === assignedProjCode || p.title?.toLowerCase().trim() === projTitle.toLowerCase().trim()));
+          const projList = [...(devObj.projects || [])];
+          const existingProjIdx = projList.findIndex((p: any) =>
+            (p.id && p.id === assignedProjCode) ||
+            (p.code && p.code === assignedProjCode) ||
+            (p.project_id && p.project_id === assignedProjCode) ||
+            ((p.title || '').toLowerCase().trim() === projTitle.toLowerCase().trim())
+          );
           if (existingProjIdx >= 0) {
-            projList[existingProjIdx] = { ...projList[existingProjIdx], ...newProjEntry };
+            projList[existingProjIdx] = { 
+              ...projList[existingProjIdx], 
+              ...newProjEntry,
+              otp_verified: false,
+              devProjectOtpVerified: false
+            };
           } else {
-            devObj.projects = [newProjEntry, ...projList];
+            projList.unshift(newProjEntry);
           }
+          updatedDevs[existingDevIdx] = {
+            ...devObj,
+            email: item.developer_email || devObj.email || '',
+            mobile: item.developer_mobile || devObj.mobile || '',
+            altMobile: item.developer_alt_mobile || devObj.altMobile || '',
+            projects: projList
+          };
         } else {
           const newDevObj = {
             id: assignedDevId,
@@ -1460,24 +1562,47 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           updatedDevs = [newDevObj, ...updatedDevs];
         }
 
-        // Auto-create Project-Wise Developer Channel Partner Agreement
+        // Auto-create Project-Wise Developer Channel Partner Agreement (Pending OTP until explicit developer verification)
         createOrUpdateDevAgreement(
           devName,
           projTitle,
           item.developer_mobile,
           item.locality,
           undefined,
-          true
+          false
         );
-
-        verifiedListToAdd.push({
-          developer: devName,
-          project: projTitle,
-          mobile: item.developer_mobile || 'Registered Mobile',
-          verifiedAt: new Date().toLocaleString(),
-          hash: `SHA256-DEV-OTP-VERIFIED-#${Math.floor(100000 + Math.random() * 900000)}`
-        });
       });
+
+      // Clear any prior verified tombstones for these newly imported projects so they remain pending OTP
+      if (setVerifiedDevProjectsList) {
+        setVerifiedDevProjectsList(prev => {
+          const importedKeys = new Set(
+            parsedBulkDevelopers.map(item => `${(item.developer || '').toLowerCase().trim()}:::${(item.title || '').toLowerCase().trim()}`)
+          );
+          return (prev || []).filter(vp => {
+            const key = `${(vp.developer || '').toLowerCase().trim()}:::${(vp.project || '').toLowerCase().trim()}`;
+            return !importedKeys.has(key);
+          });
+        });
+      }
+
+      // Clear any recycled tombstones for these newly imported developer projects
+      let updatedRecycled = (recycledItems || []).filter((r: any) => {
+        const rIds = extractAllIdentifiers(r);
+        for (const id of rIds) {
+          if (idsToUnrecycle.has(id) || idsToUnrecycle.has(id.toLowerCase())) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      if (setRecycledItems && updatedRecycled.length !== (recycledItems || []).length) {
+        setRecycledItems(updatedRecycled);
+      }
+      try {
+        localStorage.setItem('swaramayi_recycled_items', JSON.stringify(updatedRecycled));
+      } catch (e) {}
 
       setDeveloperMasterList(updatedDevs);
       if (setDevelopers) {
@@ -1487,18 +1612,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
       } catch (e) {}
 
-      if (setVerifiedDevProjectsList && verifiedListToAdd.length > 0) {
-        setVerifiedDevProjectsList(prev => [...verifiedListToAdd, ...(prev || [])]);
-      }
-
       if (syncAllToMongoDB) {
-        await syncAllToMongoDB({ developers: updatedDevs, properties });
+        await syncAllToMongoDB({ developers: updatedDevs, properties, recycled_items: updatedRecycled });
       }
 
       alert(`🎉 BULK DEVELOPER STOCK IMPORT SUCCESSFUL!\n\n• Successfully imported and registered ${parsedBulkDevelopers.length} Developer Master Projects!\n• Updated Developer Master Vault & MongoDB Atlas.\n• Project Codes assigned: ${parsedBulkDevelopers[0]?.project_id} to ${parsedBulkDevelopers[parsedBulkDevelopers.length - 1]?.project_id}`);
 
       handleClearParsedDevRows();
-      setIsBulkImportDeveloperOpen(false);
+      closeBulkDeveloperImportModal();
       setShowDevVaultModal(true);
     } catch (err: any) {
       alert(`⚠️ Ingestion failed: ${err.message || 'Could not save developers'}`);
@@ -1517,20 +1638,36 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     return properties.filter(p => matchesSearchQuery(p, searchQuery));
   }, [properties, searchQuery, matchesSearchQuery]);
 
-  const isAllPropertiesSelected = filteredPropertyList.length > 0 && filteredPropertyList.every(p => selectedPropertyIds.includes(p.id));
+  const getPropertyKey = (p: any): string => {
+    return String(p.property_code || p.id || p._id || p.code || '');
+  };
+
+  const isPropertyKeySelected = (p: any): boolean => {
+    const keys = [p.property_code, p.id, p._id, p.code].filter(Boolean).map(k => String(k).trim().toLowerCase());
+    const selSet = new Set(selectedPropertyIds.map(k => String(k).trim().toLowerCase()));
+    return keys.some(k => selSet.has(k));
+  };
+
+  const isAllPropertiesSelected = filteredPropertyList.length > 0 && filteredPropertyList.every(isPropertyKeySelected);
 
   const handleToggleSelectAllProperties = () => {
     if (isAllPropertiesSelected) {
       setSelectedPropertyIds([]);
     } else {
-      setSelectedPropertyIds(filteredPropertyList.map(p => p.id));
+      setSelectedPropertyIds(filteredPropertyList.map(getPropertyKey));
     }
   };
 
-  const handleToggleSelectProperty = (id: string) => {
-    setSelectedPropertyIds(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
+  const handleToggleSelectProperty = (key: string) => {
+    const norm = String(key).trim().toLowerCase();
+    setSelectedPropertyIds(prev => {
+      const exists = prev.some(k => String(k).trim().toLowerCase() === norm);
+      if (exists) {
+        return prev.filter(k => String(k).trim().toLowerCase() !== norm);
+      } else {
+        return [...prev, key];
+      }
+    });
   };
 
   // Helper to automatically create or update a Project-Wise Developer Agreement when a Developer/Project is added or OTP is verified
@@ -1638,24 +1775,140 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const handleBulkRecycleProperties = () => {
     if (selectedPropertyIds.length === 0) return;
     if (window.confirm(`Are you sure you want to move ${selectedPropertyIds.length} selected property item(s) to the Recycle Bin?`)) {
-      const itemsToRecycle = properties.filter(p => selectedPropertyIds.includes(p.id));
-      itemsToRecycle.forEach(p => {
-        if (onRecycleItem) {
-          onRecycleItem({
-            id: p.id || p.property_code || `PROP-${Date.now()}`,
-            title: `Property - ${p.title || p.property_title || p.property_code || 'Unit'} (${p.property_code || p.id})`,
-            category: 'Project',
-            originalLocation: 'Project & Property Inventory Management System',
-            details: `Developer: ${p.developer || 'N/A'}, Price: ${p.final_price || 'N/A'}, Config: ${p.configuration || 'N/A'}`,
-            originalData: p
-          });
-        }
-      });
-      if (setProperties) {
-        setProperties(prev => prev.filter(p => !selectedPropertyIds.includes(p.id)));
+      if (onBulkRecycleProperties) {
+        onBulkRecycleProperties(selectedPropertyIds);
+        setSelectedPropertyIds([]);
+        alert(`🗑️ Successfully moved ${selectedPropertyIds.length} property item(s) to Recycle Bin.`);
+        return;
       }
+
+      const targetSet = new Set(selectedPropertyIds.map(k => String(k).trim().toLowerCase()));
+      const itemsToRecycle = properties.filter(p => {
+        const keys = [p.id, p._id, p.property_code, p.code].filter(Boolean).map(k => String(k).trim().toLowerCase());
+        return keys.some(k => targetSet.has(k));
+      });
+
+      const newRecycledItems = itemsToRecycle.map(p => {
+        const propCode = p.property_code || p.code || p.id || p._id || `PROP-${Date.now()}`;
+        return {
+          id: propCode,
+          title: `Property - ${p.title || p.property_title || propCode || 'Unit'} (${propCode})`,
+          category: 'Project' as const,
+          deletedBy: `${currentRole === 'SUPER_ADMIN' ? 'Avishek Das (SUPER_ADMIN)' : currentRole}`,
+          deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+          originalLocation: 'Property Master / Live Inventory',
+          details: `Developer: ${p.developer || 'N/A'}, Price: ${p.final_price || 'N/A'}, Config: ${p.configuration || 'N/A'}`,
+          originalData: p
+        };
+      });
+
+      const recycledIdsSet = new Set(newRecycledItems.map(r => r.id.toLowerCase()));
+      const nextRecycled = [
+        ...newRecycledItems,
+        ...(recycledItems || []).filter(r => !recycledIdsSet.has(String(r.id).toLowerCase()))
+      ];
+
+      const nextProps = properties.filter(p => {
+        const keys = [p.id, p._id, p.property_code, p.code].filter(Boolean).map(k => String(k).trim().toLowerCase());
+        return !keys.some(k => targetSet.has(k));
+      });
+
+      if (setProperties) {
+        setProperties(nextProps);
+      }
+      if (setRecycledItems) {
+        setRecycledItems(nextRecycled);
+      }
+      try {
+        localStorage.setItem('swaramayi_recycled_items', JSON.stringify(nextRecycled));
+      } catch (e) {}
+
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({ properties: nextProps, recycled_items: nextRecycled });
+      }
+
       setSelectedPropertyIds([]);
       alert(`🗑️ Successfully moved ${itemsToRecycle.length} property item(s) to Recycle Bin.`);
+    }
+  };
+
+  const handleDeleteRegisteredProject = (dev: any, p: any, projUnits: any[]) => {
+    const projTitle = p.title || 'Project';
+    const projCode = p.code || p.id || `PROJ-${Date.now()}`;
+    if (window.confirm(`⚠️ CONFIRM PROJECT DELETION:\n\nAre you sure you want to delete project "${projTitle}" (${projCode}) and move it to the Recycle Bin?\n\nThis will also move its ${projUnits.length} associated property unit(s) to the Recycle Bin.`)) {
+      const deletedProjectItem = {
+        id: projCode,
+        title: `Project - ${projTitle} (${projCode})`,
+        category: 'Project' as const,
+        deletedBy: `${currentRole === 'SUPER_ADMIN' ? 'Avishek Das (SUPER_ADMIN)' : currentRole}`,
+        deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        originalLocation: 'Developer & Channel Partner Master',
+        details: `Developer: ${dev.name || 'N/A'}, Locality: ${p.locality || 'N/A'}, Units: ${projUnits.length}`,
+        originalData: { ...p, developer: dev.name, developer_id: dev.id }
+      };
+
+      const deletedPropertyItems = projUnits.map((prop: any) => {
+        const propCode = prop.property_code || prop.code || prop.id || `PROP-${Date.now()}`;
+        return {
+          id: propCode,
+          title: `Property - ${prop.title || propCode} (${propCode})`,
+          category: 'Project' as const,
+          deletedBy: `${currentRole === 'SUPER_ADMIN' ? 'Avishek Das (SUPER_ADMIN)' : currentRole}`,
+          deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+          originalLocation: 'Property Master / Live Inventory',
+          details: `Developer: ${dev.name || 'N/A'}, Project: ${projTitle}`,
+          originalData: prop
+        };
+      });
+
+      const allNewRecycled = [deletedProjectItem, ...deletedPropertyItems];
+      const allRecycledIds = new Set(allNewRecycled.map(r => String(r.id).toLowerCase()));
+
+      const nextDevList = (developerMasterList || []).map((d: any) => {
+        if (d.id === dev.id || (d.name && dev.name && d.name.toLowerCase().trim() === dev.name.toLowerCase().trim())) {
+          const updatedProjects = (d.projects || []).filter((proj: any) => {
+            const isMatch = (proj.id && p.id && proj.id === p.id) ||
+              (proj.code && p.code && proj.code === p.code) ||
+              (proj.title && p.title && proj.title.toLowerCase().trim() === p.title.toLowerCase().trim());
+            return !isMatch;
+          });
+          return { ...d, projects: updatedProjects };
+        }
+        return d;
+      });
+
+      const nextProps = (properties || []).filter((prop: any) => {
+        const propId = String(prop.id || prop._id || '').toLowerCase();
+        const propCode = String(prop.property_code || prop.code || '').toLowerCase();
+        const propProjId = String(prop.project_id || '').toLowerCase();
+        const propTitle = String(prop.title || '').trim().toLowerCase();
+
+        if (allRecycledIds.has(propId) || allRecycledIds.has(propCode)) return false;
+        if (propProjId && propProjId === projCode.toLowerCase()) return false;
+        if (p.title && propTitle === p.title.trim().toLowerCase()) return false;
+        return true;
+      });
+
+      const nextRecycled = [
+        ...allNewRecycled,
+        ...(recycledItems || []).filter((r: any) => !allRecycledIds.has(String(r.id).toLowerCase()))
+      ];
+
+      setDeveloperMasterList(nextDevList);
+      if (setDevelopers) setDevelopers(nextDevList);
+      if (setProperties) setProperties(nextProps);
+      if (setRecycledItems) setRecycledItems(nextRecycled);
+
+      try {
+        localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevList));
+        localStorage.setItem('swaramayi_recycled_items', JSON.stringify(nextRecycled));
+      } catch (e) {}
+
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({ developers: nextDevList, properties: nextProps, recycled_items: nextRecycled });
+      }
+
+      alert(`🗑️ Project "${projTitle}" and its ${deletedPropertyItems.length} property unit(s) moved to Recycle Bin.`);
     }
   };
 
@@ -1768,6 +2021,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const [showDevVaultModal, setShowDevVaultModal] = React.useState<boolean>(false);
   const [showDevVaultSearch, setShowDevVaultSearch] = React.useState<boolean>(false);
   const [devVaultSearchQuery, setDevVaultSearchQuery] = React.useState<string>('');
+  const [selectedVaultDevIds, setSelectedVaultDevIds] = React.useState<string[]>([]);
   const [newDevNameInput, setNewDevNameInput] = React.useState<string>('');
   const [newDevMobileInput, setNewDevMobileInput] = React.useState<string>('');
   const [newDevAltMobileInput, setNewDevAltMobileInput] = React.useState<string>('');
@@ -2773,16 +3027,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       devObj.projects = projList;
       updatedDevs[existingDevIdx] = devObj;
     } else {
-      let maxDevSeq = 0;
-      updatedDevs.forEach((d: any) => {
-        const m = (d.id || '').match(/SRM-DEV-\d+-(\d+)/i);
-        if (m) {
-          const val = parseInt(m[1], 10);
-          if (!isNaN(val) && val < 10000 && val > maxDevSeq) maxDevSeq = val;
-        }
-      });
+      const generatedDevId = targetDevId || getNextSequentialDeveloperId(0, updatedDevs);
       const newDevObj = {
-        id: targetDevId || `SRM-DEV-2026-${String(maxDevSeq + 1).padStart(6, '0')}`,
+        id: generatedDevId,
         name: newPropertyForm.developer,
         mobile: devProjectMobile || '+91 98490 88776',
         altMobile: resolvedAltMobile,
@@ -6116,7 +6363,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       return { border: '1.5px solid #22c55e', bg: 'rgba(34, 197, 94, 0.18)', color: '#4ade80' };
                     };
 
-                    const isSelected = selectedPropertyIds.includes(p.id);
+                    const isSelected = isPropertyKeySelected(p);
                     const badgeStyle = getStatusBadgeStyle(normalizedStatus);
 
                     return (
@@ -6126,7 +6373,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => handleToggleSelectProperty(p.id)}
+                              onChange={() => handleToggleSelectProperty(getPropertyKey(p))}
                               style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#0284c7' }}
                             />
                             <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '900', fontSize: '0.85rem' }}>{p.property_code}</span>
@@ -6317,7 +6564,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       const availCountForType = isEv ? availEv : isOpen ? availOpen : availCovered;
                       const totalCapForType = isEv ? totalEvCap : isOpen ? totalOpenCap : totalCoveredCap;
 
-                      const isSelected = selectedPropertyIds.includes(p.id);
+                      const isSelected = isPropertyKeySelected(p);
 
                       return (
                         <tr key={p.id} style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', background: isSelected ? (isLight ? 'rgba(56, 189, 248, 0.12)' : 'rgba(56, 189, 248, 0.18)') : undefined }}>
@@ -6325,7 +6572,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => handleToggleSelectProperty(p.id)}
+                              onChange={() => handleToggleSelectProperty(getPropertyKey(p))}
                               style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#0284c7' }}
                             />
                           </td>
@@ -6556,7 +6803,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                 >
                   <Upload size={14} /> 🏢 📥 Import Bulk Developer Stock
                 </button>
-                <button onClick={() => { setShowDevVaultModal(false); setShowDevVaultSearch(false); setDevVaultSearchQuery(''); }} style={{ background: 'none', border: 'none', color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer' }}>
+                <button onClick={() => { setShowDevVaultModal(false); setShowDevVaultSearch(false); setDevVaultSearchQuery(''); setSelectedVaultDevIds([]); }} style={{ background: 'none', border: 'none', color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer' }}>
                   <X size={20} />
                 </button>
               </div>
@@ -6650,22 +6897,44 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   type="button" 
                   onClick={() => {
                     if (!newDevNameInput || !newDevMobileInput) return alert('Please enter Developer Name & Primary Mobile Phone');
-                    let maxDevSeq = 0;
-                    (developerMasterList || []).forEach((d: any) => {
-                      const m = (d.id || '').match(/SRM-DEV-\d+-(\d+)/i);
-                      if (m) {
-                        const val = parseInt(m[1], 10);
-                        if (!isNaN(val) && val < 10000 && val > maxDevSeq) maxDevSeq = val;
-                      }
-                    });
+                    const generatedDevId = getNextSequentialDeveloperId(0, developerMasterList);
                     const newDevObj = {
-                      id: `SRM-DEV-2026-${String(maxDevSeq + 1).padStart(6, '0')}`,
+                      id: generatedDevId,
                       name: newDevNameInput,
                       mobile: newDevAltMobileInput ? `${newDevMobileInput} / ${newDevAltMobileInput}` : newDevMobileInput,
                       email: newDevEmailInput || '',
-                      projects: newDevProjectTitleInput ? [{ id: `PRJ-${Date.now()}`, title: newDevProjectTitleInput, locality: 'Locality Hub' }] : []
+                      projects: newDevProjectTitleInput ? [{ id: `PRJ-${Date.now()}`, code: `PRJ-${Date.now()}`, title: newDevProjectTitleInput, locality: 'Locality Hub' }] : []
                     };
-                    setDeveloperMasterList([newDevObj, ...developerMasterList]);
+                    const nextDevList = [newDevObj, ...developerMasterList];
+                    setDeveloperMasterList(nextDevList);
+                    if (setDevelopers) {
+                      setDevelopers(nextDevList);
+                    }
+
+                    // Only unrecycle tombstones IF explicitly re-registering the exact same developer name or project title
+                    // NEVER match by newDevObj.id, so deleted developers in Recycle Bin are NEVER wiped!
+                    const devNamesToUnrecycle = new Set<string>([
+                      newDevNameInput.toLowerCase().trim(),
+                      newDevNameInput.trim()
+                    ]);
+                    if (newDevProjectTitleInput) {
+                      devNamesToUnrecycle.add(newDevProjectTitleInput.toLowerCase().trim());
+                      devNamesToUnrecycle.add(newDevProjectTitleInput.trim());
+                    }
+                    const updatedRecycled = (recycledItems || []).filter((r: any) => {
+                      const rName = (r.originalData?.name || r.name || '').trim().toLowerCase();
+                      if (rName && devNamesToUnrecycle.has(rName)) return false;
+                      const rTitle = (r.title || '').trim().toLowerCase();
+                      if (rTitle && (devNamesToUnrecycle.has(rTitle) || devNamesToUnrecycle.has(rTitle.replace(/^developer\s*-\s*/i, '').replace(/\s*\([^)]*\)$/, '').trim()))) return false;
+                      return true;
+                    });
+                    if (setRecycledItems && updatedRecycled.length !== (recycledItems || []).length) {
+                      setRecycledItems(updatedRecycled);
+                    }
+                    try {
+                      localStorage.setItem('swaramayi_recycled_items', JSON.stringify(updatedRecycled));
+                    } catch (e) {}
+
                     if (newDevProjectTitleInput) {
                       createOrUpdateDevAgreement(newDevNameInput, newDevProjectTitleInput, newDevMobileInput, 'Locality Hub', undefined, true);
                     }
@@ -6675,10 +6944,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     setNewDevEmailInput('');
                     setNewDevProjectTitleInput('');
                     try {
-                      localStorage.setItem('swaramayi_developers_v1', JSON.stringify([newDevObj, ...developerMasterList]));
+                      localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevList));
                     } catch (e) {}
                     if (syncAllToMongoDB) {
-                      syncAllToMongoDB({ developers: [newDevObj, ...developerMasterList] });
+                      syncAllToMongoDB({ developers: nextDevList, recycled_items: updatedRecycled });
                     }
                     alert(`🎉 REGISTERED NEW DEVELOPER MASTER!\n\n• Developer ID: ${newDevObj.id}\n• Builder Name: ${newDevObj.name}\n• Phone: ${newDevObj.mobile}`);
                   }}
@@ -6730,14 +6999,181 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                   );
                 }
-                return filteredDevelopers.map((dev) => (
-                  <div key={dev.id} style={{ background: isLight ? '#f8fafc' : '#0f172a', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '12px', padding: windowWidth <= 768 ? '12px' : '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {editingDevId === dev.id ? (
-                      <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #f59e0b', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.8rem', color: '#fbbf24', fontWeight: '900', fontFamily: 'monospace' }}>
-                            ✏️ EDIT DEVELOPER PROFILE (ID: {dev.id})
+                const allSelected = filteredDevelopers.length > 0 && filteredDevelopers.every((d: any) => selectedVaultDevIds.includes(d.id));
+                const someSelected = filteredDevelopers.some((d: any) => selectedVaultDevIds.includes(d.id));
+
+                const handleToggleSelectAll = () => {
+                  if (allSelected) {
+                    setSelectedVaultDevIds([]);
+                  } else {
+                    const allIds = filteredDevelopers.map((d: any) => d.id);
+                    setSelectedVaultDevIds(allIds);
+                  }
+                };
+
+                const handleBulkDeleteSelected = () => {
+                  if (selectedVaultDevIds.length === 0) return;
+                  const devsToDelete = (developerMasterList || []).filter((d: any) => selectedVaultDevIds.includes(d.id));
+                  if (devsToDelete.length === 0) return;
+
+                  if (window.confirm(`⚠️ CONFIRM BULK DELETION:\n\nAre you sure you want to delete ${devsToDelete.length} selected developer(s)?\n\nThey will be moved to the Recycle Bin.`)) {
+                    const deletedItemsToRecycle = devsToDelete.map((dev: any) => ({
+                      id: dev.id || `DEV-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                      title: `Developer - ${dev.name || 'Partner Developer'} (${dev.id})`,
+                      category: 'Developer' as const,
+                      deletedBy: 'Avishek Das (SUPER_ADMIN)',
+                      deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+                      originalLocation: 'Developer & Channel Partner Master',
+                      details: `Mobile: ${dev.mobile || 'N/A'}, Projects: ${dev.projectsCount || (dev.projects?.length) || 0}`,
+                      originalData: dev
+                    }));
+
+                    const deleteIdsSet = new Set(selectedVaultDevIds);
+                    const nextList = (developerMasterList || []).filter((d: any) => !deleteIdsSet.has(d.id));
+                    setDeveloperMasterList(nextList);
+                    if (setDevelopers) setDevelopers(nextList);
+                    try {
+                      localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextList));
+                    } catch (e) {}
+
+                    const nextRecycled = [
+                      ...deletedItemsToRecycle,
+                      ...(recycledItems || []).filter((r: any) => !deleteIdsSet.has(r.id))
+                    ];
+                    if (setRecycledItems) {
+                      setRecycledItems(nextRecycled);
+                    }
+                    try {
+                      localStorage.setItem('swaramayi_recycled_items', JSON.stringify(nextRecycled));
+                    } catch (e) {}
+
+                    if (syncAllToMongoDB) {
+                      syncAllToMongoDB({ developers: nextList, recycled_items: nextRecycled });
+                    }
+
+                    setSelectedVaultDevIds([]);
+                    alert(`🗑️ ${devsToDelete.length} Developer(s) successfully moved to Recycle Bin.`);
+                  }
+                };
+
+                return (
+                  <>
+                    {/* SELECT ALL & BULK ACTION BAR */}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      background: isLight ? '#f1f5f9' : '#0f172a',
+                      border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      flexWrap: 'wrap',
+                      gap: '10px'
+                    }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '9px', cursor: 'pointer', fontSize: '0.84rem', fontWeight: '800', color: isLight ? '#0f172a' : '#f8fafc', userSelect: 'none' }}>
+                        <input
+                          type="checkbox"
+                          checked={allSelected}
+                          ref={(el) => { if (el) el.indeterminate = !allSelected && someSelected; }}
+                          onChange={handleToggleSelectAll}
+                          style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0284c7' }}
+                        />
+                        <span>Select All ({filteredDevelopers.length} Developers)</span>
+                      </label>
+
+                      {selectedVaultDevIds.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{
+                            fontSize: '0.78rem',
+                            fontWeight: '800',
+                            color: '#0284c7',
+                            background: isLight ? '#e0f2fe' : 'rgba(2, 132, 199, 0.2)',
+                            border: '1px solid rgba(2, 132, 199, 0.35)',
+                            padding: '4px 10px',
+                            borderRadius: '6px'
+                          }}>
+                            ✓ {selectedVaultDevIds.length} Selected
                           </span>
+                          {isSuperAdmin && (
+                            <button
+                              type="button"
+                              onClick={handleBulkDeleteSelected}
+                              style={{
+                                background: '#ef4444',
+                                color: '#ffffff',
+                                border: 'none',
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                fontWeight: '800',
+                                fontSize: '0.78rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}
+                              title="Move selected developers to Recycle Bin"
+                            >
+                              <Trash2 size={13} /> Delete Selected ({selectedVaultDevIds.length})
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedVaultDevIds([])}
+                            style={{
+                              background: isLight ? '#e2e8f0' : '#334155',
+                              color: isLight ? '#475569' : '#94a3b8',
+                              border: 'none',
+                              padding: '6px 10px',
+                              borderRadius: '6px',
+                              fontWeight: '800',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {filteredDevelopers.map((dev) => (
+                      <div
+                        key={dev.id}
+                        style={{
+                          background: selectedVaultDevIds.includes(dev.id)
+                            ? (isLight ? '#f0f9ff' : 'rgba(2, 132, 199, 0.12)')
+                            : (isLight ? '#f8fafc' : '#0f172a'),
+                          border: selectedVaultDevIds.includes(dev.id)
+                            ? '2px solid #0284c7'
+                            : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                          borderRadius: '12px',
+                          padding: windowWidth <= 768 ? '12px' : '16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {editingDevId === dev.id ? (
+                          <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #f59e0b', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedVaultDevIds.includes(dev.id)}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedVaultDevIds(prev =>
+                                      prev.includes(dev.id) ? prev.filter(id => id !== dev.id) : [...prev, dev.id]
+                                    );
+                                  }}
+                                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0284c7' }}
+                                  title={`Select ${dev.name}`}
+                                />
+                                <span style={{ fontSize: '0.8rem', color: '#fbbf24', fontWeight: '900', fontFamily: 'monospace' }}>
+                                  ✏️ EDIT DEVELOPER PROFILE (ID: {dev.id})
+                                </span>
+                              </div>
                           <button onClick={() => setEditingDevId(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
                             <X size={18} />
                           </button>
@@ -6817,13 +7253,33 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       </div>
                     ) : (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                        <div>
-                          <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: '900', fontFamily: 'monospace', background: 'rgba(251, 191, 36, 0.15)', border: '1px solid rgba(251, 191, 36, 0.3)', padding: '2px 8px', borderRadius: '4px' }}>
-                            🆔 {(dev.id || '').includes('655434') || (dev.id || '').includes('640480') || (dev.id || '').includes('688790') || (dev.id || '').includes('000105') ? 'SRM-DEV-2026-000001' : (dev.id || 'SRM-DEV-2026-000001')}
-                          </span>
-                          <h4 style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '4px' }}>
-                            🏢 {dev.name}
-                          </h4>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedVaultDevIds.includes(dev.id)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setSelectedVaultDevIds(prev =>
+                                prev.includes(dev.id) ? prev.filter(id => id !== dev.id) : [...prev, dev.id]
+                              );
+                            }}
+                            style={{
+                              width: '18px',
+                              height: '18px',
+                              cursor: 'pointer',
+                              marginTop: '3px',
+                              accentColor: '#0284c7'
+                            }}
+                            title={`Select ${dev.name}`}
+                          />
+                          <div>
+                            <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: '900', fontFamily: 'monospace', background: 'rgba(251, 191, 36, 0.15)', border: '1px solid rgba(251, 191, 36, 0.3)', padding: '2px 8px', borderRadius: '4px' }}>
+                              🆔 {(dev.id || '').includes('655434') || (dev.id || '').includes('640480') || (dev.id || '').includes('688790') || (dev.id || '').includes('000105') ? 'SRM-DEV-2026-000001' : (dev.id || 'SRM-DEV-2026-000001')}
+                            </span>
+                            <h4 style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '4px' }}>
+                              🏢 {dev.name}
+                            </h4>
+                          </div>
                         </div>
                         <div style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', textAlign: windowWidth <= 768 ? 'left' : 'right', width: windowWidth <= 640 ? '100%' : 'auto' }}>
                           <div>📱 Phone (for OTP): <strong style={{ color: '#4ade80' }}>{dev.mobile}</strong></div>
@@ -6848,15 +7304,18 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                               <button
                                 onClick={() => {
                                   if (window.confirm(`⚠️ CONFIRM DELETION:\n\nAre you sure you want to delete Developer ${dev.id} (${dev.name})? It will be moved to Recycle Bin.`)) {
+                                    const recycledDevItem = {
+                                      id: dev.id || `DEV-${Date.now()}`,
+                                      title: `Developer - ${dev.name || 'Partner Developer'} (${dev.id})`,
+                                      category: 'Developer' as const,
+                                      deletedBy: 'Avishek Das (SUPER_ADMIN)',
+                                      deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+                                      originalLocation: 'Developer & Channel Partner Master',
+                                      details: `Mobile: ${dev.mobile || 'N/A'}, Projects: ${dev.projectsCount || (dev.projects?.length) || 0}`,
+                                      originalData: dev
+                                    };
                                     if (onRecycleItem) {
-                                      onRecycleItem({
-                                        id: dev.id || `DEV-${Date.now()}`,
-                                        title: `Developer - ${dev.name || 'Partner Developer'} (${dev.id})`,
-                                        category: 'Developer',
-                                        originalLocation: 'Developer & Channel Partner Master',
-                                        details: `Mobile: ${dev.mobile || 'N/A'}, Projects: ${dev.projectsCount || (dev.projects?.length) || 0}`,
-                                        originalData: dev
-                                      });
+                                      onRecycleItem(recycledDevItem);
                                     }
                                     const nextList = developerMasterList.filter((d: any) => d.id !== dev.id && d.name !== dev.name);
                                     setDeveloperMasterList(nextList);
@@ -6864,8 +7323,20 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                     try {
                                       localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextList));
                                     } catch (e) {}
+
+                                    const nextRecycled = [
+                                      recycledDevItem,
+                                      ...(recycledItems || []).filter((r: any) => r.id !== recycledDevItem.id)
+                                    ];
+                                    if (setRecycledItems) {
+                                      setRecycledItems(nextRecycled);
+                                    }
+                                    try {
+                                      localStorage.setItem('swaramayi_recycled_items', JSON.stringify(nextRecycled));
+                                    } catch (e) {}
+
                                     if (syncAllToMongoDB) {
-                                      syncAllToMongoDB({ developers: nextList });
+                                      syncAllToMongoDB({ developers: nextList, recycled_items: nextRecycled });
                                     }
                                     alert(`🗑️ Developer ${dev.name} moved to Recycle Bin.`);
                                   }
@@ -6910,13 +7381,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                         const isDevOtpVerified = Boolean(
                           p.otp_verified ||
                           p.devProjectOtpVerified ||
-                          dev.otp_verified ||
                           matchedMaster?.otp_verified ||
-                          verifiedDevProjectsList.some((vp: any) => 
-                            (vp.developer && dev.name && vp.developer.toLowerCase().trim() === dev.name.toLowerCase().trim()) ||
+                          (verifiedDevProjectsList || []).some((vp: any) => 
+                            (vp.developer && dev.name && vp.developer.toLowerCase().trim() === dev.name.toLowerCase().trim()) &&
                             (vp.project && p.title && vp.project.toLowerCase().trim() === p.title.toLowerCase().trim())
-                          ) ||
-                          devProjectOtpVerified
+                          )
                         );
 
                         const rawMatchedProp = properties.find(prop => 
@@ -6997,6 +7466,71 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                 <span style={{ fontSize: '0.68rem', background: isDevOtpVerified ? 'rgba(34, 197, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: isDevOtpVerified ? '#22c55e' : '#f59e0b', border: `1px solid ${isDevOtpVerified ? '#22c55e' : '#f59e0b'}`, padding: '2px 8px', borderRadius: '10px', fontWeight: '900' }}>
                                   {isDevOtpVerified ? '✓ OTP VERIFIED' : '⚠️ OTP PENDING'}
                                 </span>
+                                {isDevOtpVerified && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (window.confirm(`Reset OTP verification status for project "${p.title}"? This will return it to Pending OTP.`)) {
+                                        if (setVerifiedDevProjectsList) {
+                                          setVerifiedDevProjectsList(prev => (prev || []).filter((vp: any) =>
+                                            !(vp.developer && dev.name && vp.developer.toLowerCase().trim() === dev.name.toLowerCase().trim() &&
+                                              vp.project && p.title && vp.project.toLowerCase().trim() === p.title.toLowerCase().trim())
+                                          ));
+                                        }
+                                        createOrUpdateDevAgreement(dev.name, p.title, dev.mobile, p.locality || 'Locality Hub', undefined, false, true);
+                                        const nextDevList = (developerMasterList || []).map((d: any) => {
+                                          if (d.id === dev.id || (d.name && dev.name && d.name.toLowerCase().trim() === dev.name.toLowerCase().trim())) {
+                                            const updatedProjects = (d.projects || []).map((proj: any) => {
+                                              if (
+                                                (proj.id && p.id && proj.id === p.id) ||
+                                                (proj.code && p.code && proj.code === p.code) ||
+                                                (proj.title && p.title && proj.title.toLowerCase().trim() === p.title.toLowerCase().trim())
+                                              ) {
+                                                return {
+                                                  ...proj,
+                                                  otp_verified: false,
+                                                  devProjectOtpVerified: false
+                                                };
+                                              }
+                                              return proj;
+                                            });
+                                            return { ...d, projects: updatedProjects };
+                                          }
+                                          return d;
+                                        });
+                                        setDeveloperMasterList(nextDevList);
+                                        if (setDevelopers) {
+                                          setDevelopers(nextDevList);
+                                        }
+                                        try {
+                                          localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevList));
+                                        } catch (e) {}
+                                        if (syncAllToMongoDB) {
+                                          syncAllToMongoDB({ developers: nextDevList });
+                                        }
+                                        if (setProperties) {
+                                          setProperties((prevProps: any[]) => {
+                                            return (prevProps || []).map((prop: any) => {
+                                              const isMatch = (
+                                                (prop.project_id && (prop.project_id === projCodeStr || prop.project_id === p.code || prop.project_id === p.id)) ||
+                                                (prop.property_code && (prop.property_code === projCodeStr || prop.property_code === p.code || prop.property_code === p.id)) ||
+                                                (prop.title && p.title && prop.title.toLowerCase().trim() === p.title.toLowerCase().trim())
+                                              );
+                                              if (isMatch) {
+                                                return { ...prop, otp_verified: false, devProjectOtpVerified: false };
+                                              }
+                                              return prop;
+                                            });
+                                          });
+                                        }
+                                      }
+                                    }}
+                                    style={{ background: 'transparent', color: isLight ? '#64748b' : '#94a3b8', border: 'none', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', cursor: 'pointer', textDecoration: 'underline' }}
+                                    title="Click to reset OTP back to Pending"
+                                  >
+                                    ↺ Reset OTP
+                                  </button>
+                                )}
                                 {(p.total_floors || matchedProp.total_floors) && (
                                   <span style={{ fontSize: '0.68rem', background: 'rgba(56, 189, 248, 0.15)', color: '#0284c7', border: '1px solid #38bdf8', padding: '2px 8px', borderRadius: '10px', fontWeight: '900' }}>
                                     🏬 {p.total_floors || matchedProp.total_floors}
@@ -7024,12 +7558,61 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                           hash: `SHA256-DEV-OTP-VERIFIED-#${Math.floor(100000 + Math.random() * 900000)}`
                                         };
                                         if (setVerifiedDevProjectsList) {
-                                          setVerifiedDevProjectsList([newVerifiedObj, ...(verifiedDevProjectsList || [])]);
-                                     createOrUpdateDevAgreement(dev.name, p.title, dev.mobile, p.locality || 'Locality Hub', newVerifiedObj.hash, true);
+                                          setVerifiedDevProjectsList(prev => [newVerifiedObj, ...(prev || [])]);
                                         }
-                                        if (setDevProjectOtpVerified) {
-                                          setDevProjectOtpVerified(true);
+                                        createOrUpdateDevAgreement(dev.name, p.title, dev.mobile, p.locality || 'Locality Hub', newVerifiedObj.hash, true, true);
+                                        
+                                        // Persist verified status directly in developerMasterList
+                                        const nextDevList = (developerMasterList || []).map((d: any) => {
+                                          if (d.id === dev.id || (d.name && dev.name && d.name.toLowerCase().trim() === dev.name.toLowerCase().trim())) {
+                                            const updatedProjects = (d.projects || []).map((proj: any) => {
+                                              if (
+                                                (proj.id && p.id && proj.id === p.id) ||
+                                                (proj.code && p.code && proj.code === p.code) ||
+                                                (proj.title && p.title && proj.title.toLowerCase().trim() === p.title.toLowerCase().trim())
+                                              ) {
+                                                return {
+                                                  ...proj,
+                                                  otp_verified: true,
+                                                  devProjectOtpVerified: true,
+                                                  otp_hash: newVerifiedObj.hash,
+                                                  verified_at: newVerifiedObj.verifiedAt
+                                                };
+                                              }
+                                              return proj;
+                                            });
+                                            return { ...d, projects: updatedProjects };
+                                          }
+                                          return d;
+                                        });
+                                        setDeveloperMasterList(nextDevList);
+                                        if (setDevelopers) {
+                                          setDevelopers(nextDevList);
                                         }
+                                        try {
+                                          localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevList));
+                                        } catch (e) {}
+                                        if (syncAllToMongoDB) {
+                                          syncAllToMongoDB({ developers: nextDevList });
+                                        }
+
+                                        // Update matching properties
+                                        if (setProperties) {
+                                          setProperties((prevProps: any[]) => {
+                                            return (prevProps || []).map((prop: any) => {
+                                              const isMatch = (
+                                                (prop.project_id && (prop.project_id === projCodeStr || prop.project_id === p.code || prop.project_id === p.id)) ||
+                                                (prop.property_code && (prop.property_code === projCodeStr || prop.property_code === p.code || prop.property_code === p.id)) ||
+                                                (prop.title && p.title && prop.title.toLowerCase().trim() === p.title.toLowerCase().trim())
+                                              );
+                                              if (isMatch) {
+                                                return { ...prop, otp_verified: true, devProjectOtpVerified: true };
+                                              }
+                                              return prop;
+                                            });
+                                          });
+                                        }
+
                                         alert(`✅ DEVELOPER OTP VERIFIED SUCCESSFULLY!\n\n• Developer: ${dev.name}\n• Project: ${p.title}\n• Audit Stamp: ${newVerifiedObj.hash}`);
                                       }
                                     }}
@@ -7061,6 +7644,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                   title="Edit project & developer details"
                                 >
                                   ✏️ Edit Project
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteRegisteredProject(dev, p, projUnits)}
+                                  style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  title="Move this project & its properties to Recycle Bin"
+                                >
+                                  🗑️ Delete Project
                                 </button>
                               </div>
                             </div>
@@ -7110,12 +7701,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                   </div>
                 </div>
-                ));
+                    ))}
+                  </>
+                );
               })()}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingTop: '14px' }}>
-              <button onClick={() => setShowDevVaultModal(false)} style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '8px 20px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', width: windowWidth <= 640 ? '100%' : 'auto' }}>
+              <button onClick={() => { setShowDevVaultModal(false); setSelectedVaultDevIds([]); }} style={{ background: '#334155', color: '#ffffff', border: 'none', padding: '8px 20px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', width: windowWidth <= 640 ? '100%' : 'auto' }}>
                 Close Vault
               </button>
             </div>
@@ -7401,15 +7994,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           viewPropertyModal.otp_verified ||
                           viewPropertyModal.devProjectOtpVerified ||
                           viewPropertyModal.verified ||
-                          verifiedDevProjectsList.some((vp: any) => 
-                            (vp.developer && viewPropertyModal.developer && vp.developer.toLowerCase().trim() === viewPropertyModal.developer.toLowerCase().trim()) ||
-                            (vp.project && viewPropertyModal.title && vp.project.toLowerCase().trim() === viewPropertyModal.title.toLowerCase().trim())
-                          ) ||
-                          devObj?.otp_verified ||
-                          devObj?.verified ||
                           matchedMaster?.otp_verified ||
-                          matchedMaster?.verified ||
-                          devProjectOtpVerified
+                          (verifiedDevProjectsList || []).some((vp: any) => 
+                            (vp.developer && viewPropertyModal.developer && vp.developer.toLowerCase().trim() === viewPropertyModal.developer.toLowerCase().trim()) &&
+                            (vp.project && viewPropertyModal.title && vp.project.toLowerCase().trim() === viewPropertyModal.title.toLowerCase().trim())
+                          )
                         );
 
                         if (isModalOtpVerified) {
@@ -7446,7 +8035,40 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                   if (setDevProjectOtpVerified) {
                                     setDevProjectOtpVerified(true);
                                   }
-                                  createOrUpdateDevAgreement(viewPropertyModal.developer || 'Builder', viewPropertyModal.title || 'Project', primaryDevMobile, viewPropertyModal.locality || 'Locality Hub', newVerifiedObj.hash, true);
+                                  createOrUpdateDevAgreement(viewPropertyModal.developer || 'Builder', viewPropertyModal.title || 'Project', primaryDevMobile, viewPropertyModal.locality || 'Locality Hub', newVerifiedObj.hash, true, true);
+                                  
+                                  // Update developerMasterList
+                                  const nextDevList = (developerMasterList || []).map((d: any) => {
+                                    if (
+                                      (d.name && viewPropertyModal.developer && d.name.toLowerCase().trim() === viewPropertyModal.developer.toLowerCase().trim()) ||
+                                      (d.id && viewPropertyModal.developer_id && d.id === viewPropertyModal.developer_id)
+                                    ) {
+                                      const updatedProjects = (d.projects || []).map((proj: any) => {
+                                        if (
+                                          (proj.title && viewPropertyModal.title && proj.title.toLowerCase().trim() === viewPropertyModal.title.toLowerCase().trim()) ||
+                                          (proj.code && viewPropertyModal.project_id && proj.code === viewPropertyModal.project_id)
+                                        ) {
+                                          return {
+                                            ...proj,
+                                            otp_verified: true,
+                                            devProjectOtpVerified: true,
+                                            otp_hash: newVerifiedObj.hash,
+                                            verified_at: newVerifiedObj.verifiedAt
+                                          };
+                                        }
+                                        return proj;
+                                      });
+                                      return { ...d, projects: updatedProjects };
+                                    }
+                                    return d;
+                                  });
+                                  setDeveloperMasterList(nextDevList);
+                                  if (setDevelopers) setDevelopers(nextDevList);
+                                  try {
+                                    localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevList));
+                                  } catch (e) {}
+                                  if (syncAllToMongoDB) syncAllToMongoDB({ developers: nextDevList });
+
                                   setViewPropertyModal({
                                     ...viewPropertyModal,
                                     otp_verified: true,
@@ -8116,11 +8738,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           const isOtpVer = Boolean(
             p.otp_verified ||
             p.devProjectOtpVerified ||
-            verifiedDevProjectsList.some((vp: any) => 
-              (vp.developer && p.developer && vp.developer.toLowerCase().trim() === p.developer.toLowerCase().trim()) ||
+            (verifiedDevProjectsList || []).some((vp: any) => 
+              (vp.developer && p.developer && vp.developer.toLowerCase().trim() === p.developer.toLowerCase().trim()) &&
               (vp.project && p.title && vp.project.toLowerCase().trim() === p.title.toLowerCase().trim())
-            ) ||
-            devProjectOtpVerified
+            )
           );
 
           if (advProjOtpFilter === 'VERIFIED' && !isOtpVer) return false;
@@ -8265,11 +8886,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     const isOtpVer = Boolean(
                       p.otp_verified ||
                       p.devProjectOtpVerified ||
-                      verifiedDevProjectsList.some((vp: any) => 
-                        (vp.developer && p.developer && vp.developer.toLowerCase().trim() === p.developer.toLowerCase().trim()) ||
+                      (verifiedDevProjectsList || []).some((vp: any) => 
+                        (vp.developer && p.developer && vp.developer.toLowerCase().trim() === p.developer.toLowerCase().trim()) &&
                         (vp.project && p.title && vp.project.toLowerCase().trim() === p.title.toLowerCase().trim())
-                      ) ||
-                      devProjectOtpVerified
+                      )
                     );
 
                     return (

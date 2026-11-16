@@ -522,8 +522,14 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
       const recPropSet = new Set<string>();
       const recCustSet = new Set<string>();
       const recVisitSet = new Set<string>();
+      const recDevSet = new Set<string>();
       payload.recycled_items.forEach((r: any) => {
         const orig = r.originalData || {};
+        if (r.category === 'Developer') {
+          if (r.id) recDevSet.add(String(r.id).toLowerCase());
+          if (orig.id) recDevSet.add(String(orig.id).toLowerCase());
+          if (orig.name) recDevSet.add(String(orig.name).toLowerCase());
+        }
         if (r.category === 'Project' || r.category === 'Property') {
           if (r.id) recPropSet.add(String(r.id).toLowerCase());
           if (orig.property_code) recPropSet.add(String(orig.property_code).toLowerCase());
@@ -573,6 +579,13 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
           const cNum = String(c.customer_number || c.customerNumber || '').toLowerCase();
           const cId = String(c.id || c._id || '').toLowerCase();
           return !recCustSet.has(cNum) && !recCustSet.has(cId);
+        });
+      }
+      if (Array.isArray((dbStore.data as any).developers) && recDevSet.size > 0) {
+        (dbStore.data as any).developers = (dbStore.data as any).developers.filter((d: any) => {
+          const dId = String(d.id || d._id || '').toLowerCase();
+          const dName = String(d.name || '').toLowerCase();
+          return !recDevSet.has(dId) && !recDevSet.has(dName);
         });
       }
     }

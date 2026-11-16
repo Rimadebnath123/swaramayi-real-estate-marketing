@@ -1,11 +1,10 @@
-// SAFEGUARD: Wipe any legacy localStorage caches for properties and developers
+// SAFEGUARD: Wipe any legacy localStorage caches for properties
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
     localStorage.removeItem('swaramayi_properties_v5_clean');
     localStorage.removeItem('swaramayi_properties_v4_clean');
     localStorage.removeItem('swaramayi_properties_cache_v1');
     localStorage.removeItem('swaramayi_properties_master');
-    localStorage.removeItem('swaramayi_developers_v1');
   }
 } catch (e) {}
 
@@ -52,6 +51,27 @@ export const extractAllIdentifiers = (item: any): Set<string> => {
       ids.add(trimmed.toUpperCase());
     }
   });
+
+  // SCOPED BY CATEGORY: If Developer item, ONLY developer-level identifiers (id & name),
+  // NEVER extract nested project titles or sibling property titles!
+  const isDeveloperItem = Boolean(
+    cat === 'Developer' ||
+    (typeof item.id === 'string' && item.id.startsWith('SRM-DEV-')) ||
+    (typeof data.id === 'string' && data.id.startsWith('SRM-DEV-')) ||
+    (data.name && Array.isArray(data.projects))
+  );
+
+  if (isDeveloperItem) {
+    [item.id, data.id, data.name, item.name].forEach(val => {
+      if (val && typeof val === 'string' && val.trim()) {
+        const trimmed = val.trim();
+        ids.add(trimmed);
+        ids.add(trimmed.toLowerCase());
+        ids.add(trimmed.toUpperCase());
+      }
+    });
+    return ids;
+  }
 
   // SCOPED BY CATEGORY: If Visit Management or visit object, ONLY visit identifiers & cross-format codes
   const isVisitItem = (
@@ -5942,7 +5962,7 @@ export default function App() {
   const handleRecycleItem = (itemData: {
     id?: string;
     title: string;
-    category: 'Lead' | 'Customer' | 'Project' | 'Agreement' | 'Cost Sheet' | 'Billing' | 'Visit Management';
+    category: 'Lead' | 'Customer' | 'Project' | 'Developer' | 'Agreement' | 'Cost Sheet' | 'Billing' | 'Visit Management';
     originalLocation: string;
     details?: string;
     originalData: any;
@@ -5987,20 +6007,26 @@ export default function App() {
         });
         break;
       case 'Developer': {
-        const updatedDevs = [data, ...nextDevs.filter(d => d.id !== data.id && d.name !== data.name)];
-        setDevelopers(updatedDevs);
-        try {
-          localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
-        } catch (e) {}
-        syncAllToMongoDB({ developers: updatedDevs, recycled_items: updatedRecycled });
+        setDevelopers(prev => {
+          const updatedDevs = [data, ...(prev || []).filter(d => d.id !== data.id && d.name !== data.name)];
+          try {
+            localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
+          } catch (e) {}
+          syncAllToMongoDB({ developers: updatedDevs, recycled_items: updatedRecycled });
+          return updatedDevs;
+        });
         break;
       }
       case 'Project':
         if (data.projects || data.projectsCount !== undefined) {
-          const updatedDevs = [data, ...nextDevs.filter(d => d.id !== data.id && d.name !== data.name)];
-          setDevelopers(updatedDevs);
-
-          syncAllToMongoDB({ developers: updatedDevs, recycled_items: updatedRecycled });
+          setDevelopers(prev => {
+            const updatedDevs = [data, ...(prev || []).filter(d => d.id !== data.id && d.name !== data.name)];
+            try {
+              localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
+            } catch (e) {}
+            syncAllToMongoDB({ developers: updatedDevs, recycled_items: updatedRecycled });
+            return updatedDevs;
+          });
         } else {
           setProperties(prev => {
             const updated = [data, ...prev.filter(p => p.id !== data.id && p.property_code !== data.property_code)];
@@ -6268,6 +6294,244 @@ export default function App() {
     setTimeout(() => {
       syncAllToMongoDB();
     }, 100);
+  };
+
+  const handleBulkRestoreRecycledItems = (itemsToRestore: any[]) => {
+    if (!Array.isArray(itemsToRestore) || itemsToRestore.length === 0) return;
+
+    const restoreIdsSet = new Set(itemsToRestore.map((i: any) => i.id));
+    const nextRecycled = recycledItems.filter(r => !restoreIdsSet.has(r.id));
+    setRecycledItems(nextRecycled);
+
+    const devsToRestore: any[] = [];
+    const propsToRestore: any[] = [];
+    const custsToRestore: any[] = [];
+    const leadsToRestore: any[] = [];
+    const agrsToRestore: any[] = [];
+    const pvasToRestore: any[] = [];
+    const csToRestore: any[] = [];
+    const invsToRestore: any[] = [];
+    const visitsToRestore: any[] = [];
+
+    itemsToRestore.forEach(item => {
+      const data = item.originalData || {};
+      switch (item.category) {
+        case 'Developer':
+          devsToRestore.push(data);
+          break;
+        case 'Project':
+          if (data.projects || data.projectsCount !== undefined) {
+            devsToRestore.push(data);
+          } else {
+            propsToRestore.push(data);
+          }
+          break;
+        case 'Lead':
+          leadsToRestore.push(data);
+          break;
+        case 'Customer':
+          custsToRestore.push(data);
+          break;
+        case 'Agreement':
+          if (data.pvaData) {
+            pvasToRestore.push(data);
+          } else {
+            agrsToRestore.push(data);
+          }
+          break;
+        case 'Cost Sheet':
+          csToRestore.push(data);
+          break;
+        case 'Billing':
+          invsToRestore.push(data);
+          break;
+        case 'Visit Management':
+          visitsToRestore.push({ ...data, item });
+          break;
+        default:
+          if (data.full_name || data.customer_name) {
+            custsToRestore.push(data);
+          } else if (data.property_code || data.title) {
+            propsToRestore.push(data);
+          }
+          break;
+      }
+    });
+
+    const mongoPayload: any = { recycled_items: nextRecycled };
+
+    if (devsToRestore.length > 0) {
+      setDevelopers(prev => {
+        const restoreDevMap = new Map();
+        devsToRestore.forEach(d => {
+          if (d.id) restoreDevMap.set(d.id, d);
+          if (d.name) restoreDevMap.set(d.name.toLowerCase().trim(), d);
+        });
+        const remaining = (prev || []).filter(d => !restoreDevMap.has(d.id) && !(d.name && restoreDevMap.has(d.name.toLowerCase().trim())));
+        const updatedDevs = [...devsToRestore, ...remaining];
+        try {
+          localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
+        } catch (e) {}
+        mongoPayload.developers = updatedDevs;
+        return updatedDevs;
+      });
+    }
+
+    if (propsToRestore.length > 0) {
+      setProperties(prev => {
+        const restorePropIds = new Set(propsToRestore.map(p => p.id || p.property_code));
+        const updatedProps = [...propsToRestore, ...(prev || []).filter(p => !restorePropIds.has(p.id) && !restorePropIds.has(p.property_code))];
+        mongoPayload.properties = updatedProps;
+        return updatedProps;
+      });
+    }
+
+    if (custsToRestore.length > 0) {
+      setCustomers(prev => {
+        const restoreCustIds = new Set(custsToRestore.map(c => c.id || c.customer_number));
+        const updatedCusts = [...custsToRestore, ...(prev || []).filter(c => !restoreCustIds.has(c.id) && !restoreCustIds.has(c.customer_number))];
+        try {
+          localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updatedCusts));
+          localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updatedCusts));
+        } catch (e) {}
+        mongoPayload.customers = updatedCusts;
+        return updatedCusts;
+      });
+    }
+
+    if (leadsToRestore.length > 0) {
+      setLeadsList(prev => {
+        const restoreLeadIds = new Set(leadsToRestore.map(l => l.id || l.lead_number));
+        const updatedLeads = [...leadsToRestore, ...(prev || []).filter(l => !restoreLeadIds.has(l.id) && !restoreLeadIds.has(l.lead_number))];
+        mongoPayload.leads = updatedLeads;
+        return updatedLeads;
+      });
+    }
+
+    if (agrsToRestore.length > 0) {
+      setAgreements(prev => {
+        const restoreAgrIds = new Set(agrsToRestore.map(a => a.id));
+        const updatedAgrs = [...agrsToRestore, ...(prev || []).filter(a => !restoreAgrIds.has(a.id))];
+        mongoPayload.agreements = updatedAgrs;
+        return updatedAgrs;
+      });
+    }
+
+    if (pvasToRestore.length > 0) {
+      setProjectVisitAgreements(prev => {
+        const restorePvaIds = new Set(pvasToRestore.map(p => p.id));
+        const updatedPvas = [...pvasToRestore, ...(prev || []).filter(p => !restorePvaIds.has(p.id))];
+        mongoPayload.pva_agreements = updatedPvas;
+        return updatedPvas;
+      });
+    }
+
+    if (csToRestore.length > 0) {
+      setIndividualCostSheets(prev => {
+        const restoreCsIds = new Set(csToRestore.map(c => c.id || c.costSheetId));
+        const updatedCs = [...csToRestore, ...(prev || []).filter(c => !restoreCsIds.has(c.id) && !restoreCsIds.has(c.costSheetId))];
+        mongoPayload.cost_sheets = updatedCs;
+        return updatedCs;
+      });
+    }
+
+    if (invsToRestore.length > 0) {
+      setInvoices(prev => {
+        const restoreInvIds = new Set(invsToRestore.map(i => i.id || i.invoice_number));
+        const updatedInvs = [...invsToRestore, ...(prev || []).filter(i => !restoreInvIds.has(i.id) && !restoreInvIds.has(i.invoice_number))];
+        mongoPayload.invoices = updatedInvs;
+        return updatedInvs;
+      });
+    }
+
+    if (visitsToRestore.length > 0) {
+      const restoredVisits = visitsToRestore.map(({ item, ...data }) => {
+        const visitIdToRestore = data.visitId || data.visitScheduleId || data.visitPlanId || item.id || (item.title && (item.title.match(/SRM-VS-2026-\d+/i) || [])[0]);
+        return {
+          ...data,
+          id: visitIdToRestore || data.id || `VS-${Date.now()}`,
+          visitId: visitIdToRestore || `SRM-VS-2026-${String(Date.now()).slice(-6)}`,
+          visitScheduleId: data.visitScheduleId || visitIdToRestore,
+          visitPlanId: data.visitPlanId || visitIdToRestore,
+          status: (data.status === 'DELETED' || data.status === 'CANCELLED') ? 'ASSIGNED' : (data.status || 'ASSIGNED')
+        };
+      });
+      const vIds = new Set(restoredVisits.map(v => v.visitId));
+      setScheduledVisits(prev => {
+        const updated = [...restoredVisits, ...(prev || []).filter((s: any) => !vIds.has(s.visitId))];
+        mongoPayload.site_visits = updated;
+        return updated;
+      });
+    }
+
+    syncAllToMongoDB(mongoPayload);
+  };
+
+  const handleBulkPurgeRecycledItems = (itemsToPurge: any[]) => {
+    if (!Array.isArray(itemsToPurge) || itemsToPurge.length === 0) return;
+
+    const purgeIdsSet = new Set(itemsToPurge.map((i: any) => i.id));
+    const updatedRecycled = recycledItems.filter(r => !purgeIdsSet.has(r.id));
+    setRecycledItems(updatedRecycled);
+
+    const fullPurgeSet = new Set<string>();
+    itemsToPurge.forEach(item => {
+      extractAllIdentifiers(item).forEach(id => fullPurgeSet.add(id));
+    });
+
+    const hasProp = itemsToPurge.some(i => {
+      const cat = (i.category || '').toLowerCase();
+      return cat.includes('prop') || cat.includes('unit') || cat.includes('project');
+    });
+    if (hasProp) {
+      setProperties(prev => prev.filter(p => !isItemInRecycledSet(p, fullPurgeSet)));
+    }
+
+    const hasDev = itemsToPurge.some(i => {
+      const cat = (i.category || '').toLowerCase();
+      return cat.includes('dev') || cat.includes('project') || (i.originalLocation && i.originalLocation.includes('Developer')) || (typeof i.id === 'string' && i.id.includes('DEV-'));
+    });
+    if (hasDev) {
+      setDevelopers(prev => {
+        const updated = (prev || []).filter((d: any) => !isItemInRecycledSet(d, fullPurgeSet));
+        try {
+          localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
+    }
+
+    const hasCust = itemsToPurge.some(i => (i.category || '').toLowerCase().includes('cust'));
+    if (hasCust) {
+      setCustomers(prev => {
+        const updated = (prev || []).filter(c => !isItemInRecycledSet(c, fullPurgeSet));
+        try {
+          localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
+          localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
+    }
+
+    const hasLead = itemsToPurge.some(i => (i.category || '').toLowerCase().includes('lead'));
+    if (hasLead) {
+      setLeadsList(prev => (prev || []).filter(l => !isItemInRecycledSet(l, fullPurgeSet)));
+    }
+
+    const purgeAllUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:5000/api/v1/crm/purge-all'
+      : '/api/v1/crm/purge-all';
+
+    fetch(purgeAllUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('swaramayi_token') || ''}`
+      },
+      body: JSON.stringify({ items: itemsToPurge })
+    }).catch(err => console.warn('Direct MongoDB Purge All API Error:', err));
+
+    syncAllToMongoDB({ recycled_items: updatedRecycled });
   };
 
   // Central Inbox Filter States
@@ -8699,6 +8963,61 @@ export default function App() {
                 }
               });
               localStorage.setItem('swaramayi_max_property_seq', String(maxProp));
+
+              // Re-align Developer watermark
+              let maxDev = 0;
+              (mData.developers || []).forEach((d: any) => {
+                const match = String(d.id || '').match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i) || String(d.id || '').match(/DEV-(\d+)/i);
+                if (match) {
+                  const val = parseInt(match[1], 10);
+                  if (!isNaN(val) && val > maxDev && val < 100000) maxDev = val;
+                }
+              });
+              (activeRecycled || []).forEach((r: any) => {
+                const checkStr = `${r.id || ''} ${r.originalData?.id || ''}`;
+                const match = checkStr.match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i) || checkStr.match(/DEV-(\d+)/i);
+                if (match) {
+                  const val = parseInt(match[1], 10);
+                  if (!isNaN(val) && val > maxDev && val < 100000) maxDev = val;
+                }
+              });
+              try {
+                const curDevSaved = parseInt(localStorage.getItem('swaramayi_max_dev_seq') || '0', 10);
+                if (!isNaN(curDevSaved) && curDevSaved > maxDev && curDevSaved < 100000) maxDev = curDevSaved;
+              } catch (e) {}
+              localStorage.setItem('swaramayi_max_dev_seq', String(maxDev));
+
+              // Re-align Project watermark
+              let maxProj = 0;
+              (sanitizedProps || []).forEach((p: any) => {
+                const match = String(p.project_id || p.code || p.id || '').match(/SRM-PROJ-(?:20\d{2}-)?(\d+)/i);
+                if (match) {
+                  const val = parseInt(match[1], 10);
+                  if (!isNaN(val) && val > maxProj && val < 100000 && val !== 88) maxProj = val;
+                }
+              });
+              (mData.developers || []).forEach((d: any) => {
+                (d.projects || []).forEach((proj: any) => {
+                  const match = String(proj.code || proj.id || '').match(/SRM-PROJ-(?:20\d{2}-)?(\d+)/i);
+                  if (match) {
+                    const val = parseInt(match[1], 10);
+                    if (!isNaN(val) && val > maxProj && val < 100000 && val !== 88) maxProj = val;
+                  }
+                });
+              });
+              (activeRecycled || []).forEach((r: any) => {
+                const checkStr = `${r.id || ''} ${r.originalData?.code || ''} ${r.originalData?.id || ''}`;
+                const match = checkStr.match(/SRM-PROJ-(?:20\d{2}-)?(\d+)/i);
+                if (match) {
+                  const val = parseInt(match[1], 10);
+                  if (!isNaN(val) && val > maxProj && val < 100000 && val !== 88) maxProj = val;
+                }
+              });
+              try {
+                const curProjSaved = parseInt(localStorage.getItem('swaramayi_max_project_seq') || '0', 10);
+                if (!isNaN(curProjSaved) && curProjSaved > maxProj && curProjSaved < 100000 && curProjSaved !== 88) maxProj = curProjSaved;
+              } catch (e) {}
+              localStorage.setItem('swaramayi_max_project_seq', String(maxProj));
             } catch (e) {}
             if (Array.isArray(mData.sourcing_requests)) {
               setSourcingRequests(mData.sourcing_requests);
@@ -8709,12 +9028,69 @@ export default function App() {
             if (Array.isArray(mData.developers)) {
               try {
                 const cleanDevs = mData.developers
-                  .filter((d: any) => true)
+                  .filter((d: any) => !isItemInRecycledSet(d, recycledSet))
                   .map((d: any) => ({
                     ...d,
-                    projects: (d.projects || []).filter((proj: any) => true)
+                    projects: (d.projects || []).filter((proj: any) => !isItemInRecycledSet(proj, recycledSet))
                   }));
+
+                // Auto-recover developers if they were previously lost during race condition and not in recycle bin
+                const devMap = new Map();
+                cleanDevs.forEach((d: any) => {
+                  if (d.id) devMap.set(d.id, d);
+                  if (d.name) devMap.set(d.name.toLowerCase().trim(), d);
+                });
+
+                const knownVaultDevs = [
+                  {
+                    id: 'SRM-DEV-2026-000001',
+                    name: 'SATISH PAL',
+                    mobile: '8335923847',
+                    email: 'xyz@gmail.com',
+                    projects: [
+                      {
+                        id: 'PRJ-SABUJ-NIKETAN',
+                        code: 'SRM-PROJ-2026-000006',
+                        title: 'SABUJ NIKETAN',
+                        locality: 'Greater Kolkata',
+                        otp_verified: true,
+                        devProjectOtpVerified: true,
+                        total_floors: 'G+4 Floors (5 Storey)'
+                      }
+                    ]
+                  },
+                  {
+                    id: 'SRM-DEV-2026-000003',
+                    name: 'Sosikanto Nager1',
+                    mobile: '8899889676',
+                    email: 'sasikanto@gmail.com',
+                    projects: [
+                      {
+                        id: 'PRJ-SAHALI-NIKETAN1',
+                        code: 'SRM-PROJ-2026-000008',
+                        title: 'Sahali niketan1',
+                        locality: 'Greater Kolkata',
+                        otp_verified: false,
+                        devProjectOtpVerified: false,
+                        total_floors: 'G+4 Floors (5 Storey)'
+                      }
+                    ]
+                  }
+                ];
+
+                knownVaultDevs.forEach(kd => {
+                  if (!isItemInRecycledSet(kd, recycledSet) && !devMap.has(kd.id) && !devMap.has(kd.name.toLowerCase().trim())) {
+                    cleanDevs.push(kd);
+                    devMap.set(kd.id, kd);
+                    devMap.set(kd.name.toLowerCase().trim(), kd);
+                  }
+                });
+
                 setDevelopers(cleanDevs);
+                try {
+                  localStorage.setItem('swaramayi_developers_v1', JSON.stringify(cleanDevs));
+                } catch (e) {}
+                syncAllToMongoDB({ developers: cleanDevs });
               } catch (e) {}
             }
             if (Array.isArray(mData.users) && mData.users.length > 0) {
@@ -9915,6 +10291,53 @@ export default function App() {
       syncAllToMongoDB({ properties: nextProps, recycled_items: updatedRecycled });
       alert(`🗑️ Property ${code} moved to Recycle Bin!`);
     }
+  };
+
+  const handleBulkRecycleProperties = (selectedKeys: string[]) => {
+    if (!selectedKeys || selectedKeys.length === 0) return;
+    const targetSet = new Set(selectedKeys.map(k => String(k).trim().toLowerCase()));
+
+    const itemsToRecycle = properties.filter(p => {
+      const keys = [p.id, p._id, p.property_code, p.code].filter(Boolean).map(k => String(k).trim().toLowerCase());
+      return keys.some(k => targetSet.has(k));
+    });
+
+    if (itemsToRecycle.length === 0) return;
+
+    const newRecycledItems = itemsToRecycle.map(p => {
+      const propCode = p.property_code || p.code || p.id || p._id || `PROP-${Date.now()}`;
+      return {
+        id: propCode,
+        title: `Property - ${p.title || p.property_title || propCode || 'Unit'} (${propCode})`,
+        category: 'Project' as const,
+        deletedBy: `${currentRole === 'SUPER_ADMIN' ? 'Avishek Das (SUPER_ADMIN)' : currentRole}`,
+        deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        originalLocation: 'Property Master / Live Inventory',
+        details: `Developer: ${p.developer || 'N/A'}, Price: ${p.final_price || 'N/A'}, Config: ${p.configuration || 'N/A'}`,
+        originalData: p
+      };
+    });
+
+    const recycledIdsSet = new Set(newRecycledItems.map(r => r.id.toLowerCase()));
+    const updatedRecycled = [
+      ...newRecycledItems,
+      ...recycledItems.filter(r => !recycledIdsSet.has(String(r.id).toLowerCase()))
+    ];
+
+    const nextProps = properties.filter(p => {
+      const keys = [p.id, p._id, p.property_code, p.code].filter(Boolean).map(k => String(k).trim().toLowerCase());
+      return !keys.some(k => targetSet.has(k));
+    });
+
+    setRecycledItems(updatedRecycled);
+    setProperties(nextProps);
+
+    try {
+      localStorage.setItem('swaramayi_recycled_items', JSON.stringify(updatedRecycled));
+    } catch (e) {}
+
+    // Single atomic commit to MongoDB Atlas
+    syncAllToMongoDB({ properties: nextProps, recycled_items: updatedRecycled });
   };
 
   const handleDeleteCustomer = (id: string, customerNumber: string) => {
@@ -13690,6 +14113,7 @@ export default function App() {
               setShowPvaDocumentModal={setShowPvaDocumentModal}
               handleStartEditProperty={handleStartEditProperty}
               handleDeleteProperty={handleDeleteProperty}
+              onBulkRecycleProperties={handleBulkRecycleProperties}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               matchesSearchQuery={matchesSearchQuery}
@@ -13704,6 +14128,7 @@ export default function App() {
               setAgreements={setAgreements}
               onRecycleItem={handleRecycleItem}
               recycledItems={recycledItems}
+              setRecycledItems={setRecycledItems}
               bankDetails={bankDetails}
               setBankDetails={setBankDetails}
             />
@@ -13875,6 +14300,7 @@ export default function App() {
               scheduledVisits={scheduledVisits}
               onRecycleItem={handleRecycleItem}
               recycledItems={recycledItems}
+              setRecycledItems={setRecycledItems}
               bankDetails={bankDetails}
               setBankDetails={setBankDetails}
             />
@@ -14015,6 +14441,7 @@ export default function App() {
               customers={customers}
               onRecycleItem={handleRecycleItem}
               recycledItems={recycledItems}
+              setRecycledItems={setRecycledItems}
               bankDetails={bankDetails}
               setBankDetails={setBankDetails}
             />
@@ -14044,7 +14471,9 @@ export default function App() {
               recycledItems={recycledItems}
               windowWidth={windowWidth}
               onRestoreItem={handleRestoreRecycledItem}
+              onBulkRestoreItems={handleBulkRestoreRecycledItems}
               onPurgeItem={handlePurgeRecycledItem}
+              onBulkPurgeItems={handleBulkPurgeRecycledItems}
               onEmptyBin={handleEmptyRecycleBin}
             />
           )}

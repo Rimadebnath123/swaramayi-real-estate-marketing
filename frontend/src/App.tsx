@@ -2961,7 +2961,7 @@ function PvaVerificationModalContent({
       );
       const realDevId = safeStop.developerId || matchedProp?.developer_id || matchedDev?.id || 'SRM-DEV-2026-000001';
       const realDevName = safeStop.developer || matchedProp?.developer || matchedDev?.name || 'kousik Nag';
-      const realProjId = safeStop.projectId || matchedProp?.project_id || matchedDev?.projects?.[0]?.id || 'PRJ-1793798480253';
+      const realProjId = safeStop.projectId || matchedProp?.project_id || matchedDev?.projects?.[0]?.id || 'SRM-PROJ-2026-000001';
       const realProjTitle = (safeStop.propertyTitle || matchedProp?.title || 'Abasa').split(/\s*\(\+/)[0].trim();
 
       const newPva = {
@@ -3705,16 +3705,14 @@ function InteractiveLeafletMap({
       bounds.push([lat, lng]);
       const isSelected = selectedProperty && (selectedProperty.id === p.id || selectedProperty.title === p.title);
       const projName = p.title || p.projectName || p.project_name || p.name || 'Project';
-      const locName = p.locality || p.location || p.address || 'Location';
+      const locName = (p.locality && p.locality.toLowerCase() !== 'location') ? p.locality : (p.full_address || p.address || 'Greater Kolkata');
 
       const customIcon = L.divIcon({
         className: 'leaflet-custom-marker-wrapper',
         html: `
           <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); cursor: pointer;">
-            <div style="background: ${isSelected ? '#0284c7' : 'rgba(15, 23, 42, 0.94)'}; color: #ffffff; border: ${isSelected ? '2px solid #38bdf8' : '1.5px solid rgba(56, 189, 248, 0.5)'}; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 900; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,0.6); margin-bottom: 2px; display: flex; align-items: center; gap: 5px;">
-              <span style="color: #38bdf8">🏢 ${projName}</span>
-              <span style="color: rgba(255,255,255,0.3)">|</span>
-              <span style="color: #4ade80">📍 ${locName}</span>
+            <div style="background: ${isSelected ? '#0284c7' : 'rgba(15, 23, 42, 0.94)'}; color: #ffffff; border: ${isSelected ? '2px solid #38bdf8' : '1.5px solid rgba(56, 189, 248, 0.5)'}; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 900; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,0.6); margin-bottom: 2px; display: flex; align-items: center;">
+              <span style="color: ${isSelected ? '#ffffff' : '#38bdf8'}">🏢 ${projName}</span>
             </div>
             <div style="width: ${isSelected ? '32px' : '26px'}; height: ${isSelected ? '32px' : '26px'}; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; border: 2px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.4);">
               <div style="width: ${isSelected ? '10px' : '8px'}; height: ${isSelected ? '10px' : '8px'}; background: #ffffff; border-radius: 50%; transform: rotate(45deg);"></div>
@@ -5450,7 +5448,7 @@ export default function App() {
         customerNumber: newCustomerForm.customer_number || 'SRM-CUS-2026-000001',
         mobile: newCustomerForm.mobile || '',
         source: newCustomerForm.lead_source || 'Meta Ads / Google Ads',
-        campaign: newCustomerForm.campaign_id || 'CMP-2026-8802',
+        campaign: newCustomerForm.campaign_id || '',
         score: 92,
         assignedExecutive: 'Avishek Das (Super Admin)',
         status: 'QUALIFIED'
@@ -8970,7 +8968,7 @@ export default function App() {
                 const match = String(d.id || '').match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i) || String(d.id || '').match(/DEV-(\d+)/i);
                 if (match) {
                   const val = parseInt(match[1], 10);
-                  if (!isNaN(val) && val > maxDev && val < 100000) maxDev = val;
+                  if (!isNaN(val) && val > maxDev && val < 1000) maxDev = val;
                 }
               });
               (activeRecycled || []).forEach((r: any) => {
@@ -8978,12 +8976,12 @@ export default function App() {
                 const match = checkStr.match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i) || checkStr.match(/DEV-(\d+)/i);
                 if (match) {
                   const val = parseInt(match[1], 10);
-                  if (!isNaN(val) && val > maxDev && val < 100000) maxDev = val;
+                  if (!isNaN(val) && val > maxDev && val < 1000) maxDev = val;
                 }
               });
               try {
                 const curDevSaved = parseInt(localStorage.getItem('swaramayi_max_dev_seq') || '0', 10);
-                if (!isNaN(curDevSaved) && curDevSaved > maxDev && curDevSaved < 100000) maxDev = curDevSaved;
+                if (!isNaN(curDevSaved) && curDevSaved > maxDev && curDevSaved < 1000) maxDev = curDevSaved;
               } catch (e) {}
               localStorage.setItem('swaramayi_max_dev_seq', String(maxDev));
 
@@ -8993,7 +8991,7 @@ export default function App() {
                 const match = String(p.project_id || p.code || p.id || '').match(/SRM-PROJ-(?:20\d{2}-)?(\d+)/i);
                 if (match) {
                   const val = parseInt(match[1], 10);
-                  if (!isNaN(val) && val > maxProj && val < 100000 && val !== 88) maxProj = val;
+                  if (!isNaN(val) && val > maxProj && val < 1000 && val !== 88) maxProj = val;
                 }
               });
               (mData.developers || []).forEach((d: any) => {
@@ -9001,7 +8999,7 @@ export default function App() {
                   const match = String(proj.code || proj.id || '').match(/SRM-PROJ-(?:20\d{2}-)?(\d+)/i);
                   if (match) {
                     const val = parseInt(match[1], 10);
-                    if (!isNaN(val) && val > maxProj && val < 100000 && val !== 88) maxProj = val;
+                    if (!isNaN(val) && val > maxProj && val < 1000 && val !== 88) maxProj = val;
                   }
                 });
               });
@@ -9010,12 +9008,12 @@ export default function App() {
                 const match = checkStr.match(/SRM-PROJ-(?:20\d{2}-)?(\d+)/i);
                 if (match) {
                   const val = parseInt(match[1], 10);
-                  if (!isNaN(val) && val > maxProj && val < 100000 && val !== 88) maxProj = val;
+                  if (!isNaN(val) && val > maxProj && val < 1000 && val !== 88) maxProj = val;
                 }
               });
               try {
                 const curProjSaved = parseInt(localStorage.getItem('swaramayi_max_project_seq') || '0', 10);
-                if (!isNaN(curProjSaved) && curProjSaved > maxProj && curProjSaved < 100000 && curProjSaved !== 88) maxProj = curProjSaved;
+                if (!isNaN(curProjSaved) && curProjSaved > maxProj && curProjSaved < 1000 && curProjSaved !== 88) maxProj = curProjSaved;
               } catch (e) {}
               localStorage.setItem('swaramayi_max_project_seq', String(maxProj));
             } catch (e) {}
@@ -9049,12 +9047,35 @@ export default function App() {
                     email: 'xyz@gmail.com',
                     projects: [
                       {
-                        id: 'PRJ-SABUJ-NIKETAN',
-                        code: 'SRM-PROJ-2026-000006',
+                        id: 'SRM-PROJ-2026-000001',
+                        code: 'SRM-PROJ-2026-000001',
+                        project_id: 'SRM-PROJ-2026-000001',
                         title: 'SABUJ NIKETAN',
+                        developer: 'SATISH PAL',
+                        developer_id: 'SRM-DEV-2026-000001',
                         locality: 'Greater Kolkata',
                         otp_verified: true,
                         devProjectOtpVerified: true,
+                        total_floors: 'G+4 Floors (5 Storey)'
+                      }
+                    ]
+                  },
+                  {
+                    id: 'SRM-DEV-2026-000002',
+                    name: 'Sosikanto Nager',
+                    mobile: '8899889679',
+                    email: 'sasikanto@gmail.com',
+                    projects: [
+                      {
+                        id: 'SRM-PROJ-2026-000002',
+                        code: 'SRM-PROJ-2026-000002',
+                        project_id: 'SRM-PROJ-2026-000002',
+                        title: 'Sahali niketan',
+                        developer: 'Sosikanto Nager',
+                        developer_id: 'SRM-DEV-2026-000002',
+                        locality: 'Greater Kolkata',
+                        otp_verified: false,
+                        devProjectOtpVerified: false,
                         total_floors: 'G+4 Floors (5 Storey)'
                       }
                     ]
@@ -9066,9 +9087,12 @@ export default function App() {
                     email: 'sasikanto@gmail.com',
                     projects: [
                       {
-                        id: 'PRJ-SAHALI-NIKETAN1',
-                        code: 'SRM-PROJ-2026-000008',
+                        id: 'SRM-PROJ-2026-000003',
+                        code: 'SRM-PROJ-2026-000003',
+                        project_id: 'SRM-PROJ-2026-000003',
                         title: 'Sahali niketan1',
+                        developer: 'Sosikanto Nager1',
+                        developer_id: 'SRM-DEV-2026-000003',
                         locality: 'Greater Kolkata',
                         otp_verified: false,
                         devProjectOtpVerified: false,
@@ -11126,11 +11150,11 @@ export default function App() {
         unit_photos: newPropertyForm.unit_photos && newPropertyForm.unit_photos.length > 0 ? newPropertyForm.unit_photos : (p.unit_photos || []),
         unit_photo: newPropertyForm.unit_photo || p.unit_photo || '',
         unit_videos: newPropertyForm.unit_videos && newPropertyForm.unit_videos.length > 0 ? newPropertyForm.unit_videos : (p.unit_videos || []),
-        project_posting_id: newPropertyForm.project_posting_id || p.project_posting_id || 'PRJ-POST-2026-8802',
-        key_custody: newPropertyForm.key_custody || p.key_custody,
-        description: newPropertyForm.description || p.description,
-        site_person_name: newPropertyForm.site_person_name || p.site_person_name,
-        site_person_contact: newPropertyForm.site_person_contact || p.site_person_contact
+        project_posting_id: newPropertyForm.project_posting_id || p.project_posting_id || '',
+        key_custody: newPropertyForm.key_custody || p.key_custody || '',
+        description: newPropertyForm.description || p.description || '',
+        site_person_name: newPropertyForm.site_person_name || p.site_person_name || '',
+        site_person_contact: newPropertyForm.site_person_contact || p.site_person_contact || ''
       } : p);
 
       setProperties(updatedProps);
@@ -11201,10 +11225,10 @@ export default function App() {
       unit_photos: newPropertyForm.unit_photos && newPropertyForm.unit_photos.length > 0 ? newPropertyForm.unit_photos : [],
       unit_photo: newPropertyForm.unit_photo || (newPropertyForm.unit_photos && newPropertyForm.unit_photos[0]) || '',
       unit_videos: newPropertyForm.unit_videos && newPropertyForm.unit_videos.length > 0 ? newPropertyForm.unit_videos : [],
-      project_posting_id: newPropertyForm.project_posting_id || 'PRJ-POST-2026-8802',
-      key_custody: newPropertyForm.key_custody || 'Builder Site Office',
-      description: newPropertyForm.description || 'Pool facing Vastu East, 3 balconies',
-      site_person_name: newPropertyForm.site_person_name || 'Avishek Das (Super Admin)',
+      project_posting_id: newPropertyForm.project_posting_id || '',
+      key_custody: newPropertyForm.key_custody || '',
+      description: newPropertyForm.description || '',
+      site_person_name: newPropertyForm.site_person_name || '',
       site_person_contact: newPropertyForm.site_person_contact || '',
       map_x: 35 + Math.random() * 30,
       map_y: 35 + Math.random() * 30
@@ -14549,6 +14573,7 @@ export default function App() {
               setShowAllOnMap={setShowAllOnMap}
               filteredProperties={filteredProperties}
               allProperties={properties}
+              developers={developers}
               setSelectedProperty={setSelectedProperty}
               handleStartEditProperty={handleStartEditProperty}
               handleDeleteProperty={handleDeleteProperty}
@@ -19962,7 +19987,7 @@ export default function App() {
                         type="text"
                         value={newCustomerForm.campaign_id || newCustomerForm.posting_id || ''}
                         onChange={e => setNewCustomerForm({ ...newCustomerForm, campaign_id: e.target.value, posting_id: e.target.value })}
-                        placeholder="e.g. PRJ-POST-2026-8802"
+                        placeholder="e.g. PRJ-POST-1001 (Optional)"
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: isLight ? '1px solid #cbd5e1' : '1px solid #475569', background: isLight ? '#ffffff' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}
                       />
                     </div>

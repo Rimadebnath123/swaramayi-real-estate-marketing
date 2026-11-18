@@ -81,6 +81,95 @@ const formatPropertyRateSqft = (p: any): string => {
   return '₹0 / sq.ft.';
 };
 
+// Helper to resolve proper, readable location name without dummy fallbacks
+export const getResolvedLocation = (p: any, devList: any[] = []): string => {
+  if (!p) return 'Greater Kolkata';
+
+  // 1. Check direct address / locality fields
+  const candidates = [
+    p.full_address,
+    p.locality,
+    p.address,
+    p.location,
+    p.city,
+    p.project_location,
+    p.project_address,
+    p.sector
+  ];
+  for (const c of candidates) {
+    if (c && typeof c === 'string') {
+      const trimmed = c.trim();
+      const lower = trimmed.toLowerCase();
+      if (
+        trimmed !== '' &&
+        lower !== 'location' &&
+        lower !== 'n/a' &&
+        lower !== 'null' &&
+        lower !== 'undefined'
+      ) {
+        return trimmed;
+      }
+    }
+  }
+
+  // 2. Check matched master project in developers list if available
+  if (Array.isArray(devList) && devList.length > 0) {
+    for (const d of devList) {
+      if (Array.isArray(d.projects)) {
+        const matched = d.projects.find((proj: any) =>
+          (p.project_id && (proj.id === p.project_id || proj.code === p.project_id)) ||
+          (p.title && proj.title && proj.title.toLowerCase().trim() === p.title.toLowerCase().trim())
+        );
+        if (matched) {
+          const mCandidates = [matched.full_address, matched.locality, matched.address, matched.location];
+          for (const mc of mCandidates) {
+            if (mc && typeof mc === 'string') {
+              const trimmed = mc.trim();
+              const lower = mc.toLowerCase();
+              if (trimmed !== '' && lower !== 'location' && lower !== 'n/a') {
+                return trimmed;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Coordinate-based smart geocoding fallback for standard Bengal/Kolkata hub regions
+  const lat = parseFloat(String(p.latitude || p.lat || p.parsedLat || '').replace(/[^\d.-]/g, ''));
+  const lng = parseFloat(String(p.longitude || p.lng || p.parsedLng || '').replace(/[^\d.-]/g, ''));
+
+  if (!isNaN(lat) && !isNaN(lng) && lat > 0 && lng > 0) {
+    // Madhyamgram area: ~22.67 - 22.71, ~88.42 - 88.48
+    if (lat >= 22.67 && lat <= 22.71 && lng >= 88.42 && lng <= 88.48) {
+      return 'Madhyamgram, Greater Kolkata';
+    }
+    // Barasat area: ~22.70 - 22.76, ~88.46 - 88.54
+    if (lat >= 22.70 && lat <= 22.76 && lng >= 88.46 && lng <= 88.54) {
+      return 'Barasat, North 24 Parganas';
+    }
+    // Dum Dum / Jessore Road / Airport
+    if (lat >= 22.62 && lat <= 22.68 && lng >= 88.40 && lng <= 88.46) {
+      return 'Dum Dum / Jessore Road, Kolkata';
+    }
+    // New Town / Rajarhat
+    if (lat >= 22.56 && lat <= 22.63 && lng >= 88.44 && lng <= 88.53) {
+      return 'New Town / Rajarhat, Kolkata';
+    }
+    // Salt Lake (Bidhannagar)
+    if (lat >= 22.56 && lat <= 22.61 && lng >= 88.39 && lng <= 88.44) {
+      return 'Salt Lake (Bidhannagar), Kolkata';
+    }
+    // Greater Kolkata broad coordinate range
+    if (lat >= 22.30 && lat <= 22.90 && lng >= 88.15 && lng <= 88.65) {
+      return 'Greater Kolkata';
+    }
+  }
+
+  return 'Greater Kolkata';
+};
+
 export const LocationMapView: React.FC<LocationMapViewProps> = ({
   windowWidth: propWindowWidth,
   currentRole,
@@ -99,6 +188,20 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
   InteractiveLeafletMap,
 }) => {
   const [winWidth, setWinWidth] = useState<number>(propWindowWidth || (typeof window !== 'undefined' ? window.innerWidth : 1200));
+
+  // Dynamic reverse-geocoding cache for real-world GPS coordinates
+  const [reverseGeoMap, setReverseGeoMap] = useState<Record<string, string>>({});
+
+  const resolvePropLoc = (p: any): string => {
+    if (!p) return 'Greater Kolkata';
+    const lat = parseFloat(String(p.latitude || p.lat || p.parsedLat || '').replace(/[^\d.-]/g, ''));
+    const lng = parseFloat(String(p.longitude || p.lng || p.parsedLng || '').replace(/[^\d.-]/g, ''));
+    const key = (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) ? `${lat.toFixed(4)}_${lng.toFixed(4)}` : '';
+    if (key && reverseGeoMap[key]) {
+      return reverseGeoMap[key];
+    }
+    return getResolvedLocation(p, developers);
+  };
 
   useEffect(() => {
     if (propWindowWidth) {
@@ -128,6 +231,14 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
   const basePropertiesList = useMemo(() => {
     const combined: any[] = [];
     const seenKeys = new Set<string>();
+
+    let devList = developers;
+    if (!devList || devList.length === 0) {
+      try {
+        const saved = localStorage.getItem('swaramayi_developers_v1');
+        if (saved) devList = JSON.parse(saved);
+      } catch (e) {}
+    }
 
     const addIfValid = (item: any) => {
       if (!item) return;
@@ -159,7 +270,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
       if (seenKeys.has(key)) return;
       seenKeys.add(key);
 
-      const localityStr = item.locality || item.location || item.address || item.city || 'Location';
+      const localityStr = getResolvedLocation(item, devList);
       const devStr = item.developer || item.developer_name || item.builder || item.developerName || 'Developer Partner';
       const codeStr = item.property_code || item.propertyCode || item.project_code || item.id || `PROJ-${Date.now()}`;
 
@@ -180,13 +291,6 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
     const pool = allProperties.length > 0 ? allProperties : filteredProperties;
     pool.forEach(p => addIfValid(p));
 
-    let devList = developers;
-    if (!devList || devList.length === 0) {
-      try {
-        const saved = localStorage.getItem('swaramayi_developers_v1');
-        if (saved) devList = JSON.parse(saved);
-      } catch (e) {}
-    }
     if (Array.isArray(devList)) {
       devList.forEach((d: any) => {
         const devName = d.developer_name || d.name || d.developer || 'Developer';
@@ -198,6 +302,47 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
 
     return combined;
   }, [allProperties, filteredProperties, developers]);
+
+  // Background reverse geocode for current property to display real-world municipality/locality
+  useEffect(() => {
+    const active = selectedProperty || basePropertiesList[0];
+    if (!active) return;
+    const lat = parseFloat(String(active.latitude || active.lat || active.parsedLat || '').replace(/[^\d.-]/g, ''));
+    const lng = parseFloat(String(active.longitude || active.lng || active.parsedLng || '').replace(/[^\d.-]/g, ''));
+    if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
+
+    const key = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
+    if (reverseGeoMap[key]) return;
+
+    const directLoc = active.full_address || active.locality;
+    if (directLoc && typeof directLoc === 'string' && directLoc.trim() !== '' && directLoc.toLowerCase() !== 'location' && directLoc.toLowerCase() !== 'n/a') {
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        if (res.ok) {
+          const data = await res.json();
+          const addr = data.address;
+          if (addr) {
+            const parts = [
+              addr.residential || addr.suburb || addr.neighbourhood || addr.city_district || addr.town || addr.village,
+              addr.city || addr.municipality || addr.county || 'Greater Kolkata'
+            ].filter(Boolean);
+            const resolved = parts.length > 0 ? parts.join(', ') : (data.display_name?.split(',').slice(0, 2).join(',') || '');
+            if (resolved) {
+              setReverseGeoMap(prev => ({ ...prev, [key]: resolved }));
+            }
+          }
+        }
+      } catch (e) {
+        // Fallback already provided by getResolvedLocation
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [selectedProperty, basePropertiesList, reverseGeoMap]);
 
   // Live Location Geocoding API fetch (OpenStreetMap Nominatim)
   useEffect(() => {
@@ -766,7 +911,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
                 🏢 {selectedProperty?.title || (basePropertiesList.length > 0 ? basePropertiesList[0].title : 'No GPS Project Selected')}
               </h3>
               <p style={{ fontSize: '0.82rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px', fontWeight: '800' }}>
-                📍 Location: <span style={{ color: '#0284c7' }}>{selectedProperty?.locality || (basePropertiesList.length > 0 ? basePropertiesList[0].locality : 'N/A')}</span>
+                📍 Location: <span style={{ color: '#0284c7' }}>{resolvePropLoc(selectedProperty || basePropertiesList[0])}</span>
               </p>
             </div>
 
@@ -854,7 +999,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
                             </span>
                           </div>
                           <div style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
-                            <span>📍 {p.locality || 'Location'}</span>
+                            <span>📍 {resolvePropLoc(p)}</span>
                             <span>•</span>
                             <span style={{ color: '#4ade80', fontWeight: '700' }}>{formatPropertyPrice(p)}</span>
                           </div>

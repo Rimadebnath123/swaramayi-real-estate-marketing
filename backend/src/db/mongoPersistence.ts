@@ -342,15 +342,15 @@ export async function syncToMongoDB(data: any) {
     }
     if (Array.isArray(data.sourcing_requests)) await syncCollection(SourcingRequestModel, data.sourcing_requests);
     if (Array.isArray(data.developers)) {
-      if (data.developers.length === 0) {
-        await DeveloperModel.deleteMany({});
-      } else {
-        const activeDevIds = data.developers.map((d: any) => String(d.id || '')).filter(Boolean);
-        const activeDevNames = data.developers.map((d: any) => String(d.name || '')).filter(Boolean);
-        await DeveloperModel.deleteMany({
-          id: { $nin: activeDevIds },
-          name: { $nin: activeDevNames }
-        }).catch(() => {});
+      // Safely delete ONLY developers explicitly marked as recycled in recycled_items
+      if (Array.isArray(data.recycled_items)) {
+        const recycledDevIds = data.recycled_items
+          .filter((r: any) => r && (r.category === 'Developer' || r.type === 'Developer'))
+          .map((r: any) => String(r.id || r.originalData?.id || ''))
+          .filter(Boolean);
+        if (recycledDevIds.length > 0) {
+          await DeveloperModel.deleteMany({ id: { $in: recycledDevIds } }).catch(() => {});
+        }
       }
       await syncCollection(DeveloperModel, data.developers);
     }

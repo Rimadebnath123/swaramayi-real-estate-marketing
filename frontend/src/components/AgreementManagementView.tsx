@@ -113,11 +113,13 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
     return Array.from(map.values());
   }, [agreements, projectVisitAgreements]);
 
-  // Developer Tie-Up Agreements
+  // Developer Tie-Up Agreements (Only verified & executed agreements)
   const developerAgreements = React.useMemo(() => {
     const map = new Map<string, any>();
     (agreements || []).forEach((a: any) => {
       if (a.category === 'DEVELOPER' || a.agreement_type === 'DEVELOPER_PROJECT_TIEUP') {
+        // Exclude unverified or pending OTP developer agreements
+        if (a.signed_status === 'PENDING_OTP' || a.otp_verified === false) return;
         const key = a.agreement_code || a.id;
         if (key && !map.has(key)) {
           map.set(key, a);

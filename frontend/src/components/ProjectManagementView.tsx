@@ -91,8 +91,9 @@ interface ProjectManagementViewProps {
 }
 
 export const normalizeTotalFloors = (val: any): string => {
-  if (!val) return 'G+4 Floors (5 Storey)';
+  if (!val) return '';
   const s = String(val).trim();
+  if (!s) return '';
   if (s.includes('(') && s.includes(')')) return s;
 
   const gxMatch = s.match(/^G\+(\d+)(?:\s*floors?)?$/i);
@@ -366,17 +367,51 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             hera_no: proj.hera_no || proj.heraId || proj.hera || dev.hera_no || dev.heraId || dev.hera || dev.developer_hera_no || '',
             amenities: Array.isArray(proj.selected_amenities) && proj.selected_amenities.length > 0 ? proj.selected_amenities : (proj.amenities || []),
             building_photos: proj.building_photos || [],
-            total_covered_parking_capacity: proj.total_covered_parking_capacity !== undefined ? proj.total_covered_parking_capacity : 0,
-            covered_parking_rate: proj.covered_parking_rate || proj.parking_rate || proj.builder_default_rate || proj.builderDefaultRate || proj.parking_price || proj.car_parking_charge || '',
-            total_ev_parking_capacity: proj.total_ev_parking_capacity !== undefined ? proj.total_ev_parking_capacity : 0,
-            ev_parking_rate: proj.ev_parking_rate || '',
-            total_open_parking_capacity: proj.total_open_parking_capacity !== undefined ? proj.total_open_parking_capacity : 0,
-            open_parking_rate: proj.open_parking_rate || '',
+            total_covered_parking_capacity: (() => {
+              const cap = proj.total_covered_parking_capacity;
+              const rate = String(proj.covered_parking_rate || '').trim();
+              if (cap === 12 && (rate === '250000' || rate === '')) return 0;
+              return (cap !== undefined && cap !== null) ? cap : 0;
+            })(),
+            covered_parking_rate: (() => {
+              const cap = proj.total_covered_parking_capacity;
+              const r = String(proj.covered_parking_rate || '').trim();
+              if ((cap === 12 || cap === 0 || !cap) && r === '250000') return '';
+              return r;
+            })(),
+            total_ev_parking_capacity: (() => {
+              const cap = proj.total_ev_parking_capacity;
+              const rate = String(proj.ev_parking_rate || '').trim();
+              if (cap === 4 && (rate === '350000' || rate === '')) return 0;
+              return (cap !== undefined && cap !== null) ? cap : 0;
+            })(),
+            ev_parking_rate: (() => {
+              const cap = proj.total_ev_parking_capacity;
+              const r = String(proj.ev_parking_rate || '').trim();
+              if ((cap === 4 || cap === 0 || !cap) && r === '350000') return '';
+              return r;
+            })(),
+            total_open_parking_capacity: (() => {
+              const cap = proj.total_open_parking_capacity;
+              const rate = String(proj.open_parking_rate || '').trim();
+              if (cap === 6 && (rate === '150000' || rate === '')) return 0;
+              return (cap !== undefined && cap !== null) ? cap : 0;
+            })(),
+            open_parking_rate: (() => {
+              const cap = proj.total_open_parking_capacity;
+              const r = String(proj.open_parking_rate || '').trim();
+              if ((cap === 6 || cap === 0 || !cap) && r === '150000') return '';
+              return r;
+            })(),
             key_custody: proj.key_custody || proj.keys_custody || '',
             keys_custody: proj.key_custody || proj.keys_custody || '',
             architectural_description: proj.architectural_description || proj.description || '',
             description: proj.architectural_description || proj.description || '',
-            total_floors: proj.total_floors || '',
+            total_floors: (() => {
+              const tf = String(proj.total_floors || '').trim();
+              const m = tf.match(/^(G\+\d+)\s+Floors?\s*\(\d+\s*Storey\)$/i);
+              return m ? m[1] : tf;
+            })(),
             number_of_towers: proj.number_of_towers || '',
             otp_verified: Boolean(proj.otp_verified || proj.devProjectOtpVerified || dev.otp_verified)
           });
@@ -834,7 +869,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         city: rawObj.city || matchedProj?.city || 'Kolkata',
         latitude: rawObj.latitude || matchedProj?.latitude || '22.722361',
         longitude: rawObj.longitude || matchedProj?.longitude || '88.493403',
-        project_posting_id: rawObj.project_posting_id || 'PRJ-POST-2026-8802',
+        project_posting_id: rawObj.project_posting_id || '',
         rera_id: rawObj.rera_id || matchedProj?.rera_id || '',
         hera_no: rawObj.hera_no || matchedProj?.hera_no || '',
         property_type: propType,
@@ -849,7 +884,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         unit_floor: rawObj.unit_floor || '2nd Floor',
         floor_num: rawObj.unit_floor || '2nd Floor',
         floor_number: rawObj.unit_floor || '2nd Floor',
-        total_floors: normalizeTotalFloors(rawObj.total_floors || matchedProj?.total_floors || 'G+4 Floors (5 Storey)'),
+        total_floors: rawObj.total_floors ? String(rawObj.total_floors).trim() : (matchedProj?.total_floors || 'G+4'),
         tower_block: rawObj.tower_block || matchedProj?.tower_block || 'Tower A',
         number_of_towers: rawObj.number_of_towers || matchedProj?.number_of_towers || '1 Standalone Tower',
         unit_number: rawObj.unit_number || `Unit ${parsedList.length + 1}`,
@@ -872,8 +907,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         total_all_inclusive_price: totalAllInclusive > 0 ? totalAllInclusive : totalBaseWithOthers,
         maintenance_monthly: cleanNum(rawObj.maintenance_monthly, 1500),
         status,
-        key_custody: rawObj.key_custody || 'Builder Site Office',
-        description: rawObj.description || 'Spacious ventilated residential property unit with optimal natural light.',
+        key_custody: rawObj.key_custody || '',
+        description: rawObj.description || '',
         map_x: 35 + Math.random() * 30,
         map_y: 35 + Math.random() * 30
       };
@@ -983,34 +1018,36 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   // ==========================================
   const BULK_DEVELOPER_COLUMNS = [
     // 1. Project & Developer Identification (from Register New Project & Developer Master)
+    { header: 'Developer ID', key: 'developer_id', section: '1. Project & Developer Identification', sample1: 'SRM-DEV-2026-000001', sample2: 'SRM-DEV-2026-000002', desc: 'Developer Master Unique ID (Optional / Auto-generated if left blank)' },
     { header: 'Developer / Builder Name', key: 'developer', section: '1. Project & Developer Identification', sample1: 'Godrej Properties', sample2: 'Ambuja Neotia', desc: 'Company / Builder / Developer Entity Name *' },
+    { header: 'Project ID', key: 'project_id', section: '1. Project & Developer Identification', sample1: 'SRM-PROJ-2026-000001', sample2: 'SRM-PROJ-2026-000002', desc: 'Master Project Unique ID (Optional / Auto-generated if left blank)' },
     { header: 'Project Title & Name', key: 'title', section: '1. Project & Developer Identification', sample1: 'Godrej Prakriti', sample2: 'Utalika Luxury', desc: 'Project or Society Master Name *' },
     { header: 'Developer Mobile Phone (for OTP)', key: 'developer_mobile', section: '1. Project & Developer Identification', sample1: '+91 98833 95102', sample2: '+91 98300 12345', desc: 'Primary Developer Mobile Contact for OTP verification *' },
     { header: 'Alternative Phone Number', key: 'developer_alt_mobile', section: '1. Project & Developer Identification', sample1: '+91 70442 93951', sample2: '+91 98311 54321', desc: 'Secondary Developer / Sales Contact Phone' },
     { header: 'Developer Email Address', key: 'developer_email', section: '1. Project & Developer Identification', sample1: 'sales@godrejproperties.com', sample2: 'info@ambujaneotia.com', desc: 'Official Builder Email Address' },
     { header: 'RERA Registration No. (RERA ID)', key: 'rera_id', section: '1. Project & Developer Identification', sample1: 'WBRERA/P/NOR/2024/000128', sample2: 'WBRERA/P/SOU/2024/000215', desc: 'State RERA Registration Number' },
     { header: 'HERA Registration No. (HERA ID)', key: 'hera_no', section: '1. Project & Developer Identification', sample1: 'WBHERA/REG/2024/0045', sample2: 'WBHERA/REG/2024/0088', desc: 'State Housing Authority HERA Number' },
-    { header: 'Total Floors in Building', key: 'total_floors', section: '1. Project & Developer Identification', sample1: 'G+14 Floors (Highrise)', sample2: '2B+G+30 Floors (Mega Highrise)', desc: 'Storey structure (e.g. G+4 Floors, G+14 Floors, B+G+30 Floors) *' },
-    { header: 'Number Of Towers in Project / Complex', key: 'number_of_towers', section: '1. Project & Developer Identification', sample1: '8 Towers Complex', sample2: '4 Luxury Towers', desc: 'Standalone Tower / Multiple Towers Complex *' },
+    { header: 'Total Floors in Building', key: 'total_floors', section: '1. Project & Developer Identification', sample1: 'G+4', sample2: 'G+14', desc: 'Storey structure (e.g. G+4, G+14, B+G+30 Floors)' },
+    { header: 'Number Of Towers in Project / Complex', key: 'number_of_towers', section: '1. Project & Developer Identification', sample1: '1', sample2: '4', desc: 'Standalone Tower / Multiple Towers Complex' },
 
     // 2. GPS Location Coordinates & Device Auto-Capture
-    { header: 'GPS Latitude', key: 'latitude', section: '2. GPS Location Coordinates', sample1: 22.698021, sample2: 22.492150, desc: 'Exact Map Latitude coordinate' },
-    { header: 'GPS Longitude', key: 'longitude', section: '2. GPS Location Coordinates', sample1: 88.463723, sample2: 88.398412, desc: 'Exact Map Longitude coordinate' },
+    { header: 'GPS Latitude', key: 'latitude', section: '2. GPS Location Coordinates', sample1: 22.689639, sample2: 22.492150, desc: 'Exact Map Latitude coordinate' },
+    { header: 'GPS Longitude', key: 'longitude', section: '2. GPS Location Coordinates', sample1: 88.449663, sample2: 88.398412, desc: 'Exact Map Longitude coordinate' },
 
     // 3. Project & Developer Amenities & Infrastructure Features
-    { header: 'Project Amenities', key: 'amenities', section: '3. Amenities & Features', sample1: '24/7 Power Backup, Water Supply, Security, CCTV cameras, Elevators, Gymnasium, Swimming Pool, Clubhouse, Children\'s Play Area, Landscaped Gardens', sample2: '24/7 Power Backup, Water Supply, Security, CCTV cameras, Elevators, Gymnasium, Swimming Pool, Clubhouse, Sports Courts, Jogging Track, Yoga Deck', desc: 'Comma-separated project amenities' },
+    { header: 'Project Amenities', key: 'amenities', section: '3. Amenities & Features', sample1: 'Gymnasium, Swimming Pool, Clubhouse', sample2: 'Community Hall, Children Play Area', desc: 'Comma-separated project amenities' },
 
     // 4. Project Parking Stock Capacity & Default Rates Management System
-    { header: 'Covered Parking Slot Capacity', key: 'total_covered_parking_capacity', section: '4. Parking Stock & Rates', sample1: 120, sample2: 200, desc: 'Total allocated covered basement/stilt parking slots' },
+    { header: 'Covered Parking Slot Capacity', key: 'total_covered_parking_capacity', section: '4. Parking Stock & Rates', sample1: 2, sample2: 12, desc: 'Total allocated covered basement/stilt parking slots' },
     { header: 'Covered Parking Default Rate (INR)', key: 'covered_parking_rate', section: '4. Parking Stock & Rates', sample1: 350000, sample2: 450000, desc: 'Builder quotation price for covered parking slot' },
-    { header: 'EV Fast Charging Station Slots', key: 'total_ev_parking_capacity', section: '4. Parking Stock & Rates', sample1: 16, sample2: 25, desc: 'Total allocated EV fast-charging parking slots' },
+    { header: 'EV Fast Charging Station Slots', key: 'total_ev_parking_capacity', section: '4. Parking Stock & Rates', sample1: 2, sample2: 4, desc: 'Total allocated EV fast-charging parking slots' },
     { header: 'EV Slot Default Rate (INR)', key: 'ev_parking_rate', section: '4. Parking Stock & Rates', sample1: 450000, sample2: 550000, desc: 'Builder quotation price for EV parking slot' },
-    { header: 'Open Surface Ground Parking Slots', key: 'total_open_parking_capacity', section: '4. Parking Stock & Rates', sample1: 40, sample2: 30, desc: 'Total allocated open surface parking slots' },
+    { header: 'Open Surface Ground Parking Slots', key: 'total_open_parking_capacity', section: '4. Parking Stock & Rates', sample1: 5, sample2: 10, desc: 'Total allocated open surface parking slots' },
     { header: 'Open Surface Slot Default Rate (INR)', key: 'open_parking_rate', section: '4. Parking Stock & Rates', sample1: 200000, sample2: 250000, desc: 'Builder quotation price for open surface parking slot' },
 
     // 5. Keys Custody & Architectural Description
-    { header: 'Key Custody Location / Handler', key: 'key_custody', section: '5. Custody & Architecture', sample1: 'Builder Site Office & Security Gate', sample2: 'Central Clubhouse Reception Desk', desc: 'Location of keys or site caretaker handler' },
-    { header: 'Architectural & Structural Description', key: 'architectural_description', section: '5. Custody & Architecture', sample1: 'RCC Earthquake resistant structure, premium vitrified tiles, 3-tier security system with wide landscape open spaces.', sample2: 'IGBC Gold Certified eco-luxury towers, German sanitary fittings, acoustic glazed windows and private sky lounges.', desc: 'Architectural construction, structural framework, design & materials' }
+    { header: 'Key Custody Location / Handler', key: 'key_custody', section: '5. Custody & Architecture', sample1: 'Builder Site Office', sample2: 'Caretaker Desk', desc: 'Location of keys or site caretaker handler' },
+    { header: 'Architectural & Structural Description', key: 'architectural_description', section: '5. Custody & Architecture', sample1: 'Modern RCC frame structure with vitrified tile flooring.', sample2: 'Earthquake resistant design with premium fittings.', desc: 'Architectural construction, structural framework, design & materials' }
   ];
 
   const [isBulkImportDeveloperOpen, setIsBulkImportDeveloperOpen] = React.useState<boolean>(false);
@@ -1045,7 +1082,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       const m = strId.match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i) || strId.match(/DEV-(\d+)/i);
       if (m && m[1]) {
         const val = parseInt(m[1], 10);
-        if (!isNaN(val) && val > 0 && val < 100000) allNums.push(val);
+        if (!isNaN(val) && val > 0 && val < 50000) allNums.push(val);
       }
     };
 
@@ -1061,24 +1098,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       extractDevSeq(r.originalData);
     });
 
-    // 3. Persistent sequence watermark in localStorage
-    try {
-      const savedSeq = localStorage.getItem('swaramayi_max_dev_seq');
-      if (savedSeq) {
-        const parsed = parseInt(savedSeq, 10);
-        if (!isNaN(parsed) && parsed > 0 && parsed < 100000) {
-          allNums.push(parsed);
-        }
-      }
-    } catch (e) {}
-
     const maxDevSeq = allNums.length > 0 ? Math.max(0, ...allNums) : 0;
     const yr = new Date().getFullYear();
     const nextNum = maxDevSeq + 1 + offset;
-
-    try {
-      localStorage.setItem('swaramayi_max_dev_seq', String(nextNum));
-    } catch (e) {}
 
     return `SRM-DEV-${yr}-${String(nextNum).padStart(6, '0')}`;
   };
@@ -1092,7 +1114,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       const m = pCode.match(/SRM-PROJ-(?:20\d{2}-)?(\d+)/i) || pCode.match(/PROJ-(\d+)/i);
       if (m && m[1]) {
         const num = parseInt(m[1], 10);
-        if (!isNaN(num) && num > 0 && num < 100000 && num !== 88) allNums.push(num);
+        if (!isNaN(num) && num > 0 && num < 50000 && num !== 88) allNums.push(num);
       }
     };
 
@@ -1115,23 +1137,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       }
     });
 
-    // 4. Persistent sequence watermark in localStorage
-    try {
-      const savedSeq = localStorage.getItem('swaramayi_max_project_seq');
-      if (savedSeq) {
-        const parsed = parseInt(savedSeq, 10);
-        if (!isNaN(parsed) && parsed > 0 && parsed < 100000 && parsed !== 88) {
-          allNums.push(parsed);
-        }
-      }
-    } catch (e) {}
-
     const maxSeq = allNums.length > 0 ? Math.max(0, ...allNums) : 0;
     const nextNum = maxSeq + 1 + offset;
-
-    try {
-      localStorage.setItem('swaramayi_max_project_seq', String(nextNum));
-    } catch (e) {}
 
     return `SRM-PROJ-${yr}-${String(nextNum).padStart(6, '0')}`;
   };
@@ -1175,29 +1182,76 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           if (isItemInRecycledSet(proj, recycledSet)) return;
           const row = BULK_DEVELOPER_COLUMNS.map(c => {
             switch (c.key) {
-              case 'developer': return dev.name || '';
-              case 'title': return proj.title || '';
-              case 'project_id': return proj.code || proj.id || '';
               case 'developer_id': return dev.id || '';
-              case 'developer_mobile': return dev.mobile || '';
-              case 'developer_alt_mobile': return dev.altMobile || '';
-              case 'developer_email': return dev.email || proj.developer_email || '';
+              case 'developer': return dev.name || '';
+              case 'project_id': return proj.code || proj.project_id || proj.id || '';
+              case 'title': return proj.title || '';
+              case 'developer_mobile': return dev.mobile || proj.developer_mobile || '';
+              case 'developer_alt_mobile': return dev.altMobile || proj.developer_alt_mobile || '';
+              case 'developer_email': {
+                const em = proj.developer_email || dev.email || '';
+                return em === 'developer@swaramayi.com' ? '' : em;
+              }
               case 'locality': return proj.locality || '';
               case 'rera_id': return proj.rera_id || dev.rera_id || '';
               case 'hera_no': return proj.hera_no || dev.hera_no || '';
-              case 'total_floors': return proj.total_floors || '';
+              case 'total_floors': {
+                const tf = String(proj.total_floors || dev.total_floors || '').trim();
+                const m = tf.match(/^(G\+\d+)\s+Floors?\s*\(\d+\s*Storey\)$/i);
+                return m ? m[1] : tf;
+              }
               case 'number_of_towers': return proj.number_of_towers || '';
               case 'latitude': return proj.lat || proj.latitude || '';
               case 'longitude': return proj.lng || proj.longitude || '';
-              case 'amenities': return Array.isArray(proj.amenities) ? proj.amenities.join(', ') : (proj.amenities || '');
-              case 'total_covered_parking_capacity': return proj.total_covered_parking_capacity !== undefined ? proj.total_covered_parking_capacity : '';
-              case 'covered_parking_rate': return proj.covered_parking_rate || '';
-              case 'total_ev_parking_capacity': return proj.total_ev_parking_capacity !== undefined ? proj.total_ev_parking_capacity : '';
-              case 'ev_parking_rate': return proj.ev_parking_rate || '';
-              case 'total_open_parking_capacity': return proj.total_open_parking_capacity !== undefined ? proj.total_open_parking_capacity : '';
-              case 'open_parking_rate': return proj.open_parking_rate || '';
-              case 'key_custody': return proj.key_custody || proj.keys_custody || '';
-              case 'architectural_description': return proj.architectural_description || proj.description || '';
+              case 'amenities': {
+                const am = Array.isArray(proj.amenities) ? proj.amenities : (proj.amenities ? String(proj.amenities).split(',').map((s: string) => s.trim()).filter(Boolean) : []);
+                const isDummyAm = am.length === 5 && am[0] === '24/7 Power Backup' && am[4] === 'Elevators';
+                return isDummyAm ? '' : am.join(', ');
+              }
+              case 'total_covered_parking_capacity': {
+                const cap = proj.total_covered_parking_capacity;
+                const rate = String(proj.covered_parking_rate || '').trim();
+                if (cap === 12 && (rate === '250000' || rate === '')) return '';
+                return (cap !== undefined && cap !== null && cap !== 0) ? cap : '';
+              }
+              case 'covered_parking_rate': {
+                const cap = proj.total_covered_parking_capacity;
+                const r = String(proj.covered_parking_rate || '').trim();
+                if ((cap === 12 || cap === 0 || !cap) && r === '250000') return '';
+                return r || '';
+              }
+              case 'total_ev_parking_capacity': {
+                const cap = proj.total_ev_parking_capacity;
+                const rate = String(proj.ev_parking_rate || '').trim();
+                if (cap === 4 && (rate === '350000' || rate === '')) return '';
+                return (cap !== undefined && cap !== null && cap !== 0) ? cap : '';
+              }
+              case 'ev_parking_rate': {
+                const cap = proj.total_ev_parking_capacity;
+                const r = String(proj.ev_parking_rate || '').trim();
+                if ((cap === 4 || cap === 0 || !cap) && r === '350000') return '';
+                return r || '';
+              }
+              case 'total_open_parking_capacity': {
+                const cap = proj.total_open_parking_capacity;
+                const rate = String(proj.open_parking_rate || '').trim();
+                if (cap === 6 && (rate === '150000' || rate === '')) return '';
+                return (cap !== undefined && cap !== null && cap !== 0) ? cap : '';
+              }
+              case 'open_parking_rate': {
+                const cap = proj.total_open_parking_capacity;
+                const r = String(proj.open_parking_rate || '').trim();
+                if ((cap === 6 || cap === 0 || !cap) && r === '150000') return '';
+                return r || '';
+              }
+              case 'key_custody': {
+                const kc = proj.key_custody || proj.keys_custody || '';
+                return kc === 'Builder Site Office' ? '' : kc;
+              }
+              case 'architectural_description': {
+                const ad = proj.architectural_description || proj.description || '';
+                return ad.startsWith('Modern RCC Frame Structure, Vastu compliant layouts') ? '' : ad;
+              }
               default: return proj[c.key] !== undefined ? proj[c.key] : (dev[c.key] !== undefined ? dev[c.key] : '');
             }
           });
@@ -1230,10 +1284,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     if (directCol) return directCol.key;
 
     const aliases: { [key: string]: string[] } = {
+      developer_id: ['developer id', 'developer master id', 'developer_id', 'dev id', 'dev_id', 'dev code', 'developer code', 'builder id', 'builder code'],
       developer: ['developer / builder name', 'developer name', 'builder name', 'developer', 'builder', 'company', 'developer_name', 'builder_name'],
+      project_id: ['project id', 'master project id', 'project_id', 'proj id', 'proj_id', 'project code', 'project_code', 'master project code'],
       title: ['project title & name', 'project title', 'project name', 'project', 'title', 'society name', 'complex name', 'project_title'],
-      project_id: ['master project id', 'project id', 'project_id', 'proj id', 'proj_id', 'project code', 'project_code'],
-      developer_id: ['developer master id', 'developer id', 'developer_id', 'dev id', 'dev_id', 'dev code'],
       developer_mobile: ['developer mobile phone (for otp)', 'developer mobile phone', 'developer mobile', 'mobile', 'dev mobile', 'phone', 'contact', 'primary mobile'],
       developer_alt_mobile: ['alternative phone number', 'alternative phone', 'alt phone', 'alt mobile', 'developer alt mobile', 'secondary mobile', 'secondary contact'],
       developer_email: ['developer email address', 'developer email', 'email', 'builder email', 'dev email'],
@@ -1269,21 +1323,36 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       return;
     }
 
-    const rawHeaders = sheetRows[0];
+    // Intelligently find the header row index (first row containing recognizable columns)
+    let headerRowIdx = 0;
+    for (let i = 0; i < Math.min(sheetRows.length, 5); i++) {
+      const row = sheetRows[i];
+      if (Array.isArray(row) && row.some(cell => {
+        const str = String(cell || '').toLowerCase().trim();
+        return str.includes('developer') || str.includes('builder') || str.includes('project') || str.includes('title');
+      })) {
+        headerRowIdx = i;
+        break;
+      }
+    }
+
+    const rawHeaders = sheetRows[headerRowIdx] || sheetRows[0];
     const headerKeys = rawHeaders.map(h => normalizeDevHeaderKey(h));
     const errors: string[] = [];
     const parsedList: any[] = [];
 
-    const createdDevsMap = new Map<string, string>();
-    let nextProjSeqOffset = 0;
-    let nextDevSeqOffset = 0;
-
-    for (let r = 1; r < sheetRows.length; r++) {
+    // Collect all non-empty data rows strictly
+    const dataRows: any[][] = [];
+    for (let r = headerRowIdx + 1; r < sheetRows.length; r++) {
       const row = sheetRows[r];
       if (!row || row.every((c: any) => c === null || c === undefined || String(c).trim() === '')) {
         continue;
       }
+      dataRows.push(row);
+    }
 
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
       const rawObj: any = {};
       headerKeys.forEach((key, colIdx) => {
         if (key && colIdx < row.length) {
@@ -1292,35 +1361,26 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       });
 
       const devName = rawObj.developer ? String(rawObj.developer).trim() : 'Swaramayi Developer';
-      const projTitle = rawObj.title ? String(rawObj.title).trim() : `Master Project ${parsedList.length + 1}`;
+      const projTitle = rawObj.title ? String(rawObj.title).trim() : `Master Project ${i + 1}`;
 
-      const existingDev = (developerMasterList || []).find((d: any) => d.name.toLowerCase().trim() === devName.toLowerCase().trim());
-
+      // Assign sequential Developer ID for every row unless explicitly provided
       let assignedDevId = rawObj.developer_id ? String(rawObj.developer_id).trim() : '';
       if (!assignedDevId || assignedDevId.toUpperCase() === 'AUTO') {
-        if (existingDev) {
-          assignedDevId = existingDev.id;
-        } else if (createdDevsMap.has(devName.toLowerCase())) {
-          assignedDevId = createdDevsMap.get(devName.toLowerCase())!;
-        } else {
-          assignedDevId = getNextSequentialDeveloperId(nextDevSeqOffset, developerMasterList);
-          createdDevsMap.set(devName.toLowerCase(), assignedDevId);
-          nextDevSeqOffset++;
-        }
+        assignedDevId = getNextSequentialDeveloperId(i, developerMasterList);
       }
 
+      // Assign sequential Project ID for every row unless explicitly provided
       let assignedProjId = rawObj.project_id ? String(rawObj.project_id).trim() : '';
       if (!assignedProjId || assignedProjId.toUpperCase() === 'AUTO') {
-        assignedProjId = getNextSequentialProjectId(nextProjSeqOffset, developerMasterList, properties);
-        nextProjSeqOffset++;
+        assignedProjId = getNextSequentialProjectId(i, developerMasterList, properties);
       }
 
-      const primaryMobile = rawObj.developer_mobile ? String(rawObj.developer_mobile).trim() : (existingDev?.mobile || '+91 98833 95102');
-      const altMobile = rawObj.developer_alt_mobile ? String(rawObj.developer_alt_mobile).trim() : (existingDev?.altMobile || '');
-      const devEmail = rawObj.developer_email ? String(rawObj.developer_email).trim() : (existingDev?.email || 'developer@swaramayi.com');
-      const locality = rawObj.locality ? String(rawObj.locality).trim() : 'Greater Kolkata';
-      const totalFloors = normalizeTotalFloors(rawObj.total_floors || 'G+4 Floors (5 Storey)');
-      const numberOfTowers = rawObj.number_of_towers ? String(rawObj.number_of_towers).trim() : '1 Standalone Tower';
+      const primaryMobile = rawObj.developer_mobile ? String(rawObj.developer_mobile).trim() : '';
+      const altMobile = rawObj.developer_alt_mobile ? String(rawObj.developer_alt_mobile).trim() : '';
+      const devEmail = rawObj.developer_email ? String(rawObj.developer_email).trim() : '';
+      const locality = rawObj.locality ? String(rawObj.locality).trim() : '';
+      const totalFloors = rawObj.total_floors ? String(rawObj.total_floors).trim() : '';
+      const numberOfTowers = rawObj.number_of_towers ? String(rawObj.number_of_towers).trim() : '';
 
       let lat = rawObj.latitude !== undefined && rawObj.latitude !== null && String(rawObj.latitude).trim() !== '' ? String(rawObj.latitude).trim() : '';
       let lng = rawObj.longitude !== undefined && rawObj.longitude !== null && String(rawObj.longitude).trim() !== '' ? String(rawObj.longitude).trim() : '';
@@ -1340,19 +1400,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           amenitiesList = String(rawObj.amenities).split(',').map((s: string) => s.trim()).filter(Boolean);
         }
       }
-      if (amenitiesList.length === 0) {
-        amenitiesList = ['24/7 Power Backup', 'Water Supply', 'Security', 'CCTV cameras', 'Elevators'];
-      }
 
-      const coveredCap = cleanNum(rawObj.total_covered_parking_capacity, 12);
-      const coveredRate = rawObj.covered_parking_rate ? String(rawObj.covered_parking_rate).trim() : '250000';
-      const evCap = cleanNum(rawObj.total_ev_parking_capacity, 4);
-      const evRate = rawObj.ev_parking_rate ? String(rawObj.ev_parking_rate).trim() : '350000';
-      const openCap = cleanNum(rawObj.total_open_parking_capacity, 6);
-      const openRate = rawObj.open_parking_rate ? String(rawObj.open_parking_rate).trim() : '150000';
+      const coveredCap = rawObj.total_covered_parking_capacity !== undefined && rawObj.total_covered_parking_capacity !== null && String(rawObj.total_covered_parking_capacity).trim() !== '' ? cleanNum(rawObj.total_covered_parking_capacity, 0) : 0;
+      const coveredRate = rawObj.covered_parking_rate ? String(rawObj.covered_parking_rate).trim() : '';
+      const evCap = rawObj.total_ev_parking_capacity !== undefined && rawObj.total_ev_parking_capacity !== null && String(rawObj.total_ev_parking_capacity).trim() !== '' ? cleanNum(rawObj.total_ev_parking_capacity, 0) : 0;
+      const evRate = rawObj.ev_parking_rate ? String(rawObj.ev_parking_rate).trim() : '';
+      const openCap = rawObj.total_open_parking_capacity !== undefined && rawObj.total_open_parking_capacity !== null && String(rawObj.total_open_parking_capacity).trim() !== '' ? cleanNum(rawObj.total_open_parking_capacity, 0) : 0;
+      const openRate = rawObj.open_parking_rate ? String(rawObj.open_parking_rate).trim() : '';
 
-      const keyCustody = rawObj.key_custody ? String(rawObj.key_custody).trim() : 'Builder Site Office';
-      const archDesc = rawObj.architectural_description ? String(rawObj.architectural_description).trim() : 'Modern RCC Frame Structure, Vastu compliant layouts, Premium vitrified tiles flooring.';
+      const keyCustody = rawObj.key_custody ? String(rawObj.key_custody).trim() : '';
+      const archDesc = rawObj.architectural_description ? String(rawObj.architectural_description).trim() : '';
 
       const parsedItem = {
         id: assignedProjId,
@@ -1368,8 +1425,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         hera_no: rawObj.hera_no ? String(rawObj.hera_no).trim() : '',
         total_floors: totalFloors,
         number_of_towers: numberOfTowers,
-        latitude: lat || '22.722361',
-        longitude: lng || '88.493403',
+        latitude: lat || '',
+        longitude: lng || '',
         amenities: amenitiesList,
         total_covered_parking_capacity: coveredCap,
         covered_parking_rate: coveredRate,
@@ -1505,7 +1562,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           longitude: item.longitude || '',
           rera_id: item.rera_id || '',
           hera_no: item.hera_no || '',
-          total_floors: item.total_floors || 'G+4 Floors (5 Storey)',
+          total_floors: item.total_floors || '',
           number_of_towers: item.number_of_towers || '',
           key_custody: item.key_custody || '',
           keys_custody: item.key_custody || '',
@@ -1523,7 +1580,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           devProjectOtpVerified: false
         };
 
-        const existingDevIdx = updatedDevs.findIndex(d => (d.name || '').toLowerCase().trim() === devName.toLowerCase().trim());
+        // If assignedDevId explicitly matches an existing developer ID, link project under that developer
+        const existingDevIdx = updatedDevs.findIndex(d => d.id && d.id === assignedDevId);
         if (existingDevIdx >= 0) {
           const devObj = updatedDevs[existingDevIdx];
           const projList = [...(devObj.projects || [])];
@@ -1541,7 +1599,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
               devProjectOtpVerified: false
             };
           } else {
-            projList.unshift(newProjEntry);
+            projList.push(newProjEntry);
           }
           updatedDevs[existingDevIdx] = {
             ...devObj,
@@ -1551,26 +1609,38 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             projects: projList
           };
         } else {
+          // Register as a separate developer entry so all rows in Excel are imported 1-to-1
           const newDevObj = {
             id: assignedDevId,
             name: devName,
-            mobile: item.developer_mobile || '+91 98490 88776',
+            mobile: item.developer_mobile || '',
             altMobile: item.developer_alt_mobile || '',
             email: item.developer_email || '',
             projects: [newProjEntry]
           };
-          updatedDevs = [newDevObj, ...updatedDevs];
+          updatedDevs.push(newDevObj);
         }
 
-        // Auto-create Project-Wise Developer Channel Partner Agreement (Pending OTP until explicit developer verification)
-        createOrUpdateDevAgreement(
-          devName,
-          projTitle,
-          item.developer_mobile,
-          item.locality,
-          undefined,
-          false
-        );
+        // Auto-create Project-Wise Developer Channel Partner Agreement ONLY if OTP verified
+        if (item.otp_verified || item.devProjectOtpVerified) {
+          createOrUpdateDevAgreement(
+            devName,
+            projTitle,
+            item.developer_mobile,
+            item.locality,
+            undefined,
+            true
+          );
+        }
+      });
+
+      // Sort all developers strictly by sequence number so they appear serially
+      updatedDevs.sort((a: any, b: any) => {
+        const getSeq = (d: any) => {
+          const m = String(d.id || '').match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i) || String(d.id || '').match(/DEV-(\d+)/i);
+          return m ? parseInt(m[1], 10) : 999999;
+        };
+        return getSeq(a) - getSeq(b);
       });
 
       // Clear any prior verified tombstones for these newly imported projects so they remain pending OTP
@@ -1602,6 +1672,31 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       }
       try {
         localStorage.setItem('swaramayi_recycled_items', JSON.stringify(updatedRecycled));
+      } catch (e) {}
+
+      // Update persistent sequence watermarks to the new peak sequence
+      try {
+        let maxD = 0;
+        updatedDevs.forEach((d: any) => {
+          const m = String(d.id || '').match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i) || String(d.id || '').match(/DEV-(\d+)/i);
+          if (m && m[1]) {
+            const v = parseInt(m[1], 10);
+            if (!isNaN(v) && v > maxD && v < 50000) maxD = v;
+          }
+        });
+        localStorage.setItem('swaramayi_max_dev_seq', String(maxD));
+
+        let maxP = 0;
+        updatedDevs.forEach((d: any) => {
+          (d.projects || []).forEach((p: any) => {
+            const m = String(p.project_id || p.code || p.id || '').match(/SRM-PROJ-(?:20\d{2}-)?(\d+)/i);
+            if (m && m[1]) {
+              const v = parseInt(m[1], 10);
+              if (!isNaN(v) && v > maxP && v < 50000) maxP = v;
+            }
+          });
+        });
+        localStorage.setItem('swaramayi_max_project_seq', String(maxP));
       } catch (e) {}
 
       setDeveloperMasterList(updatedDevs);
@@ -1685,6 +1780,27 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     const cleanProj = projectName.trim();
     const cleanLoc = localityHub || 'Master Project Hub';
     const cleanContact = devContact || '+91 98490 88776';
+
+    // CRITICAL: Agreements must ONLY be created after developer OTP verification!
+    if (!isOtpVerified) {
+      if (setAgreements) {
+        setAgreements((prevAgreements: any[]) => {
+          const currentList = Array.isArray(prevAgreements) ? prevAgreements : (agreements || []);
+          const filtered = currentList.filter((a: any) =>
+            !(
+              (a.party_name?.toLowerCase() === cleanDev.toLowerCase() && a.project_name?.toLowerCase() === cleanProj.toLowerCase()) ||
+              a.title?.toLowerCase().includes(`${cleanProj.toLowerCase()} (${cleanDev.toLowerCase()})`)
+            )
+          );
+          if (filtered.length !== currentList.length) {
+            if (triggerSync && syncAllToMongoDB) syncAllToMongoDB({ agreements: filtered });
+            return filtered;
+          }
+          return currentList;
+        });
+      }
+      return;
+    }
 
     const newId = `AGR-DEV-${Date.now().toString().slice(-6)}`;
     let agreementCode = '';
@@ -1927,7 +2043,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     }
   }, [developers]);
 
-  // AUTOMATIC DEVELOPER AGREEMENT SYNC: Ensure every registered/verified developer project has a Project-Wise Developer Agreement
+  // AUTOMATIC DEVELOPER AGREEMENT SYNC: Only create/sync agreement if developer project is verified via OTP
   React.useEffect(() => {
     if (!developerMasterList || developerMasterList.length === 0) return;
     developerMasterList.forEach((dev: any) => {
@@ -1940,78 +2056,211 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             (vp.developer?.toLowerCase() === dev.name?.toLowerCase() && vp.project?.toLowerCase() === p.title?.toLowerCase())
           )
         );
-        createOrUpdateDevAgreement(dev.name, p.title, dev.mobile, p.locality || 'Locality Hub', undefined, isOtpVer);
+        if (isOtpVer) {
+          createOrUpdateDevAgreement(dev.name, p.title, dev.mobile, p.locality || 'Locality Hub', undefined, true);
+        }
       });
     });
   }, [developerMasterList, verifiedDevProjectsList]);
 
-  // AUTOMATIC CLEANUP EFFECT: Ensure every project & developer in developerMasterList starts clean from 000001
+  // AUTOMATIC CLEANUP & HEALING EFFECT: Ensure every project & developer in developerMasterList starts clean from 000001 serially
   React.useEffect(() => {
     if (!developerMasterList || developerMasterList.length === 0) return;
 
-    let modified = false;
     const year = new Date().getFullYear();
-    const seenCodes = new Set<string>();
-    let maxSeq = 0;
+    let needsHealing = false;
 
-    // Scan max sequence number (ignoring legacy offsets >= 88)
-    developerMasterList.forEach((dev: any) => {
+    // Check if any developer has an invalid, legacy, non-serial or ballooned sequence ID (>= 1000) or injected demo data
+    developerMasterList.forEach((dev: any, idx: number) => {
+      const devIdStr = String(dev.id || '');
+      const m = devIdStr.match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i) || devIdStr.match(/DEV-(\d+)/i);
+      const expectedDevCode = `SRM-DEV-${year}-${String(idx + 1).padStart(6, '0')}`;
+      if (!m || devIdStr !== expectedDevCode || parseInt(m[1], 10) >= 1000) {
+        needsHealing = true;
+      }
+      if (dev.email === 'developer@swaramayi.com') {
+        needsHealing = true;
+      }
       (dev.projects || []).forEach((proj: any) => {
-        const pCode = proj.code || proj.id || '';
-        const match = pCode.match(/SRM-PROJ-\d+-(\d+)/i);
-        if (match) {
-          const seq = parseInt(match[1], 10);
-          if (!isNaN(seq) && seq < 88 && seq > maxSeq) maxSeq = seq;
+        const pCode = String(proj.code || proj.project_id || proj.id || '');
+        const pm = pCode.match(/SRM-PROJ-(?:20\d{2}-)?(\d+)/i);
+        if (!pm || pCode.startsWith('PRJ-') || pCode.includes('000088') || pCode.includes('000089') || pCode.includes('000090') || parseInt(pm[1], 10) >= 1000) {
+          needsHealing = true;
+        }
+
+        const hasDummyCovered = (proj.total_covered_parking_capacity === 12 && (String(proj.covered_parking_rate || '') === '250000' || !proj.covered_parking_rate));
+        const hasDummyEv = (proj.total_ev_parking_capacity === 4 && (String(proj.ev_parking_rate || '') === '350000' || !proj.ev_parking_rate));
+        const hasDummyOpen = (proj.total_open_parking_capacity === 6 && (String(proj.open_parking_rate || '') === '150000' || !proj.open_parking_rate));
+        const hasExpandedFloors = /^(G\+\d+)\s+Floors?\s*\(\d+\s*Storey\)$/i.test(String(proj.total_floors || ''));
+
+        if (
+          proj.developer_email === 'developer@swaramayi.com' ||
+          proj.key_custody === 'Builder Site Office' ||
+          String(proj.architectural_description || proj.description || '').startsWith('Modern RCC Frame Structure, Vastu compliant layouts') ||
+          hasDummyCovered ||
+          hasDummyEv ||
+          hasDummyOpen ||
+          hasExpandedFloors
+        ) {
+          needsHealing = true;
         }
       });
     });
 
-    const cleanedDevs = developerMasterList.map((dev: any, devIdx: number) => {
-      let cleanDevId = dev.id || '';
-      const isLegacyDevId = !cleanDevId ||
-        cleanDevId.includes('655434') ||
-        cleanDevId.includes('640480') ||
-        cleanDevId.includes('688790') ||
-        cleanDevId.includes('000105') ||
-        /\bSRM-DEV-\d+-[1-9]\d{4,}\b/.test(cleanDevId);
+    // Also check if developer 1 has project starting at 000006
+    if (developerMasterList[0]?.projects?.[0]) {
+      const firstProjCode = String(developerMasterList[0].projects[0].code || developerMasterList[0].projects[0].id || '');
+      if (firstProjCode.includes('000006') || firstProjCode.includes('PRJ-')) {
+        needsHealing = true;
+      }
+    }
 
-      if (isLegacyDevId) {
-        cleanDevId = `SRM-DEV-${year}-${String(devIdx + 1).padStart(6, '0')}`;
-        modified = true;
+    if (!needsHealing) return;
+
+    let globalProjSeq = 0;
+    const oldToNewCodeMap = new Map<string, string>();
+
+    const cleanedDevs = developerMasterList.map((dev: any, devIdx: number) => {
+      const cleanDevId = `SRM-DEV-${year}-${String(devIdx + 1).padStart(6, '0')}`;
+      if (dev.id && dev.id !== cleanDevId) {
+        oldToNewCodeMap.set(dev.id, cleanDevId);
       }
 
       const cleanProjects = (dev.projects || []).map((proj: any) => {
-        let code = proj.code || proj.id;
-        const isLegacyProj = !code || seenCodes.has(code) || code.includes('000088') || code.includes('000089') || code.includes('000090');
-        if (isLegacyProj) {
-          maxSeq++;
-          code = `SRM-PROJ-${year}-${String(maxSeq).padStart(6, '0')}`;
-          modified = true;
+        globalProjSeq++;
+        const cleanProjCode = `SRM-PROJ-${year}-${String(globalProjSeq).padStart(6, '0')}`;
+        const oldCode = proj.code || proj.id || proj.project_id;
+        if (oldCode && oldCode !== cleanProjCode) {
+          oldToNewCodeMap.set(oldCode, cleanProjCode);
         }
-        seenCodes.add(code);
+
+        const isDummyArchDesc = String(proj.architectural_description || proj.description || '').startsWith('Modern RCC Frame Structure, Vastu compliant layouts');
+        const isDummyEmail = proj.developer_email === 'developer@swaramayi.com';
+        const isDummyCustody = proj.key_custody === 'Builder Site Office' || proj.keys_custody === 'Builder Site Office';
+        const hasDummyAmenities = Array.isArray(proj.amenities) && proj.amenities.length === 5 && proj.amenities[0] === '24/7 Power Backup' && proj.amenities[4] === 'Elevators';
+        
+        const isDummyCovered = proj.total_covered_parking_capacity === 12 && (String(proj.covered_parking_rate || '') === '250000' || !proj.covered_parking_rate);
+        const isDummyEv = proj.total_ev_parking_capacity === 4 && (String(proj.ev_parking_rate || '') === '350000' || !proj.ev_parking_rate);
+        const isDummyOpen = proj.total_open_parking_capacity === 6 && (String(proj.open_parking_rate || '') === '150000' || !proj.open_parking_rate);
+
+        const cleanFloors = (() => {
+          const tf = String(proj.total_floors || '').trim();
+          const m = tf.match(/^(G\+\d+)\s+Floors?\s*\(\d+\s*Storey\)$/i);
+          return m ? m[1] : tf;
+        })();
+
         return {
           ...proj,
-          id: code,
-          code: code
+          id: cleanProjCode,
+          code: cleanProjCode,
+          project_id: cleanProjCode,
+          developer: dev.name || proj.developer || 'Builder',
+          developer_id: cleanDevId,
+          developer_email: isDummyEmail ? '' : (proj.developer_email || ''),
+          key_custody: isDummyCustody ? '' : (proj.key_custody || ''),
+          keys_custody: isDummyCustody ? '' : (proj.keys_custody || ''),
+          architectural_description: isDummyArchDesc ? '' : (proj.architectural_description || ''),
+          description: isDummyArchDesc ? '' : (proj.description || ''),
+          amenities: hasDummyAmenities ? [] : (Array.isArray(proj.amenities) ? proj.amenities : []),
+          total_floors: cleanFloors,
+          total_covered_parking_capacity: isDummyCovered ? 0 : (proj.total_covered_parking_capacity || 0),
+          covered_parking_rate: isDummyCovered ? '' : (proj.covered_parking_rate || ''),
+          total_ev_parking_capacity: isDummyEv ? 0 : (proj.total_ev_parking_capacity || 0),
+          ev_parking_rate: isDummyEv ? '' : (proj.ev_parking_rate || ''),
+          total_open_parking_capacity: isDummyOpen ? 0 : (proj.total_open_parking_capacity || 0),
+          open_parking_rate: isDummyOpen ? '' : (proj.open_parking_rate || '')
         };
       });
+
+      const isDummyDevEmail = dev.email === 'developer@swaramayi.com';
       return {
         ...dev,
         id: cleanDevId,
+        email: isDummyDevEmail ? '' : (dev.email || ''),
         projects: cleanProjects
       };
     });
 
-    if (modified) {
-      setDeveloperMasterList(cleanedDevs);
-      if (setDevelopers) setDevelopers(cleanedDevs);
-      try {
-        localStorage.setItem('swaramayi_developers_v1', JSON.stringify(cleanedDevs));
-      } catch (e) {
-        console.error(e);
-      }
+    setDeveloperMasterList(cleanedDevs);
+    if (setDevelopers) setDevelopers(cleanedDevs);
+    try {
+      localStorage.setItem('swaramayi_developers_v1', JSON.stringify(cleanedDevs));
+      localStorage.setItem('swaramayi_max_dev_seq', String(cleanedDevs.length));
+      localStorage.setItem('swaramayi_max_project_seq', String(globalProjSeq));
+    } catch (e) {
+      console.error(e);
     }
-  }, []);
+
+    // Also update any matching properties
+    if (setProperties && Array.isArray(properties) && properties.length > 0) {
+      const updatedProps = properties.map((prop: any) => {
+        let changed = false;
+        let newProjId = prop.project_id;
+        let newDevId = prop.developer_id;
+        if (prop.project_id && oldToNewCodeMap.has(prop.project_id)) {
+          newProjId = oldToNewCodeMap.get(prop.project_id);
+          changed = true;
+        }
+        if (prop.developer_id && oldToNewCodeMap.has(prop.developer_id)) {
+          newDevId = oldToNewCodeMap.get(prop.developer_id);
+          changed = true;
+        }
+
+        let totalFloors = prop.total_floors;
+        if (totalFloors && /^(G\+\d+)\s+Floors?\s*\(\d+\s*Storey\)$/i.test(String(totalFloors))) {
+          const m = String(totalFloors).match(/^(G\+\d+)\s+Floors?\s*\(\d+\s*Storey\)$/i);
+          totalFloors = m ? m[1] : totalFloors;
+          changed = true;
+        }
+
+        let covCap = prop.total_covered_parking_capacity;
+        let covRate = prop.covered_parking_rate;
+        if (covCap === 12 && (String(covRate || '') === '250000' || !covRate)) {
+          covCap = 0;
+          covRate = '';
+          changed = true;
+        }
+
+        let evCap = prop.total_ev_parking_capacity;
+        let evRate = prop.ev_parking_rate;
+        if (evCap === 4 && (String(evRate || '') === '350000' || !evRate)) {
+          evCap = 0;
+          evRate = '';
+          changed = true;
+        }
+
+        let openCap = prop.total_open_parking_capacity;
+        let openRate = prop.open_parking_rate;
+        if (openCap === 6 && (String(openRate || '') === '150000' || !openRate)) {
+          openCap = 0;
+          openRate = '';
+          changed = true;
+        }
+
+        if (changed) {
+          return {
+            ...prop,
+            project_id: newProjId,
+            developer_id: newDevId,
+            total_floors: totalFloors,
+            total_covered_parking_capacity: covCap,
+            covered_parking_rate: covRate,
+            total_ev_parking_capacity: evCap,
+            ev_parking_rate: evRate,
+            total_open_parking_capacity: openCap,
+            open_parking_rate: openRate
+          };
+        }
+        return prop;
+      });
+      setProperties(updatedProps);
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({ developers: cleanedDevs, properties: updatedProps });
+      }
+    } else if (syncAllToMongoDB) {
+      syncAllToMongoDB({ developers: cleanedDevs });
+    }
+  }, [developerMasterList]);
 
   const [selectedDevId, setSelectedDevId] = React.useState<string>('');
   const [selectedProjectId, setSelectedProjectId] = React.useState<string>('');
@@ -2384,10 +2633,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       p.total_floors,
       p.total_floors_in_building,
       matchedMaster?.total_floors,
-      pickFromUnits('total_floors', 'total_floors_in_building'),
-      'G+4 Floors (5 Storey)'
+      pickFromUnits('total_floors', 'total_floors_in_building')
     );
-    const resolvedTotalFloors = normalizeTotalFloors(rawTotalFloors);
+    const resolvedTotalFloors = (() => {
+      if (!rawTotalFloors) return '';
+      const m = String(rawTotalFloors).trim().match(/^(G\+\d+)\s+Floors?\s*\(\d+\s*Storey\)$/i);
+      return m ? m[1] : String(rawTotalFloors).trim();
+    })();
 
     const resolvedTowers = pickStr(
       vaultProj?.number_of_towers,
@@ -2421,44 +2673,53 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       pickArrFromUnits('layout_photos')
     );
 
-    const resolvedCoveredCap = pickNumCap(
+    const rawCoveredCap = pickNumCap(
       vaultProj?.total_covered_parking_capacity,
       p.total_covered_parking_capacity,
       matchedMaster?.total_covered_parking_capacity,
       pickNumFromUnits('total_covered_parking_capacity')
     );
-    const resolvedCoveredRate = pickStr(
+    const rawCoveredRate = pickStr(
       vaultProj?.covered_parking_rate,
       p.covered_parking_rate,
       matchedMaster?.covered_parking_rate,
       pickFromUnits('covered_parking_rate', 'parking_rate', 'builder_default_rate')
     );
+    const isDummyCov = rawCoveredCap === 12 && (rawCoveredRate === '250000' || !rawCoveredRate);
+    const resolvedCoveredCap = isDummyCov ? 0 : rawCoveredCap;
+    const resolvedCoveredRate = isDummyCov ? '' : rawCoveredRate;
 
-    const resolvedEvCap = pickNumCap(
+    const rawEvCap = pickNumCap(
       vaultProj?.total_ev_parking_capacity,
       p.total_ev_parking_capacity,
       matchedMaster?.total_ev_parking_capacity,
       pickNumFromUnits('total_ev_parking_capacity')
     );
-    const resolvedEvRate = pickStr(
+    const rawEvRate = pickStr(
       vaultProj?.ev_parking_rate,
       p.ev_parking_rate,
       matchedMaster?.ev_parking_rate,
       pickFromUnits('ev_parking_rate')
     );
+    const isDummyEv = rawEvCap === 4 && (rawEvRate === '350000' || !rawEvRate);
+    const resolvedEvCap = isDummyEv ? 0 : rawEvCap;
+    const resolvedEvRate = isDummyEv ? '' : rawEvRate;
 
-    const resolvedOpenCap = pickNumCap(
+    const rawOpenCap = pickNumCap(
       vaultProj?.total_open_parking_capacity,
       p.total_open_parking_capacity,
       matchedMaster?.total_open_parking_capacity,
       pickNumFromUnits('total_open_parking_capacity')
     );
-    const resolvedOpenRate = pickStr(
+    const rawOpenRate = pickStr(
       vaultProj?.open_parking_rate,
       p.open_parking_rate,
       matchedMaster?.open_parking_rate,
       pickFromUnits('open_parking_rate')
     );
+    const isDummyOpen = rawOpenCap === 6 && (rawOpenRate === '150000' || !rawOpenRate);
+    const resolvedOpenCap = isDummyOpen ? 0 : rawOpenCap;
+    const resolvedOpenRate = isDummyOpen ? '' : rawOpenRate;
 
     const resolvedKeyCustody = pickStr(
       vaultProj?.key_custody,
@@ -2583,7 +2844,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       project_posting_id: resolved.project_posting_id || '',
       rera_id: resolved.rera_id || '',
       hera_no: resolved.hera_no || '',
-      total_floors: resolved.total_floors || 'G+4 Floors (5 Storey)',
+      total_floors: resolved.total_floors || '',
       number_of_towers: resolved.number_of_towers || '',
       key_custody: resolved.key_custody || '',
       keys_custody: resolved.keys_custody || '',
@@ -2643,53 +2904,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
   // AUTOMATED PROJECT ID GENERATOR (Starts at SRM-PROJ-2026-000001)
   const generateNextProjectId = React.useCallback(() => {
-    const year = new Date().getFullYear();
-    let maxSeq = 0;
-
-    // Scan properties (ignoring legacy offsets >= 88)
-    (properties || []).forEach((p: any) => {
-      const pCode = p.project_id || p.code || p.id || '';
-      const match = pCode.match(/SRM-PROJ-\d+-(\d+)/i) || pCode.match(/PROJ-\d+-(\d+)/i);
-      if (match) {
-        const num = parseInt(match[1], 10);
-        if (!isNaN(num) && num < 88 && num > maxSeq) maxSeq = num;
-      }
-    });
-
-    // Scan developerMasterList (ignoring legacy offsets >= 88)
-    (developerMasterList || []).forEach((dev: any) => {
-      (dev.projects || []).forEach((proj: any) => {
-        const pCode = proj.code || proj.id || '';
-        const match = pCode.match(/SRM-PROJ-\d+-(\d+)/i) || pCode.match(/PROJ-\d+-(\d+)/i);
-        if (match) {
-          const num = parseInt(match[1], 10);
-          if (!isNaN(num) && num < 88 && num > maxSeq) maxSeq = num;
-        }
-      });
-    });
-
-    // Collect all existing codes to guarantee 100% uniqueness
-    const existingCodes = new Set<string>();
-    (properties || []).forEach((p: any) => {
-      if (p.project_id && !p.project_id.includes('000088')) existingCodes.add(p.project_id);
-      if (p.code && !p.code.includes('000088')) existingCodes.add(p.code);
-    });
-    (developerMasterList || []).forEach((dev: any) => {
-      (dev.projects || []).forEach((proj: any) => {
-        if (proj.code && !proj.code.includes('000088')) existingCodes.add(proj.code);
-        if (proj.id && !proj.id.includes('000088')) existingCodes.add(proj.id);
-      });
-    });
-
-    let nextNum = maxSeq + 1;
-    let candidate = `SRM-PROJ-${year}-${String(nextNum).padStart(6, '0')}`;
-    while (existingCodes.has(candidate)) {
-      nextNum++;
-      candidate = `SRM-PROJ-${year}-${String(nextNum).padStart(6, '0')}`;
-    }
-
-    return candidate;
-  }, [properties, developerMasterList]);
+    return getNextSequentialProjectId(0, developerMasterList, properties);
+  }, [developerMasterList, properties, getNextSequentialProjectId]);
 
   // AUTOMATED SEQUENTIAL INDIVIDUAL PROPERTY CODE GENERATOR FOR EVERY ADDITION (SRM-PROP-2026-000428, SRM-PROP-2026-000429...)
   const generateDynamicPropertyCode = React.useCallback((offset = 0) => {
@@ -3036,8 +3252,41 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         email: newPropertyForm.developer_email || '',
         projects: [newProjEntry]
       };
-      updatedDevs = [newDevObj, ...updatedDevs];
+      updatedDevs.push(newDevObj);
     }
+
+    // Sort developers serially by developer ID
+    updatedDevs.sort((a: any, b: any) => {
+      const getSeq = (d: any) => {
+        const m = String(d.id || '').match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i) || String(d.id || '').match(/DEV-(\d+)/i);
+        return m ? parseInt(m[1], 10) : 999999;
+      };
+      return getSeq(a) - getSeq(b);
+    });
+
+    try {
+      let maxDevVal = 0;
+      updatedDevs.forEach((d: any) => {
+        const m = String(d.id || '').match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i) || String(d.id || '').match(/DEV-(\d+)/i);
+        if (m && m[1]) {
+          const v = parseInt(m[1], 10);
+          if (!isNaN(v) && v > maxDevVal && v < 50000) maxDevVal = v;
+        }
+      });
+      localStorage.setItem('swaramayi_max_dev_seq', String(maxDevVal));
+
+      let maxProjVal = 0;
+      updatedDevs.forEach((d: any) => {
+        (d.projects || []).forEach((p: any) => {
+          const m = String(p.project_id || p.code || p.id || '').match(/SRM-PROJ-(?:20\d{2}-)?(\d+)/i);
+          if (m && m[1]) {
+            const v = parseInt(m[1], 10);
+            if (!isNaN(v) && v > maxProjVal && v < 50000) maxProjVal = v;
+          }
+        });
+      });
+      localStorage.setItem('swaramayi_max_project_seq', String(maxProjVal));
+    } catch (e) {}
 
     setDeveloperMasterList(updatedDevs);
     if (setDevelopers) {
@@ -3089,15 +3338,17 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       setProperties(updatedProperties);
     }
 
-    // Auto-create Project-Wise Developer Channel Partner Agreement
-    createOrUpdateDevAgreement(
-      newPropertyForm.developer,
-      newPropertyForm.title,
-      devProjectMobile,
-      newPropertyForm.locality,
-      undefined,
-      Boolean(devProjectOtpVerified)
-    );
+    // Auto-create Project-Wise Developer Channel Partner Agreement ONLY if OTP verified
+    if (devProjectOtpVerified) {
+      createOrUpdateDevAgreement(
+        newPropertyForm.developer,
+        newPropertyForm.title,
+        devProjectMobile,
+        newPropertyForm.locality,
+        undefined,
+        true
+      );
+    }
 
     // ALSO IMMEDIATELY SYNC RECORD TO MONGODB ATLAS CLUSTER
     try {
@@ -3518,7 +3769,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       open_parking_rate: openRate,
 
       // Section 2 Specs & IDs
-      project_posting_id: p.project_posting_id || p.campaign_id || 'PRJ-POST-2026-8802',
+      project_posting_id: (p.project_posting_id && p.project_posting_id !== 'PRJ-POST-2026-8802') ? p.project_posting_id : (p.campaign_id && p.campaign_id !== 'CMP-2026-8802') ? p.campaign_id : '',
       rera_id: p.rera_id || p.reraId || p.rera || matchedMaster?.rera_id || '',
       hera_no: p.hera_no || p.heraId || p.hera || matchedMaster?.hera_no || '',
       property_type: p.property_type || p.type || 'Flat / Apartment (New / Builder)',
@@ -3571,10 +3822,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       handover_month_year: p.handover_month_year || `${p.handover_month || 'December'} ${p.handover_year || '2026'}`,
       maintenance_monthly: p.maintenance_monthly || '',
       status: p.status || 'AVAILABLE',
-      key_custody: p.key_custody || p.keys_custody || matchedMaster?.key_custody || '',
-      keys_custody: p.key_custody || p.keys_custody || matchedMaster?.key_custody || '',
-      description: p.description || p.architectural_description || matchedMaster?.description || '',
-      site_person_name: p.site_person_name || '',
+      key_custody: (p.key_custody && p.key_custody !== 'Builder Site Office') ? p.key_custody : (p.keys_custody && p.keys_custody !== 'Builder Site Office') ? p.keys_custody : (matchedMaster?.key_custody && matchedMaster?.key_custody !== 'Builder Site Office') ? matchedMaster.key_custody : '',
+      keys_custody: (p.key_custody && p.key_custody !== 'Builder Site Office') ? p.key_custody : (p.keys_custody && p.keys_custody !== 'Builder Site Office') ? p.keys_custody : (matchedMaster?.key_custody && matchedMaster?.key_custody !== 'Builder Site Office') ? matchedMaster.key_custody : '',
+      description: (p.description && !p.description.toLowerCase().includes('pool facing vastu east')) ? p.description : (p.architectural_description && !p.architectural_description.toLowerCase().includes('pool facing vastu east')) ? p.architectural_description : (matchedMaster?.description && !matchedMaster?.description.toLowerCase().includes('pool facing vastu east')) ? matchedMaster.description : '',
+      site_person_name: (p.site_person_name && p.site_person_name !== 'Avishek Das (Super Admin)') ? p.site_person_name : '',
       site_person_contact: p.site_person_contact || ''
     };
 
@@ -5276,9 +5527,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                         <label style={{ fontSize: '0.78rem', color: isLight ? '#0284c7' : '#38bdf8', fontWeight: '800', display: 'block', marginBottom: '6px' }}>🆔 Project Posting ID</label>
                         <input 
                           type="text" 
-                          value={newPropertyForm.project_posting_id !== undefined ? newPropertyForm.project_posting_id : (newPropertyForm.campaign_id || 'PRJ-POST-2026-8802')} 
+                          value={newPropertyForm.project_posting_id || newPropertyForm.campaign_id || ''} 
                           onChange={(e) => setNewPropertyForm({ ...newPropertyForm, project_posting_id: e.target.value })} 
-                          placeholder="e.g. PRJ-POST-2026-8802" 
+                          placeholder="e.g. PRJ-POST-2026-0001 (Optional)" 
                           style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '1.5px solid #0284c7', color: '#fbbf24', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
                         />
                       </div>
@@ -6279,9 +6530,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                              (itemTitle && displayTitle && itemTitle.toLowerCase().trim() === displayTitle.toLowerCase().trim());
                     });
 
-                    const totalCoveredCap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : 24;
-                    const totalEvCap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : 6;
-                    const totalOpenCap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : 12;
+                    const totalCoveredCap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : 0;
+                    const totalEvCap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : 0;
+                    const totalOpenCap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : 0;
 
                     const allocCovered = projProps.filter(item => String(item.car_parking || '').toLowerCase().includes('covered')).length;
                     const allocEv = projProps.filter(item => String(item.car_parking || '').toLowerCase().includes('ev')).length;
@@ -6291,16 +6542,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     const availEv = Math.max(0, totalEvCap - allocEv);
                     const availOpen = Math.max(0, totalOpenCap - allocOpen);
 
-                    const assignedParking = String(p.car_parking || '1 Covered Basement Parking Slot');
+                    const assignedParking = String(p.car_parking || '');
                     const isCovered = (assignedParking).toLowerCase().includes('covered');
                     const isEv = (assignedParking).toLowerCase().includes('ev');
                     const isOpen = (assignedParking).toLowerCase().includes('open');
 
                     const parkingRateStr = isEv 
-                      ? (matchedMaster?.ev_parking_rate || '450000') 
+                      ? (matchedMaster?.ev_parking_rate || '') 
                       : isOpen 
-                      ? (matchedMaster?.open_parking_rate || '150000') 
-                      : (matchedMaster?.covered_parking_rate || '300000');
+                      ? (matchedMaster?.open_parking_rate || '') 
+                      : (matchedMaster?.covered_parking_rate || '');
 
                     const availCountForType = isEv ? availEv : isOpen ? availOpen : availCovered;
                     const totalCapForType = isEv ? totalEvCap : isOpen ? totalOpenCap : totalCoveredCap;
@@ -6538,9 +6789,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                (itemTitle && displayTitle && itemTitle.toLowerCase().trim() === displayTitle.toLowerCase().trim());
                       });
 
-                      const totalCoveredCap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : 24;
-                      const totalEvCap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : 6;
-                      const totalOpenCap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : 12;
+                      const totalCoveredCap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : 0;
+                      const totalEvCap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : 0;
+                      const totalOpenCap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : 0;
 
                       const allocCovered = projProps.filter(item => String(item.car_parking || '').toLowerCase().includes('covered')).length;
                       const allocEv = projProps.filter(item => String(item.car_parking || '').toLowerCase().includes('ev')).length;
@@ -6550,16 +6801,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       const availEv = Math.max(0, totalEvCap - allocEv);
                       const availOpen = Math.max(0, totalOpenCap - allocOpen);
 
-                      const assignedParking = String(p.car_parking || '1 Covered Basement Parking Slot');
+                      const assignedParking = String(p.car_parking || '');
                       const isCovered = (assignedParking).toLowerCase().includes('covered');
                       const isEv = (assignedParking).toLowerCase().includes('ev');
                       const isOpen = (assignedParking).toLowerCase().includes('open');
 
                       const parkingRateStr = isEv 
-                        ? (matchedMaster?.ev_parking_rate || '450000') 
+                        ? (matchedMaster?.ev_parking_rate || '') 
                         : isOpen 
-                        ? (matchedMaster?.open_parking_rate || '150000') 
-                        : (matchedMaster?.covered_parking_rate || '300000');
+                        ? (matchedMaster?.open_parking_rate || '') 
+                        : (matchedMaster?.covered_parking_rate || '');
 
                       const availCountForType = isEv ? availEv : isOpen ? availOpen : availCovered;
                       const totalCapForType = isEv ? totalEvCap : isOpen ? totalOpenCap : totalCoveredCap;
@@ -6898,14 +7149,51 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   onClick={() => {
                     if (!newDevNameInput || !newDevMobileInput) return alert('Please enter Developer Name & Primary Mobile Phone');
                     const generatedDevId = getNextSequentialDeveloperId(0, developerMasterList);
+                    const generatedProjId = newDevProjectTitleInput 
+                      ? getNextSequentialProjectId(0, developerMasterList, properties) 
+                      : '';
+
+                    const newProjEntry = newDevProjectTitleInput ? {
+                      id: generatedProjId,
+                      code: generatedProjId,
+                      project_id: generatedProjId,
+                      title: newDevProjectTitleInput,
+                      developer: newDevNameInput,
+                      developer_id: generatedDevId,
+                      developer_mobile: newDevMobileInput,
+                      developer_alt_mobile: newDevAltMobileInput || '',
+                      developer_email: newDevEmailInput || '',
+                      locality: '',
+                      total_floors: '',
+                      number_of_towers: '',
+                      otp_verified: false,
+                      devProjectOtpVerified: false,
+                      building_photos: [],
+                      amenities: [],
+                      total_covered_parking_capacity: 0,
+                      covered_parking_rate: '',
+                      total_ev_parking_capacity: 0,
+                      ev_parking_rate: '',
+                      total_open_parking_capacity: 0,
+                      open_parking_rate: '',
+                      key_custody: '',
+                      architectural_description: ''
+                    } : null;
+
                     const newDevObj = {
                       id: generatedDevId,
                       name: newDevNameInput,
                       mobile: newDevAltMobileInput ? `${newDevMobileInput} / ${newDevAltMobileInput}` : newDevMobileInput,
                       email: newDevEmailInput || '',
-                      projects: newDevProjectTitleInput ? [{ id: `PRJ-${Date.now()}`, code: `PRJ-${Date.now()}`, title: newDevProjectTitleInput, locality: 'Locality Hub' }] : []
+                      projects: newProjEntry ? [newProjEntry] : []
                     };
-                    const nextDevList = [newDevObj, ...developerMasterList];
+                    const nextDevList = [...developerMasterList, newDevObj].sort((a: any, b: any) => {
+                      const getSeq = (d: any) => {
+                        const m = String(d.id || '').match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i) || String(d.id || '').match(/DEV-(\d+)/i);
+                        return m ? parseInt(m[1], 10) : 999999;
+                      };
+                      return getSeq(a) - getSeq(b);
+                    });
                     setDeveloperMasterList(nextDevList);
                     if (setDevelopers) {
                       setDevelopers(nextDevList);
@@ -6935,9 +7223,17 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       localStorage.setItem('swaramayi_recycled_items', JSON.stringify(updatedRecycled));
                     } catch (e) {}
 
-                    if (newDevProjectTitleInput) {
-                      createOrUpdateDevAgreement(newDevNameInput, newDevProjectTitleInput, newDevMobileInput, 'Locality Hub', undefined, true);
-                    }
+                    // Update sequence watermarks in localStorage
+                    try {
+                      const devSeqMatch = generatedDevId.match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i);
+                      if (devSeqMatch) localStorage.setItem('swaramayi_max_dev_seq', String(parseInt(devSeqMatch[1], 10)));
+                      if (generatedProjId) {
+                        const projSeqMatch = generatedProjId.match(/SRM-PROJ-(?:20\d{2}-)?(\d+)/i);
+                        if (projSeqMatch) localStorage.setItem('swaramayi_max_project_seq', String(parseInt(projSeqMatch[1], 10)));
+                      }
+                    } catch (e) {}
+
+                    // NOTE: Agreement is NOT created here. It will only be created after explicit developer OTP verification.
                     setNewDevNameInput('');
                     setNewDevMobileInput('');
                     setNewDevAltMobileInput('');
@@ -6949,7 +7245,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     if (syncAllToMongoDB) {
                       syncAllToMongoDB({ developers: nextDevList, recycled_items: updatedRecycled });
                     }
-                    alert(`🎉 REGISTERED NEW DEVELOPER MASTER!\n\n• Developer ID: ${newDevObj.id}\n• Builder Name: ${newDevObj.name}\n• Phone: ${newDevObj.mobile}`);
+                    const projCodeMsg = generatedProjId ? ('\n• Master Project Code: ' + generatedProjId) : '';
+                    alert(`🎉 REGISTERED NEW DEVELOPER MASTER!\n\n• Developer ID: ${newDevObj.id}\n• Builder Name: ${newDevObj.name}\n• Phone: ${newDevObj.mobile}${projCodeMsg}`);
                   }}
                   style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '9px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', width: '100%', textAlign: 'center', height: '100%', minHeight: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap' }}
                 >
@@ -6961,7 +7258,15 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             {/* DEVELOPERS MASTER LIST TABLE */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {(() => {
-                const activeDevelopers = (developerMasterList || []).filter((d: any) => !isItemInRecycledSet(d, recycledSet));
+                const activeDevelopers = (developerMasterList || [])
+                  .filter((d: any) => !isItemInRecycledSet(d, recycledSet))
+                  .sort((a: any, b: any) => {
+                    const getSeq = (d: any) => {
+                      const m = String(d.id || '').match(/SRM-DEV-(?:20\d{2}-)?(\d+)/i) || String(d.id || '').match(/DEV-(\d+)/i);
+                      return m ? parseInt(m[1], 10) : 999999;
+                    };
+                    return getSeq(a) - getSeq(b);
+                  });
                 if (activeDevelopers.length === 0) {
                   return (
                     <div style={{ padding: '30px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', fontStyle: 'italic', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155' }}>
@@ -7274,7 +7579,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           />
                           <div>
                             <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: '900', fontFamily: 'monospace', background: 'rgba(251, 191, 36, 0.15)', border: '1px solid rgba(251, 191, 36, 0.3)', padding: '2px 8px', borderRadius: '4px' }}>
-                              🆔 {(dev.id || '').includes('655434') || (dev.id || '').includes('640480') || (dev.id || '').includes('688790') || (dev.id || '').includes('000105') ? 'SRM-DEV-2026-000001' : (dev.id || 'SRM-DEV-2026-000001')}
+                              🆔 {dev.id || 'SRM-DEV-2026-000001'}
                             </span>
                             <h4 style={{ fontSize: '1.05rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '4px' }}>
                               🏢 {dev.name}
@@ -7366,10 +7671,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           (m.code && p.code && m.code === p.code)
                         );
 
-                        let projCodeStr = p.code || p.id || matchedMaster?.code || matchedMaster?.id || `SRM-PROJ-2026-${String(pIdx + 1).padStart(6, '0')}`;
-                        if (projCodeStr.includes('000088')) projCodeStr = 'SRM-PROJ-2026-000001';
-                        else if (projCodeStr.includes('000089')) projCodeStr = 'SRM-PROJ-2026-000002';
-                        else if (projCodeStr.includes('000090')) projCodeStr = 'SRM-PROJ-2026-000003';
+                        let projCodeStr = p.code || p.id || p.project_id || matchedMaster?.code || matchedMaster?.id || '';
+                        if (!projCodeStr || projCodeStr.startsWith('PRJ-') || projCodeStr.includes('000088')) {
+                          projCodeStr = `SRM-PROJ-2026-${String(pIdx + 1).padStart(6, '0')}`;
+                        } else if (projCodeStr.includes('000089')) {
+                          projCodeStr = 'SRM-PROJ-2026-000002';
+                        } else if (projCodeStr.includes('000090')) {
+                          projCodeStr = 'SRM-PROJ-2026-000003';
+                        }
                         
                         const projUnits = properties.filter(prop => 
                           (prop.project_id && (prop.project_id === projCodeStr || prop.project_id === p.code || prop.project_id === p.id)) ||
@@ -7413,15 +7722,15 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           project_id: projCodeStr,
                           code: projCodeStr,
                           property_code: rawMatchedProp?.property_code || projCodeStr,
-                          locality: resolvedProj?.locality || p.locality || rawMatchedProp?.locality || 'Barasat, Kolkata',
-                          full_address: resolvedProj?.full_address || rawMatchedProp?.full_address || `${p.title}, ${p.locality || 'Barasat'}, North 24 Parganas, Kolkata, West Bengal`,
-                          latitude: resolvedProj?.latitude || rawMatchedProp?.latitude || matchedMaster?.latitude || '22.722361',
-                          longitude: resolvedProj?.longitude || rawMatchedProp?.longitude || matchedMaster?.longitude || '88.493403',
+                          locality: resolvedProj?.locality || p.locality || rawMatchedProp?.locality || '',
+                          full_address: resolvedProj?.full_address || rawMatchedProp?.full_address || (p.locality ? `${p.title}, ${p.locality}` : p.title),
+                          latitude: resolvedProj?.latitude || rawMatchedProp?.latitude || p.latitude || p.lat || '',
+                          longitude: resolvedProj?.longitude || rawMatchedProp?.longitude || p.longitude || p.lng || '',
                           configuration: rawMatchedProp?.configuration || rawMatchedProp?.bhk || '',
-                          carpet_area: rawMatchedProp?.carpet_area || '700 Sq.Ft.',
-                          super_builtup_area: rawMatchedProp?.super_builtup_area || '950 Sq.Ft.',
-                          final_price: rawMatchedProp?.final_price || '₹35,00,000',
-                          price_sqft: rawMatchedProp?.price_sqft || '₹3,684',
+                          carpet_area: rawMatchedProp?.carpet_area || '',
+                          super_builtup_area: rawMatchedProp?.super_builtup_area || '',
+                          final_price: rawMatchedProp?.final_price || '',
+                          price_sqft: rawMatchedProp?.price_sqft || '',
                           status: rawMatchedProp?.status || 'LIVE',
                           otp_verified: isDevOtpVerified,
                           devProjectOtpVerified: isDevOtpVerified
@@ -7533,7 +7842,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                 )}
                                 {(p.total_floors || matchedProp.total_floors) && (
                                   <span style={{ fontSize: '0.68rem', background: 'rgba(56, 189, 248, 0.15)', color: '#0284c7', border: '1px solid #38bdf8', padding: '2px 8px', borderRadius: '10px', fontWeight: '900' }}>
-                                    🏬 {p.total_floors || matchedProp.total_floors}
+                                    🏬 {(() => {
+                                      const raw = String(p.total_floors || matchedProp.total_floors || '').trim();
+                                      const m = raw.match(/^(G\+\d+)\s+Floors?\s*\(\d+\s*Storey\)$/i);
+                                      return m ? m[1] : raw;
+                                    })()}
                                   </span>
                                 )}
                                 {(p.number_of_towers || matchedProp.number_of_towers) && (
@@ -7739,13 +8052,30 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           (p.title || '').toLowerCase().trim() === (viewPropertyModal.title || '').toLowerCase().trim()
         );
 
-        const totalCoveredCap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : 0;
-        const totalEvCap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : 0;
-        const totalOpenCap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : 0;
+        const totalCoveredCap = (() => {
+          const cap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : (viewPropertyModal.total_covered_parking_capacity || 0);
+          const rate = String(matchedMaster?.covered_parking_rate || viewPropertyModal.covered_parking_rate || '').trim();
+          if (cap === 12 && (rate === '250000' || rate === '')) return 0;
+          return cap;
+        })();
 
-        const coveredRateStr = matchedMaster?.covered_parking_rate ? parseInt(matchedMaster.covered_parking_rate, 10).toLocaleString('en-IN') : '0';
-        const evRateStr = matchedMaster?.ev_parking_rate ? parseInt(matchedMaster.ev_parking_rate, 10).toLocaleString('en-IN') : '0';
-        const openRateStr = matchedMaster?.open_parking_rate ? parseInt(matchedMaster.open_parking_rate, 10).toLocaleString('en-IN') : '0';
+        const totalEvCap = (() => {
+          const cap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : (viewPropertyModal.total_ev_parking_capacity || 0);
+          const rate = String(matchedMaster?.ev_parking_rate || viewPropertyModal.ev_parking_rate || '').trim();
+          if (cap === 4 && (rate === '350000' || rate === '')) return 0;
+          return cap;
+        })();
+
+        const totalOpenCap = (() => {
+          const cap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : (viewPropertyModal.total_open_parking_capacity || 0);
+          const rate = String(matchedMaster?.open_parking_rate || viewPropertyModal.open_parking_rate || '').trim();
+          if (cap === 6 && (rate === '150000' || rate === '')) return 0;
+          return cap;
+        })();
+
+        const coveredRateStr = (matchedMaster?.covered_parking_rate && totalCoveredCap > 0) ? parseInt(matchedMaster.covered_parking_rate, 10).toLocaleString('en-IN') : '0';
+        const evRateStr = (matchedMaster?.ev_parking_rate && totalEvCap > 0) ? parseInt(matchedMaster.ev_parking_rate, 10).toLocaleString('en-IN') : '0';
+        const openRateStr = (matchedMaster?.open_parking_rate && totalOpenCap > 0) ? parseInt(matchedMaster.open_parking_rate, 10).toLocaleString('en-IN') : '0';
 
         const modalAllocCovered = modalProjProps.filter(p => (p.car_parking || '').toLowerCase().includes('covered')).length;
         const modalAllocEv = modalProjProps.filter(p => (p.car_parking || '').toLowerCase().includes('ev')).length;
@@ -7933,7 +8263,12 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Project Posting ID</span>
-                      <strong style={{ color: '#a855f7', fontFamily: 'monospace' }}>{viewPropertyModal.project_posting_id || viewPropertyModal.campaign_id || 'PRJ-POST-2026-8802'}</strong>
+                      <strong style={{ color: '#a855f7', fontFamily: 'monospace' }}>
+                        {(() => {
+                          const pId = viewPropertyModal.project_posting_id || viewPropertyModal.campaign_id;
+                          return (pId && pId !== 'PRJ-POST-2026-8802' && pId !== 'CMP-2026-8802') ? pId : 'N/A';
+                        })()}
+                      </strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Developer Primary Mobile</span>
@@ -7945,7 +8280,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Site Incharge Person</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.site_person_name || 'N/A'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>
+                        {(viewPropertyModal.site_person_name && viewPropertyModal.site_person_name !== 'Avishek Das (Super Admin)') ? viewPropertyModal.site_person_name : 'N/A'}
+                      </strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Site Person Contact</span>
@@ -7955,7 +8292,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Developer Email Address</span>
                       {(() => {
                         const rawEmail = viewPropertyModal.developer_email || devObj?.email || devObj?.developer_email || matchedMaster?.developer_email || matchedMaster?.email || '';
-                        const devEmailDisp = (rawEmail && !rawEmail.includes('@builder.com') && !rawEmail.includes('biswajitdas')) ? rawEmail : '';
+                        const devEmailDisp = (rawEmail && !rawEmail.includes('@builder.com') && !rawEmail.includes('biswajitdas') && !rawEmail.includes('developer@swaramayi.com')) ? rawEmail : '';
                         return (
                           <strong style={{ color: devEmailDisp ? '#a855f7' : (isLight ? '#64748b' : '#94a3b8'), fontFamily: 'monospace' }}>
                             {devEmailDisp || 'N/A'}
@@ -8150,7 +8487,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Deduction / Loading (%)</span>
-                      <strong style={{ color: '#eab308', fontWeight: '900' }}>{`${parseDeductionPct(viewPropertyModal.deduction_pct, viewPropertyModal.super_builtup_area || superBuiltupDisp, viewPropertyModal.carpet_area)}%`}</strong>
+                      <strong style={{ color: '#eab308', fontWeight: '900' }}>
+                        {viewPropertyModal.carpet_area && (viewPropertyModal.super_builtup_area || superBuiltupDisp !== 'N/A')
+                          ? `${parseDeductionPct(viewPropertyModal.deduction_pct, viewPropertyModal.super_builtup_area || superBuiltupDisp, viewPropertyModal.carpet_area)}%`
+                          : (viewPropertyModal.deduction_pct ? `${viewPropertyModal.deduction_pct}%` : 'N/A')}
+                      </strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Tower / Block Name</span>
@@ -8166,7 +8507,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Total Floors in Building</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.total_floors || 'N/A'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>
+                        {(() => {
+                          const raw = String(viewPropertyModal.total_floors || matchedMaster?.total_floors || '').trim();
+                          const m = raw.match(/^(G\+\d+)\s+Floors?\s*\(\d+\s*Storey\)$/i);
+                          return m ? m[1] : (raw || 'N/A');
+                        })()}
+                      </strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Facing Direction</span>
@@ -8194,7 +8541,12 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Architectural Description / Notes</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.8rem' }}>{viewPropertyModal.description || 'N/A'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.8rem' }}>
+                        {(() => {
+                          const desc = viewPropertyModal.description || viewPropertyModal.architectural_description;
+                          return (desc && !desc.toLowerCase().includes('pool facing vastu east')) ? desc : 'N/A';
+                        })()}
+                      </strong>
                     </div>
                   </div>
                 </div>
@@ -8215,7 +8567,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Statutory GST Charge (%)</span>
-                      <strong style={{ color: '#a855f7', fontWeight: '900' }}>{viewPropertyModal.gst_pct || '5%'}</strong>
+                      <strong style={{ color: '#a855f7', fontWeight: '900' }}>{viewPropertyModal.gst_pct || 'N/A'}</strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Parking Slot Allocation</span>
@@ -8272,7 +8624,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       💰 Total Base price with Others Charges (INR) [Base Flat + Floor Rise + PLC + Parking + Clubhouse + Maint + Legal]
                     </span>
                     <strong style={{ fontSize: '1.2rem', color: '#22c55e', fontWeight: '900' }}>
-                      {computeTotalBaseWithOtherCharges(viewPropertyModal)}
+                      {computeTotalBaseWithOtherCharges(viewPropertyModal) === '₹0' ? 'N/A (No Inventory Units Priced Yet)' : computeTotalBaseWithOtherCharges(viewPropertyModal)}
                     </strong>
                     <span style={{ fontSize: '0.72rem', color: isLight ? '#475569' : '#94a3b8', fontWeight: '700' }}>
                       Calculated sum of Base Property Asking Price + Floor Rise + PLC + Covered Car Parking Slot Charge + Clubhouse + Advance Maintenance (1 Year) + Legal Charges.
@@ -8286,13 +8638,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </span>
                     <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : windowWidth <= 900 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px', fontSize: '0.8rem' }}>
                       <div style={{ background: 'rgba(56, 189, 248, 0.1)', padding: '8px 12px', borderRadius: '6px', border: '1px solid #0284c7' }}>
-                        <span style={{ color: '#38bdf8', fontWeight: '800' }}>🚗 Covered Stock:</span> <strong style={{ color: '#4ade80' }}>{modalAvailCovered} / {totalCoveredCap} Available</strong> (₹{coveredRateStr})
+                        <span style={{ color: '#38bdf8', fontWeight: '800' }}>🚗 Covered Stock:</span> <strong style={{ color: '#4ade80' }}>{totalCoveredCap > 0 ? `${modalAvailCovered} / ${totalCoveredCap} Available (₹${coveredRateStr})` : 'Not Configured'}</strong>
                       </div>
                       <div style={{ background: 'rgba(234, 179, 8, 0.1)', padding: '8px 12px', borderRadius: '6px', border: '1px solid #eab308' }}>
-                        <span style={{ color: '#eab308', fontWeight: '800' }}>⚡ EV Stations:</span> <strong style={{ color: '#4ade80' }}>{modalAvailEv} / {totalEvCap} Available</strong> (₹{evRateStr})
+                        <span style={{ color: '#eab308', fontWeight: '800' }}>⚡ EV Stations:</span> <strong style={{ color: '#4ade80' }}>{totalEvCap > 0 ? `${modalAvailEv} / ${totalEvCap} Available (₹${evRateStr})` : 'Not Configured'}</strong>
                       </div>
                       <div style={{ background: 'rgba(34, 197, 94, 0.1)', padding: '8px 12px', borderRadius: '6px', border: '1px solid #22c55e' }}>
-                        <span style={{ color: '#4ade80', fontWeight: '800' }}>🅿️ Open Surface:</span> <strong style={{ color: '#4ade80' }}>{modalAvailOpen} / {totalOpenCap} Available</strong> (₹{openRateStr})
+                        <span style={{ color: '#4ade80', fontWeight: '800' }}>🅿️ Open Surface:</span> <strong style={{ color: '#4ade80' }}>{totalOpenCap > 0 ? `${modalAvailOpen} / ${totalOpenCap} Available (₹${openRateStr})` : 'Not Configured'}</strong>
                       </div>
                     </div>
                   </div>
@@ -8571,7 +8923,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 640 ? '1fr' : 'repeat(3, 1fr)', gap: '12px', fontSize: '0.85rem' }}>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Site Incharge Person Name</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.site_person_name || 'N/A'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>
+                        {(viewPropertyModal.site_person_name && viewPropertyModal.site_person_name !== 'Avishek Das (Super Admin)') ? viewPropertyModal.site_person_name : 'N/A'}
+                      </strong>
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Site Person Contact Phone</span>
@@ -8579,7 +8933,12 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Property Highlights & Notes</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.description || 'N/A'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>
+                        {(() => {
+                          const desc = viewPropertyModal.description || viewPropertyModal.architectural_description;
+                          return (desc && !desc.toLowerCase().includes('pool facing vastu east')) ? desc : 'N/A';
+                        })()}
+                      </strong>
                     </div>
                   </div>
                 </div>

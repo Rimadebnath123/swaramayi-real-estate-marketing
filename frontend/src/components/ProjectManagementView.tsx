@@ -508,7 +508,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   // ==========================================
   const BULK_PROPERTY_COLUMNS = [
     // 1. Master Project ID & Link (2 fields - project details & developer credentials auto-linked)
+    { header: 'Property Code', key: 'property_code', section: '1. Master Project Link', sample1: 'SRM-PROP-2026-000001', sample2: 'SRM-PROP-2026-000002', desc: 'Unique property inventory code' },
+    { header: 'Property Title', key: 'title', section: '1. Master Project Link', sample1: 'AHANA APARTMENT', sample2: 'ABILASH APARTMENT', desc: 'Project or building title' },
     { header: 'Master Project ID', key: 'project_id', section: '1. Master Project Link', sample1: 'SRM-PROJ-2026-000004', sample2: 'SRM-PROJ-2026-000002', desc: 'Master project code to link this unit to (e.g. SRM-PROJ-2026-000004). Developer, locality, address, RERA & building specs auto-link.' },
+    { header: 'Developer ID', key: 'developer_id', section: '1. Master Project Link', sample1: 'SRM-DEV-2026-000003', sample2: 'SRM-DEV-2026-000001', desc: 'Developer ID code' },
+    { header: 'Developer Name', key: 'developer', section: '1. Master Project Link', sample1: 'ARNAB DAS', sample2: 'ISHANA MONDAL', desc: 'Developer or builder name' },
     { header: 'Project Posting ID', key: 'project_posting_id', section: '1. Master Project Link', sample1: 'PRJ-POST-2026-8802', sample2: 'PRJ-POST-2026-8803', desc: 'Marketing / posting campaign tracking ID' },
 
     // 2. Unit Configuration, Area, Floor & Orientation Specifications (11 fields)
@@ -533,6 +537,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     { header: 'Floor Rise Charge (INR)', key: 'floor_rise_charge', section: '3. Pricing & Commercials', sample1: 0, sample2: 50000, desc: 'Additional floor rise charge' },
     { header: 'Preferential Location Charge PLC (INR)', key: 'plc_charge', section: '3. Pricing & Commercials', sample1: 0, sample2: 75000, desc: 'PLC for park, pool or road-facing units' },
     { header: 'Covered Car Parking Slot Charge (INR)', key: 'parking_price', section: '3. Pricing & Commercials', sample1: 250000, sample2: 350000, desc: 'Dedicated covered vehicle parking cost' },
+    { header: 'Covered Stock', key: 'covered_stock', section: '3. Pricing & Commercials', sample1: '2 / 2 Available (₹9,00,000)', sample2: 'Not Configured', desc: 'Project covered vehicle parking availability and rate' },
+    { header: 'EV Stations', key: 'ev_stations', section: '3. Pricing & Commercials', sample1: 'Not Configured', sample2: '1 / 2 Available (₹3,50,000)', desc: 'Project electric vehicle EV charging stations stock and rate' },
+    { header: 'Open Surface', key: 'open_surface', section: '3. Pricing & Commercials', sample1: 'Not Configured', sample2: '3 / 4 Available (₹1,50,000)', desc: 'Project open surface parking stock and rate' },
     { header: 'Clubhouse & Amenities Membership (INR)', key: 'amenity_charges', section: '3. Pricing & Commercials', sample1: 50000, sample2: 150000, desc: 'Clubhouse, gym and amenities membership fee' },
     { header: 'Advance Maintenance Charge (INR)', key: 'advance_maintenance_charge', section: '3. Pricing & Commercials', sample1: 25000, sample2: 30000, desc: 'Initial maintenance deposit / sinking fund' },
     { header: 'Lawyer & Legal Verification Charge (INR)', key: 'legal_doc_charge', section: '3. Pricing & Commercials', sample1: 45000, sample2: 45000, desc: 'Legal vetting and document preparation charge' },
@@ -649,10 +656,99 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         handleDownloadExcelTemplate();
         return;
       }
+      const allMasters = getAllMasterProjects();
       const headers = BULK_PROPERTY_COLUMNS.map(c => c.header);
       const rows = properties.map(p => {
+        const displayTitle = p.title || p.property_name || p.name || 'Untitled Property';
+        const displayDeveloper = p.developer || p.developer_name || p.builder_name || '';
+
+        const matchedMaster = allMasters.find(m =>
+          (m.title && displayTitle && m.title.toLowerCase().trim() === displayTitle.toLowerCase().trim()) ||
+          (m.id && p.project_id && m.id === p.project_id) ||
+          (m.code && p.project_id && m.code === p.project_id)
+        );
+
+        const devObj = (developerMasterList || []).find((d: any) =>
+          (d.id && p.developer_id && d.id === p.developer_id) ||
+          (d.name && displayDeveloper && d.name.toLowerCase().trim() === displayDeveloper.toLowerCase().trim())
+        );
+
+        const devId = p.developer_id || devObj?.id || matchedMaster?.developer_id || (p.project_id && p.project_id.startsWith('SRM-DEV-') ? p.project_id : '') || 'N/A';
+        const projId = (p.project_id && !p.project_id.startsWith('SRM-DEV-')) ? p.project_id : (matchedMaster?.code || matchedMaster?.id || '');
+
+        const projProps = properties.filter(item => {
+          const itemTitle = (item.title || item.property_name || '').toLowerCase().trim();
+          const targetTitle = displayTitle.toLowerCase().trim();
+          const itemProjId = item.project_id;
+          return (projId && itemProjId === projId) || (targetTitle && itemTitle === targetTitle);
+        });
+
+        const totalCoveredCap = (() => {
+          const cap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : (p.total_covered_parking_capacity || 0);
+          const rate = String(matchedMaster?.covered_parking_rate || p.covered_parking_rate || '').trim();
+          if (cap === 12 && (rate === '250000' || rate === '')) return 0;
+          return Number(cap) || 0;
+        })();
+
+        const totalEvCap = (() => {
+          const cap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : (p.total_ev_parking_capacity || 0);
+          const rate = String(matchedMaster?.ev_parking_rate || p.ev_parking_rate || '').trim();
+          if (cap === 4 && (rate === '350000' || rate === '')) return 0;
+          return Number(cap) || 0;
+        })();
+
+        const totalOpenCap = (() => {
+          const cap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : (p.total_open_parking_capacity || 0);
+          const rate = String(matchedMaster?.open_parking_rate || p.open_parking_rate || '').trim();
+          if (cap === 6 && (rate === '150000' || rate === '')) return 0;
+          return Number(cap) || 0;
+        })();
+
+        const coveredRateNum = totalCoveredCap > 0 ? (parseInt(String(matchedMaster?.covered_parking_rate || p.covered_parking_rate || p.parking_price || p.car_parking_charge || '').replace(/[^0-9]/g, ''), 10) || 0) : 0;
+        const evRateNum = totalEvCap > 0 ? (parseInt(String(matchedMaster?.ev_parking_rate || p.ev_parking_rate || '').replace(/[^0-9]/g, ''), 10) || 0) : 0;
+        const openRateNum = totalOpenCap > 0 ? (parseInt(String(matchedMaster?.open_parking_rate || p.open_parking_rate || '').replace(/[^0-9]/g, ''), 10) || 0) : 0;
+
+        const allocCovered = projProps.filter(item => {
+          const cp = String(item.car_parking || '').toLowerCase();
+          const cPrice = parseInt(String(item.parking_price || item.car_parking_charge || '').replace(/[^0-9]/g, ''), 10) || 0;
+          return cp.includes('covered') || (cPrice > 0 && !cp.includes('open') && !cp.includes('ev'));
+        }).length;
+        const allocEv = projProps.filter(item => String(item.car_parking || '').toLowerCase().includes('ev')).length;
+        const allocOpen = projProps.filter(item => {
+          const cp = String(item.car_parking || '').toLowerCase();
+          return cp.includes('open') && !cp.includes('none');
+        }).length;
+
+        const availCovered = Math.max(0, totalCoveredCap - allocCovered);
+        const availEv = Math.max(0, totalEvCap - allocEv);
+        const availOpen = Math.max(0, totalOpenCap - allocOpen);
+
+        const coveredStockStr = totalCoveredCap > 0
+          ? `${availCovered} / ${totalCoveredCap} Available${coveredRateNum > 0 ? ` (₹${coveredRateNum.toLocaleString('en-IN')})` : ''}`
+          : 'Not Configured';
+
+        const evStationsStr = totalEvCap > 0
+          ? `${availEv} / ${totalEvCap} Available${evRateNum > 0 ? ` (₹${evRateNum.toLocaleString('en-IN')})` : ''}`
+          : 'Not Configured';
+
+        const openSurfaceStr = totalOpenCap > 0
+          ? `${availOpen} / ${totalOpenCap} Available${openRateNum > 0 ? ` (₹${openRateNum.toLocaleString('en-IN')})` : ''}`
+          : 'Not Configured';
+
+        const enrichedP: any = {
+          ...p,
+          property_code: p.property_code || p.id || '',
+          title: displayTitle,
+          developer: displayDeveloper,
+          project_id: projId,
+          developer_id: devId,
+          covered_stock: coveredStockStr,
+          ev_stations: evStationsStr,
+          open_surface: openSurfaceStr
+        };
+
         return BULK_PROPERTY_COLUMNS.map(c => {
-          const val = p[c.key];
+          const val = enrichedP[c.key];
           return val !== undefined && val !== null ? val : '';
         });
       });
@@ -744,6 +840,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       floor_rise_charge: ['floor rise charge (inr)', 'floor rise charge', 'floor rise', 'floor_rise_charge', 'floorrise'],
       plc_charge: ['preferential location charge plc (inr)', 'preferential location charge', 'plc charge', 'plc', 'plc_charge'],
       parking_price: ['covered car parking slot charge (inr)', 'car parking slot charge', 'covered parking charge', 'parking charge', 'parking price', 'parking_price', 'car_parking_charge'],
+      covered_stock: ['covered stock', 'covered_stock', 'covered parking stock', 'covered parking'],
+      ev_stations: ['ev stations', 'ev_stations', 'ev stations stock', 'ev stock', 'electric vehicle stations'],
+      open_surface: ['open surface', 'open_surface', 'open surface stock', 'open stock', 'open parking stock'],
       amenity_charges: ['clubhouse & amenities membership (inr)', 'clubhouse charge', 'amenity charges', 'amenities charge', 'amenity_charges', 'clubhouse_charge'],
       advance_maintenance_charge: ['advance maintenance charge (inr)', 'advance maintenance charge', 'advance maintenance', 'advance_maintenance_charge'],
       legal_doc_charge: ['lawyer & legal verification charge (inr)', 'legal verification charge', 'legal charge', 'lawyer charge', 'legal_doc_charge', 'lawyer_charge', 'infrastructure_charge'],
@@ -6530,31 +6629,63 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                              (itemTitle && displayTitle && itemTitle.toLowerCase().trim() === displayTitle.toLowerCase().trim());
                     });
 
-                    const totalCoveredCap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : 0;
-                    const totalEvCap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : 0;
-                    const totalOpenCap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : 0;
+                    // PARKING COMPUTATION FOR THIS ROW
+                    const totalCoveredCap = (() => {
+                      const cap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : (p.total_covered_parking_capacity || 0);
+                      const rate = String(matchedMaster?.covered_parking_rate || p.covered_parking_rate || '').trim();
+                      if (cap === 12 && (rate === '250000' || rate === '')) return 0;
+                      return cap;
+                    })();
 
-                    const allocCovered = projProps.filter(item => String(item.car_parking || '').toLowerCase().includes('covered')).length;
+                    const totalEvCap = (() => {
+                      const cap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : (p.total_ev_parking_capacity || 0);
+                      const rate = String(matchedMaster?.ev_parking_rate || p.ev_parking_rate || '').trim();
+                      if (cap === 4 && (rate === '350000' || rate === '')) return 0;
+                      return cap;
+                    })();
+
+                    const totalOpenCap = (() => {
+                      const cap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : (p.total_open_parking_capacity || 0);
+                      const rate = String(matchedMaster?.open_parking_rate || p.open_parking_rate || '').trim();
+                      if (cap === 6 && (rate === '150000' || rate === '')) return 0;
+                      return cap;
+                    })();
+
+                    const coveredRateNum = totalCoveredCap > 0 ? (parseInt(String(matchedMaster?.covered_parking_rate || p.covered_parking_rate || p.parking_price || p.car_parking_charge || '').replace(/[^0-9]/g, ''), 10) || 0) : 0;
+                    const evRateNum = totalEvCap > 0 ? (parseInt(String(matchedMaster?.ev_parking_rate || p.ev_parking_rate || '').replace(/[^0-9]/g, ''), 10) || 0) : 0;
+                    const openRateNum = totalOpenCap > 0 ? (parseInt(String(matchedMaster?.open_parking_rate || p.open_parking_rate || '').replace(/[^0-9]/g, ''), 10) || 0) : 0;
+
+                    const allocCovered = projProps.filter(item => {
+                      const cp = String(item.car_parking || '').toLowerCase();
+                      const cPrice = parseInt(String(item.parking_price || item.car_parking_charge || '').replace(/[^0-9]/g, ''), 10) || 0;
+                      return cp.includes('covered') || (cPrice > 0 && !cp.includes('open') && !cp.includes('ev'));
+                    }).length;
                     const allocEv = projProps.filter(item => String(item.car_parking || '').toLowerCase().includes('ev')).length;
-                    const allocOpen = projProps.filter(item => String(item.car_parking || '').toLowerCase().includes('open')).length;
+                    const allocOpen = projProps.filter(item => {
+                      const cp = String(item.car_parking || '').toLowerCase();
+                      return cp.includes('open') && !cp.includes('none');
+                    }).length;
 
                     const availCovered = Math.max(0, totalCoveredCap - allocCovered);
                     const availEv = Math.max(0, totalEvCap - allocEv);
                     const availOpen = Math.max(0, totalOpenCap - allocOpen);
 
-                    const assignedParking = String(p.car_parking || '');
-                    const isCovered = (assignedParking).toLowerCase().includes('covered');
-                    const isEv = (assignedParking).toLowerCase().includes('ev');
-                    const isOpen = (assignedParking).toLowerCase().includes('open');
+                    const unitParking = String(p.car_parking || '').trim();
+                    const unitParkingPrice = parseInt(String(p.parking_price || p.car_parking_charge || '').replace(/[^0-9]/g, ''), 10) || 0;
+                    const isUnitCovered = unitParking.toLowerCase().includes('covered') || (unitParkingPrice > 0 && !unitParking.toLowerCase().includes('open') && !unitParking.toLowerCase().includes('ev'));
+                    const isUnitEv = unitParking.toLowerCase().includes('ev');
+                    const isUnitOpen = unitParking.toLowerCase().includes('open') && !unitParking.toLowerCase().includes('none');
 
-                    const parkingRateStr = isEv 
-                      ? (matchedMaster?.ev_parking_rate || '') 
-                      : isOpen 
-                      ? (matchedMaster?.open_parking_rate || '') 
-                      : (matchedMaster?.covered_parking_rate || '');
+                    const unitHasAssignedParking = isUnitCovered || isUnitEv || isUnitOpen;
+                    let unitSlotText = 'Unassigned';
+                    if (isUnitCovered) unitSlotText = '🚗 Covered Slot';
+                    else if (isUnitEv) unitSlotText = '⚡ EV Slot';
+                    else if (isUnitOpen) unitSlotText = '🅿️ Open Slot';
 
-                    const availCountForType = isEv ? availEv : isOpen ? availOpen : availCovered;
-                    const totalCapForType = isEv ? totalEvCap : isOpen ? totalOpenCap : totalCoveredCap;
+                    const hasCoveredStock = totalCoveredCap > 0;
+                    const hasOpenStock = totalOpenCap > 0;
+                    const hasEvStock = totalEvCap > 0;
+                    const hasAnyStock = hasCoveredStock || hasOpenStock || hasEvStock;
 
                     const isSoldOutByBilling = (invoices || []).some((inv: any) => {
                       if (!inv || inv.status === 'CANCELLED' || inv.payment_status === 'CANCELLED') return false;
@@ -6706,13 +6837,60 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           </div>
                         </div>
 
-                        <div style={{ fontSize: '0.75rem', background: isLight ? '#ffffff' : '#1e293b', padding: '8px', borderRadius: '6px', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155' }}>
-                          <span style={{ color: isEv ? '#eab308' : isOpen ? '#22c55e' : '#0284c7', fontWeight: '800' }}>
-                            {isEv ? '⚡ EV Fast Charger' : isOpen ? '🅿️ Open Surface' : '🚘 Covered Basement'}
-                          </span>
-                          <span style={{ marginLeft: '6px', color: isLight ? '#64748b' : '#94a3b8' }}>
-                            (Avail: <strong style={{ color: availCountForType > 0 ? '#22c55e' : '#ef4444' }}>{availCountForType}/{totalCapForType}</strong>)
-                          </span>
+                        <div style={{ fontSize: '0.75rem', background: isLight ? '#ffffff' : '#1e293b', padding: '8px 10px', borderRadius: '8px', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ fontSize: '0.72rem', fontWeight: '800', color: isLight ? '#475569' : '#cbd5e1' }}>
+                            🅿️ Project Parking Stock & Unit Slot:
+                          </div>
+                          {hasCoveredStock && (
+                            <div style={{ fontSize: '0.76rem', fontWeight: '800', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                              <span>🚗 Covered:</span>
+                              <span style={{ color: availCovered > 0 ? '#22c55e' : '#ef4444' }}>{availCovered}/{totalCoveredCap} Avail</span>
+                              {coveredRateNum > 0 && (
+                                <span style={{ color: '#fbbf24', fontSize: '0.72rem', fontWeight: '800' }}>
+                                  ₹{coveredRateNum.toLocaleString('en-IN')}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {hasOpenStock && (
+                            <div style={{ fontSize: '0.76rem', fontWeight: '800', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                              <span>🅿️ Open:</span>
+                              <span style={{ color: availOpen > 0 ? '#22c55e' : '#ef4444' }}>{availOpen}/{totalOpenCap} Avail</span>
+                              {openRateNum > 0 && (
+                                <span style={{ color: '#fbbf24', fontSize: '0.72rem', fontWeight: '800' }}>
+                                  ₹{openRateNum.toLocaleString('en-IN')}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {hasEvStock && (
+                            <div style={{ fontSize: '0.76rem', fontWeight: '800', color: '#eab308', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                              <span>⚡ EV:</span>
+                              <span style={{ color: availEv > 0 ? '#22c55e' : '#ef4444' }}>{availEv}/{totalEvCap} Avail</span>
+                              {evRateNum > 0 && (
+                                <span style={{ color: '#fbbf24', fontSize: '0.72rem', fontWeight: '800' }}>
+                                  ₹{evRateNum.toLocaleString('en-IN')}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {!hasAnyStock && (
+                            <div style={{ fontSize: '0.72rem', color: isLight ? '#94a3b8' : '#64748b', fontStyle: 'italic', fontWeight: '600' }}>
+                              🅿️ No Parking Configured
+                            </div>
+                          )}
+
+                          <div style={{ marginTop: '2px', borderTop: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', paddingTop: '3px', fontSize: '0.7rem', fontWeight: '700' }}>
+                            {unitHasAssignedParking ? (
+                              <span style={{ color: '#22c55e', background: isLight ? '#dcfce7' : 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', padding: '1px 5px', borderRadius: '4px', display: 'inline-block' }}>
+                                ✓ {unitSlotText} {unitParkingPrice > 0 ? `(₹${unitParkingPrice.toLocaleString('en-IN')})` : ''}
+                              </span>
+                            ) : (
+                              <span style={{ color: isLight ? '#64748b' : '#94a3b8', background: isLight ? '#f1f5f9' : 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: '4px', display: 'inline-block' }}>
+                                Slot: Unassigned {hasAnyStock ? '(Available)' : ''}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: windowWidth <= 480 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '6px', borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #334155', paddingTop: '10px' }}>
@@ -6789,31 +6967,62 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                (itemTitle && displayTitle && itemTitle.toLowerCase().trim() === displayTitle.toLowerCase().trim());
                       });
 
-                      const totalCoveredCap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : 0;
-                      const totalEvCap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : 0;
-                      const totalOpenCap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : 0;
+                      const totalCoveredCap = (() => {
+                        const cap = matchedMaster?.total_covered_parking_capacity !== undefined ? matchedMaster.total_covered_parking_capacity : (p.total_covered_parking_capacity || 0);
+                        const rate = String(matchedMaster?.covered_parking_rate || p.covered_parking_rate || '').trim();
+                        if (cap === 12 && (rate === '250000' || rate === '')) return 0;
+                        return cap;
+                      })();
 
-                      const allocCovered = projProps.filter(item => String(item.car_parking || '').toLowerCase().includes('covered')).length;
+                      const totalEvCap = (() => {
+                        const cap = matchedMaster?.total_ev_parking_capacity !== undefined ? matchedMaster.total_ev_parking_capacity : (p.total_ev_parking_capacity || 0);
+                        const rate = String(matchedMaster?.ev_parking_rate || p.ev_parking_rate || '').trim();
+                        if (cap === 4 && (rate === '350000' || rate === '')) return 0;
+                        return cap;
+                      })();
+
+                      const totalOpenCap = (() => {
+                        const cap = matchedMaster?.total_open_parking_capacity !== undefined ? matchedMaster.total_open_parking_capacity : (p.total_open_parking_capacity || 0);
+                        const rate = String(matchedMaster?.open_parking_rate || p.open_parking_rate || '').trim();
+                        if (cap === 6 && (rate === '150000' || rate === '')) return 0;
+                        return cap;
+                      })();
+
+                      const coveredRateNum = totalCoveredCap > 0 ? (parseInt(String(matchedMaster?.covered_parking_rate || p.covered_parking_rate || p.parking_price || p.car_parking_charge || '').replace(/[^0-9]/g, ''), 10) || 0) : 0;
+                      const evRateNum = totalEvCap > 0 ? (parseInt(String(matchedMaster?.ev_parking_rate || p.ev_parking_rate || '').replace(/[^0-9]/g, ''), 10) || 0) : 0;
+                      const openRateNum = totalOpenCap > 0 ? (parseInt(String(matchedMaster?.open_parking_rate || p.open_parking_rate || '').replace(/[^0-9]/g, ''), 10) || 0) : 0;
+
+                      const allocCovered = projProps.filter(item => {
+                        const cp = String(item.car_parking || '').toLowerCase();
+                        const cPrice = parseInt(String(item.parking_price || item.car_parking_charge || '').replace(/[^0-9]/g, ''), 10) || 0;
+                        return cp.includes('covered') || (cPrice > 0 && !cp.includes('open') && !cp.includes('ev'));
+                      }).length;
                       const allocEv = projProps.filter(item => String(item.car_parking || '').toLowerCase().includes('ev')).length;
-                      const allocOpen = projProps.filter(item => String(item.car_parking || '').toLowerCase().includes('open')).length;
+                      const allocOpen = projProps.filter(item => {
+                        const cp = String(item.car_parking || '').toLowerCase();
+                        return cp.includes('open') && !cp.includes('none');
+                      }).length;
 
                       const availCovered = Math.max(0, totalCoveredCap - allocCovered);
                       const availEv = Math.max(0, totalEvCap - allocEv);
                       const availOpen = Math.max(0, totalOpenCap - allocOpen);
 
-                      const assignedParking = String(p.car_parking || '');
-                      const isCovered = (assignedParking).toLowerCase().includes('covered');
-                      const isEv = (assignedParking).toLowerCase().includes('ev');
-                      const isOpen = (assignedParking).toLowerCase().includes('open');
+                      const unitParking = String(p.car_parking || '').trim();
+                      const unitParkingPrice = parseInt(String(p.parking_price || p.car_parking_charge || '').replace(/[^0-9]/g, ''), 10) || 0;
+                      const isUnitCovered = unitParking.toLowerCase().includes('covered') || (unitParkingPrice > 0 && !unitParking.toLowerCase().includes('open') && !unitParking.toLowerCase().includes('ev'));
+                      const isUnitEv = unitParking.toLowerCase().includes('ev');
+                      const isUnitOpen = unitParking.toLowerCase().includes('open') && !unitParking.toLowerCase().includes('none');
 
-                      const parkingRateStr = isEv 
-                        ? (matchedMaster?.ev_parking_rate || '') 
-                        : isOpen 
-                        ? (matchedMaster?.open_parking_rate || '') 
-                        : (matchedMaster?.covered_parking_rate || '');
+                      const unitHasAssignedParking = isUnitCovered || isUnitEv || isUnitOpen;
+                      let unitSlotText = 'Unassigned';
+                      if (isUnitCovered) unitSlotText = '🚗 Covered Slot';
+                      else if (isUnitEv) unitSlotText = '⚡ EV Slot';
+                      else if (isUnitOpen) unitSlotText = '🅿️ Open Slot';
 
-                      const availCountForType = isEv ? availEv : isOpen ? availOpen : availCovered;
-                      const totalCapForType = isEv ? totalEvCap : isOpen ? totalOpenCap : totalCoveredCap;
+                      const hasCoveredStock = totalCoveredCap > 0;
+                      const hasOpenStock = totalOpenCap > 0;
+                      const hasEvStock = totalEvCap > 0;
+                      const hasAnyStock = hasCoveredStock || hasOpenStock || hasEvStock;
 
                       const isSelected = isPropertyKeySelected(p);
 
@@ -6856,16 +7065,59 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                               Total Base + Charges
                             </span>
                           </td>
-                          <td style={{ padding: '12px' }}>
-                            <div style={{ fontWeight: '800', color: isEv ? '#eab308' : isOpen ? '#22c55e' : '#0284c7', fontSize: '0.78rem' }}>
-                              {isEv ? '⚡ EV Fast Charger' : isOpen ? '🅿️ Open Surface' : '🚘 Covered Basement'}
+                          <td style={{ padding: '12px', minWidth: '175px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                              {hasCoveredStock && (
+                                <div style={{ fontSize: '0.76rem', fontWeight: '800', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                                  <span>🚗 Covered:</span>
+                                  <span style={{ color: availCovered > 0 ? '#22c55e' : '#ef4444' }}>{availCovered}/{totalCoveredCap} Avail</span>
+                                  {coveredRateNum > 0 && (
+                                    <span style={{ color: '#fbbf24', fontSize: '0.72rem', fontWeight: '800' }}>
+                                      ₹{coveredRateNum.toLocaleString('en-IN')}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {hasOpenStock && (
+                                <div style={{ fontSize: '0.76rem', fontWeight: '800', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                                  <span>🅿️ Open:</span>
+                                  <span style={{ color: availOpen > 0 ? '#22c55e' : '#ef4444' }}>{availOpen}/{totalOpenCap} Avail</span>
+                                  {openRateNum > 0 && (
+                                    <span style={{ color: '#fbbf24', fontSize: '0.72rem', fontWeight: '800' }}>
+                                      ₹{openRateNum.toLocaleString('en-IN')}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {hasEvStock && (
+                                <div style={{ fontSize: '0.76rem', fontWeight: '800', color: '#eab308', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                                  <span>⚡ EV:</span>
+                                  <span style={{ color: availEv > 0 ? '#22c55e' : '#ef4444' }}>{availEv}/{totalEvCap} Avail</span>
+                                  {evRateNum > 0 && (
+                                    <span style={{ color: '#fbbf24', fontSize: '0.72rem', fontWeight: '800' }}>
+                                      ₹{evRateNum.toLocaleString('en-IN')}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {!hasAnyStock && (
+                                <div style={{ fontSize: '0.72rem', color: isLight ? '#94a3b8' : '#64748b', fontStyle: 'italic', fontWeight: '600' }}>
+                                  🅿️ No Parking Configured
+                                </div>
+                              )}
+
+                              <div style={{ marginTop: '2px', borderTop: isLight ? '1px dashed #cbd5e1' : '1px dashed #334155', paddingTop: '3px', fontSize: '0.68rem', fontWeight: '700' }}>
+                                {unitHasAssignedParking ? (
+                                  <span style={{ color: '#22c55e', background: isLight ? '#dcfce7' : 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', padding: '1px 5px', borderRadius: '4px', display: 'inline-block' }}>
+                                    ✓ {unitSlotText} {unitParkingPrice > 0 ? `(₹${unitParkingPrice.toLocaleString('en-IN')})` : ''}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: isLight ? '#64748b' : '#94a3b8', background: isLight ? '#f1f5f9' : 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: '4px', display: 'inline-block' }}>
+                                    Slot: Unassigned {hasAnyStock ? '(Available)' : ''}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', marginTop: '2px' }}>
-                              Avail: <strong style={{ color: availCountForType > 0 ? '#22c55e' : '#ef4444' }}>{availCountForType}/{totalCapForType} Slots</strong>
-                            </div>
-                            <span style={{ fontSize: '0.66rem', color: '#eab308', fontWeight: '800' }}>
-                              Rate: ₹{parseInt(parkingRateStr, 10).toLocaleString('en-IN')}
-                            </span>
                           </td>
                           <td style={{ padding: '12px' }}>
                             {(() => {

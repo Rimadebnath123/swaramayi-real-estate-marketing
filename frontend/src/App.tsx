@@ -10037,32 +10037,135 @@ export default function App() {
 
   // 3. Property Management / Inventory CSV Export
   const exportPropertyCSV = () => {
-    const rows = (properties || []).map((p: any) => ({
-      'Property Code': p.property_code || p.id || '',
-      'Property Title': p.title || p.property_name || p.name || '',
-      'Developer / Promoter': p.developer || p.developer_name || '',
-      'Developer Contact': p.developer_mobile || p.developer_phone || '',
-      'Locality': p.locality || p.city || '',
-      'Address / Landmark': p.address || p.landmark || '',
-      'Property Type': p.property_type || 'Flat / Apartment',
-      'Configuration (BHK)': p.bhk || p.configuration || '',
-      'Floor Number': p.floor_no !== undefined ? p.floor_no : (p.floor || ''),
-      'Total Floors': p.total_floors || '',
-      'Carpet Area (Sq.Ft.)': p.carpet_area || '',
-      'Super Built-up Area (Sq.Ft.)': p.super_builtup_area || '',
-      'Total Price / Budget (₹)': p.price || p.total_cost || p.budget || '',
-      'Price per Sq.Ft. (₹)': p.price_per_sqft || '',
-      'Brokerage / Commission Rate': p.commission_rate || p.brokerage_rate || '2.0%',
-      'Possession Status': p.possession_status || '',
-      'Facing Direction': p.facing || '',
-      'Car Parking Type': p.car_parking || p.parking || '',
-      'RERA Registration No': p.rera_id || p.hera_no || '',
-      'Inventory Status': p.status || p.listing_status || 'AVAILABLE',
-      'Assigned Property Advisor': p.assigned_advisor_name || p.site_person_name || 'Official Swaramayi Advisor',
-      'Advisor Contact': '+91 89021 30791',
-      'Verification Status': p.is_verified ? 'VERIFIED' : 'PENDING',
-      'Created Date': p.created_at || p.createdAt || ''
-    }));
+    const allMasters = (() => {
+      const masterList: any[] = [];
+      (developers || []).forEach((dev: any) => {
+        (dev.projects || []).forEach((proj: any) => {
+          masterList.push({
+            ...proj,
+            developer_id: dev.id,
+            developer_name: dev.name
+          });
+        });
+      });
+      return masterList;
+    })();
+
+    const rows = (properties || []).map((p: any) => {
+      const displayTitle = p.title || p.property_name || p.name || '';
+      const displayDeveloper = p.developer || p.developer_name || '';
+
+      const devObj = (developers || []).find((d: any) =>
+        (d.id && p.developer_id && d.id === p.developer_id) ||
+        (d.name && displayDeveloper && d.name.toLowerCase().trim() === displayDeveloper.toLowerCase().trim()) ||
+        (Array.isArray(d.projects) && d.projects.some((pr: any) =>
+          (pr.code && p.project_id && pr.code === p.project_id) ||
+          (pr.id && p.project_id && pr.id === p.project_id) ||
+          (pr.title && displayTitle && pr.title.toLowerCase().trim() === displayTitle.toLowerCase().trim())
+        ))
+      );
+
+      const matchedProj = allMasters.find((pr: any) =>
+        (pr.code && p.project_id && pr.code === p.project_id) ||
+        (pr.id && p.project_id && pr.id === p.project_id) ||
+        (pr.title && displayTitle && pr.title.toLowerCase().trim() === displayTitle.toLowerCase().trim())
+      );
+
+      const developerId = p.developer_id || devObj?.id || matchedProj?.developer_id || (p.project_id && p.project_id.startsWith('SRM-DEV-') ? p.project_id : '') || 'N/A';
+
+      // Capacities calculation (filter out unconfigured dummy defaults)
+      const totalCoveredCap = (() => {
+        const cap = matchedProj?.total_covered_parking_capacity !== undefined ? matchedProj.total_covered_parking_capacity : (p.total_covered_parking_capacity || 0);
+        const rate = String(matchedProj?.covered_parking_rate || p.covered_parking_rate || '').trim();
+        if (cap === 12 && (rate === '250000' || rate === '')) return 0;
+        return Number(cap) || 0;
+      })();
+
+      const totalEvCap = (() => {
+        const cap = matchedProj?.total_ev_parking_capacity !== undefined ? matchedProj.total_ev_parking_capacity : (p.total_ev_parking_capacity || 0);
+        const rate = String(matchedProj?.ev_parking_rate || p.ev_parking_rate || '').trim();
+        if (cap === 4 && (rate === '350000' || rate === '')) return 0;
+        return Number(cap) || 0;
+      })();
+
+      const totalOpenCap = (() => {
+        const cap = matchedProj?.total_open_parking_capacity !== undefined ? matchedProj.total_open_parking_capacity : (p.total_open_parking_capacity || 0);
+        const rate = String(matchedProj?.open_parking_rate || p.open_parking_rate || '').trim();
+        if (cap === 6 && (rate === '150000' || rate === '')) return 0;
+        return Number(cap) || 0;
+      })();
+
+      const coveredRateNum = totalCoveredCap > 0 ? (parseInt(String(matchedProj?.covered_parking_rate || p.covered_parking_rate || p.parking_price || p.car_parking_charge || '').replace(/[^0-9]/g, ''), 10) || 0) : 0;
+      const evRateNum = totalEvCap > 0 ? (parseInt(String(matchedProj?.ev_parking_rate || p.ev_parking_rate || '').replace(/[^0-9]/g, ''), 10) || 0) : 0;
+      const openRateNum = totalOpenCap > 0 ? (parseInt(String(matchedProj?.open_parking_rate || p.open_parking_rate || '').replace(/[^0-9]/g, ''), 10) || 0) : 0;
+
+      // Project properties for counting allocated slots
+      const projProps = (properties || []).filter((item: any) => {
+        const itemTitle = (item.title || item.property_name || '').toLowerCase().trim();
+        const targetTitle = displayTitle.toLowerCase().trim();
+        const itemProjId = item.project_id;
+        const targetProjId = p.project_id || matchedProj?.code || matchedProj?.id;
+        return (targetProjId && itemProjId === targetProjId) || (targetTitle && itemTitle === targetTitle);
+      });
+
+      const allocCovered = projProps.filter((item: any) => {
+        const cp = String(item.car_parking || '').toLowerCase();
+        const cPrice = parseInt(String(item.parking_price || item.car_parking_charge || '').replace(/[^0-9]/g, ''), 10) || 0;
+        return cp.includes('covered') || (cPrice > 0 && !cp.includes('open') && !cp.includes('ev'));
+      }).length;
+      const allocEv = projProps.filter((item: any) => String(item.car_parking || '').toLowerCase().includes('ev')).length;
+      const allocOpen = projProps.filter((item: any) => {
+        const cp = String(item.car_parking || '').toLowerCase();
+        return cp.includes('open') && !cp.includes('none');
+      }).length;
+
+      const availCovered = Math.max(0, totalCoveredCap - allocCovered);
+      const availEv = Math.max(0, totalEvCap - allocEv);
+      const availOpen = Math.max(0, totalOpenCap - allocOpen);
+
+      const coveredStock = totalCoveredCap > 0
+        ? `${availCovered} / ${totalCoveredCap} Available${coveredRateNum > 0 ? ` (₹${coveredRateNum.toLocaleString('en-IN')})` : ''}`
+        : 'Not Configured';
+
+      const evStations = totalEvCap > 0
+        ? `${availEv} / ${totalEvCap} Available${evRateNum > 0 ? ` (₹${evRateNum.toLocaleString('en-IN')})` : ''}`
+        : 'Not Configured';
+
+      const openSurface = totalOpenCap > 0
+        ? `${availOpen} / ${totalOpenCap} Available${openRateNum > 0 ? ` (₹${openRateNum.toLocaleString('en-IN')})` : ''}`
+        : 'Not Configured';
+
+      return {
+        'Property Code': p.property_code || p.id || '',
+        'Property Title': displayTitle,
+        'Developer ID': developerId,
+        'Developer / Promoter': displayDeveloper,
+        'Developer Contact': p.developer_mobile || p.developer_phone || devObj?.mobile || '',
+        'Locality': p.locality || p.city || '',
+        'Address / Landmark': p.address || p.landmark || '',
+        'Property Type': p.property_type || 'Flat / Apartment',
+        'Configuration (BHK)': p.bhk || p.configuration || '',
+        'Floor Number': p.floor_no !== undefined ? p.floor_no : (p.floor || ''),
+        'Total Floors': p.total_floors || '',
+        'Carpet Area (Sq.Ft.)': p.carpet_area || '',
+        'Super Built-up Area (Sq.Ft.)': p.super_builtup_area || '',
+        'Total Price / Budget (₹)': p.price || p.total_cost || p.budget || p.total_base_price_with_other_charges || p.final_price || '',
+        'Price per Sq.Ft. (₹)': p.price_per_sqft || p.price_sqft || '',
+        'Brokerage / Commission Rate': p.commission_rate || p.brokerage_rate || '2.0%',
+        'Possession Status': p.possession_status || '',
+        'Facing Direction': p.facing || '',
+        'Car Parking Type': p.car_parking || p.parking || (p.parking_price > 0 ? '1 Covered Parking Slot' : 'Open / None'),
+        'Covered Stock': coveredStock,
+        'EV Stations': evStations,
+        'Open Surface': openSurface,
+        'RERA Registration No': p.rera_id || p.hera_no || '',
+        'Inventory Status': p.status || p.listing_status || 'AVAILABLE',
+        'Assigned Property Advisor': p.assigned_advisor_name || p.site_person_name || 'Official Swaramayi Advisor',
+        'Advisor Contact': '+91 89021 30791',
+        'Verification Status': p.is_verified ? 'VERIFIED' : 'PENDING',
+        'Created Date': p.created_at || p.createdAt || ''
+      };
+    });
     downloadFormattedCSV(rows, 'Property_Inventory_Export');
   };
 

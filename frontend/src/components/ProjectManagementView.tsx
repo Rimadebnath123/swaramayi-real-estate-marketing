@@ -1,7 +1,7 @@
 import React from 'react';
 import * as XLSX from 'xlsx';
 import { extractAllIdentifiers, isItemInRecycledSet } from '../App';
-import { Upload, Building2, Share2, ArrowRightLeft, Compass, Navigation, Camera, Video, Search, X, Download, Trash2, ChevronDown, MapPin, CheckCircle2, AlertTriangle, FileSpreadsheet, FileText, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Upload, Building2, Share2, ArrowRightLeft, Compass, Navigation, Camera, Video, Search, X, Download, Trash2, ChevronDown, ChevronLeft, ChevronRight, Check, MapPin, CheckCircle2, AlertTriangle, FileSpreadsheet, FileText, RefreshCw, Eye, EyeOff } from 'lucide-react';
 
 export const parseSqftValue = (val: any): number => {
   if (val === null || val === undefined) return 0;
@@ -506,12 +506,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   // ==========================================
   // BULK PROPERTY STOCK IMPORT & EXCEL ENGINE
   // ==========================================
-  const BULK_PROPERTY_COLUMNS = [
-    // 1. Master Project ID & Link (2 fields - project details & developer credentials auto-linked)
+  // COMPREHENSIVE 40-COLUMN EXPORT SPECIFICATION
+  const BULK_EXPORT_PROPERTY_COLUMNS = [
+    // 1. Master Project ID & Link (7 fields)
     { header: 'Property Code', key: 'property_code', section: '1. Master Project Link', sample1: 'SRM-PROP-2026-000001', sample2: 'SRM-PROP-2026-000002', desc: 'Unique property inventory code' },
     { header: 'Property Title', key: 'title', section: '1. Master Project Link', sample1: 'AHANA APARTMENT', sample2: 'ABILASH APARTMENT', desc: 'Project or building title' },
     { header: 'Master Project ID', key: 'project_id', section: '1. Master Project Link', sample1: 'SRM-PROJ-2026-000004', sample2: 'SRM-PROJ-2026-000002', desc: 'Master project code to link this unit to (e.g. SRM-PROJ-2026-000004). Developer, locality, address, RERA & building specs auto-link.' },
     { header: 'Developer ID', key: 'developer_id', section: '1. Master Project Link', sample1: 'SRM-DEV-2026-000003', sample2: 'SRM-DEV-2026-000001', desc: 'Developer ID code' },
+    { header: 'Developer Contact', key: 'developer_mobile', section: '1. Master Project Link', sample1: '+91 98490 88776', sample2: '+91 98833 95102', desc: 'Developer primary mobile contact number' },
     { header: 'Developer Name', key: 'developer', section: '1. Master Project Link', sample1: 'ARNAB DAS', sample2: 'ISHANA MONDAL', desc: 'Developer or builder name' },
     { header: 'Project Posting ID', key: 'project_posting_id', section: '1. Master Project Link', sample1: 'PRJ-POST-2026-8802', sample2: 'PRJ-POST-2026-8803', desc: 'Marketing / posting campaign tracking ID' },
 
@@ -528,7 +530,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     { header: 'Unit Floor Number', key: 'unit_floor', section: '2. Configuration & Area', sample1: '2nd Floor', sample2: '4th Floor', desc: 'Specific unit floor level (e.g. Ground Floor, 2nd Floor)' },
     { header: 'Unit / Flat Number', key: 'unit_number', section: '2. Configuration & Area', sample1: 'Flat 2B', sample2: 'Flat 4A', desc: 'Individual flat or unit number' },
 
-    // 3. Pricing, Commercials, Parking & All-Inclusive Final Valuation (17 fields)
+    // 3. Pricing, Commercials, Parking & All-Inclusive Final Valuation (22 fields)
     { header: 'Asking Rate per Sq.Ft.', key: 'price_sqft', section: '3. Pricing & Commercials', sample1: 4000, sample2: 4200, desc: 'Base quotation rate per super built-up sq.ft.' },
     { header: 'Base Property Asking Price (INR)', key: 'final_price', section: '3. Pricing & Commercials', sample1: 2820000, sample2: 4830000, desc: 'Base asking price = Super Built-up Area x Rate' },
     { header: 'Goods & Services Tax GST Rate (%)', key: 'gst_pct', section: '3. Pricing & Commercials', sample1: '0%', sample2: '5%', desc: 'Applicable GST percentage (e.g. 0%, 1%, 5%, 12%)' },
@@ -545,11 +547,56 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     { header: 'Lawyer & Legal Verification Charge (INR)', key: 'legal_doc_charge', section: '3. Pricing & Commercials', sample1: 45000, sample2: 45000, desc: 'Legal vetting and document preparation charge' },
     { header: 'Total Base Price with Others (INR)', key: 'total_base_price_with_other_charges', section: '3. Pricing & Commercials', sample1: 3190000, sample2: 5530000, desc: 'Base price + Floor Rise + PLC + Parking + Clubhouse + Legal' },
     { header: 'Total All-Inclusive Price (INR)', key: 'total_all_inclusive_price', section: '3. Pricing & Commercials', sample1: 3381400, sample2: 6138300, desc: 'All-inclusive grand total on-road property price' },
-    { header: 'Monthly Maintenance (INR)', key: 'maintenance_monthly', section: '3. Pricing & Commercials', sample1: 1500, sample2: 2500, desc: 'Recurring monthly society maintenance' },
+    { header: 'Monthly Maintenance (INR)', key: 'maintenance_monthly', section: '3. Pricing & Commercials', sample1: 0, sample2: 2500, desc: 'Recurring monthly society maintenance (0 if none)' },
+    { header: 'Stock Inventory Status', key: 'status', section: '3. Pricing & Commercials', sample1: 'AVAILABLE', sample2: 'AVAILABLE', desc: 'Inventory status (AVAILABLE, BOOKED, HOLD, SOLD)' },
+    { header: 'Key Custody / Site Person', key: 'key_custody', section: '3. Pricing & Commercials', sample1: 'Builder Site Office', sample2: 'Site Supervisor (Mr. Sen)', desc: 'Location of keys or site in-charge person' },
+    { header: 'Property Description & Highlights', key: 'description', section: '3. Pricing & Commercials', sample1: 'Road facing, East open, 2 balconies with scenic view', sample2: 'Corner 3BHK flat, pool facing, airy 3-side open', desc: 'Salient features, cross-ventilation, views, and remarks' },
+    { header: 'Created Date', key: 'created_at', section: '3. Pricing & Commercials', sample1: '2026-11-23', sample2: '2026-11-23', desc: 'Date when property unit record was created' },
+    { header: 'Property Created By', key: 'created_by', section: '3. Pricing & Commercials', sample1: 'Avishek Das (SUPER_ADMIN)', sample2: 'Avishek Das (SUPER_ADMIN)', desc: 'User or administrator who created the property record' }
+  ];
+
+  // STREAMLINED 30-COLUMN UPLOAD TEMPLATE SPECIFICATION
+  // Excludes 10 auto-computed/linked fields (Developer ID, Contact, Name, Parking stocks, Grand totals, and Created Date/By)
+  const BULK_UPLOAD_PROPERTY_COLUMNS = [
+    // 1. Master Project Link (4 fields)
+    { header: 'Property Code', key: 'property_code', section: '1. Master Project Link', sample1: 'SRM-PROP-2026-000001', sample2: 'SRM-PROP-2026-000002', desc: 'Unique property inventory code (Auto-generated if left blank)' },
+    { header: 'Property Title', key: 'title', section: '1. Master Project Link', sample1: 'AHANA APARTMENT', sample2: 'ABILASH APARTMENT', desc: 'Project or building title *' },
+    { header: 'Master Project ID', key: 'project_id', section: '1. Master Project Link', sample1: 'SRM-PROJ-2026-000004', sample2: 'SRM-PROJ-2026-000002', desc: 'Master project code to link this unit to (e.g. SRM-PROJ-2026-000004). Developer, locality, address & RERA auto-link.' },
+    { header: 'Project Posting ID', key: 'project_posting_id', section: '1. Master Project Link', sample1: 'PRJ-POST-2026-8802', sample2: 'PRJ-POST-2026-8803', desc: 'Marketing / posting campaign tracking ID' },
+
+    // 2. Unit Configuration, Area, Floor & Orientation Specifications (11 fields)
+    { header: 'Property Category Type', key: 'property_type', section: '2. Configuration & Area', sample1: 'Flat / Apartment', sample2: 'Flat / Apartment', desc: 'Flat / Apartment, Penthouse, Duplex, Villa, Commercial' },
+    { header: 'BHK Configuration', key: 'configuration', section: '2. Configuration & Area', sample1: '2 BHK', sample2: '3 BHK', desc: '1 BHK, 2 BHK, 3 BHK, 4 BHK, etc.' },
+    { header: 'Super Built-up Area (Sq.Ft.)', key: 'super_builtup_area', section: '2. Configuration & Area', sample1: 705, sample2: 1150, desc: 'Total chargeable super built-up area in sq.ft.' },
+    { header: 'Deduction / Loading (%)', key: 'deduction_pct', section: '2. Configuration & Area', sample1: 20, sample2: 22, desc: 'Loading / deduction percentage (typically 20% to 30%)' },
+    { header: 'Carpet Area (Sq.Ft.)', key: 'carpet_area', section: '2. Configuration & Area', sample1: 564, sample2: 897, desc: 'Net internal usable carpet area in sq.ft.' },
+    { header: 'Vastu Facing', key: 'facing', section: '2. Configuration & Area', sample1: 'East Facing', sample2: 'North-East Facing', desc: 'Main entrance orientation (e.g. East Facing, North Facing)' },
+    { header: 'Furnishing', key: 'furnishing', section: '2. Configuration & Area', sample1: 'Semi-Furnished', sample2: 'Unfurnished', desc: 'Unfurnished, Semi-Furnished, Fully Furnished' },
+    { header: 'Possession Status', key: 'possession_status', section: '2. Configuration & Area', sample1: 'Ready to Move', sample2: 'Under Construction', desc: 'Ready to Move or Under Construction' },
+    { header: 'Handover Month & Year', key: 'handover_month_year', section: '2. Configuration & Area', sample1: 'Ready', sample2: 'December 2026', desc: 'Possession handover timeline' },
+    { header: 'Unit Floor Number', key: 'unit_floor', section: '2. Configuration & Area', sample1: '2nd Floor', sample2: '4th Floor', desc: 'Specific unit floor level (e.g. Ground Floor, 2nd Floor)' },
+    { header: 'Unit / Flat Number', key: 'unit_number', section: '2. Configuration & Area', sample1: 'Flat 2B', sample2: 'Flat 4A', desc: 'Individual flat or unit number' },
+
+    // 3. Pricing, Commercials, Additional Charges & Valuation (15 fields)
+    { header: 'Asking Rate per Sq.Ft.', key: 'price_sqft', section: '3. Pricing & Commercials', sample1: 4000, sample2: 4200, desc: 'Base quotation rate per super built-up sq.ft.' },
+    { header: 'Base Property Asking Price (INR)', key: 'final_price', section: '3. Pricing & Commercials', sample1: 2820000, sample2: 4830000, desc: 'Base asking price = Super Built-up Area x Rate' },
+    { header: 'Goods & Services Tax GST Rate (%)', key: 'gst_pct', section: '3. Pricing & Commercials', sample1: '0%', sample2: '5%', desc: 'Applicable GST percentage (e.g. 0%, 1%, 5%, 12%)' },
+    { header: 'Stamp Duty Charges Rate (%)', key: 'stamp_duty_pct', section: '3. Pricing & Commercials', sample1: '5%', sample2: '5%', desc: 'State Government Stamp Duty percentage (e.g. 5%, 6%, 7%)' },
+    { header: 'Registration Fee Rate (%)', key: 'registration_fee_pct', section: '3. Pricing & Commercials', sample1: '1%', sample2: '1%', desc: 'Government Registry fee percentage (e.g. 1%, 2%)' },
+    { header: 'Floor Rise Charge (INR)', key: 'floor_rise_charge', section: '3. Pricing & Commercials', sample1: 0, sample2: 50000, desc: 'Additional floor rise charge' },
+    { header: 'Preferential Location Charge PLC (INR)', key: 'plc_charge', section: '3. Pricing & Commercials', sample1: 0, sample2: 75000, desc: 'PLC for park, pool or road-facing units' },
+    { header: 'Covered Car Parking Slot Charge (INR)', key: 'parking_price', section: '3. Pricing & Commercials', sample1: 250000, sample2: 350000, desc: 'Dedicated covered vehicle parking cost' },
+    { header: 'Clubhouse & Amenities Membership (INR)', key: 'amenity_charges', section: '3. Pricing & Commercials', sample1: 50000, sample2: 150000, desc: 'Clubhouse, gym and amenities membership fee' },
+    { header: 'Advance Maintenance Charge (INR)', key: 'advance_maintenance_charge', section: '3. Pricing & Commercials', sample1: 25000, sample2: 30000, desc: 'Initial maintenance deposit / sinking fund' },
+    { header: 'Lawyer & Legal Verification Charge (INR)', key: 'legal_doc_charge', section: '3. Pricing & Commercials', sample1: 45000, sample2: 45000, desc: 'Legal vetting and document preparation charge' },
+    { header: 'Monthly Maintenance (INR)', key: 'maintenance_monthly', section: '3. Pricing & Commercials', sample1: 0, sample2: 2500, desc: 'Recurring monthly society maintenance (0 if none)' },
     { header: 'Stock Inventory Status', key: 'status', section: '3. Pricing & Commercials', sample1: 'AVAILABLE', sample2: 'AVAILABLE', desc: 'Inventory status (AVAILABLE, BOOKED, HOLD, SOLD)' },
     { header: 'Key Custody / Site Person', key: 'key_custody', section: '3. Pricing & Commercials', sample1: 'Builder Site Office', sample2: 'Site Supervisor (Mr. Sen)', desc: 'Location of keys or site in-charge person' },
     { header: 'Property Description & Highlights', key: 'description', section: '3. Pricing & Commercials', sample1: 'Road facing, East open, 2 balconies with scenic view', sample2: 'Corner 3BHK flat, pool facing, airy 3-side open', desc: 'Salient features, cross-ventilation, views, and remarks' }
   ];
+
+  // Backward-compatible alias for existing references
+  const BULK_PROPERTY_COLUMNS = BULK_EXPORT_PROPERTY_COLUMNS;
 
   const [isBulkImportPropertyOpen, setIsBulkImportPropertyOpen] = React.useState<boolean>(false);
   const [bulkImportMode, setBulkImportMode] = React.useState<'upload' | 'paste'>('upload');
@@ -559,8 +606,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const [bulkImportErrors, setBulkImportErrors] = React.useState<string[]>([]);
   const [isProcessingBulkFile, setIsProcessingBulkFile] = React.useState<boolean>(false);
   const [isIngestingStock, setIsIngestingStock] = React.useState<boolean>(false);
+  const [isSavingProperty, setIsSavingProperty] = React.useState<boolean>(false);
   const [showBulkColumnsGuide, setShowBulkColumnsGuide] = React.useState<boolean>(false);
   const [bulkPreviewFilter, setBulkPreviewFilter] = React.useState<string>('');
+  const [isDraggingBulkFile, setIsDraggingBulkFile] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     if (showBulkImportPropertyModal) {
@@ -622,14 +671,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
   const handleDownloadExcelTemplate = () => {
     try {
-      const headers = BULK_PROPERTY_COLUMNS.map(c => c.header);
-      const row1 = BULK_PROPERTY_COLUMNS.map(c => c.sample1);
-      const row2 = BULK_PROPERTY_COLUMNS.map(c => c.sample2);
+      const headers = BULK_UPLOAD_PROPERTY_COLUMNS.map(c => c.header);
+      const row1 = BULK_UPLOAD_PROPERTY_COLUMNS.map(c => c.sample1);
+      const row2 = BULK_UPLOAD_PROPERTY_COLUMNS.map(c => c.sample2);
       const ws = XLSX.utils.aoa_to_sheet([headers, row1, row2]);
-      ws['!cols'] = BULK_PROPERTY_COLUMNS.map(c => ({ wch: Math.max(c.header.length + 4, 18) }));
+      ws['!cols'] = BULK_UPLOAD_PROPERTY_COLUMNS.map(c => ({ wch: Math.max(c.header.length + 4, 18) }));
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Property_Master_Stock');
-      XLSX.writeFile(wb, 'Swaramayi_Bulk_Property_Stock_Template.xlsx');
+      XLSX.writeFile(wb, 'Swaramayi_Bulk_Property_Stock_Template_30Cols.xlsx');
     } catch (err: any) {
       alert(`⚠️ Could not generate Excel template: ${err.message}`);
     }
@@ -637,13 +686,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
   const handleDownloadCsvTemplate = () => {
     try {
-      const headers = BULK_PROPERTY_COLUMNS.map(c => c.header);
-      const row1 = BULK_PROPERTY_COLUMNS.map(c => c.sample1);
-      const row2 = BULK_PROPERTY_COLUMNS.map(c => c.sample2);
+      const headers = BULK_UPLOAD_PROPERTY_COLUMNS.map(c => c.header);
+      const row1 = BULK_UPLOAD_PROPERTY_COLUMNS.map(c => c.sample1);
+      const row2 = BULK_UPLOAD_PROPERTY_COLUMNS.map(c => c.sample2);
       const ws = XLSX.utils.aoa_to_sheet([headers, row1, row2]);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Property_Master_Stock');
-      XLSX.writeFile(wb, 'Swaramayi_Bulk_Property_Stock_Template.csv', { bookType: 'csv' });
+      XLSX.writeFile(wb, 'Swaramayi_Bulk_Property_Stock_Template_30Cols.csv', { bookType: 'csv' });
     } catch (err: any) {
       alert(`⚠️ Could not generate CSV template: ${err.message}`);
     }
@@ -657,7 +706,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         return;
       }
       const allMasters = getAllMasterProjects();
-      const headers = BULK_PROPERTY_COLUMNS.map(c => c.header);
+      const headers = BULK_EXPORT_PROPERTY_COLUMNS.map(c => c.header);
       const rows = properties.map(p => {
         const displayTitle = p.title || p.property_name || p.name || 'Untitled Property';
         const displayDeveloper = p.developer || p.developer_name || p.builder_name || '';
@@ -674,6 +723,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         );
 
         const devId = p.developer_id || devObj?.id || matchedMaster?.developer_id || (p.project_id && p.project_id.startsWith('SRM-DEV-') ? p.project_id : '') || 'N/A';
+        const devContact = p.developer_mobile || p.developer_phone || p.developer_contact || devObj?.mobile || matchedMaster?.developer_mobile || '';
         const projId = (p.project_id && !p.project_id.startsWith('SRM-DEV-')) ? p.project_id : (matchedMaster?.code || matchedMaster?.id || '');
 
         const projProps = properties.filter(item => {
@@ -735,6 +785,19 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           ? `${availOpen} / ${totalOpenCap} Available${openRateNum > 0 ? ` (₹${openRateNum.toLocaleString('en-IN')})` : ''}`
           : 'Not Configured';
 
+        const createdDateStr = (() => {
+          const d = p.created_at || p.createdAt || p.created_date || p.date;
+          if (!d) {
+            const today = new Date();
+            return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+          }
+          const str = String(d).trim();
+          if (str.includes('T')) return str.split('T')[0];
+          return str;
+        })();
+
+        const createdByStr = p.created_by || p.createdBy || p.added_by || p.property_created_by || (p.site_person_name && p.site_person_name !== 'N/A' ? p.site_person_name : '') || (currentRole === 'SUPER_ADMIN' ? 'Avishek Das (SUPER_ADMIN)' : (currentRole || 'Avishek Das (SUPER_ADMIN)'));
+
         const enrichedP: any = {
           ...p,
           property_code: p.property_code || p.id || '',
@@ -742,18 +805,23 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           developer: displayDeveloper,
           project_id: projId,
           developer_id: devId,
+          developer_mobile: devContact,
+          created_at: createdDateStr,
+          created_date: createdDateStr,
+          created_by: createdByStr,
+          property_created_by: createdByStr,
           covered_stock: coveredStockStr,
           ev_stations: evStationsStr,
           open_surface: openSurfaceStr
         };
 
-        return BULK_PROPERTY_COLUMNS.map(c => {
+        return BULK_EXPORT_PROPERTY_COLUMNS.map(c => {
           const val = enrichedP[c.key];
           return val !== undefined && val !== null ? val : '';
         });
       });
       const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-      ws['!cols'] = BULK_PROPERTY_COLUMNS.map(c => ({ wch: Math.max(c.header.length + 4, 18) }));
+      ws['!cols'] = BULK_EXPORT_PROPERTY_COLUMNS.map(c => ({ wch: Math.max(c.header.length + 4, 18) }));
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Master_Inventory_Stock');
       const nowStr = new Date().toISOString().slice(0, 10);
@@ -766,7 +834,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const normalizeHeaderKey = (rawHeader: any): string => {
     if (!rawHeader) return '';
     const clean = String(rawHeader).toLowerCase().trim().replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ');
-    const directCol = BULK_PROPERTY_COLUMNS.find(c => c.header.toLowerCase().trim().replace(/\s+/g, ' ') === clean);
+    const directCol = BULK_EXPORT_PROPERTY_COLUMNS.find(c => c.header.toLowerCase().trim().replace(/\s+/g, ' ') === clean) ||
+                      BULK_UPLOAD_PROPERTY_COLUMNS.find(c => c.header.toLowerCase().trim().replace(/\s+/g, ' ') === clean);
     if (directCol) return directCol.key;
 
     // Fuzzy alias dictionary
@@ -776,7 +845,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       title: ['project title & name', 'project title', 'title', 'project name', 'project', 'building name'],
       developer: ['developer / builder name', 'developer name', 'builder name', 'developer', 'builder'],
       developer_id: ['developer id', 'developer_id', 'dev id', 'dev_id'],
-      developer_mobile: ['developer mobile (for otp)', 'developer mobile', 'mobile', 'dev mobile', 'phone', 'contact'],
+      developer_mobile: ['developer contact', 'developer mobile (for otp)', 'developer mobile', 'mobile', 'dev mobile', 'phone', 'contact'],
       developer_alt_mobile: ['developer alt mobile', 'alt mobile', 'alternative mobile', 'alternate phone'],
       developer_email: ['developer email address', 'developer email', 'email', 'dev email'],
       locality: ['locality hub / sector', 'locality hub', 'locality', 'location', 'sector', 'area'],
@@ -851,7 +920,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       maintenance_monthly: ['monthly maintenance (inr)', 'monthly maintenance', 'maintenance per month', 'maintenance_monthly'],
       status: ['stock inventory status', 'inventory status', 'stock status', 'status'],
       key_custody: ['key custody / site person', 'key custody', 'keys custody', 'site person', 'key_custody'],
-      description: ['property description & highlights', 'property description', 'description', 'highlights', 'notes']
+      description: ['property description & highlights', 'property description', 'description', 'highlights', 'notes'],
+      created_at: ['created date', 'created_date', 'creation date', 'created at', 'created_at', 'date'],
+      created_by: ['property created by', 'created by', 'created_by', 'property_created_by', 'creator', 'added by', 'added_by']
     };
 
     for (const [key, aliasList] of Object.entries(aliases)) {
@@ -1004,10 +1075,12 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
         legal_doc_charge: legal,
         total_base_price_with_other_charges: totalBaseWithOthers > 0 ? totalBaseWithOthers : baseAskingPrice,
         total_all_inclusive_price: totalAllInclusive > 0 ? totalAllInclusive : totalBaseWithOthers,
-        maintenance_monthly: cleanNum(rawObj.maintenance_monthly, 1500),
+        maintenance_monthly: cleanNum(rawObj.maintenance_monthly, 0),
         status,
         key_custody: rawObj.key_custody || '',
         description: rawObj.description || '',
+        created_at: rawObj.created_at || rawObj.created_date || new Date().toISOString().slice(0, 10),
+        created_by: rawObj.created_by || rawObj.property_created_by || (currentRole === 'SUPER_ADMIN' ? 'Avishek Das (SUPER_ADMIN)' : (currentRole || 'Avishek Das (SUPER_ADMIN)')),
         map_x: 35 + Math.random() * 30,
         map_y: 35 + Math.random() * 30
       };
@@ -1023,8 +1096,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     setParsedBulkProperties(parsedList);
   };
 
-  const handleBulkFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const processUploadedFile = (file: File) => {
     if (!file) return;
 
     setBulkFileName(file.name);
@@ -1051,6 +1123,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       setIsProcessingBulkFile(false);
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  const handleBulkFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processUploadedFile(file);
+    }
   };
 
   const handleProcessPastedCsv = () => {
@@ -1096,17 +1175,39 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       if (setProperties) {
         setProperties(updatedProps);
       }
-      if (syncAllToMongoDB) {
-        await syncAllToMongoDB({ properties: updatedProps });
+
+      // Direct, robust network sync to backend + MongoDB Atlas with response validation
+      const backendUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:5000/api/v1/crm/sync'
+        : '/api/v1/crm/sync';
+
+      const syncResponse = await fetch(backendUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties: updatedProps })
+      });
+
+      if (!syncResponse.ok) {
+        throw new Error(`Server returned HTTP ${syncResponse.status}: ${syncResponse.statusText}`);
+      }
+      const syncJson = await syncResponse.json().catch(() => null);
+      if (syncJson && syncJson.status === 'ERROR') {
+        throw new Error(syncJson.message || 'Database sync rejected by server');
       }
 
-      alert(`🎉 BULK IMPORT SUCCESSFUL!\n\n• Successfully imported ${parsedBulkProperties.length} new property units into Master Inventory Stock!\n• Synced to central stock vault & MongoDB Atlas.\n• Codes assigned: ${parsedBulkProperties[0].property_code} to ${parsedBulkProperties[parsedBulkProperties.length - 1].property_code}`);
+      if (syncAllToMongoDB) {
+        try {
+          await syncAllToMongoDB({ properties: updatedProps });
+        } catch (e) {}
+      }
+
+      alert(`🎉 BULK IMPORT SUCCESSFUL!\n\n• Successfully imported ${parsedBulkProperties.length} new property units into Master Inventory Stock!\n• Synced directly to MongoDB Atlas & Central Stock Vault.\n• Codes assigned: ${parsedBulkProperties[0].property_code} to ${parsedBulkProperties[parsedBulkProperties.length - 1].property_code}`);
 
       handleClearParsedRows();
       closeBulkImportModal();
       setActiveProjectSubTab('property_master');
     } catch (err: any) {
-      alert(`⚠️ Ingestion failed: ${err.message || 'Could not sync to database'}`);
+      alert(`⚠️ Bulk Ingestion Failed: ${err.message || 'Could not sync to database'}\n\nPlease check server connection.`);
     } finally {
       setIsIngestingStock(false);
     }
@@ -1829,8 +1930,77 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const [selectedPropertyIds, setSelectedPropertyIds] = React.useState<string[]>([]);
 
   const filteredPropertyList = React.useMemo(() => {
-    return properties.filter(p => matchesSearchQuery(p, searchQuery));
+    if (!searchQuery || !searchQuery.trim()) return properties;
+    const qRaw = searchQuery.trim().toLowerCase();
+    const qClean = qRaw.replace(/[\s\-_]/g, '');
+
+    return properties.filter(p => {
+      // 1. Check parent matcher first
+      if (matchesSearchQuery && matchesSearchQuery(p, searchQuery)) return true;
+
+      // 2. Normalized matcher across all key fields (code, title, developer, locality, project_id, etc.)
+      if (qClean) {
+        const codeClean = String(p.property_code || p.code || p.id || '').toLowerCase().replace(/[\s\-_]/g, '');
+        if (codeClean.includes(qClean)) return true;
+
+        const titleClean = String(p.title || p.property_title || p.project_name || '').toLowerCase().replace(/[\s\-_]/g, '');
+        if (titleClean.includes(qClean)) return true;
+
+        const devClean = String(p.developer || p.developer_name || p.builder_name || '').toLowerCase().replace(/[\s\-_]/g, '');
+        if (devClean.includes(qClean)) return true;
+
+        const projClean = String(p.project_id || p.project_code || '').toLowerCase().replace(/[\s\-_]/g, '');
+        if (projClean.includes(qClean)) return true;
+
+        const locClean = String(p.locality || p.full_address || '').toLowerCase().replace(/[\s\-_]/g, '');
+        if (locClean.includes(qClean)) return true;
+
+        const configClean = String(p.configuration || p.bhk || p.config || '').toLowerCase().replace(/[\s\-_]/g, '');
+        if (configClean.includes(qClean)) return true;
+
+        const reraClean = String(p.rera_id || p.hera_no || '').toLowerCase().replace(/[\s\-_]/g, '');
+        if (reraClean.includes(qClean)) return true;
+      }
+      return false;
+    });
   }, [properties, searchQuery, matchesSearchQuery]);
+
+  // 📄 MASTER PROPERTY INVENTORY PAGINATION STATE (25, 50, 75, 100)
+  const [propertyPageSize, setPropertyPageSize] = React.useState<number>(100);
+  const [propertyCurrentPage, setPropertyCurrentPage] = React.useState<number>(1);
+  const [isPageSizeDropdownOpen, setIsPageSizeDropdownOpen] = React.useState<boolean>(false);
+  const pageSizeDropdownRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Close dropdown on outside click
+  React.useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (pageSizeDropdownRef.current && !pageSizeDropdownRef.current.contains(e.target as Node)) {
+        setIsPageSizeDropdownOpen(false);
+      }
+    };
+    if (isPageSizeDropdownOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isPageSizeDropdownOpen]);
+
+  // Reset to page 1 whenever searchQuery changes
+  React.useEffect(() => {
+    setPropertyCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalFilteredPropertiesCount = filteredPropertyList.length;
+  const totalPropertyPages = Math.max(1, Math.ceil(totalFilteredPropertiesCount / propertyPageSize));
+  const safeCurrentPage = Math.min(Math.max(1, propertyCurrentPage), totalPropertyPages);
+  const propertyStartIndex = totalFilteredPropertiesCount === 0 ? 0 : (safeCurrentPage - 1) * propertyPageSize;
+  const propertyEndIndex = Math.min(propertyStartIndex + propertyPageSize, totalFilteredPropertiesCount);
+
+  const paginatedPropertyList = React.useMemo(() => {
+    if (totalFilteredPropertiesCount === 0) return [];
+    return filteredPropertyList.slice(propertyStartIndex, propertyEndIndex);
+  }, [filteredPropertyList, propertyStartIndex, propertyEndIndex, totalFilteredPropertiesCount]);
 
   const getPropertyKey = (p: any): string => {
     return String(p.property_code || p.id || p._id || p.code || '');
@@ -1842,13 +2012,15 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     return keys.some(k => selSet.has(k));
   };
 
-  const isAllPropertiesSelected = filteredPropertyList.length > 0 && filteredPropertyList.every(isPropertyKeySelected);
+  const isAllPropertiesSelected = paginatedPropertyList.length > 0 && paginatedPropertyList.every(isPropertyKeySelected);
 
   const handleToggleSelectAllProperties = () => {
     if (isAllPropertiesSelected) {
-      setSelectedPropertyIds([]);
+      const pageKeys = new Set(paginatedPropertyList.map(getPropertyKey).map(k => k.trim().toLowerCase()));
+      setSelectedPropertyIds(prev => prev.filter(k => !pageKeys.has(k.trim().toLowerCase())));
     } else {
-      setSelectedPropertyIds(filteredPropertyList.map(getPropertyKey));
+      const pageKeys = paginatedPropertyList.map(getPropertyKey);
+      setSelectedPropertyIds(prev => Array.from(new Set([...prev, ...pageKeys])));
     }
   };
 
@@ -2162,8 +2334,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     });
   }, [developerMasterList, verifiedDevProjectsList]);
 
-  // AUTOMATIC CLEANUP & HEALING EFFECT: Ensure every project & developer in developerMasterList starts clean from 000001 serially
+  // AUTOMATIC CLEANUP & HEALING EFFECT: Ensure every project & developer in developerMasterList starts clean from 000001 serially (Runs strictly once on init)
+  const hasHealedDevelopersRef = React.useRef<boolean>(false);
   React.useEffect(() => {
+    if (hasHealedDevelopersRef.current) return;
     if (!developerMasterList || developerMasterList.length === 0) return;
 
     const year = new Date().getFullYear();
@@ -2214,7 +2388,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       }
     }
 
-    if (!needsHealing) return;
+    if (!needsHealing) {
+      hasHealedDevelopersRef.current = true;
+      return;
+    }
+    hasHealedDevelopersRef.current = true;
 
     let globalProjSeq = 0;
     const oldToNewCodeMap = new Map<string, string>();
@@ -3201,6 +3379,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       unit_photo: foundProp.unit_photo || '',
       project_posting_id: foundProp.project_posting_id || '',
       key_custody: foundProp.key_custody || '',
+      maintenance_monthly: foundProp.maintenance_monthly !== undefined && foundProp.maintenance_monthly !== null ? foundProp.maintenance_monthly : '',
       description: foundProp.description || '',
       site_person_name: foundProp.site_person_name || '',
       site_person_contact: foundProp.site_person_contact || ''
@@ -3694,34 +3873,38 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   }, [setNewPropertyForm, setDevProjectMobile, setDevProjectAltMobile, setDevProjectOtpVerified, setDevProjectOtpSent, setDevProjectOtpInput, setActiveProjectSubTab]);
 
   const handleOpenNewPropertyForm = React.useCallback(() => {
+    const nextPropCode = generateDynamicPropertyCode();
+    const allProjects = getAllMasterProjects();
+    const defaultProj = allProjects.length > 0 ? allProjects[0] : null;
+
     setNewPropertyForm({
-      project_id: '',
-      property_code: '',
-      developer_id: '',
-      developer: '',
-      developer_email: '',
-      developer_mobile: '',
-      developer_alt_mobile: '',
-      title: '',
-      locality: '',
+      project_id: defaultProj?.code || defaultProj?.id || '',
+      property_code: nextPropCode,
+      developer_id: defaultProj?.developer_id || '',
+      developer: defaultProj?.developer || '',
+      developer_email: defaultProj?.email || '',
+      developer_mobile: defaultProj?.mobile || '',
+      developer_alt_mobile: defaultProj?.altMobile || '',
+      title: defaultProj?.title || '',
+      locality: defaultProj?.locality || '',
       configuration: '',
       super_builtup_area: '',
       carpet_area: '',
       floor_num: '',
-      total_floors: 'G+4 Floors (5 Storey)',
-      number_of_towers: '',
+      total_floors: defaultProj?.total_floors || 'G+4 Floors (5 Storey)',
+      number_of_towers: defaultProj?.number_of_towers || '',
       facing: '',
       furnishing: '',
       final_price: '',
       price_sqft: '',
       car_parking: '',
-      parking_price: '',
-      total_covered_parking_capacity: 0,
-      covered_parking_rate: '',
-      total_ev_parking_capacity: 0,
-      ev_parking_rate: '',
-      total_open_parking_capacity: 0,
-      open_parking_rate: '',
+      parking_price: defaultProj?.covered_parking_rate || '',
+      total_covered_parking_capacity: defaultProj?.total_covered_parking_capacity || 0,
+      covered_parking_rate: defaultProj?.covered_parking_rate || '',
+      total_ev_parking_capacity: defaultProj?.total_ev_parking_capacity || 0,
+      ev_parking_rate: defaultProj?.ev_parking_rate || '',
+      total_open_parking_capacity: defaultProj?.total_open_parking_capacity || 0,
+      open_parking_rate: defaultProj?.open_parking_rate || '',
       amenity_charges: '',
       clubhouse_charge: '',
       floor_rise_charge: '',
@@ -3729,8 +3912,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       advance_maintenance_charge: '',
       legal_doc_charge: '',
       total_all_inclusive_price: '',
-      latitude: '',
-      longitude: '',
+      maintenance_monthly: '',
+      latitude: defaultProj?.latitude || '',
+      longitude: defaultProj?.longitude || '',
       selected_amenities: [],
       building_photos: [],
       building_photo: '',
@@ -3744,15 +3928,15 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       site_person_name: '',
       site_person_contact: '',
       architectural_description: '',
-      rera_id: '',
-      hera_no: '',
+      rera_id: defaultProj?.rera_id || '',
+      hera_no: defaultProj?.hera_no || '',
       layout_photos: [],
       layout_photo: '',
       floor_plan_photos: [],
       floor_plan_photo: ''
     });
     setActiveProjectSubTab('add_property_master');
-  }, [setNewPropertyForm, setActiveProjectSubTab]);
+  }, [setNewPropertyForm, setActiveProjectSubTab, generateDynamicPropertyCode]);
 
   // HYDRATE AND POPULATE FULL SAVED PROPERTY DETAILS UPON ENTERING EDIT MODE
   const populateFullEditPropertyDetails = React.useCallback((p: any) => {
@@ -3963,63 +4147,243 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     }, 40);
   }, [handleStartEditProperty, setActiveProjectSubTab, populateFullEditPropertyDetails]);
 
+  // DIRECT PROPERTY MASTER PERSISTENCE HANDLER WITH INSTANT MONGODB ATLAS SYNC
+  const handleSavePropertyDirect = React.useCallback(async (e?: any) => {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+
+    if (isSavingProperty) return;
+
+    const isEditing = Boolean(editingProperty && (editingProperty.id || editingProperty.property_code));
+    const targetPropId = isEditing
+      ? (editingProperty.id || editingProperty.property_code)
+      : `PROP-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+    // Resolve dynamic sequential codes and fallback titles
+    const codeToUse = isEditing
+      ? (editingProperty.property_code || newPropertyForm.property_code || generateDynamicPropertyCode())
+      : (newPropertyForm.property_code || generateDynamicPropertyCode());
+
+    const projToUse = newPropertyForm.project_id || generateNextProjectId();
+    const titleToUse = newPropertyForm.title || (newPropertyForm.locality ? `Property Unit at ${newPropertyForm.locality}` : 'Master Property Unit');
+    const devToUse = newPropertyForm.developer || 'Swaramayi Developer';
+    const resolvedMobile = devProjectMobile || newPropertyForm.developer_mobile || '9883395102';
+    const resolvedAltMobile = devProjectAltMobile || newPropertyForm.developer_alt_mobile || '7044293951';
+
+    // Construct clean, robust, complete property record
+    const fullRecord: any = {
+      ...newPropertyForm,
+      id: targetPropId,
+      property_code: codeToUse,
+      code: codeToUse,
+      project_id: projToUse,
+      title: titleToUse,
+      property_title: titleToUse,
+      developer: devToUse,
+      developer_name: devToUse,
+      developer_id: newPropertyForm.developer_id || 'SRM-DEV-2026-000001',
+      developer_mobile: resolvedMobile,
+      developer_alt_mobile: resolvedAltMobile,
+      locality: newPropertyForm.locality || '',
+      full_address: newPropertyForm.full_address || newPropertyForm.locality || '',
+      property_type: newPropertyForm.property_type || 'Flat / Apartment',
+      configuration: newPropertyForm.configuration || newPropertyForm.bhk || '3BHK',
+      bhk: newPropertyForm.configuration || newPropertyForm.bhk || '3BHK',
+      carpet_area: newPropertyForm.carpet_area || '',
+      super_builtup_area: newPropertyForm.super_builtup_area || '',
+      floor_num: newPropertyForm.floor_num || newPropertyForm.floor_no || '2nd Floor',
+      floor_number: newPropertyForm.floor_num || newPropertyForm.floor_no || '2nd Floor',
+      total_floors: newPropertyForm.total_floors || 'G+4 Floors',
+      facing: newPropertyForm.facing || 'East Facing',
+      furnishing: newPropertyForm.furnishing || 'Unfurnished',
+      tower_block: newPropertyForm.tower_block || 'Tower 1',
+      number_of_towers: newPropertyForm.number_of_towers || '1 Standalone Tower',
+      price_sqft: newPropertyForm.price_sqft || '',
+      final_price: newPropertyForm.final_price || '',
+      parking_required: newPropertyForm.parking_required || 'YES',
+      car_parking: newPropertyForm.car_parking || '1 Covered Parking Slot',
+      parking_price: newPropertyForm.parking_required === 'NO' ? '0' : (newPropertyForm.parking_price !== undefined ? newPropertyForm.parking_price : '300000'),
+      car_parking_charge: newPropertyForm.parking_required === 'NO' ? '0' : (newPropertyForm.parking_price !== undefined ? newPropertyForm.parking_price : '300000'),
+      floor_rise_charge: newPropertyForm.floor_rise_charge !== undefined ? newPropertyForm.floor_rise_charge : '0',
+      floorRise: newPropertyForm.floor_rise_charge !== undefined ? newPropertyForm.floor_rise_charge : '0',
+      plc_charge: newPropertyForm.plc_charge !== undefined ? newPropertyForm.plc_charge : '0',
+      plc: newPropertyForm.plc_charge !== undefined ? newPropertyForm.plc_charge : '0',
+      amenity_charges: newPropertyForm.amenity_charges !== undefined ? newPropertyForm.amenity_charges : '0',
+      clubhouse_charge: newPropertyForm.amenity_charges !== undefined ? newPropertyForm.amenity_charges : '0',
+      advance_maintenance_charge: newPropertyForm.advance_maintenance_charge !== undefined ? newPropertyForm.advance_maintenance_charge : '0',
+      legal_doc_charge: newPropertyForm.legal_doc_charge !== undefined ? newPropertyForm.legal_doc_charge : '0',
+      infrastructure_charge: newPropertyForm.legal_doc_charge !== undefined ? newPropertyForm.legal_doc_charge : '0',
+      lawyer_charge: newPropertyForm.legal_doc_charge !== undefined ? newPropertyForm.legal_doc_charge : '0',
+      total_base_price_with_other_charges: newPropertyForm.total_base_price_with_other_charges || '',
+      gst_pct: newPropertyForm.gst_pct || '5%',
+      stamp_duty_pct: newPropertyForm.stamp_duty_pct || '5%',
+      registration_fee_pct: newPropertyForm.registration_fee_pct || '1%',
+      total_all_inclusive_price: newPropertyForm.total_all_inclusive_price || '',
+      commission_pct: newPropertyForm.commission_pct || '2%',
+      possession_status: newPropertyForm.possession_status || 'Ready to Move',
+      maintenance_monthly: newPropertyForm.maintenance_monthly || '',
+      status: newPropertyForm.status || 'AVAILABLE',
+      latitude: newPropertyForm.latitude || '',
+      longitude: newPropertyForm.longitude || '',
+      building_photos: Array.isArray(newPropertyForm.building_photos) ? newPropertyForm.building_photos : [],
+      building_photo: newPropertyForm.building_photo || (Array.isArray(newPropertyForm.building_photos) && newPropertyForm.building_photos[0]) || '',
+      unit_photos: Array.isArray(newPropertyForm.unit_photos) ? newPropertyForm.unit_photos : [],
+      unit_photo: newPropertyForm.unit_photo || (Array.isArray(newPropertyForm.unit_photos) && newPropertyForm.unit_photos[0]) || '',
+      unit_videos: Array.isArray(newPropertyForm.unit_videos) ? newPropertyForm.unit_videos : [],
+      project_posting_id: newPropertyForm.project_posting_id || '',
+      key_custody: newPropertyForm.key_custody || '',
+      description: newPropertyForm.description || '',
+      site_person_name: newPropertyForm.site_person_name || '',
+      site_person_contact: newPropertyForm.site_person_contact || '',
+      created_at: isEditing && editingProperty.created_at ? editingProperty.created_at : new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // Construct updated properties list
+    let updatedProps: any[];
+    if (isEditing) {
+      updatedProps = properties.map(p => {
+        if (p.id === targetPropId || p.property_code === codeToUse) {
+          return { ...p, ...fullRecord };
+        }
+        return p;
+      });
+    } else {
+      updatedProps = [fullRecord, ...properties];
+    }
+
+    setIsSavingProperty(true);
+    try {
+      // 1. Update React state immediately for snappy UI
+      if (setProperties) {
+        setProperties(updatedProps);
+      }
+
+      // 2. Direct Network Sync to backend + MongoDB Atlas with response validation
+      const backendUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:5000/api/v1/crm/sync'
+        : '/api/v1/crm/sync';
+      const syncRes = await fetch(backendUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties: updatedProps })
+      });
+      if (!syncRes.ok) {
+        throw new Error(`Server returned HTTP ${syncRes.status}: ${syncRes.statusText}`);
+      }
+      const syncJson = await syncRes.json().catch(() => null);
+      if (syncJson && syncJson.status === 'ERROR') {
+        throw new Error(syncJson.message || 'Database sync rejected by server');
+      }
+
+      // 3. Trigger parent syncAllToMongoDB helper for complete state sync
+      if (syncAllToMongoDB) {
+        try {
+          await syncAllToMongoDB({ properties: updatedProps });
+        } catch (syncErr) {
+          console.warn('syncAllToMongoDB warning:', syncErr);
+        }
+      }
+
+      lastHydratedPropertyIdRef.current = null;
+      if (setActiveProjectSubTab) {
+        setActiveProjectSubTab('property_master');
+      }
+
+      alert(`🎉 ${isEditing ? 'Property Master Record Updated' : 'Property Registration Complete'}!\n\n• Code: ${codeToUse}\n• Project: ${projToUse}\n• Title: ${titleToUse}\n• Total Base Price: ${fullRecord.total_base_price_with_other_charges || 'Calculated'}\n• Status: Successfully saved & registered into Central Stock Inventory Registry & MongoDB Atlas!`);
+    } catch (err: any) {
+      console.error('Property save error:', err);
+      alert(`⚠️ Property Registration Failed: ${err?.message || 'Could not save to MongoDB Atlas'}\n\nPlease check server connection and try again.`);
+    } finally {
+      setIsSavingProperty(false);
+    }
+  }, [
+    isSavingProperty,
+    editingProperty,
+    newPropertyForm,
+    properties,
+    devProjectMobile,
+    devProjectAltMobile,
+    setProperties,
+    syncAllToMongoDB,
+    setActiveProjectSubTab,
+    generateDynamicPropertyCode,
+    generateNextProjectId
+  ]);
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
       
-      {/* SYSTEM HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '20px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <h2 style={{ fontSize: windowWidth <= 640 ? '1.15rem' : '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>PROJECT & PROPERTY INVENTORY MANAGEMENT SYSTEM</h2>
-            <span style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: '800' }}>STOCK INVENTORY ACTIVE</span>
+      {/* FIXED / STICKY HEADER & SUB-TABS NAVIGATION WRAPPER */}
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        background: isLight ? '#f8fafc' : '#0b0f19',
+        paddingTop: '2px',
+        paddingBottom: '8px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px'
+      }}>
+        {/* SYSTEM HEADER */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '14px' : '20px', boxShadow: isLight ? '0 4px 16px rgba(0,0,0,0.05)' : '0 4px 20px rgba(0,0,0,0.35)' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <h2 style={{ fontSize: windowWidth <= 640 ? '1.15rem' : '1.4rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', margin: 0 }}>PROJECT & PROPERTY INVENTORY MANAGEMENT SYSTEM</h2>
+              <span style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: '800' }}>STOCK INVENTORY ACTIVE</span>
+            </div>
+            <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
+              Master Stock Inventory
+            </p>
           </div>
-          <p style={{ fontSize: '0.8rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
-            Master Stock Inventory
-          </p>
+
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto' }}>
+            <button 
+              onClick={handleOpenNewPropertyForm} 
+              style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}
+            >
+              🏠 + Add Property
+            </button>
+            <button 
+              onClick={handleOpenNewProjectDeveloperForm} 
+              style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}
+            >
+              🏢 + Add Project & Developer
+            </button>
+            <button 
+              onClick={() => { setIsBulkImportPropertyOpen(true); if (setShowBulkImportPropertyModal) setShowBulkImportPropertyModal(true); }} 
+              style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}
+            >
+              <Upload size={15} /> 🏠 📥 Import Bulk Property Stock
+            </button>
+            <button 
+              onClick={() => { setIsBulkImportDeveloperOpen(true); if (setShowBulkImportDeveloperModal) setShowBulkImportDeveloperModal(true); }} 
+              style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none', boxShadow: '0 2px 8px rgba(168, 85, 247, 0.3)' }}
+            >
+              <Upload size={15} /> 🏢 📥 Import Bulk Developer Stock
+            </button>
+            <button onClick={handleExportInventoryExcel} style={{ background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#cbd5e1', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}>
+              <Share2 size={15} /> Export Inventory
+            </button>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto' }}>
-          <button 
-            onClick={handleOpenNewPropertyForm} 
-            style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}
-          >
-            🏠 + Add Property
+        {/* SUB-TABS NAVIGATION BAR FOR PROJECT MANAGEMENT */}
+        <div className="horizontal-scroll-touch" style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', width: '100%' }}>
+          <button onClick={() => setActiveProjectSubTab('property_master')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeProjectSubTab === 'property_master' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeProjectSubTab === 'property_master' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            🏠 Property Master Stock ({properties.length})
           </button>
-          <button 
-            onClick={handleOpenNewProjectDeveloperForm} 
-            style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}
-          >
-            🏢 + Add Project & Developer
+          <button onClick={() => setActiveProjectSubTab('introduction_register' as any)} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeProjectSubTab === ('introduction_register' as any) ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeProjectSubTab === ('introduction_register' as any) ? '#ffffff' : '#a855f7', border: activeProjectSubTab === ('introduction_register' as any) ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), whiteSpace: 'nowrap', flexShrink: 0 }}>
+            🛡️ Customer Introduction Register ({projectVisitAgreements.length})
           </button>
-          <button 
-            onClick={() => { setIsBulkImportPropertyOpen(true); if (setShowBulkImportPropertyModal) setShowBulkImportPropertyModal(true); }} 
-            style={{ background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}
-          >
-            <Upload size={15} /> 🏠 📥 Import Bulk Property Stock
-          </button>
-          <button 
-            onClick={() => { setIsBulkImportDeveloperOpen(true); if (setShowBulkImportDeveloperModal) setShowBulkImportDeveloperModal(true); }} 
-            style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none', boxShadow: '0 2px 8px rgba(168, 85, 247, 0.3)' }}
-          >
-            <Upload size={15} /> 🏢 📥 Import Bulk Developer Stock
-          </button>
-          <button onClick={handleExportInventoryExcel} style={{ background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#cbd5e1', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}>
-            <Share2 size={15} /> Export Inventory
+          <button onClick={() => setShowDevVaultModal(true)} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: isLight ? '#ffffff' : '#1e293b', color: '#fbbf24', border: '1px solid #fbbf24', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            🏢 Developer Master Vault ({(developerMasterList || []).filter((d: any) => !isItemInRecycledSet(d, recycledSet)).length} Developer IDs)
           </button>
         </div>
-      </div>
-      {/* SUB-TABS NAVIGATION BAR FOR PROJECT MANAGEMENT */}
-      <div className="horizontal-scroll-touch" style={{ borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155', paddingBottom: '12px', width: '100%' }}>
-        <button onClick={() => setActiveProjectSubTab('property_master')} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeProjectSubTab === 'property_master' ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeProjectSubTab === 'property_master' ? '#ffffff' : (isLight ? '#0f172a' : '#94a3b8'), border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', whiteSpace: 'nowrap', flexShrink: 0 }}>
-          🏠 Property Master Stock ({properties.length})
-        </button>
-        <button onClick={() => setActiveProjectSubTab('introduction_register' as any)} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: activeProjectSubTab === ('introduction_register' as any) ? '#0284c7' : (isLight ? '#ffffff' : '#1e293b'), color: activeProjectSubTab === ('introduction_register' as any) ? '#ffffff' : '#a855f7', border: activeProjectSubTab === ('introduction_register' as any) ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'), whiteSpace: 'nowrap', flexShrink: 0 }}>
-          🛡️ Customer Introduction Register ({projectVisitAgreements.length})
-        </button>
-        <button onClick={() => setShowDevVaultModal(true)} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', background: isLight ? '#ffffff' : '#1e293b', color: '#fbbf24', border: '1px solid #fbbf24', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-          🏢 Developer Master Vault ({(developerMasterList || []).filter((d: any) => !isItemInRecycledSet(d, recycledSet)).length} Developer IDs)
-        </button>
       </div>
 
       {/* SUB-TAB: CUSTOMER INTRODUCTION REGISTER & BROKERAGE PROTECTION */}
@@ -5106,10 +5470,25 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
               <button
                 type="button"
-                onClick={(e) => handleCreatePropertySubmit(e as any)}
-                style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: '900', fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(22, 163, 74, 0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                disabled={isSavingProperty}
+                onClick={(e) => handleSavePropertyDirect(e)}
+                style={{
+                  background: isSavingProperty ? '#475569' : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '10px',
+                  fontWeight: '900',
+                  fontSize: '0.92rem',
+                  cursor: isSavingProperty ? 'not-allowed' : 'pointer',
+                  boxShadow: isSavingProperty ? 'none' : '0 4px 14px rgba(22, 163, 74, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
               >
-                💾 SAVE & COMPLETE REGISTRATION
+                {isSavingProperty ? <RefreshCw size={16} className="spin" /> : null}
+                {isSavingProperty ? 'SAVING TO MONGODB ATLAS...' : '💾 SAVE & COMPLETE REGISTRATION'}
               </button>
 
               <div style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1.5px solid #38bdf8', borderRadius: '10px', padding: '8px 14px', textAlign: 'right' }}>
@@ -5130,7 +5509,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
           {/* FULL PAGE FORM CONTAINER */}
           <div style={{ background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', borderRadius: '16px', padding: windowWidth <= 640 ? '16px' : '28px', boxShadow: isLight ? '0 4px 16px rgba(0,0,0,0.04)' : 'none' }}>
-            <form onSubmit={handleCreatePropertySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <form 
+              onSubmit={(e) => handleSavePropertyDirect(e)} 
+              style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
+            >
               
               {/* SECTION 1: SEARCH / SELECT MASTER PROJECT ID & UNIQUE PROPERTY CODE */}
               <div style={{ background: isLight ? '#f8fafc' : '#0f172a', border: '1.5px solid #0284c7', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -5842,7 +6224,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                         });
                       }} 
                       style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: '2px solid #38bdf8', color: '#38bdf8', fontWeight: '900', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} 
-                      required 
                     />
                   </div>
 
@@ -6448,7 +6829,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   )}
                   <div>
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Monthly Maintenance</label>
-                    <input type="text" value={newPropertyForm.maintenance_monthly} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, maintenance_monthly: e.target.value })} style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} />
+                    <input type="text" value={newPropertyForm.maintenance_monthly !== undefined && newPropertyForm.maintenance_monthly !== null ? newPropertyForm.maintenance_monthly : ''} onChange={(e) => setNewPropertyForm({ ...newPropertyForm, maintenance_monthly: e.target.value })} placeholder="e.g. 1500 or 0" style={{ width: '100%', background: isLight ? '#ffffff' : '#1e293b', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', color: isLight ? '#0f172a' : '#ffffff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }} />
                   </div>
                   <div>
                     <label style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Stock Inventory Status</label>
@@ -6485,10 +6866,28 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   Cancel & Return to Registry
                 </button>
                 <button 
-                  type="submit" 
-                  style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff', border: 'none', padding: '14px 36px', borderRadius: '10px', fontWeight: '900', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 6px 20px rgba(22, 163, 74, 0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  type="button"
+                  disabled={isSavingProperty}
+                  onClick={(e) => handleSavePropertyDirect(e)} 
+                  style={{
+                    background: isSavingProperty ? '#475569' : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '14px 36px',
+                    borderRadius: '10px',
+                    fontWeight: '900',
+                    fontSize: '1rem',
+                    cursor: isSavingProperty ? 'not-allowed' : 'pointer',
+                    boxShadow: isSavingProperty ? 'none' : '0 6px 20px rgba(22, 163, 74, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
                 >
-                  {editingProperty ? `💾 SAVE & UPDATE PROPERTY (${editingProperty.property_code})` : `💾 SAVE & COMPLETE PROPERTY REGISTRATION`}
+                  {isSavingProperty ? <RefreshCw size={18} className="spin" /> : null}
+                  {isSavingProperty
+                    ? 'SAVING TO MONGODB ATLAS...'
+                    : (editingProperty ? `💾 SAVE & UPDATE PROPERTY (${editingProperty.property_code})` : `💾 SAVE & COMPLETE PROPERTY REGISTRATION`)}
                 </button>
               </div>
 
@@ -6510,7 +6909,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', width: windowWidth <= 640 ? '100%' : 'auto' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '8px', padding: '6px 12px', width: windowWidth <= 640 ? '100%' : '320px', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: isLight ? '#f8fafc' : '#0f172a', border: '1px solid #0284c7', borderRadius: '8px', padding: '6px 12px', width: windowWidth <= 640 ? '100%' : '300px', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}>
                 <Search size={15} color="#38bdf8" />
                 <input 
                   type="text" 
@@ -6525,6 +6924,155 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   </span>
                 )}
               </div>
+
+              {/* MONGODB ATLAS-STYLE PAGINATION WIDGET BESIDE SEARCH BAR */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: isLight ? '#f8fafc' : '#0f172a',
+                border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                borderRadius: '8px',
+                padding: '4px 8px',
+                userSelect: 'none',
+                position: 'relative'
+              }}>
+                {/* DROPDOWN SELECTOR: 25, 50, 75, 100 */}
+                <div ref={pageSizeDropdownRef} style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsPageSizeDropdownOpen(prev => !prev)}
+                    style={{
+                      background: isLight ? '#ffffff' : '#1e293b',
+                      color: isLight ? '#0f172a' : '#ffffff',
+                      border: isLight ? '1px solid #cbd5e1' : '1px solid #475569',
+                      borderRadius: '6px',
+                      padding: '4px 8px',
+                      fontSize: '0.78rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    }}
+                    title="Select rows per page"
+                  >
+                    <span>{propertyPageSize}</span>
+                    <ChevronDown size={13} color="#38bdf8" />
+                  </button>
+
+                  {/* FLOATING DROPDOWN MENU */}
+                  {isPageSizeDropdownOpen && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      marginTop: '4px',
+                      background: isLight ? '#ffffff' : '#1e293b',
+                      border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                      borderRadius: '8px',
+                      boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
+                      zIndex: 1000,
+                      minWidth: '85px',
+                      padding: '4px 0',
+                      overflow: 'hidden'
+                    }}>
+                      {[25, 50, 75, 100].map(size => {
+                        const isSelected = propertyPageSize === size;
+                        return (
+                          <div
+                            key={size}
+                            onClick={() => {
+                              setPropertyPageSize(size);
+                              setPropertyCurrentPage(1);
+                              setIsPageSizeDropdownOpen(false);
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.78rem',
+                              fontWeight: isSelected ? '900' : '700',
+                              color: isSelected ? '#0284c7' : (isLight ? '#0f172a' : '#f8fafc'),
+                              background: isSelected ? (isLight ? '#e0f2fe' : 'rgba(2, 132, 199, 0.2)') : 'transparent',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '6px',
+                              transition: 'background 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) e.currentTarget.style.background = isLight ? '#f1f5f9' : '#0f172a';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) e.currentTarget.style.background = 'transparent';
+                            }}
+                          >
+                            <span>{size}</span>
+                            {isSelected && <Check size={13} color="#0284c7" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* RANGE TEXT: 1 – 100 of 611 */}
+                <span style={{
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  color: isLight ? '#475569' : '#cbd5e1',
+                  whiteSpace: 'nowrap',
+                  padding: '0 2px'
+                }}>
+                  {totalFilteredPropertiesCount === 0 ? '0 – 0 of 0' : `${propertyStartIndex + 1} – ${propertyEndIndex} of ${totalFilteredPropertiesCount}`}
+                </span>
+
+                {/* PREVIOUS BUTTON (<) */}
+                <button
+                  type="button"
+                  onClick={() => setPropertyCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={safeCurrentPage <= 1}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '3px 4px',
+                    color: safeCurrentPage <= 1 ? '#64748b' : (isLight ? '#0f172a' : '#ffffff'),
+                    cursor: safeCurrentPage <= 1 ? 'not-allowed' : 'pointer',
+                    opacity: safeCurrentPage <= 1 ? 0.3 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="Previous Page"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                {/* NEXT BUTTON (>) */}
+                <button
+                  type="button"
+                  onClick={() => setPropertyCurrentPage(prev => Math.min(totalPropertyPages, prev + 1))}
+                  disabled={safeCurrentPage >= totalPropertyPages || totalFilteredPropertiesCount === 0}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '3px 4px',
+                    color: (safeCurrentPage >= totalPropertyPages || totalFilteredPropertiesCount === 0) ? '#64748b' : (isLight ? '#0f172a' : '#ffffff'),
+                    cursor: (safeCurrentPage >= totalPropertyPages || totalFilteredPropertiesCount === 0) ? 'not-allowed' : 'pointer',
+                    opacity: (safeCurrentPage >= totalPropertyPages || totalFilteredPropertiesCount === 0) ? 0.3 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="Next Page"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
               <button onClick={() => { setIsBulkImportPropertyOpen(true); if (setShowBulkImportPropertyModal) setShowBulkImportPropertyModal(true); }} style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '900', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none', whiteSpace: 'nowrap' }}>
                 <Upload size={15} /> 📥 Import Bulk Inventory CSV / Excel
               </button>
@@ -6587,17 +7135,13 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           )}
 
           {windowWidth <= 768 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {properties
-                .filter(p => matchesSearchQuery(p, searchQuery))
-                .length === 0 ? (
+            <div className="custom-modal-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', paddingRight: '4px' }}>
+              {paginatedPropertyList.length === 0 ? (
                 <div style={{ padding: '24px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8', background: isLight ? '#f8fafc' : '#0f172a', borderRadius: '12px' }}>
                   No matching property stock items found.
                 </div>
               ) : (
-                properties
-                  .filter(p => matchesSearchQuery(p, searchQuery))
-                  .map(p => {
+                paginatedPropertyList.map(p => {
                     const carpetNum = parseFloat(String(p.carpet_area || '').replace(/[^0-9.]/g, ''));
                     const calcSuper = carpetNum ? `${Math.round(carpetNum / 0.7)} Sq.Ft.` : '1,280 Sq.Ft.';
                     const superDisp = p.super_builtup_area ? (String(p.super_builtup_area).toLowerCase().includes('sq') ? String(p.super_builtup_area) : `${p.super_builtup_area} Sq.Ft.`) : calcSuper;
@@ -6906,10 +7450,19 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
               )}
             </div>
           ) : (
-            <div className="table-responsive-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <div className="table-responsive-wrapper custom-modal-scrollbar" style={{
+              width: '100%',
+              overflowX: 'auto',
+              maxHeight: 'calc(100vh - 330px)',
+              minHeight: '400px',
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+              borderRadius: '10px'
+            }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ background: isLight ? '#f8fafc' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: isLight ? '#f1f5f9' : '#0f172a' }}>
+                  <tr style={{ background: isLight ? '#f1f5f9' : '#0f172a', color: isLight ? '#0f172a' : '#ffffff', textAlign: 'left', borderBottom: isLight ? '2px solid #cbd5e1' : '2px solid #334155' }}>
                     <th style={{ width: '40px', padding: '12px 8px', textAlign: 'center' }}>
                       <input
                         type="checkbox"
@@ -6932,9 +7485,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {properties
-                    .filter(p => matchesSearchQuery(p, searchQuery))
-                    .map(p => {
+                  {paginatedPropertyList.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} style={{ padding: '36px', textAlign: 'center', color: isLight ? '#64748b' : '#94a3b8' }}>
+                        No matching property stock items found.
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedPropertyList.map(p => {
                       const carpetNum = parseFloat(String(p.carpet_area || '').replace(/[^0-9.]/g, ''));
                       const calcSuper = carpetNum ? `${Math.round(carpetNum / 0.7)} Sq.Ft.` : '1,280 Sq.Ft.';
                       const superDisp = p.super_builtup_area ? (String(p.super_builtup_area).toLowerCase().includes('sq') ? String(p.super_builtup_area) : `${p.super_builtup_area} Sq.Ft.`) : calcSuper;
@@ -7246,7 +7804,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           </td>
                         </tr>
                       );
-                    })}
+                    }))}
                 </tbody>
               </table>
             </div>
@@ -8831,7 +9389,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Monthly Maintenance</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>{viewPropertyModal.maintenance_monthly ? (viewPropertyModal.maintenance_monthly.toString().startsWith('₹') ? viewPropertyModal.maintenance_monthly : `₹${viewPropertyModal.maintenance_monthly}`) : 'N/A'}</strong>
+                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff' }}>
+                        {(() => {
+                          const val = viewPropertyModal.maintenance_monthly;
+                          if (val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '0' && String(val).trim().toLowerCase() !== 'n/a') {
+                            const strVal = String(val).trim();
+                            return strVal.startsWith('₹') ? strVal : `₹${strVal}`;
+                          }
+                          return '₹0';
+                        })()}
+                      </strong>
                     </div>
                   </div>
 
@@ -9667,13 +10234,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   </span>
                   <span style={{
                     background: isLight ? '#f1f5f9' : '#0f172a',
-                    color: isLight ? '#64748b' : '#94a3b8',
-                    padding: '3px 8px',
+                    color: isLight ? '#0284c7' : '#38bdf8',
+                    padding: '3px 10px',
                     borderRadius: '6px',
                     fontSize: '0.72rem',
-                    fontWeight: '700'
+                    fontWeight: '800',
+                    border: '1px solid #0284c7'
                   }}>
-                    {BULK_PROPERTY_COLUMNS.length} Master Inventory Columns Supported
+                    {BULK_UPLOAD_PROPERTY_COLUMNS.length} Fast-Input Columns Supported • {BULK_EXPORT_PROPERTY_COLUMNS.length} in Live Export
                   </span>
                 </div>
                 <h3 style={{
@@ -9692,7 +10260,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   color: isLight ? '#64748b' : '#94a3b8',
                   margin: '4px 0 0 0'
                 }}>
-                  Upload or paste your property inventory sheets. All {BULK_PROPERTY_COLUMNS.length} fields (linked by Master Project ID with BHK, Area, Floor, Pricing, and Charges) are supported with automatic formula calculations and sequential code generation.
+                  Upload or paste your property inventory sheets with {BULK_UPLOAD_PROPERTY_COLUMNS.length} essential input columns. All grand totals, project-level parking inventory, developer links, and audit timestamps are automatically computed upon ingestion.
                 </p>
               </div>
               <button
@@ -9720,88 +10288,100 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
               flexDirection: 'column',
               gap: '14px'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div>
                   <strong style={{ color: isLight ? '#166534' : '#86efac', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CheckCircle2 size={18} color="#22c55e" /> Step 1: Download Standard Pre-Formatted Template
+                    <CheckCircle2 size={18} color="#22c55e" /> Step 1: Download Standard Pre-Formatted Template ({BULK_UPLOAD_PROPERTY_COLUMNS.length} Columns)
                   </strong>
                   <span style={{ fontSize: '0.78rem', color: isLight ? '#475569' : '#cbd5e1', display: 'block', marginTop: '2px' }}>
-                    Template includes all {BULK_PROPERTY_COLUMNS.length} columns covering property unit inventory with 2 complete sample units.
+                    Template includes {BULK_UPLOAD_PROPERTY_COLUMNS.length} standard input columns with 2 complete sample units. All 10 formula & audit fields auto-compute.
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%', flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: '2px' }}>
                   <button
                     onClick={handleDownloadExcelTemplate}
                     style={{
+                      flex: 1,
+                      whiteSpace: 'nowrap',
+                      justifyContent: 'center',
                       background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                       color: '#ffffff',
                       border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      fontWeight: '900',
-                      fontSize: '0.82rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)'
-                    }}
-                  >
-                    <Download size={15} /> 📥 Download Excel Template (.xlsx)
-                  </button>
-                  <button
-                    onClick={handleDownloadCsvTemplate}
-                    style={{
-                      background: isLight ? '#ffffff' : '#1e293b',
-                      color: isLight ? '#0f172a' : '#f8fafc',
-                      border: '1px solid #22c55e',
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      fontWeight: '800',
-                      fontSize: '0.82rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <FileText size={15} /> 📄 Download CSV Template (.csv)
-                  </button>
-                  <button
-                    onClick={handleExportInventoryExcel}
-                    style={{
-                      background: isLight ? '#ffffff' : '#0f172a',
-                      color: '#0284c7',
-                      border: '1px solid #0284c7',
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      fontWeight: '800',
-                      fontSize: '0.82rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <FileSpreadsheet size={15} /> 📊 Export Live Inventory ({properties.length})
-                  </button>
-                  <button
-                    onClick={() => setShowBulkColumnsGuide(prev => !prev)}
-                    style={{
-                      background: 'none',
-                      border: isLight ? '1px solid #cbd5e1' : '1px solid #475569',
-                      color: isLight ? '#475569' : '#cbd5e1',
-                      padding: '8px 12px',
+                      padding: '8px 8px',
                       borderRadius: '8px',
                       fontWeight: '800',
                       fontSize: '0.78rem',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px'
+                      gap: '5px',
+                      boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)'
                     }}
                   >
-                    {showBulkColumnsGuide ? <EyeOff size={14} /> : <Eye size={14} />} {showBulkColumnsGuide ? 'Hide Column Guide' : `View ${BULK_PROPERTY_COLUMNS.length} Column Guide`}
+                    <Download size={14} /> Download Excel Template (.xlsx)
+                  </button>
+                  <button
+                    onClick={handleDownloadCsvTemplate}
+                    style={{
+                      flex: 1,
+                      whiteSpace: 'nowrap',
+                      justifyContent: 'center',
+                      background: isLight ? '#ffffff' : '#1e293b',
+                      color: isLight ? '#0f172a' : '#f8fafc',
+                      border: '1px solid #22c55e',
+                      padding: '8px 8px',
+                      borderRadius: '8px',
+                      fontWeight: '800',
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                  >
+                    <FileText size={14} /> Download CSV Template (.csv)
+                  </button>
+                  <button
+                    onClick={handleExportInventoryExcel}
+                    style={{
+                      flex: 1,
+                      whiteSpace: 'nowrap',
+                      justifyContent: 'center',
+                      background: isLight ? '#ffffff' : '#0f172a',
+                      color: '#0284c7',
+                      border: '1px solid #0284c7',
+                      padding: '8px 8px',
+                      borderRadius: '8px',
+                      fontWeight: '800',
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                  >
+                    <FileSpreadsheet size={14} /> Export Live Inventory ({BULK_EXPORT_PROPERTY_COLUMNS.length} Cols • {properties.length})
+                  </button>
+                  <button
+                    onClick={() => setShowBulkColumnsGuide(prev => !prev)}
+                    style={{
+                      flex: 1,
+                      whiteSpace: 'nowrap',
+                      justifyContent: 'center',
+                      background: isLight ? '#ffffff' : '#1e293b',
+                      border: isLight ? '1px solid #cbd5e1' : '1px solid #475569',
+                      color: isLight ? '#334155' : '#cbd5e1',
+                      padding: '8px 8px',
+                      borderRadius: '8px',
+                      fontWeight: '800',
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                  >
+                    {showBulkColumnsGuide ? <EyeOff size={14} /> : <Eye size={14} />} {showBulkColumnsGuide ? 'Hide Column Guide' : `View ${BULK_UPLOAD_PROPERTY_COLUMNS.length} Column Guide`}
                   </button>
                 </div>
               </div>
@@ -9813,20 +10393,21 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
                   borderRadius: '10px',
                   padding: '14px',
-                  maxHeight: '260px',
+                  maxHeight: '320px',
                   overflowY: 'auto',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '10px'
+                  gap: '12px'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong style={{ fontSize: '0.82rem', color: isLight ? '#0284c7' : '#38bdf8' }}>
-                      📋 Full {BULK_PROPERTY_COLUMNS.length} Column Specification (Grouped by "Register New Property Master Inventory" Form Sections)
+                    <strong style={{ fontSize: '0.84rem', color: isLight ? '#0284c7' : '#38bdf8' }}>
+                      📋 Standard {BULK_UPLOAD_PROPERTY_COLUMNS.length}-Column Upload Specification
                     </strong>
                     <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
-                      Column headers in your Excel sheet match these names (or synonyms)
+                      Upload sheets only need these {BULK_UPLOAD_PROPERTY_COLUMNS.length} clean input columns
                     </span>
                   </div>
+
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
                       <thead>
@@ -9839,7 +10420,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                         </tr>
                       </thead>
                       <tbody>
-                        {BULK_PROPERTY_COLUMNS.map((col, idx) => (
+                        {BULK_UPLOAD_PROPERTY_COLUMNS.map((col, idx) => (
                           <tr key={col.key} style={{ borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #1e293b' }}>
                             <td style={{ padding: '6px 10px', fontWeight: '800', color: '#22c55e' }}>{idx + 1}</td>
                             <td style={{ padding: '6px 10px', fontWeight: '700', color: isLight ? '#0f172a' : '#ffffff' }}>{col.header}</td>
@@ -9904,18 +10485,41 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
               </div>
 
               {bulkImportMode === 'upload' ? (
-                <div style={{
-                  border: '2px dashed #0284c7',
-                  borderRadius: '12px',
-                  padding: '24px 16px',
-                  textAlign: 'center',
-                  background: isLight ? '#f0f9ff' : 'rgba(2, 132, 199, 0.05)',
-                  cursor: 'pointer',
-                  position: 'relative'
-                }}>
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDraggingBulkFile(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDraggingBulkFile(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDraggingBulkFile(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      processUploadedFile(file);
+                    }
+                  }}
+                  style={{
+                    border: isDraggingBulkFile ? '2.5px dashed #22c55e' : '2px dashed #0284c7',
+                    borderRadius: '12px',
+                    padding: '24px 16px',
+                    textAlign: 'center',
+                    background: isDraggingBulkFile ? (isLight ? '#f0fdf4' : 'rgba(34, 197, 94, 0.12)') : (isLight ? '#f0f9ff' : 'rgba(2, 132, 199, 0.05)'),
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
                   <input
                     type="file"
                     accept=".xlsx, .xls, .csv"
+                    onClick={(e) => { (e.target as any).value = null; }}
                     onChange={handleBulkFileSelected}
                     style={{
                       position: 'absolute',
@@ -9928,14 +10532,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     }}
                   />
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', pointerEvents: 'none' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: isDraggingBulkFile ? '#22c55e' : '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', transition: 'background 0.2s ease' }}>
                       <Upload size={24} />
                     </div>
-                    <strong style={{ fontSize: '0.95rem', color: isLight ? '#0284c7' : '#38bdf8' }}>
-                      {bulkFileName ? `Selected: ${bulkFileName}` : 'Click or Drag & Drop Excel (.xlsx, .xls) or CSV File Here'}
+                    <strong style={{ fontSize: '0.95rem', color: isDraggingBulkFile ? '#22c55e' : (isLight ? '#0284c7' : '#38bdf8') }}>
+                      {bulkFileName ? `Selected: ${bulkFileName}` : (isDraggingBulkFile ? 'Drop Excel or CSV file here to import!' : 'Click or Drag & Drop Excel (.xlsx, .xls) or CSV File Here')}
                     </strong>
                     <span style={{ fontSize: '0.75rem', color: isLight ? '#64748b' : '#94a3b8' }}>
-                      Supports all {BULK_PROPERTY_COLUMNS.length} columns. Auto-generates sequential property codes if left blank.
+                      Supports {BULK_UPLOAD_PROPERTY_COLUMNS.length} input columns (as well as full {BULK_EXPORT_PROPERTY_COLUMNS.length}-column exported sheets). Auto-calculates totals & sequential property codes.
                     </span>
                   </div>
                 </div>

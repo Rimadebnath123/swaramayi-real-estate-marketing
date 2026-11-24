@@ -439,11 +439,48 @@ import {
   InvoiceModel, SiteVisitModel, MatchingRequestModel, RecycleBinModel
 } from '../db/mongoPersistence.js';
 
+let lastAtlasBackgroundSync = 0;
+let isAtlasBackgroundSyncing = false;
+
 export async function getMongoDBSync(req: AuthRequest, res: Response) {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.setHeader('Surrogate-Control', 'no-store');
+
+  const force = req.query?.force === 'true' || req.query?.refresh === 'true';
+
+  // HIGH-PERFORMANCE SERVING: If in-memory store is already hydrated, serve immediately in <10ms!
+  if (!force && dbStore.data && Array.isArray(dbStore.data.properties) && dbStore.data.properties.length > 0) {
+    const now = Date.now();
+    // Non-blocking background sync every 60 seconds to ensure fresh data without holding up the user
+    if (now - lastAtlasBackgroundSync > 60000 && !isAtlasBackgroundSyncing) {
+      isAtlasBackgroundSyncing = true;
+      loadDataFromMongoDB().then((mongoData) => {
+        if (mongoData) {
+          if (Array.isArray(mongoData.properties) && mongoData.properties.length > 0) {
+            dbStore.data.properties = mongoData.properties as any;
+          }
+          if (Array.isArray(mongoData.users) && mongoData.users.length > 0) {
+            dbStore.data.users = mongoData.users as any;
+          }
+          if (Array.isArray(mongoData.developers) && mongoData.developers.length > 0) {
+            (dbStore.data as any).developers = mongoData.developers as any;
+          }
+          lastAtlasBackgroundSync = Date.now();
+        }
+      }).catch(() => {}).finally(() => {
+        isAtlasBackgroundSyncing = false;
+      });
+    }
+
+    return res.json({
+      status: 'SUCCESS',
+      data: dbStore.data
+    });
+  }
+
+  // Fallback for cold start or explicit forced refresh
   const mongoData = await loadDataFromMongoDB();
   const data = mongoData || dbStore.data;
   if (mongoData && Array.isArray(mongoData.users) && mongoData.users.length > 0) {
@@ -455,6 +492,7 @@ export async function getMongoDBSync(req: AuthRequest, res: Response) {
   if (data && Array.isArray((dbStore.data as any).files)) {
     (data as any).files = (dbStore.data as any).files;
   }
+  lastAtlasBackgroundSync = Date.now();
   return res.json({
     status: 'SUCCESS',
     data
@@ -475,6 +513,9 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
       if (!name && !mob && !num) return true;
       return false;
     };
+
+    // Keep snapshot of existing in-memory properties for smart delta persistence
+    const prevProperties = Array.isArray(dbStore.data.properties) ? [...dbStore.data.properties] : [];
 
     if (Array.isArray(payload.leads)) {
       const incomingLeads = payload.leads.filter((l: any) => !isTestRecord(l));
@@ -589,8 +630,60 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
         });
       }
     }
+
+    // Persist full in-memory data to local disk store immediately
     dbStore.save();
-    await syncToMongoDB(payload);
+
+    // SMART DELTA CLUSTER WRITE:
+    // Only send new or updated properties to MongoDB Atlas, avoiding costly 600+ record bulkWrites
+    const mongoPayload = { ...payload };
+    if (Array.isArray(payload.properties) && prevProperties.length > 0 && !payload.sync_all) {
+      const prevMap = new Map<string, any>();
+      prevProperties.forEach((p: any) => {
+        const k = String(p.property_code || p.code || p.id || '').trim().toUpperCase();
+        if (k) prevMap.set(k, p);
+      });
+
+      const deltaProps = payload.properties.filter((p: any) => {
+        const k = String(p.property_code || p.code || p.id || '').trim().toUpperCase();
+        if (!k) return true;
+        const prev = prevMap.get(k);
+        if (!prev) return true; // Brand new property!
+        if (p.updated_at && prev.updated_at && p.updated_at !== prev.updated_at) return true;
+        if (p.final_price !== prev.final_price) return true;
+        if (p.status !== prev.status) return true;
+        if (p.title !== prev.title) return true;
+        if (p.carpet_area !== prev.carpet_area) return true;
+        if (p.super_builtup_area !== prev.super_builtup_area) return true;
+        if (p.parking_price !== prev.parking_price) return true;
+        if (p.price_sqft !== prev.price_sqft) return true;
+        if (p.project_id !== prev.project_id) return true;
+        if (p.total_base_price_with_other_charges !== prev.total_base_price_with_other_charges) return true;
+        return JSON.stringify(p) !== JSON.stringify(prev);
+      });
+
+      // Handle any deleted properties removed from array
+      const currentKeys = new Set(payload.properties.map((p: any) => String(p.property_code || p.code || p.id || '').trim().toUpperCase()).filter(Boolean));
+      const removedCodes = prevProperties
+        .map((p: any) => String(p.property_code || p.code || p.id || '').trim())
+        .filter(k => k && !currentKeys.has(k.toUpperCase()));
+
+      if (removedCodes.length > 0) {
+        PropertyModel.deleteMany({
+          $or: [
+            { property_code: { $in: removedCodes } },
+            { id: { $in: removedCodes } }
+          ]
+        }).catch((e: any) => console.warn('Remove deleted properties note:', e.message));
+      }
+
+      // If delta has specific records to sync, only write those to Atlas for lightning speed
+      if (deltaProps.length > 0 && deltaProps.length < payload.properties.length) {
+        mongoPayload.properties = deltaProps;
+      }
+    }
+
+    await syncToMongoDB(mongoPayload);
   }
   return res.json({
     status: 'SUCCESS',

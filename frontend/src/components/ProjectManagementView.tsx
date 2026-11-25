@@ -303,34 +303,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     }
   };
 
-  const [developerMasterList, setDeveloperMasterList] = React.useState<any[]>(() => {
-    if (developers && Array.isArray(developers) && developers.length > 0) return developers;
-    try {
-      const saved = localStorage.getItem('swaramayi_developers_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-      console.error('Error reading developers from localStorage');
-    }
-    return [];
-  });
+  const [developerMasterList, setDeveloperMasterList] = React.useState<any[]>(() => (
+    developers && Array.isArray(developers) && developers.length > 0 ? developers : []
+  ));
 
   // COLLECT ALL REGISTERED MASTER PROJECTS FROM DEVELOPER VAULT & EXISTING PROPERTIES
   const getAllMasterProjects = React.useCallback(() => {
-    let recycledSet = new Set<string>();
-    try {
-      const savedRec = localStorage.getItem('swaramayi_recycled_items');
-      if (savedRec) {
-        const parsed = JSON.parse(savedRec);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((r: any) => {
-            extractAllIdentifiers(r).forEach(id => recycledSet.add(id));
-          });
-        }
-      }
-    } catch (e) {}
+    const recycledSet = new Set<string>();
+    (recycledItems || []).forEach((r: any) => {
+      extractAllIdentifiers(r).forEach(id => recycledSet.add(id));
+    });
 
     const masterProjectsMap = new Map<string, any>();
 
@@ -506,9 +488,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   // ==========================================
   // BULK PROPERTY STOCK IMPORT & EXCEL ENGINE
   // ==========================================
-  // COMPREHENSIVE 40-COLUMN EXPORT SPECIFICATION
+  // COMPREHENSIVE 43-COLUMN EXPORT SPECIFICATION
   const BULK_EXPORT_PROPERTY_COLUMNS = [
-    // 1. Master Project ID & Link (7 fields)
+    // 1. Master Project ID, Link & GPS Location (10 fields)
     { header: 'Property Code', key: 'property_code', section: '1. Master Project Link', sample1: 'SRM-PROP-2026-000001', sample2: 'SRM-PROP-2026-000002', desc: 'Unique property inventory code' },
     { header: 'Property Title', key: 'title', section: '1. Master Project Link', sample1: 'AHANA APARTMENT', sample2: 'ABILASH APARTMENT', desc: 'Project or building title' },
     { header: 'Master Project ID', key: 'project_id', section: '1. Master Project Link', sample1: 'SRM-PROJ-2026-000004', sample2: 'SRM-PROJ-2026-000002', desc: 'Master project code to link this unit to (e.g. SRM-PROJ-2026-000004). Developer, locality, address, RERA & building specs auto-link.' },
@@ -516,6 +498,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     { header: 'Developer Contact', key: 'developer_mobile', section: '1. Master Project Link', sample1: '+91 98490 88776', sample2: '+91 98833 95102', desc: 'Developer primary mobile contact number' },
     { header: 'Developer Name', key: 'developer', section: '1. Master Project Link', sample1: 'ARNAB DAS', sample2: 'ISHANA MONDAL', desc: 'Developer or builder name' },
     { header: 'Project Posting ID', key: 'project_posting_id', section: '1. Master Project Link', sample1: 'PRJ-POST-2026-8802', sample2: 'PRJ-POST-2026-8803', desc: 'Marketing / posting campaign tracking ID' },
+    { header: 'Latitude', key: 'latitude', section: '1. Master Project Link', sample1: '22.689639', sample2: '22.722361', desc: 'GPS Latitude coordinate' },
+    { header: 'Longitude', key: 'longitude', section: '1. Master Project Link', sample1: '88.449663', sample2: '88.493403', desc: 'GPS Longitude coordinate' },
+    { header: 'Full Address', key: 'full_address', section: '1. Master Project Link', sample1: 'Madhyamgram, North 24 Parganas, West Bengal - 700129, India', sample2: 'Chapadali, Barasat, West Bengal - 700124, India', desc: 'Full physical site address' },
 
     // 2. Unit Configuration, Area, Floor & Orientation Specifications (11 fields)
     { header: 'Property Category Type', key: 'property_type', section: '2. Configuration & Area', sample1: 'Flat / Apartment', sample2: 'Flat / Apartment', desc: 'Flat / Apartment, Penthouse, Duplex, Villa, Commercial' },
@@ -606,6 +591,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const [bulkImportErrors, setBulkImportErrors] = React.useState<string[]>([]);
   const [isProcessingBulkFile, setIsProcessingBulkFile] = React.useState<boolean>(false);
   const [isIngestingStock, setIsIngestingStock] = React.useState<boolean>(false);
+  const [isExportingInventory, setIsExportingInventory] = React.useState<boolean>(false);
+  const [exportProgressText, setExportProgressText] = React.useState<string>('');
   const [isSavingProperty, setIsSavingProperty] = React.useState<boolean>(false);
   const [showBulkColumnsGuide, setShowBulkColumnsGuide] = React.useState<boolean>(false);
   const [bulkPreviewFilter, setBulkPreviewFilter] = React.useState<string>('');
@@ -698,14 +685,85 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     }
   };
 
-  const handleExportInventoryExcel = () => {
+  const handleExportInventoryExcel = async () => {
+    if (isExportingInventory) return;
     try {
       if (!properties || properties.length === 0) {
         alert('⚠️ Master inventory is currently empty. Downloading sample template instead.');
         handleDownloadExcelTemplate();
         return;
       }
+
+      setIsExportingInventory(true);
+      setExportProgressText('Preparing GPS addresses...');
+
       const allMasters = getAllMasterProjects();
+
+      // Pre-collect unique uncached (lat, lng) pairs that need full reverse-geocoded physical address
+      const uniqueCoordsToResolve = new Map<string, { lat: number; lng: number }>();
+      properties.forEach(p => {
+        const displayTitle = p.title || p.property_name || p.name || 'Untitled Property';
+        const matchedMaster = allMasters.find(m =>
+          (m.title && displayTitle && m.title.toLowerCase().trim() === displayTitle.toLowerCase().trim()) ||
+          (m.id && p.project_id && m.id === p.project_id) ||
+          (m.code && p.project_id && m.code === p.project_id)
+        );
+        const exportLat = String(p.latitude || p.lat || matchedMaster?.latitude || matchedMaster?.lat || '').trim();
+        const exportLng = String(p.longitude || p.lng || matchedMaster?.longitude || matchedMaster?.lng || '').trim();
+        const parsedLat = parseFloat(exportLat.replace(/[^\d.\-+]/g, ''));
+        const parsedLng = parseFloat(exportLng.replace(/[^\d.\-+]/g, ''));
+        if (isNaN(parsedLat) || isNaN(parsedLng) || parsedLat < -90 || parsedLat > 90 || parsedLng < -180 || parsedLng > 180) return;
+
+        const coordKey = `${parsedLat.toFixed(6)},${parsedLng.toFixed(6)}`;
+        if (resolvedModalAddressCacheRef.current[coordKey]) return;
+
+        const rawFullAddr = String(p.full_address || p.address || matchedMaster?.full_address || matchedMaster?.address || '').trim();
+        const isGeneric = !rawFullAddr || ['n/a', 'na', 'greater kolkata', 'kolkata', 'locality hub'].includes(rawFullAddr.toLowerCase()) || (!rawFullAddr.includes(',') && rawFullAddr.length < 30);
+        if (isGeneric && !uniqueCoordsToResolve.has(coordKey)) {
+          uniqueCoordsToResolve.set(coordKey, { lat: parsedLat, lng: parsedLng });
+        }
+      });
+
+      const coordsEntries = Array.from(uniqueCoordsToResolve.entries());
+      if (coordsEntries.length > 0) {
+        const BATCH_SIZE = 2;
+        for (let i = 0; i < coordsEntries.length; i += BATCH_SIZE) {
+          const batch = coordsEntries.slice(i, i + BATCH_SIZE);
+          setExportProgressText(`Resolving GPS Addresses (${Math.min(i + batch.length, coordsEntries.length)}/${coordsEntries.length})...`);
+          await Promise.all(
+            batch.map(async ([coordKey, { lat, lng }]) => {
+              let resolved = '';
+              try {
+                if (detectLocalityFromCoords) {
+                  const res = await detectLocalityFromCoords(String(lat), String(lng));
+                  resolved = res?.fullAddress || res?.locality || '';
+                }
+              } catch (e) {}
+
+              if (!resolved) {
+                try {
+                  const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+                    headers: { 'Accept-Language': 'en' }
+                  });
+                  if (resp.ok) {
+                    const data = await resp.json();
+                    resolved = data?.display_name || '';
+                  }
+                } catch (e) {}
+              }
+
+              if (resolved) {
+                resolvedModalAddressCacheRef.current[coordKey] = resolved;
+              }
+            })
+          );
+          if (i + BATCH_SIZE < coordsEntries.length) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+        }
+      }
+
+      setExportProgressText('Building Excel file...');
       const headers = BULK_EXPORT_PROPERTY_COLUMNS.map(c => c.header);
       const rows = properties.map(p => {
         const displayTitle = p.title || p.property_name || p.name || 'Untitled Property';
@@ -798,6 +856,19 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
 
         const createdByStr = p.created_by || p.createdBy || p.added_by || p.property_created_by || (p.site_person_name && p.site_person_name !== 'N/A' ? p.site_person_name : '') || (currentRole === 'SUPER_ADMIN' ? 'Avishek Das (SUPER_ADMIN)' : (currentRole || 'Avishek Das (SUPER_ADMIN)'));
 
+        const exportLat = String(p.latitude || p.lat || matchedMaster?.latitude || matchedMaster?.lat || '').trim();
+        const exportLng = String(p.longitude || p.lng || matchedMaster?.longitude || matchedMaster?.lng || '').trim();
+        const parsedExportLat = parseFloat(exportLat.replace(/[^\d.\-+]/g, ''));
+        const parsedExportLng = parseFloat(exportLng.replace(/[^\d.\-+]/g, ''));
+        const exportCoordKey = (!isNaN(parsedExportLat) && !isNaN(parsedExportLng))
+          ? `${parsedExportLat.toFixed(6)},${parsedExportLng.toFixed(6)}`
+          : '';
+        const cachedExportAddr = exportCoordKey ? resolvedModalAddressCacheRef.current[exportCoordKey] : '';
+        const rawExportFullAddr = String(p.full_address || p.address || matchedMaster?.full_address || matchedMaster?.address || '').trim();
+        const rawExportLocality = String(p.locality || matchedMaster?.locality || '').trim();
+        const isGenericExportAddr = !rawExportFullAddr || ['n/a', 'na', 'greater kolkata', 'kolkata', 'locality hub'].includes(rawExportFullAddr.toLowerCase()) || (!rawExportFullAddr.includes(',') && rawExportFullAddr.length < 30);
+        const exportFullAddress = (!isGenericExportAddr ? rawExportFullAddr : (cachedExportAddr || rawExportFullAddr || rawExportLocality));
+
         const enrichedP: any = {
           ...p,
           property_code: p.property_code || p.id || '',
@@ -806,6 +877,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
           project_id: projId,
           developer_id: devId,
           developer_mobile: devContact,
+          latitude: exportLat,
+          longitude: exportLng,
+          full_address: exportFullAddress,
           created_at: createdDateStr,
           created_date: createdDateStr,
           created_by: createdByStr,
@@ -828,6 +902,9 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       XLSX.writeFile(wb, `Swaramayi_Master_Property_Stock_${nowStr}.xlsx`);
     } catch (err: any) {
       alert(`⚠️ Export failed: ${err.message}`);
+    } finally {
+      setIsExportingInventory(false);
+      setExportProgressText('');
     }
   };
 
@@ -1870,9 +1947,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       if (setRecycledItems && updatedRecycled.length !== (recycledItems || []).length) {
         setRecycledItems(updatedRecycled);
       }
-      try {
-        localStorage.setItem('swaramayi_recycled_items', JSON.stringify(updatedRecycled));
-      } catch (e) {}
 
       // Update persistent sequence watermarks to the new peak sequence
       try {
@@ -1903,9 +1977,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       if (setDevelopers) {
         setDevelopers(updatedDevs);
       }
-      try {
-        localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
-      } catch (e) {}
 
       if (syncAllToMongoDB) {
         await syncAllToMongoDB({ developers: updatedDevs, properties, recycled_items: updatedRecycled });
@@ -2206,9 +2277,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       if (setRecycledItems) {
         setRecycledItems(nextRecycled);
       }
-      try {
-        localStorage.setItem('swaramayi_recycled_items', JSON.stringify(nextRecycled));
-      } catch (e) {}
 
       if (syncAllToMongoDB) {
         syncAllToMongoDB({ properties: nextProps, recycled_items: nextRecycled });
@@ -2286,11 +2354,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       if (setProperties) setProperties(nextProps);
       if (setRecycledItems) setRecycledItems(nextRecycled);
 
-      try {
-        localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevList));
-        localStorage.setItem('swaramayi_recycled_items', JSON.stringify(nextRecycled));
-      } catch (e) {}
-
       if (syncAllToMongoDB) {
         syncAllToMongoDB({ developers: nextDevList, properties: nextProps, recycled_items: nextRecycled });
       }
@@ -2299,18 +2362,10 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     }
   };
 
-  // SYNC DEVELOPER MASTER LIST WITH DEVELOPERS PROP AND LOCALSTORAGE
+  // SYNC DEVELOPER MASTER LIST WITH DEVELOPERS PROP (MongoDB Atlas)
   React.useEffect(() => {
-    if (developers && Array.isArray(developers) && developers.length > 0) {
+    if (developers && Array.isArray(developers)) {
       setDeveloperMasterList(developers);
-    } else {
-      try {
-        const saved = localStorage.getItem('swaramayi_developers_v1');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) setDeveloperMasterList(parsed);
-        }
-      } catch (e) {}
     }
   }, [developers]);
 
@@ -2461,7 +2516,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     setDeveloperMasterList(cleanedDevs);
     if (setDevelopers) setDevelopers(cleanedDevs);
     try {
-      localStorage.setItem('swaramayi_developers_v1', JSON.stringify(cleanedDevs));
       localStorage.setItem('swaramayi_max_dev_seq', String(cleanedDevs.length));
       localStorage.setItem('swaramayi_max_project_seq', String(globalProjSeq));
     } catch (e) {
@@ -2554,6 +2608,118 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const [newDevEmailInput, setNewDevEmailInput] = React.useState<string>('');
   const [newDevProjectTitleInput, setNewDevProjectTitleInput] = React.useState<string>('');
   const [viewPropertyModal, setViewPropertyModal] = React.useState<any | null>(null);
+  const [resolvedModalAddress, setResolvedModalAddress] = React.useState<string>('');
+  const [isResolvingModalAddress, setIsResolvingModalAddress] = React.useState<boolean>(false);
+  const resolvedModalAddressCacheRef = React.useRef<Record<string, string>>({});
+
+  React.useEffect(() => {
+    if (!viewPropertyModal) {
+      setResolvedModalAddress('');
+      setIsResolvingModalAddress(false);
+      return;
+    }
+
+    const parseCoordNum = (raw: any, negDir: RegExp) => {
+      const cleaned = String(raw || '').trim();
+      if (!cleaned) return NaN;
+      const num = parseFloat(cleaned.replace(/[^\d.\-+]/g, ''));
+      if (isNaN(num)) return NaN;
+      return negDir.test(cleaned) ? -Math.abs(num) : num;
+    };
+
+    const rawLat = viewPropertyModal.latitude ?? viewPropertyModal.lat ?? '';
+    const rawLng = viewPropertyModal.longitude ?? viewPropertyModal.lng ?? '';
+    const lat = parseCoordNum(rawLat, /[SW]/i);
+    const lng = parseCoordNum(rawLng, /[SW]/i);
+
+    const existingAddr = String(viewPropertyModal.full_address || viewPropertyModal.address || '').trim();
+    const locStr = String(viewPropertyModal.locality || '').trim();
+    const titleStr = String(viewPropertyModal.title || '').trim();
+    const titleLocCombined = (titleStr && locStr) ? `${titleStr}, ${locStr}`.toLowerCase() : '';
+    const addrLower = existingAddr.toLowerCase();
+
+    const isGenericAddress =
+      !existingAddr ||
+      addrLower === 'n/a' ||
+      addrLower === 'na' ||
+      addrLower === 'greater kolkata' ||
+      addrLower === 'kolkata' ||
+      addrLower === 'locality hub' ||
+      (locStr && addrLower === locStr.toLowerCase()) ||
+      (titleStr && addrLower === titleStr.toLowerCase()) ||
+      (titleLocCombined && addrLower === titleLocCombined) ||
+      (!existingAddr.includes(',') && existingAddr.length < 30);
+
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      setResolvedModalAddress(existingAddr || locStr || '');
+      setIsResolvingModalAddress(false);
+      return;
+    }
+
+    if (!isGenericAddress) {
+      setResolvedModalAddress(existingAddr);
+      setIsResolvingModalAddress(false);
+      return;
+    }
+
+    const coordKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+    const cached = resolvedModalAddressCacheRef.current[coordKey];
+    if (cached) {
+      setResolvedModalAddress(cached);
+      setIsResolvingModalAddress(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsResolvingModalAddress(true);
+    setResolvedModalAddress('');
+
+    (async () => {
+      let resolved = '';
+      try {
+        if (detectLocalityFromCoords) {
+          const res = await detectLocalityFromCoords(String(lat), String(lng));
+          resolved = res?.fullAddress || res?.locality || '';
+        }
+      } catch (e) {}
+
+      if (!resolved) {
+        try {
+          const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+            headers: { 'Accept-Language': 'en' }
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            resolved = data?.display_name || '';
+          }
+        } catch (e) {}
+      }
+
+      if (!cancelled) {
+        if (resolved) {
+          resolvedModalAddressCacheRef.current[coordKey] = resolved;
+          setResolvedModalAddress(resolved);
+        } else {
+          setResolvedModalAddress(existingAddr || locStr || '');
+        }
+        setIsResolvingModalAddress(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    viewPropertyModal?.id,
+    viewPropertyModal?.property_code,
+    viewPropertyModal?.latitude,
+    viewPropertyModal?.longitude,
+    viewPropertyModal?.full_address,
+    viewPropertyModal?.address,
+    viewPropertyModal?.locality,
+    viewPropertyModal?.title,
+    detectLocalityFromCoords
+  ]);
 
   // 📍 GPS COORDINATES AUTO-FETCH ADDRESS STATE & HANDLER
   const [isFetchingCoordsAddress, setIsFetchingCoordsAddress] = React.useState<boolean>(false);
@@ -2562,10 +2728,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
   const lastFetchedCoordsRef = React.useRef<string>('');
 
   const fetchAddressForCoordinates = React.useCallback(async (latInput: string, lngInput: string, force: boolean = false) => {
+    const parseCoordVal = (raw: string) => {
+      const cleaned = String(raw || '').trim();
+      const num = parseFloat(cleaned.replace(/[^\d.\-+]/g, ''));
+      if (isNaN(num)) return NaN;
+      return /[SW]/i.test(cleaned) ? -Math.abs(num) : num;
+    };
     const latStr = (latInput || '').trim();
     const lngStr = (lngInput || '').trim();
-    const lat = parseFloat(latStr);
-    const lng = parseFloat(lngStr);
+    const lat = parseCoordVal(latStr);
+    const lng = parseCoordVal(lngStr);
 
     if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       return;
@@ -2850,16 +3022,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     ].map((v: any) => (v ? String(v).trim() : '')).filter(Boolean);
     const resolvedLocality = localityCandidates.find(l => l.toLowerCase() !== 'locality hub') || localityCandidates[0] || '';
 
-    const resolvedFullAddress = pickStr(
-      vaultProj?.full_address,
-      vaultProj?.address,
-      p.full_address,
-      p.address,
-      matchedMaster?.full_address,
-      pickFromUnits('full_address', 'address'),
-      resolvedLocality
-    );
-
     const resolvedLat = pickStr(
       vaultProj?.latitude,
       vaultProj?.lat,
@@ -2875,6 +3037,16 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
       p.lng,
       matchedMaster?.longitude,
       pickFromUnits('longitude', 'lng')
+    );
+
+    const resolvedFullAddress = pickStr(
+      vaultProj?.full_address,
+      vaultProj?.address,
+      p.full_address,
+      p.address,
+      matchedMaster?.full_address,
+      pickFromUnits('full_address', 'address'),
+      (resolvedLat && resolvedLng) ? '' : resolvedLocality
     );
 
     const resolvedRera = pickStr(
@@ -3320,14 +3492,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     }
   }, [projectParkingStockMap]);
 
-  React.useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_developers_v1', JSON.stringify(developerMasterList));
-    } catch (e) {
-      console.error(e);
-    }
-  }, [developerMasterList]);
-
   const [propCodeSearchQuery, setPropCodeSearchQuery] = React.useState<string>('');
   const [selectedPropCode, setSelectedPropCode] = React.useState<string>('');
 
@@ -3570,9 +3734,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
     if (setDevelopers) {
       setDevelopers(updatedDevs);
     }
-    try {
-      localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
-    } catch (e) {}
 
     let updatedProperties = properties;
     if (isEditingMode && setProperties && Array.isArray(properties)) {
@@ -4366,8 +4527,8 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
             >
               <Upload size={15} /> 🏢 📥 Import Bulk Developer Stock
             </button>
-            <button onClick={handleExportInventoryExcel} style={{ background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#cbd5e1', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}>
-              <Share2 size={15} /> Export Inventory
+            <button onClick={handleExportInventoryExcel} disabled={isExportingInventory} style={{ background: isLight ? '#ffffff' : '#1e293b', color: isLight ? '#0f172a' : '#cbd5e1', border: isLight ? '1px solid #cbd5e1' : '1px solid #334155', padding: '8px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem', cursor: isExportingInventory ? 'wait' : 'pointer', opacity: isExportingInventory ? 0.75 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: windowWidth <= 640 ? '100%' : 'auto', flex: windowWidth <= 640 ? '1 1 100%' : 'none' }}>
+              <Share2 size={15} /> {isExportingInventory ? (exportProgressText || 'Exporting...') : 'Export Inventory'}
             </button>
           </div>
         </div>
@@ -8029,9 +8190,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     if (setRecycledItems && updatedRecycled.length !== (recycledItems || []).length) {
                       setRecycledItems(updatedRecycled);
                     }
-                    try {
-                      localStorage.setItem('swaramayi_recycled_items', JSON.stringify(updatedRecycled));
-                    } catch (e) {}
 
                     // Update sequence watermarks in localStorage
                     try {
@@ -8049,9 +8207,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     setNewDevAltMobileInput('');
                     setNewDevEmailInput('');
                     setNewDevProjectTitleInput('');
-                    try {
-                      localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevList));
-                    } catch (e) {}
                     if (syncAllToMongoDB) {
                       syncAllToMongoDB({ developers: nextDevList, recycled_items: updatedRecycled });
                     }
@@ -8147,9 +8302,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     const nextList = (developerMasterList || []).filter((d: any) => !deleteIdsSet.has(d.id));
                     setDeveloperMasterList(nextList);
                     if (setDevelopers) setDevelopers(nextList);
-                    try {
-                      localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextList));
-                    } catch (e) {}
 
                     const nextRecycled = [
                       ...deletedItemsToRecycle,
@@ -8158,9 +8310,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     if (setRecycledItems) {
                       setRecycledItems(nextRecycled);
                     }
-                    try {
-                      localStorage.setItem('swaramayi_recycled_items', JSON.stringify(nextRecycled));
-                    } catch (e) {}
 
                     if (syncAllToMongoDB) {
                       syncAllToMongoDB({ developers: nextList, recycled_items: nextRecycled });
@@ -8351,9 +8500,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                               if (setDevelopers) {
                                 setDevelopers(nextList);
                               }
-                              try {
-                                localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextList));
-                              } catch (e) {}
                               if (syncAllToMongoDB) {
                                 syncAllToMongoDB({ developers: nextList });
                               }
@@ -8435,9 +8581,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                     const nextList = developerMasterList.filter((d: any) => d.id !== dev.id && d.name !== dev.name);
                                     setDeveloperMasterList(nextList);
                                     if (setDevelopers) setDevelopers(nextList);
-                                    try {
-                                      localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextList));
-                                    } catch (e) {}
 
                                     const nextRecycled = [
                                       recycledDevItem,
@@ -8446,9 +8589,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                     if (setRecycledItems) {
                                       setRecycledItems(nextRecycled);
                                     }
-                                    try {
-                                      localStorage.setItem('swaramayi_recycled_items', JSON.stringify(nextRecycled));
-                                    } catch (e) {}
 
                                     if (syncAllToMongoDB) {
                                       syncAllToMongoDB({ developers: nextList, recycled_items: nextRecycled });
@@ -8533,7 +8673,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                           code: projCodeStr,
                           property_code: rawMatchedProp?.property_code || projCodeStr,
                           locality: resolvedProj?.locality || p.locality || rawMatchedProp?.locality || '',
-                          full_address: resolvedProj?.full_address || rawMatchedProp?.full_address || (p.locality ? `${p.title}, ${p.locality}` : p.title),
+                          full_address: resolvedProj?.full_address || rawMatchedProp?.full_address || rawMatchedProp?.address || '',
                           latitude: resolvedProj?.latitude || rawMatchedProp?.latitude || p.latitude || p.lat || '',
                           longitude: resolvedProj?.longitude || rawMatchedProp?.longitude || p.longitude || p.lng || '',
                           configuration: rawMatchedProp?.configuration || rawMatchedProp?.bhk || '',
@@ -8621,9 +8761,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                         if (setDevelopers) {
                                           setDevelopers(nextDevList);
                                         }
-                                        try {
-                                          localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevList));
-                                        } catch (e) {}
                                         if (syncAllToMongoDB) {
                                           syncAllToMongoDB({ developers: nextDevList });
                                         }
@@ -8712,9 +8849,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                         if (setDevelopers) {
                                           setDevelopers(nextDevList);
                                         }
-                                        try {
-                                          localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevList));
-                                        } catch (e) {}
                                         if (syncAllToMongoDB) {
                                           syncAllToMongoDB({ developers: nextDevList });
                                         }
@@ -9211,9 +9345,6 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                                   });
                                   setDeveloperMasterList(nextDevList);
                                   if (setDevelopers) setDevelopers(nextDevList);
-                                  try {
-                                    localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevList));
-                                  } catch (e) {}
                                   if (syncAllToMongoDB) syncAllToMongoDB({ developers: nextDevList });
 
                                   setViewPropertyModal({
@@ -9268,7 +9399,11 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                     </div>
                     <div>
                       <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: '700' }}>Full Physical Address</span>
-                      <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.78rem' }}>{viewPropertyModal.full_address || viewPropertyModal.address || viewPropertyModal.locality || 'N/A'}</strong>
+                      <strong style={{ color: isResolvingModalAddress ? '#38bdf8' : (isLight ? '#0f172a' : '#ffffff'), fontSize: '0.78rem', lineHeight: 1.4, display: 'block' }}>
+                        {isResolvingModalAddress
+                          ? `📡 Fetching full address for (${viewPropertyModal.latitude}, ${viewPropertyModal.longitude})...`
+                          : (resolvedModalAddress || viewPropertyModal.full_address || viewPropertyModal.address || viewPropertyModal.locality || 'N/A')}
+                      </strong>
                     </div>
                   </div>
                 </div>
@@ -10343,6 +10478,7 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                   </button>
                   <button
                     onClick={handleExportInventoryExcel}
+                    disabled={isExportingInventory}
                     style={{
                       flex: 1,
                       whiteSpace: 'nowrap',
@@ -10354,13 +10490,14 @@ export const ProjectManagementView: React.FC<ProjectManagementViewProps> = ({
                       borderRadius: '8px',
                       fontWeight: '800',
                       fontSize: '0.78rem',
-                      cursor: 'pointer',
+                      cursor: isExportingInventory ? 'wait' : 'pointer',
+                      opacity: isExportingInventory ? 0.75 : 1,
                       display: 'flex',
                       alignItems: 'center',
                       gap: '5px'
                     }}
                   >
-                    <FileSpreadsheet size={14} /> Export Live Inventory ({BULK_EXPORT_PROPERTY_COLUMNS.length} Cols • {properties.length})
+                    <FileSpreadsheet size={14} /> {isExportingInventory ? (exportProgressText || 'Resolving GPS Addresses...') : `Export Live Inventory (${BULK_EXPORT_PROPERTY_COLUMNS.length} Cols • ${properties.length})`}
                   </button>
                   <button
                     onClick={() => setShowBulkColumnsGuide(prev => !prev)}

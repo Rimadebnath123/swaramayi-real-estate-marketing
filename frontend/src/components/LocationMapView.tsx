@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Compass, Search, Target, MapPin, X, Building, Sliders, Navigation, Loader2, Globe } from 'lucide-react';
+import { reverseGeocodeCoords } from '../utils/googleMapsLoader';
 
 interface LocationMapViewProps {
   windowWidth?: number;
@@ -191,12 +192,40 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
 
   // Dynamic reverse-geocoding cache for real-world GPS coordinates
   const [reverseGeoMap, setReverseGeoMap] = useState<Record<string, string>>({});
+  const [isResolvingActiveLoc, setIsResolvingActiveLoc] = useState<boolean>(false);
+
+  const parseCoordNum = (raw: any): number => {
+    const cleaned = String(raw || '').trim();
+    if (!cleaned) return NaN;
+    const num = parseFloat(cleaned.replace(/[^\d.\-+]/g, ''));
+    if (isNaN(num)) return NaN;
+    return /[SW]/i.test(cleaned) ? -Math.abs(num) : num;
+  };
+
+  const isGenericLoc = (loc?: string, title?: string): boolean => {
+    const trimmed = String(loc || '').trim();
+    const lower = trimmed.toLowerCase();
+    const titleLower = String(title || '').trim().toLowerCase();
+    return (
+      !trimmed ||
+      lower === 'location' ||
+      lower === 'n/a' ||
+      lower === 'na' ||
+      lower === 'null' ||
+      lower === 'undefined' ||
+      lower === 'greater kolkata' ||
+      lower === 'kolkata' ||
+      lower === 'locality hub' ||
+      (titleLower !== '' && lower === titleLower) ||
+      (!trimmed.includes(',') && trimmed.length < 30)
+    );
+  };
 
   const resolvePropLoc = (p: any): string => {
     if (!p) return 'Greater Kolkata';
-    const lat = parseFloat(String(p.latitude || p.lat || p.parsedLat || '').replace(/[^\d.-]/g, ''));
-    const lng = parseFloat(String(p.longitude || p.lng || p.parsedLng || '').replace(/[^\d.-]/g, ''));
-    const key = (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) ? `${lat.toFixed(4)}_${lng.toFixed(4)}` : '';
+    const lat = parseCoordNum(p.latitude ?? p.lat ?? p.parsedLat);
+    const lng = parseCoordNum(p.longitude ?? p.lng ?? p.parsedLng);
+    const key = (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) ? `${lat.toFixed(6)}_${lng.toFixed(6)}` : '';
     if (key && reverseGeoMap[key]) {
       return reverseGeoMap[key];
     }
@@ -232,13 +261,7 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
     const combined: any[] = [];
     const seenKeys = new Set<string>();
 
-    let devList = developers;
-    if (!devList || devList.length === 0) {
-      try {
-        const saved = localStorage.getItem('swaramayi_developers_v1');
-        if (saved) devList = JSON.parse(saved);
-      } catch (e) {}
-    }
+    const devList = developers || [];
 
     const addIfValid = (item: any) => {
       if (!item) return;
@@ -303,45 +326,51 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
     return combined;
   }, [allProperties, filteredProperties, developers]);
 
-  // Background reverse geocode for current property to display real-world municipality/locality
+  // Background reverse geocode for current property to display full real-world physical address
   useEffect(() => {
     const active = selectedProperty || basePropertiesList[0];
-    if (!active) return;
-    const lat = parseFloat(String(active.latitude || active.lat || active.parsedLat || '').replace(/[^\d.-]/g, ''));
-    const lng = parseFloat(String(active.longitude || active.lng || active.parsedLng || '').replace(/[^\d.-]/g, ''));
-    if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
-
-    const key = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
-    if (reverseGeoMap[key]) return;
-
-    const directLoc = active.full_address || active.locality;
-    if (directLoc && typeof directLoc === 'string' && directLoc.trim() !== '' && directLoc.toLowerCase() !== 'location' && directLoc.toLowerCase() !== 'n/a') {
+    if (!active) {
+      setIsResolvingActiveLoc(false);
+      return;
+    }
+    const lat = parseCoordNum(active.latitude ?? active.lat ?? active.parsedLat);
+    const lng = parseCoordNum(active.longitude ?? active.lng ?? active.parsedLng);
+    if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
+      setIsResolvingActiveLoc(false);
       return;
     }
 
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-        if (res.ok) {
-          const data = await res.json();
-          const addr = data.address;
-          if (addr) {
-            const parts = [
-              addr.residential || addr.suburb || addr.neighbourhood || addr.city_district || addr.town || addr.village,
-              addr.city || addr.municipality || addr.county || 'Greater Kolkata'
-            ].filter(Boolean);
-            const resolved = parts.length > 0 ? parts.join(', ') : (data.display_name?.split(',').slice(0, 2).join(',') || '');
-            if (resolved) {
-              setReverseGeoMap(prev => ({ ...prev, [key]: resolved }));
-            }
-          }
-        }
-      } catch (e) {
-        // Fallback already provided by getResolvedLocation
-      }
-    }, 200);
+    const key = `${lat.toFixed(6)}_${lng.toFixed(6)}`;
+    if (reverseGeoMap[key]) {
+      setIsResolvingActiveLoc(false);
+      return;
+    }
 
-    return () => clearTimeout(timer);
+    const directFullAddr = String(active.full_address || active.address || '').trim();
+    if (directFullAddr && !isGenericLoc(directFullAddr, active.title)) {
+      setIsResolvingActiveLoc(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsResolvingActiveLoc(true);
+
+    const timer = setTimeout(async () => {
+      const revRes = await reverseGeocodeCoords(lat, lng);
+      const resolved = revRes.fullAddress;
+
+      if (!cancelled) {
+        if (resolved) {
+          setReverseGeoMap(prev => ({ ...prev, [key]: resolved }));
+        }
+        setIsResolvingActiveLoc(false);
+      }
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [selectedProperty, basePropertiesList, reverseGeoMap]);
 
   // Live Location Geocoding API fetch (OpenStreetMap Nominatim)
@@ -910,8 +939,12 @@ export const LocationMapView: React.FC<LocationMapViewProps> = ({
               <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: isLight ? '#0f172a' : '#ffffff', marginTop: '6px', wordBreak: 'break-word', overflowWrap: 'break-word', lineHeight: '1.3' }}>
                 🏢 {selectedProperty?.title || (basePropertiesList.length > 0 ? basePropertiesList[0].title : 'No GPS Project Selected')}
               </h3>
-              <p style={{ fontSize: '0.82rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px', fontWeight: '800' }}>
-                📍 Location: <span style={{ color: '#0284c7' }}>{resolvePropLoc(selectedProperty || basePropertiesList[0])}</span>
+              <p style={{ fontSize: '0.82rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '4px', fontWeight: '800', lineHeight: '1.4' }}>
+                📍 Location: <span style={{ color: '#0284c7' }}>
+                  {isResolvingActiveLoc
+                    ? 'Resolving full location from GPS...'
+                    : resolvePropLoc(selectedProperty || basePropertiesList[0])}
+                </span>
               </p>
             </div>
 

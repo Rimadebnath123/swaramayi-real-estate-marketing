@@ -80,9 +80,6 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
     });
 
     setBookings(updatedBookings);
-    try {
-      localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(updatedBookings));
-    } catch (err) {}
 
     if (syncAllToMongoDB) {
       syncAllToMongoDB({ bookings: updatedBookings });
@@ -296,16 +293,10 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
     if (setInvoices) {
       setInvoices(updatedInvoices);
     }
-    try {
-      localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(updatedInvoices));
-    } catch (e) {}
 
     if (setBookings) {
       setBookings(updatedBookings);
     }
-    try {
-      localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(updatedBookings));
-    } catch (e) {}
 
     if (syncAllToMongoDB) {
       syncAllToMongoDB({
@@ -567,9 +558,6 @@ export const BookingManagementView: React.FC<BookingManagementViewProps> = ({
                                 if (setBookings) {
                                   setBookings(updatedBookings);
                                 }
-                                try {
-                                  localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(updatedBookings));
-                                } catch (e) {}
                                 if (syncAllToMongoDB) {
                                   syncAllToMongoDB({ bookings: updatedBookings });
                                 }

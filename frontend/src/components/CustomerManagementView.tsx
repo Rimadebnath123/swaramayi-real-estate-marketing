@@ -125,18 +125,6 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
       rawUserList.push(...users);
     }
 
-    try {
-      ['swaramayi_users_v7', 'swaramayi_users_v6', 'swaramayi_users_v8', 'swaramayi_users'].forEach(k => {
-        const stored = localStorage.getItem(k);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            rawUserList.push(...parsed);
-          }
-        }
-      });
-    } catch (e) {}
-
     const extraNames = new Set<string>();
     [
       ...(Array.isArray(customers) ? customers : []),
@@ -450,28 +438,19 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
       setSelectedCust({ ...selectedCust, ...updatedCust });
     }
 
-    // 7. Persist to localStorage
-    try {
-      const storedCusts = JSON.parse(localStorage.getItem('swaramayi_customers_master_v3_clean') || '[]');
-      const updatedStored = storedCusts.map((c: any) => {
-        const cCode = (c.customer_number || c.customer_id || c.id || '').toString().toLowerCase();
-        const cId = (c.id || '').toString().toLowerCase();
-        const cMob = (c.mobile || c.phone || '').toString().replace(/\D/g, '');
-        if ((cleanId && cId === cleanId) || (cleanCustCode && cCode === cleanCustCode) || (cleanMobile && cMob === cleanMobile)) {
-          return { ...c, ...updatedCust };
-        }
-        return c;
-      });
-      localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updatedStored));
-      localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updatedStored));
-    } catch (e) {
-      console.error(e);
-    }
-
-    // 8. Sync to MongoDB if handler provided
+    // 7. Sync updated customers to MongoDB if handler provided
+    const nextCustomersForSync = (customers || []).map((c: any) => {
+      const cCode = (c.customer_number || c.customer_id || c.id || '').toString().toLowerCase();
+      const cId = (c.id || '').toString().toLowerCase();
+      const cMob = (c.mobile || c.phone || '').toString().replace(/\D/g, '');
+      if ((cleanId && cId === cleanId) || (cleanCustCode && cCode === cleanCustCode) || (cleanMobile && cMob === cleanMobile)) {
+        return { ...c, ...updatedCust };
+      }
+      return c;
+    });
     if (typeof syncAllToMongoDB === 'function') {
       try {
-        syncAllToMongoDB();
+        syncAllToMongoDB({ customers: nextCustomersForSync });
       } catch (e) {}
     }
 
@@ -506,9 +485,9 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
         return c;
       });
       setCustomers(updatedCustomersList);
-      try {
-        localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updatedCustomersList));
-      } catch (e) {}
+      if (typeof syncAllToMongoDB === 'function') {
+        try { syncAllToMongoDB({ customers: updatedCustomersList }); } catch (e) {}
+      }
     }
 
     if (setSelectedCust) {
@@ -533,12 +512,13 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
         return l;
       });
       setLeadsList(updatedLeads);
-      try {
-        localStorage.setItem('swaramayi_leads_v5_clean', JSON.stringify(updatedLeads));
-      } catch (e) {}
-    }
-
-    if (syncAllToMongoDB) {
+      if (syncAllToMongoDB) {
+        syncAllToMongoDB({
+          customers: updatedCustomersList.length > 0 ? updatedCustomersList : customers,
+          leads: updatedLeads
+        });
+      }
+    } else if (syncAllToMongoDB) {
       syncAllToMongoDB({
         customers: updatedCustomersList.length > 0 ? updatedCustomersList : customers
       });
@@ -606,15 +586,15 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
             created_date: new Date().toISOString().split('T')[0]
           };
           const list = [newInv, ...prev];
-          try {
-            localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(list));
-          } catch (e) {}
+          if (syncAllToMongoDB) {
+            syncAllToMongoDB({ invoices: list });
+          }
           return list;
         }
 
-        try {
-          localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(nextInvoices));
-        } catch (e) {}
+        if (syncAllToMongoDB) {
+          syncAllToMongoDB({ invoices: nextInvoices });
+        }
 
         return nextInvoices;
       });
@@ -1188,23 +1168,15 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
         };
       });
 
-    // 12. Dynamic Visit Feedbacks List (Linked to Structured 5-Star Feedback)
-    let allVisitFeedbacks: any[] = [];
-    try {
-      const saved = localStorage.getItem('swaramayi_visit_feedbacks_v2');
-      const parsedSaved = saved ? JSON.parse(saved) : [];
-      const combined = [...(visitFeedbacks || []), ...(Array.isArray(parsedSaved) ? parsedSaved : [])];
-      const seenFbs = new Set<string>();
-      allVisitFeedbacks = combined.filter((fb: any) => {
-        if (!fb) return false;
-        const key = `${fb.id || ''}_${fb.visitId || ''}_${fb.custMobile || ''}_${fb.custName || ''}`.toLowerCase();
-        if (key && seenFbs.has(key)) return false;
-        if (key) seenFbs.add(key);
-        return true;
-      });
-    } catch (e) {
-      allVisitFeedbacks = visitFeedbacks || [];
-    }
+    // 12. Dynamic Visit Feedbacks List (Live from MongoDB Atlas)
+    const seenFbs = new Set<string>();
+    const allVisitFeedbacks = (visitFeedbacks || []).filter((fb: any) => {
+      if (!fb) return false;
+      const key = `${fb.id || ''}_${fb.visitId || ''}_${fb.custMobile || ''}_${fb.custName || ''}`.toLowerCase();
+      if (key && seenFbs.has(key)) return false;
+      if (key) seenFbs.add(key);
+      return true;
+    });
 
     const matchingFbs = allVisitFeedbacks.filter((fb: any) => {
       if (!fb) return false;
@@ -2187,11 +2159,6 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
 
                 if (setCustomers) setCustomers(nextCusts);
 
-                try {
-                  localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(nextCusts));
-                  localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(nextCusts));
-                } catch (e) {}
-
                 if (setMatchingRequestsQueue) {
                   setMatchingRequestsQueue((prev: any[]) => (prev || []).filter((r: any) => {
                     if (!r) return false;
@@ -2245,11 +2212,6 @@ export const CustomerManagementView: React.FC<CustomerManagementViewProps> = ({
                 });
 
                 if (setCustomers) setCustomers(nextCusts);
-
-                try {
-                  localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(nextCusts));
-                  localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(nextCusts));
-                } catch (e) {}
 
                 if (setMatchingRequestsQueue) {
                   setMatchingRequestsQueue((prev: any[]) => (prev || []).filter((r: any) => {

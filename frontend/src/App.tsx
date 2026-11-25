@@ -1,10 +1,27 @@
-// SAFEGUARD: Wipe any legacy localStorage caches for properties
+// SAFEGUARD: Wipe any legacy localStorage caches for MongoDB-backed CRM records
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
     localStorage.removeItem('swaramayi_properties_v5_clean');
     localStorage.removeItem('swaramayi_properties_v4_clean');
     localStorage.removeItem('swaramayi_properties_cache_v1');
     localStorage.removeItem('swaramayi_properties_master');
+    localStorage.removeItem('swaramayi_developers_v1');
+    localStorage.removeItem('swaramayi_customers_v7_clean');
+    localStorage.removeItem('swaramayi_customers_master_v3_clean');
+    localStorage.removeItem('swaramayi_recycled_items');
+    localStorage.removeItem('swaramayi_visit_plans_v7_clean');
+    localStorage.removeItem('swaramayi_scheduled_visits_v7_clean');
+    localStorage.removeItem('swaramayi_leads_v5_clean');
+    localStorage.removeItem('swaramayi_leads_v7_clean');
+    localStorage.removeItem('swaramayi_bookings_v3_clean');
+    localStorage.removeItem('swaramayi_invoices_v6');
+    localStorage.removeItem('swaramayi_matching_queue_v7_clean');
+    localStorage.removeItem('swaramayi_users_v7');
+    localStorage.removeItem('swaramayi_enterprise_users_v8');
+    localStorage.removeItem('swaramayi_enterprise_branches_v9');
+    localStorage.removeItem('swaramayi_enterprise_teams_v2');
+    localStorage.removeItem('swaramayi_sourcing_requests_v1');
+    localStorage.removeItem('swaramayi_visit_feedbacks_v2');
   }
 } catch (e) {}
 
@@ -310,7 +327,7 @@ import { CrmReportView } from './components/CrmReportView';
 import { WebsitePortalView } from './components/WebsitePortalView';
 import { MultiSelectFloorSelector } from './components/MultiSelectFloorSelector';
 import { LocationAutocompleteInput } from './components/LocationAutocompleteInput';
-import { loadGoogleMapsApi, geocodeAddress, getGoogleMapsApiKey } from './utils/googleMapsLoader';
+import { loadGoogleMapsApi, geocodeAddress, getGoogleMapsApiKey, reverseGeocodeCoords } from './utils/googleMapsLoader';
 
 function InteractiveRoutePlanMap({ plan, isLight = false, autoStart = false, branches = [] }: { plan: any; isLight?: boolean; autoStart?: boolean; branches?: any[] }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -1661,13 +1678,6 @@ function ScheduleVisitModalContent({
               extractSeq(r.originalData);
             });
 
-            try {
-              const storedPlans = JSON.parse(localStorage.getItem('swaramayi_visit_plans_v7_clean') || '[]');
-              if (Array.isArray(storedPlans)) storedPlans.forEach(extractSeq);
-              const storedVisits = JSON.parse(localStorage.getItem('swaramayi_scheduled_visits_v7_clean') || '[]');
-              if (Array.isArray(storedVisits)) storedVisits.forEach(extractSeq);
-            } catch (e) {}
-
             const curMax = existingVisitNumbers.length > 0 ? Math.max(...existingVisitNumbers) : 0;
             try {
               const savedSeq = localStorage.getItem('swaramayi_max_visit_seq');
@@ -1883,7 +1893,6 @@ function ScheduleVisitModalContent({
             return req;
           });
           try {
-            localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(updatedMatchingQueue));
             localStorage.setItem('swaramayi_matching_queue_v3_clean', JSON.stringify(updatedMatchingQueue));
           } catch (e) {
             console.error('Error persisting matching queue:', e);
@@ -3521,6 +3530,36 @@ function PvaDocumentModalContent({ isLight = false, pva, onClose }: any) {
   );
 }
 
+const normalizeBudgetUnit = (unit?: string, fallback: 'Lakhs (L)' | 'Crore (Cr)' = 'Lakhs (L)'): 'Lakhs (L)' | 'Crore (Cr)' => {
+  const s = String(unit || '').toLowerCase().trim();
+  if (!s) return fallback;
+  if (s.includes('crore') || s === 'cr' || s.includes('(cr)')) return 'Crore (Cr)';
+  if (s.includes('lakh') || s === 'l' || s.includes('(l)')) return 'Lakhs (L)';
+  return fallback;
+};
+
+const shortBudgetUnit = (unit?: string): 'Cr' | 'Lakhs' =>
+  normalizeBudgetUnit(unit) === 'Crore (Cr)' ? 'Cr' : 'Lakhs';
+
+const budgetToRupees = (val: any, unit?: string, fallbackRupees = 0): number => {
+  if (val === undefined || val === null || String(val).trim() === '') return fallbackRupees;
+  const num = parseFloat(String(val).replace(/[^0-9.]/g, ''));
+  if (isNaN(num) || num <= 0) return fallbackRupees;
+  if (num >= 100000) return num;
+  return normalizeBudgetUnit(unit) === 'Crore (Cr)' ? Math.round(num * 10000000) : Math.round(num * 100000);
+};
+
+const formatBudgetSummaryText = (minVal: any, maxVal: any, minUnit?: string, maxUnit?: string, separator = 'to'): string => {
+  const minU = shortBudgetUnit(minUnit);
+  const maxU = shortBudgetUnit(maxUnit || minUnit);
+  const minStr = minVal || '0';
+  const maxStr = maxVal || '0';
+  if (minU === maxU) {
+    return `₹${minStr} ${separator} ₹${maxStr} ${maxU}`;
+  }
+  return `₹${minStr} ${minU} ${separator} ₹${maxStr} ${maxU}`;
+};
+
 const getPropLatLng = (p: any) => {
   if (!p) return { lat: null, lng: null };
   if (p.parsedLat && p.parsedLng) return { lat: p.parsedLat, lng: p.parsedLng };
@@ -4309,36 +4348,9 @@ export default function App() {
   const [leadIntakeStep, setLeadIntakeStep] = useState<number>(1);
   const [customerWizardStep, setCustomerWizardStep] = useState<number>(1);
   const [matchingVaultFilter, setMatchingVaultFilter] = useState<'PENDING_ONLY' | 'ALL'>('PENDING_ONLY');
-  const [matchingRequestsQueue, setMatchingRequestsQueue] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_matching_queue_v7_clean');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((r: any) => {
-            const name = (r.customerName || r.name || '').toString().toLowerCase();
-            const custNum = (r.customerNumber || '').toString().toUpperCase();
-            const reqId = (r.requestId || r.id || '').toString().toUpperCase();
-            if (name.includes('demo') || name.includes('test')) {
-              return false;
-            }
-            return true;
-          });
-        }
-      }
-    } catch (e) {
-      console.error('Error reading matching queue from localStorage:', e);
-    }
-    return [];
-  });
+  const [matchingRequestsQueue, setMatchingRequestsQueue] = useState<any[]>([]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(matchingRequestsQueue));
-    } catch (e) {
-      console.error('Error saving matching queue to localStorage:', e);
-    }
-
     if (Array.isArray(matchingRequestsQueue) && matchingRequestsQueue.length > 0) {
       setCustomers(prevCusts => {
         let updated = [...(prevCusts || [])];
@@ -4382,10 +4394,6 @@ export default function App() {
           }
         });
         if (changed) {
-          try {
-            localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
-            localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
-          } catch (e) {}
           return updated;
         }
         return prevCusts;
@@ -4662,6 +4670,9 @@ export default function App() {
     condition: 'Ready to Move',
     budget_min: '',
     budget_max: '',
+    budget_unit: 'Lakhs (L)',
+    budget_min_unit: 'Lakhs (L)',
+    budget_max_unit: 'Lakhs (L)',
     budget: '',
     budget_flexibility: 'Normal',
     preferredArea: '',
@@ -4901,13 +4912,6 @@ export default function App() {
       extractSeq(r);
       extractSeq(r.originalData);
     });
-
-    try {
-      const storedPlans = JSON.parse(localStorage.getItem('swaramayi_visit_plans_v7_clean') || '[]');
-      if (Array.isArray(storedPlans)) storedPlans.forEach(extractSeq);
-      const storedVisits = JSON.parse(localStorage.getItem('swaramayi_scheduled_visits_v7_clean') || '[]');
-      if (Array.isArray(storedVisits)) storedVisits.forEach(extractSeq);
-    } catch (e) {}
 
     const curMax = allNums.length > 0 ? Math.max(...allNums) : 0;
     try {
@@ -5199,6 +5203,9 @@ export default function App() {
       non_preferred_floor: '',
       budget_min: '',
       budget_max: '',
+      budget_unit: 'Lakhs (L)',
+      budget_min_unit: 'Lakhs (L)',
+      budget_max_unit: 'Lakhs (L)',
       budget_flexibility: 'Strict Fixed (0% Stretch)',
       carpet_area_min: '',
       carpet_area_max: '',
@@ -5268,6 +5275,9 @@ export default function App() {
       non_preferred_floor: '',
       budget_min: '',
       budget_max: '',
+      budget_unit: 'Lakhs (L)',
+      budget_min_unit: 'Lakhs (L)',
+      budget_max_unit: 'Lakhs (L)',
       budget_flexibility: 'Strict Fixed (0% Stretch)',
       carpet_area_min: '',
       carpet_area_max: '',
@@ -5567,51 +5577,9 @@ export default function App() {
   // ----------------------------------------------------
 
   // 1. Employee Directory (Strict Single Super Admin Master Store - Direct MongoDB Source)
-  const [users, setUsers] = useState<any[]>(() => {
-    const defaultCoreUsers = [
-      { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'avishek@swaramayi.info', password: 'Swaramayi@2026', mobile: '+9198490 00001', role: 'SUPER_ADMIN', designation: 'Super Admin', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' }
-    ];
-    try {
-      ['swaramayi_users_v7', 'swaramayi_users_v6', 'swaramayi_users_v8', 'swaramayi_users_v5', 'swaramayi_users'].forEach(k => {
-        try {
-          const s = localStorage.getItem(k);
-          if (s) {
-            const parsed = JSON.parse(s);
-            if (Array.isArray(parsed)) {
-              const cleaned = parsed.filter((u: any) => {
-                const name = (u.full_name || u.username || u.name || '').toLowerCase();
-                const email = (u.email || '').toLowerCase();
-                const id = (u.id || '').toUpperCase();
-                return !(name.includes('rajesh') || name.includes('priya') || email.includes('rajesh') || email.includes('priya'));
-              });
-              localStorage.setItem(k, JSON.stringify(cleaned));
-            }
-          }
-        } catch (e) {}
-      });
-      const saved = localStorage.getItem('swaramayi_users_v7');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const filtered = parsed.filter((u: any) => {
-            const name = (u.full_name || u.username || u.name || '').toLowerCase();
-            const email = (u.email || '').toLowerCase();
-            const id = (u.id || '').toUpperCase();
-            return !(name.includes('rajesh') || name.includes('priya') || email.includes('rajesh') || email.includes('priya'));
-          });
-          const loadedIds = new Set(filtered.map((u: any) => u.id));
-          const missingDefaults = defaultCoreUsers.filter(d => !loadedIds.has(d.id));
-          const res = [...filtered, ...missingDefaults];
-          localStorage.setItem('swaramayi_users_v7', JSON.stringify(res));
-          return res;
-        }
-      }
-    } catch (e) {
-      console.error('Error loading users from localStorage:', e);
-    }
-    try { localStorage.setItem('swaramayi_users_v7', JSON.stringify(defaultCoreUsers)); } catch (e) {}
-    return defaultCoreUsers;
-  });
+  const [users, setUsers] = useState<any[]>(() => [
+    { id: 'USR-01', username: 'Avishek Das (Super Admin)', full_name: 'Avishek Das', email: 'avishek@swaramayi.info', password: 'Swaramayi@2026', mobile: '+9198490 00001', role: 'SUPER_ADMIN', designation: 'Super Admin', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', team_name: 'Corporate Leadership Squad', manager_name: 'Self', is_active: true, user_status: 'ACTIVE' }
+  ]);
 
   // Authenticated Logged-In User State (Persisted in Session Storage)
   const [loggedInUser, setLoggedInUser] = useState<any>(() => {
@@ -5740,74 +5708,21 @@ export default function App() {
     }
   }, [customRoles]);
 
-  // Enterprise Branches List (with LocalStorage Persistence)
+  // Enterprise Branches List (Live from MongoDB Atlas)
   const [editingBranchId, setEditingBranchId] = useState<string | null>(null);
-  const [branches, setBranches] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_enterprise_branches_v9') || localStorage.getItem('swaramayi_enterprise_branches_v8');
-      if (saved) {
-        const sanitized = saved.replace(/Rajesh V[ae]rma/gi, 'Avishek Das');
-        const parsed = JSON.parse(sanitized);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((b: any) => ({
-            ...b,
-            manager_name: (b.manager_name || 'Avishek Das (Super Admin)').replace(/Rajesh V[ae]rma/gi, 'Avishek Das'),
-            address: (b.id === 'BR-01' || (b.branch_name && b.branch_name.includes('Head Office')))
-              ? '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129'
-              : b.address
-          }));
-        }
-      }
-    } catch (e) {
-      console.error('Error reading branches from localStorage:', e);
-    }
-    return [
-      { id: 'BR-01', branch_name: 'Head Office (Kolkata)', city: 'Kolkata', manager_name: 'Avishek Das (Super Admin)', address: '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129', target_revenue: '₹15,00,00,000', teams: ['Corporate Leadership Squad'], created_at: '2026-01-15' },
-      { id: 'BR-02', branch_name: 'Kolkata Branch', city: 'Kolkata', manager_name: 'Abinash Roy (Admin)', address: 'Park Street, Kolkata - 700016', target_revenue: '₹5,00,00,000', teams: ['Kolkata Expansion Team'], created_at: '2026-03-10' }
-    ];
-  });
+  const [branches, setBranches] = useState<any[]>([
+    { id: 'BR-01', branch_name: 'Head Office (Kolkata)', city: 'Kolkata', manager_name: 'Avishek Das (Super Admin)', address: '4, Samarkunja Apartment, Sarada Sarani, Udayrajpur, Madhyamgram, Kolkata - 700129', target_revenue: '₹15,00,00,000', teams: ['Corporate Leadership Squad'], created_at: '2026-01-15' },
+    { id: 'BR-02', branch_name: 'Kolkata Branch', city: 'Kolkata', manager_name: 'Abinash Roy (Admin)', address: 'Park Street, Kolkata - 700016', target_revenue: '₹5,00,00,000', teams: ['Kolkata Expansion Team'], created_at: '2026-03-10' }
+  ]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_enterprise_branches_v9', JSON.stringify(branches));
-    } catch (e) {
-      console.error('Error saving branches to localStorage:', e);
-    }
-  }, [branches]);
-
-  // Enterprise Teams & Squads List (with LocalStorage Persistence)
+  // Enterprise Teams & Squads List (Live from MongoDB Atlas)
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
-  const [teams, setTeams] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_enterprise_teams_v2') || localStorage.getItem('swaramayi_enterprise_teams_v1');
-      if (saved) {
-        const sanitized = saved.replace(/Rajesh V[ae]rma/gi, 'Avishek Das');
-        const parsed = JSON.parse(sanitized);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((t: any) => ({
-            ...t,
-            leader_name: (t.leader_name || 'Avishek Das (SUPER_ADMIN)').replace(/Rajesh V[ae]rma/gi, 'Avishek Das')
-          }));
-        }
-      }
-    } catch (e) {
-      console.error('Error reading teams from localStorage:', e);
-    }
-    return [
-      { id: 'TEAM-01', team_name: 'Corporate Leadership Squad', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', leader_name: 'Avishek Das (SUPER_ADMIN)', monthly_target: '50 Property Units', created_at: '2026-01-15' },
-      { id: 'TEAM-02', team_name: 'Kolkata Expansion Team', branch_name: 'Kolkata Branch', department: 'Sales Operations', leader_name: 'Abinash Roy (Admin)', monthly_target: '25 Property Units', created_at: '2026-03-10' },
-      { id: 'TEAM-03', team_name: 'General Operations Squad', branch_name: 'Head Office (Kolkata)', department: 'System Admin', leader_name: 'Avishek Das (SUPER_ADMIN)', monthly_target: '15 Property Units', created_at: '2026-04-01' },
-      { id: 'TEAM-04', team_name: 'Kolkata Admin & Technical Squad', branch_name: 'Kolkata Branch', department: 'System Admin', leader_name: 'Abinash Roy (Admin)', monthly_target: '20 Property Units', created_at: '2026-08-27' }
-    ];
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_enterprise_teams_v2', JSON.stringify(teams));
-    } catch (e) {
-      console.error('Error saving teams to localStorage:', e);
-    }
-  }, [teams]);
+  const [teams, setTeams] = useState<any[]>([
+    { id: 'TEAM-01', team_name: 'Corporate Leadership Squad', branch_name: 'Head Office (Kolkata)', department: 'Executive Board', leader_name: 'Avishek Das (SUPER_ADMIN)', monthly_target: '50 Property Units', created_at: '2026-01-15' },
+    { id: 'TEAM-02', team_name: 'Kolkata Expansion Team', branch_name: 'Kolkata Branch', department: 'Sales Operations', leader_name: 'Abinash Roy (Admin)', monthly_target: '25 Property Units', created_at: '2026-03-10' },
+    { id: 'TEAM-03', team_name: 'General Operations Squad', branch_name: 'Head Office (Kolkata)', department: 'System Admin', leader_name: 'Avishek Das (SUPER_ADMIN)', monthly_target: '15 Property Units', created_at: '2026-04-01' },
+    { id: 'TEAM-04', team_name: 'Kolkata Admin & Technical Squad', branch_name: 'Kolkata Branch', department: 'System Admin', leader_name: 'Abinash Roy (Admin)', monthly_target: '20 Property Units', created_at: '2026-08-27' }
+  ]);
 
   // 3. Approval Queue & Security Logs
   const [approvalRequests, setApprovalRequests] = useState<any[]>([]);
@@ -5931,20 +5846,9 @@ export default function App() {
     });
   };
 
-  // 6.5. CENTRAL LEADS MASTER STORE (Direct MongoDB & Local Storage Source)
+  // 6.5. CENTRAL LEADS MASTER STORE (Live from MongoDB Atlas only)
   const [activeEditingLeadId, setActiveEditingLeadId] = useState<string | null>(null);
-  const [leadsList, setLeadsList] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_leads_v7_clean') || localStorage.getItem('swaramayi_leads_v5_clean');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return sanitizeLeadRecords(parsed);
-        }
-      }
-    } catch (e) {}
-    return [];
-  });
+  const [leadsList, setLeadsList] = useState<any[]>([]);
 
   // 6.6. DYNAMIC RECYCLE BIN VAULT (DIRECT MONGODB ATLAS SYNCHRONIZATION)
   const [recycledItems, setRecycledItems] = useState<any[]>([]);
@@ -5996,10 +5900,6 @@ export default function App() {
       case 'Customer':
         setCustomers(prev => {
           const updated = [data, ...prev.filter(c => c.id !== data.id && c.customer_number !== data.customer_number)];
-          try {
-            localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
-            localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
-          } catch (e) {}
           syncAllToMongoDB({ customers: updated, recycled_items: updatedRecycled });
           return updated;
         });
@@ -6007,9 +5907,6 @@ export default function App() {
       case 'Developer': {
         setDevelopers(prev => {
           const updatedDevs = [data, ...(prev || []).filter(d => d.id !== data.id && d.name !== data.name)];
-          try {
-            localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
-          } catch (e) {}
           syncAllToMongoDB({ developers: updatedDevs, recycled_items: updatedRecycled });
           return updatedDevs;
         });
@@ -6019,9 +5916,6 @@ export default function App() {
         if (data.projects || data.projectsCount !== undefined) {
           setDevelopers(prev => {
             const updatedDevs = [data, ...(prev || []).filter(d => d.id !== data.id && d.name !== data.name)];
-            try {
-              localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
-            } catch (e) {}
             syncAllToMongoDB({ developers: updatedDevs, recycled_items: updatedRecycled });
             return updatedDevs;
           });
@@ -6154,19 +6048,12 @@ export default function App() {
           projects: (d.projects || []).filter((proj: any) => !isItemInRecycledSet(proj, purgeSet))
         }));
       setDevelopers(nextDevs);
-      try {
-        localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevs));
-      } catch (e) {}
     }
 
     let nextCusts = customers;
     if (cat.includes('cust')) {
       nextCusts = (customers || []).filter(c => !isItemInRecycledSet(c, purgeSet));
       setCustomers(nextCusts);
-      try {
-        localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(nextCusts));
-        localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(nextCusts));
-      } catch (e) {}
     }
 
     // CRUCIAL: ONLY purge from leadsList if the recycled item is specifically a LEAD!
@@ -6194,19 +6081,12 @@ export default function App() {
         return true;
       });
       setLeadsList(nextLeads);
-      try {
-        localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(nextLeads));
-        localStorage.setItem('swaramayi_leads_v5_clean', JSON.stringify(nextLeads));
-      } catch (e) {}
     }
 
     let nextMatches = matchingRequestsQueue;
     if (cat.includes('match') || cat.includes('cust')) {
       nextMatches = (matchingRequestsQueue || []).filter(m => !isItemInRecycledSet(m, purgeSet));
       setMatchingRequestsQueue(nextMatches);
-      try {
-        localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(nextMatches));
-      } catch (e) {}
     }
 
     let nextCostSheets = individualCostSheets;
@@ -6269,9 +6149,6 @@ export default function App() {
         !purgedDevIds.has(String(d.name || '').toLowerCase().trim())
       );
       setDevelopers(nextDevs);
-      try {
-        localStorage.setItem('swaramayi_developers_v1', JSON.stringify(nextDevs));
-      } catch (e) {}
     }
 
     syncAllToMongoDB({ recycled_items: [], developers: nextDevs });
@@ -6367,9 +6244,6 @@ export default function App() {
         });
         const remaining = (prev || []).filter(d => !restoreDevMap.has(d.id) && !(d.name && restoreDevMap.has(d.name.toLowerCase().trim())));
         const updatedDevs = [...devsToRestore, ...remaining];
-        try {
-          localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updatedDevs));
-        } catch (e) {}
         mongoPayload.developers = updatedDevs;
         return updatedDevs;
       });
@@ -6388,10 +6262,6 @@ export default function App() {
       setCustomers(prev => {
         const restoreCustIds = new Set(custsToRestore.map(c => c.id || c.customer_number));
         const updatedCusts = [...custsToRestore, ...(prev || []).filter(c => !restoreCustIds.has(c.id) && !restoreCustIds.has(c.customer_number))];
-        try {
-          localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updatedCusts));
-          localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updatedCusts));
-        } catch (e) {}
         mongoPayload.customers = updatedCusts;
         return updatedCusts;
       });
@@ -6490,25 +6360,12 @@ export default function App() {
       return cat.includes('dev') || cat.includes('project') || (i.originalLocation && i.originalLocation.includes('Developer')) || (typeof i.id === 'string' && i.id.includes('DEV-'));
     });
     if (hasDev) {
-      setDevelopers(prev => {
-        const updated = (prev || []).filter((d: any) => !isItemInRecycledSet(d, fullPurgeSet));
-        try {
-          localStorage.setItem('swaramayi_developers_v1', JSON.stringify(updated));
-        } catch (e) {}
-        return updated;
-      });
+      setDevelopers(prev => (prev || []).filter((d: any) => !isItemInRecycledSet(d, fullPurgeSet)));
     }
 
     const hasCust = itemsToPurge.some(i => (i.category || '').toLowerCase().includes('cust'));
     if (hasCust) {
-      setCustomers(prev => {
-        const updated = (prev || []).filter(c => !isItemInRecycledSet(c, fullPurgeSet));
-        try {
-          localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
-          localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
-        } catch (e) {}
-        return updated;
-      });
+      setCustomers(prev => (prev || []).filter(c => !isItemInRecycledSet(c, fullPurgeSet)));
     }
 
     const hasLead = itemsToPurge.some(i => (i.category || '').toLowerCase().includes('lead'));
@@ -8131,6 +7988,8 @@ export default function App() {
         invoices: [],
         site_visits: [],
         matching_requests: [],
+        sourcing_requests: [],
+        visit_feedbacks: [],
         developers: []
       });
 
@@ -8157,28 +8016,7 @@ export default function App() {
   // 7. SITE VISITS & BOOKINGS
   const [siteVisits, setSiteVisits] = useState([]);
 
-  const [bookings, setBookings] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_bookings_v3_clean');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error('Error reading bookings from localStorage:', e);
-    }
-    return [];
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(bookings));
-    } catch (e) {
-      console.error('Error saving bookings to localStorage:', e);
-    }
-  }, [bookings]);
+  const [bookings, setBookings] = useState<any[]>([]);
 
   // --------------------------------------------------------------------------
   // DYNAMIC SALES EXECUTIVES & CLIENT RELATIONSHIP MANAGERS STORE
@@ -8282,6 +8120,10 @@ export default function App() {
       avoided_floors: newCustomerForm.non_preferred_floor || '',
       budget_min: newCustomerForm.budget_min || '',
       budget_max: newCustomerForm.budget_max || '',
+      budget_unit: newCustomerForm.budget_unit || 'Lakhs (L)',
+      budget_min_unit: newCustomerForm.budget_min_unit || newCustomerForm.budget_unit || 'Lakhs (L)',
+      budget_max_unit: newCustomerForm.budget_max_unit || newCustomerForm.budget_unit || 'Lakhs (L)',
+      budget: newCustomerForm.budget_min ? formatBudgetSummaryText(newCustomerForm.budget_min, newCustomerForm.budget_max, newCustomerForm.budget_min_unit || newCustomerForm.budget_unit, newCustomerForm.budget_max_unit || newCustomerForm.budget_unit, '-') : '',
       budget_flexibility: newCustomerForm.budget_flexibility || '',
       carpet_area_min: newCustomerForm.carpet_area_min || '',
       carpet_area_max: newCustomerForm.carpet_area_max || '',
@@ -8334,6 +8176,10 @@ export default function App() {
       avoided_floors: newCustomerForm.non_preferred_floor || '',
       budget_min: newCustomerForm.budget_min || '',
       budget_max: newCustomerForm.budget_max || '',
+      budget_unit: newCustomerForm.budget_unit || 'Lakhs (L)',
+      budget_min_unit: newCustomerForm.budget_min_unit || newCustomerForm.budget_unit || 'Lakhs (L)',
+      budget_max_unit: newCustomerForm.budget_max_unit || newCustomerForm.budget_unit || 'Lakhs (L)',
+      budget: newCustomerForm.budget_min ? formatBudgetSummaryText(newCustomerForm.budget_min, newCustomerForm.budget_max, newCustomerForm.budget_min_unit || newCustomerForm.budget_unit, newCustomerForm.budget_max_unit || newCustomerForm.budget_unit, '-') : '',
       budget_flexibility: newCustomerForm.budget_flexibility || '',
       carpet_area_min: newCustomerForm.carpet_area_min || '',
       carpet_area_max: newCustomerForm.carpet_area_max || '',
@@ -8355,22 +8201,11 @@ export default function App() {
       : [draftLeadObj, ...leadsList];
     
     setLeadsList(updatedLeads);
-    try {
-      localStorage.setItem('swaramayi_leads_v5_clean', JSON.stringify(updatedLeads));
-    } catch (err) {
-      console.error('Error saving draft lead to localStorage', err);
-    }
 
     // Update customers list ONLY if this was already an existing customer (leads drafting steps 1-8 are kept strictly in leadsList)
     if (existingCustomer) {
       const updatedCusts = customers.map(c => (c.customer_number === finalCustomerCode || c.id === existingCustomer.id) ? { ...c, ...draftCustObj } : c);
       setCustomers(updatedCusts);
-      try {
-        localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updatedCusts));
-        localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updatedCusts));
-      } catch (err) {
-        console.error('Error saving draft customer to localStorage', err);
-      }
       syncAllToMongoDB({ customers: updatedCusts, leads: updatedLeads });
     } else {
       syncAllToMongoDB({ leads: updatedLeads });
@@ -8427,6 +8262,9 @@ export default function App() {
       radius_km: (lead.radius_km !== undefined && lead.radius_km !== null) ? lead.radius_km : ((lead.radiusKm !== undefined && lead.radiusKm !== null) ? lead.radiusKm : 2),
       budget_min: lead.budget_min || '',
       budget_max: lead.budget_max || '',
+      budget_unit: normalizeBudgetUnit(lead.budget_unit || lead.budget_min_unit || lead.budget_max_unit),
+      budget_min_unit: normalizeBudgetUnit(lead.budget_min_unit || lead.budget_unit),
+      budget_max_unit: normalizeBudgetUnit(lead.budget_max_unit || lead.budget_unit),
       budget_flexibility: lead.budget_flexibility !== undefined && lead.budget_flexibility !== null ? lead.budget_flexibility : '',
       carpet_area_min: lead.carpet_area_min !== undefined && lead.carpet_area_min !== null ? String(lead.carpet_area_min) : '',
       carpet_area_max: lead.carpet_area_max !== undefined && lead.carpet_area_max !== null ? String(lead.carpet_area_max) : '',
@@ -8511,75 +8349,10 @@ export default function App() {
     }
   }, [verifiedDevProjectsList]);
 
-  const [invoices, setInvoices] = useState<any[]>(() => {
-    const defaultInvoices: any[] = [];
+  const [invoices, setInvoices] = useState<any[]>([]);
 
-    try {
-      const saved = localStorage.getItem('swaramayi_invoices_v6');
-      if (saved !== null) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const seen = new Set<string>();
-          const deduped: any[] = [];
-          for (let inv of parsed) {
-            if (inv.invoice_number) {
-              inv.invoice_number = inv.invoice_number
-                .replace('SRM-INV-2026-000188', 'SRM-INV-2026-000001')
-                .replace('SRM-DEV-INV-2026-000188', 'SRM-DEV-INV-2026-000001')
-                .replace('000188', '000001');
-            }
-            if (inv.id && typeof inv.id === 'string') {
-              inv.id = inv.id.replace('000188', '000001');
-            }
-            const key = inv.id || `${inv.invoice_number}_${inv.invoice_category || 'CUSTOMER'}`;
-            const numKey = inv.invoice_number ? `${inv.invoice_number}_${inv.invoice_category || 'CUSTOMER'}` : null;
-            if (numKey && seen.has(numKey)) continue;
-            if (seen.has(key)) continue;
-            if (numKey) seen.add(numKey);
-            seen.add(key);
-            if (inv.invoice_number === 'SRM-INV-2026-000088' || inv.invoice_number === 'SRM-INV-2026-000001') {
-              inv.settlement_status = 'SETTLED';
-              inv.is_settled = true;
-            }
-            deduped.push(inv);
-          }
-          return deduped;
-        }
-      }
-    } catch (e) {
-      console.error('Error reading invoices from localStorage:', e);
-    }
-    return defaultInvoices;
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(invoices));
-    } catch (e) {
-      console.error('Error saving invoices to localStorage:', e);
-    }
-  }, [invoices]);
-
-  const [sourcingRequests, setSourcingRequests] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_sourcing_requests_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {
-      console.error('Error loading sourcing requests', e);
-    }
-    return [];
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_sourcing_requests_v1', JSON.stringify(sourcingRequests));
-    } catch (e) {
-      console.error('Error saving sourcing requests', e);
-    }
-  }, [sourcingRequests]);
+  const [sourcingRequests, setSourcingRequests] = useState<any[]>([]);
+  // Sourcing requests persistence in localStorage REMOVED - live from MongoDB Atlas only
 
   const [developers, setDevelopers] = useState<any[]>([]);
 
@@ -8628,6 +8401,8 @@ export default function App() {
       if (Array.isArray(overrideData.teams)) payload.teams = overrideData.teams;
       if (Array.isArray(overrideData.branches)) payload.branches = overrideData.branches;
       if (Array.isArray(overrideData.rating_invites)) payload.rating_invites = overrideData.rating_invites;
+      if (Array.isArray(overrideData.sourcing_requests)) payload.sourcing_requests = overrideData.sourcing_requests;
+      if (Array.isArray(overrideData.visit_feedbacks)) payload.visit_feedbacks = overrideData.visit_feedbacks;
       if (Array.isArray(overrideData.recycled_items)) payload.recycled_items = overrideData.recycled_items;
       if (Array.isArray(overrideData.agency_bank_details) || Array.isArray(overrideData.bank_details)) {
         payload.agency_bank_details = overrideData.agency_bank_details || overrideData.bank_details;
@@ -8679,11 +8454,6 @@ export default function App() {
 
             if (Array.isArray(mData.users) && mData.users.length > 0) {
               setUsers(mData.users);
-              ['swaramayi_users_v7', 'swaramayi_enterprise_users_v8'].forEach(k => {
-                try {
-                  localStorage.setItem(k, JSON.stringify(mData.users));
-                } catch (e) {}
-              });
             }
             if (Array.isArray(mData.teams) && mData.teams.length > 0) setTeams(mData.teams);
             if (Array.isArray(mData.branches) && mData.branches.length > 0) {
@@ -9019,9 +8789,9 @@ export default function App() {
             } catch (e) {}
             if (Array.isArray(mData.sourcing_requests)) {
               setSourcingRequests(mData.sourcing_requests);
-              try {
-                localStorage.setItem('swaramayi_sourcing_requests_v1', JSON.stringify(mData.sourcing_requests));
-              } catch (e) {}
+            }
+            if (Array.isArray(mData.visit_feedbacks)) {
+              setVisitFeedbacks(mData.visit_feedbacks);
             }
             if (Array.isArray(mData.developers)) {
               try {
@@ -9111,9 +8881,6 @@ export default function App() {
                 });
 
                 setDevelopers(cleanDevs);
-                try {
-                  localStorage.setItem('swaramayi_developers_v1', JSON.stringify(cleanDevs));
-                } catch (e) {}
                 syncAllToMongoDB({ developers: cleanDevs });
               } catch (e) {}
             }
@@ -9123,11 +8890,7 @@ export default function App() {
                 const userMap = new Map();
                 (prev || []).forEach((u: any) => { if (u && u.id) userMap.set(u.id, u); });
                 (cleanUsers || []).forEach((u: any) => { if (u && u.id) userMap.set(u.id, u); });
-                const mergedUsers = Array.from(userMap.values());
-                try {
-                  localStorage.setItem('swaramayi_users_v7', JSON.stringify(mergedUsers));
-                } catch (e) {}
-                return mergedUsers;
+                return Array.from(userMap.values());
               });
             }
           }
@@ -9495,29 +9258,8 @@ export default function App() {
   const [showAlternativePropertyModal, setShowAlternativePropertyModal] = useState<{ open: boolean; customer: any; currentProperty: any } | null>(null);
   const [showLogSalesFeedbackModal, setShowLogSalesFeedbackModal] = useState<boolean>(false);
   
-  // DYNAMIC STRUCTURED 5-STAR VISIT FEEDBACKS STATE (WITH LOCALSTORAGE PERSISTENCE)
-  const [visitFeedbacks, setVisitFeedbacks] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_visit_feedbacks_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter(Boolean);
-        }
-      }
-    } catch (e) {
-      console.error('Error reading visit feedbacks from localStorage:', e);
-    }
-    return [];
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_visit_feedbacks_v2', JSON.stringify(visitFeedbacks));
-    } catch (e) {
-      console.error('Error saving visit feedbacks to localStorage:', e);
-    }
-  }, [visitFeedbacks]);
+  // DYNAMIC STRUCTURED 5-STAR VISIT FEEDBACKS STATE (Live from MongoDB Atlas only)
+  const [visitFeedbacks, setVisitFeedbacks] = useState<any[]>([]);
 
   const [salesFeedbackForm, setSalesFeedbackForm] = useState({
     feedbackId: '',
@@ -9652,9 +9394,7 @@ export default function App() {
 
     setVisitFeedbacks(prev => {
       const updated = [newFb, ...(prev || []).filter(f => f.id !== newFb.id && f.visitId !== newFb.visitId)];
-      try {
-        localStorage.setItem('swaramayi_visit_feedbacks_v2', JSON.stringify(updated));
-      } catch (e) {}
+      syncAllToMongoDB({ visit_feedbacks: updated });
       return updated;
     });
 
@@ -9730,7 +9470,11 @@ export default function App() {
 
   const handleDeleteFeedback = (fbId: string) => {
     if (window.confirm('Are you sure you want to delete this feedback record?')) {
-      setVisitFeedbacks(prev => prev.filter(fb => fb.id !== fbId));
+      setVisitFeedbacks(prev => {
+        const updated = (prev || []).filter(fb => fb.id !== fbId);
+        syncAllToMongoDB({ visit_feedbacks: updated });
+        return updated;
+      });
     }
   };
 
@@ -10459,10 +10203,6 @@ export default function App() {
     setRecycledItems(updatedRecycled);
     setProperties(nextProps);
 
-    try {
-      localStorage.setItem('swaramayi_recycled_items', JSON.stringify(updatedRecycled));
-    } catch (e) {}
-
     // Single atomic commit to MongoDB Atlas
     syncAllToMongoDB({ properties: nextProps, recycled_items: updatedRecycled });
   };
@@ -10617,9 +10357,15 @@ export default function App() {
 
   // 📍 MAXIMUM DETAILED GPS REVERSE GEOCODING ADDRESS DETECTOR ENGINE
   const detectLocalityFromCoords = async (latStr: string, lngStr: string): Promise<{ locality: string; fullAddress: string; rawDetails: any }> => {
-    const lat = parseFloat(latStr);
-    const lng = parseFloat(lngStr);
-    if (isNaN(lat) || isNaN(lng)) {
+    const parseCoord = (raw: string, negDir: RegExp) => {
+      const cleaned = String(raw || '').trim();
+      const num = parseFloat(cleaned.replace(/[^\d.\-+]/g, ''));
+      if (isNaN(num)) return NaN;
+      return negDir.test(cleaned) ? -Math.abs(num) : num;
+    };
+    const lat = parseCoord(latStr, /[SW]/i);
+    const lng = parseCoord(lngStr, /[SW]/i);
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       return { locality: '', fullAddress: '', rawDetails: null };
     }
 
@@ -10633,82 +10379,13 @@ export default function App() {
 
     const geofenceMatch = geofences.find(g => lat >= g.latMin && lat <= g.latMax && lng >= g.lngMin && lng <= g.lngMax);
 
-    // Google Maps Geocoder if SDK loaded & available
-    try {
-      if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Geocoder) {
-        const geocoder = new (window as any).google.maps.Geocoder();
-        const googleRes = await new Promise<any>((resolve) => {
-          geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
-            if (status === 'OK' && results && results[0]) {
-              resolve(results[0]);
-            } else {
-              resolve(null);
-            }
-          });
-        });
-
-        if (googleRes && googleRes.formatted_address) {
-          const formattedAddress = googleRes.formatted_address;
-          return {
-            locality: formattedAddress,
-            fullAddress: formattedAddress,
-            rawDetails: googleRes
-          };
-        }
-      }
-    } catch (e) {
-      console.log('Google reverse geocoder fallback to OpenStreetMap Nominatim', e);
-    }
-
-    // 2. OpenStreetMap Nominatim Reverse Geocoding API Call for Maximum Detailed Full Address
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
-      const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
-        signal: controller.signal,
-        headers: { 'Accept-Language': 'en' }
-      });
-      clearTimeout(timeoutId);
-
-      if (resp.ok) {
-        const data = await resp.json();
-        const addr = data.address || {};
-
-        const buildingOrAmenity = addr.building || addr.amenity || addr.shop || addr.office || addr.tourism || '';
-        const road = addr.road || addr.street || addr.pedestrian || addr.highway || '';
-        const neighbourhood = addr.neighbourhood || addr.suburb || addr.quarter || addr.residential || '';
-        const districtOrTown = addr.subdistrict || addr.town || addr.village || addr.city_district || addr.municipality || '';
-        const city = addr.city || addr.county || addr.state_district || '';
-        const state = addr.state || '';
-        const postcode = addr.postcode || '';
-        const country = addr.country || 'India';
-
-        const parts = [
-          buildingOrAmenity,
-          road,
-          neighbourhood,
-          districtOrTown,
-          city,
-          state ? (postcode ? `${state} - ${postcode}` : state) : postcode,
-          country
-        ].filter(Boolean);
-
-        const constructedFullAddress = parts.length > 0 ? parts.join(', ') : (data.display_name || '');
-
-        const primaryLoc = neighbourhood || districtOrTown || city || 'Central Hub';
-        const secondaryLoc = city && !primaryLoc.toLowerCase().includes(city.toLowerCase()) ? city : '';
-        const shortLocalityStr = secondaryLoc ? `${primaryLoc} Hub / ${secondaryLoc}` : primaryLoc;
-
-        const bestAddress = constructedFullAddress || data.display_name || (geofenceMatch ? geofenceMatch.fullAddress : shortLocalityStr);
-
-        return {
-          locality: bestAddress,
-          fullAddress: bestAddress,
-          rawDetails: addr
-        };
-      }
-    } catch (e) {
-      console.log('Reverse geocoding API offline or timed out, using precision geofence fallback', e);
+    const revRes = await reverseGeocodeCoords(lat, lng);
+    if (revRes.fullAddress) {
+      return {
+        locality: revRes.fullAddress,
+        fullAddress: revRes.fullAddress,
+        rawDetails: revRes.rawDetails
+      };
     }
 
     if (geofenceMatch) {
@@ -10842,15 +10519,6 @@ export default function App() {
     if (window.confirm(`Are you sure you want to delete User "${displayName}"?`)) {
       const updated = users.filter(u => u.id !== id && u.username !== displayName && u.full_name !== displayName);
       setUsers(updated);
-      try {
-        ['swaramayi_users_v7', 'swaramayi_enterprise_users_v8', 'swaramayi_users_v6', 'swaramayi_users_v5', 'swaramayi_users'].forEach(k => {
-          try {
-            localStorage.setItem(k, JSON.stringify(updated));
-          } catch (e) {}
-        });
-      } catch (e) {
-        console.error(e);
-      }
 
       const host = window.location.hostname || 'localhost';
       fetch((typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? `http://localhost:5000/api/v1/security/users/${encodeURIComponent(id)}` : `/api/v1/security/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
@@ -10987,11 +10655,6 @@ export default function App() {
     }
     const updated = branches.filter(b => b.id !== branchId && b.branch_name !== branchName);
     setBranches(updated);
-    try {
-      localStorage.setItem('swaramayi_enterprise_branches_v9', JSON.stringify(updated));
-    } catch (e) {
-      console.error(e);
-    }
 
     const host = window.location.hostname || 'localhost';
     fetch((typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? `http://localhost:5000/api/v1/security/branches/${encodeURIComponent(branchId)}` : `/api/v1/security/branches/${encodeURIComponent(branchId)}`, { method: 'DELETE' })
@@ -11007,11 +10670,6 @@ export default function App() {
     if (window.confirm(`Are you sure you want to delete Team Squad "${teamName}"?`)) {
       const updatedTeams = teams.filter(t => t.id !== teamId && t.team_name !== teamName);
       setTeams(updatedTeams);
-      try {
-        localStorage.setItem('swaramayi_enterprise_teams_v2', JSON.stringify(updatedTeams));
-      } catch (e) {
-        console.error(e);
-      }
 
       const updatedBranches = branches.map(b => ({
         ...b,
@@ -11060,10 +10718,12 @@ export default function App() {
       preferredArea: newCustomerForm.preferredArea || 'Kolkata',
       secondary_areas: newCustomerForm.secondary_areas || '',
       secondaryAreas: newCustomerForm.secondary_areas || '',
-      budget: newCustomerForm.budget || `₹${newCustomerForm.budget_min || '40'} - ₹${newCustomerForm.budget_max || '80'} Lakhs`,
+      budget: newCustomerForm.budget || formatBudgetSummaryText(newCustomerForm.budget_min || '40', newCustomerForm.budget_max || '80', newCustomerForm.budget_min_unit || newCustomerForm.budget_unit || 'Lakhs (L)', newCustomerForm.budget_max_unit || newCustomerForm.budget_unit || 'Lakhs (L)', '-'),
       budget_min: newCustomerForm.budget_min || '40',
       budget_max: newCustomerForm.budget_max || '80',
-      budget_unit: newCustomerForm.budget_unit || 'Lakhs',
+      budget_unit: newCustomerForm.budget_unit || 'Lakhs (L)',
+      budget_min_unit: newCustomerForm.budget_min_unit || newCustomerForm.budget_unit || 'Lakhs (L)',
+      budget_max_unit: newCustomerForm.budget_max_unit || newCustomerForm.budget_unit || 'Lakhs (L)',
       budget_flexibility: newCustomerForm.budget_flexibility || 'Strict Fixed (0% Stretch)',
       carpet_area_min: newCustomerForm.carpet_area_min || '',
       carpet_area_max: newCustomerForm.carpet_area_max || '',
@@ -11095,10 +10755,6 @@ export default function App() {
       } else {
         updated = [newC, ...(prev || [])];
       }
-      try {
-        localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(updated));
-        localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updated));
-      } catch (err) {}
       syncAllToMongoDB({ customers: updated });
       return updated;
     });
@@ -11120,10 +10776,12 @@ export default function App() {
       preferredArea: newCustomerForm.preferredArea || newCustomerForm.locality || 'Kolkata',
       secondary_areas: newCustomerForm.secondary_areas || '',
       secondaryAreas: newCustomerForm.secondary_areas || '',
-      budget: newCustomerForm.budget || `₹${newCustomerForm.budget_min || '40'} - ₹${newCustomerForm.budget_max || '80'} Lakhs`,
-      budget_min: Number(newCustomerForm.budget_min) ? Number(newCustomerForm.budget_min) * 100000 : 4000000,
-      budget_max: Number(newCustomerForm.budget_max) ? Number(newCustomerForm.budget_max) * 100000 : 8000000,
-      budget_unit: newCustomerForm.budget_unit || 'Lakhs',
+      budget: newCustomerForm.budget || formatBudgetSummaryText(newCustomerForm.budget_min || '40', newCustomerForm.budget_max || '80', newCustomerForm.budget_min_unit || newCustomerForm.budget_unit || 'Lakhs (L)', newCustomerForm.budget_max_unit || newCustomerForm.budget_unit || 'Lakhs (L)', '-'),
+      budget_min: budgetToRupees(newCustomerForm.budget_min, newCustomerForm.budget_min_unit || newCustomerForm.budget_unit, 4000000),
+      budget_max: budgetToRupees(newCustomerForm.budget_max, newCustomerForm.budget_max_unit || newCustomerForm.budget_unit, 8000000),
+      budget_unit: newCustomerForm.budget_unit || 'Lakhs (L)',
+      budget_min_unit: newCustomerForm.budget_min_unit || newCustomerForm.budget_unit || 'Lakhs (L)',
+      budget_max_unit: newCustomerForm.budget_max_unit || newCustomerForm.budget_unit || 'Lakhs (L)',
       budget_flexibility: newCustomerForm.budget_flexibility || 'Strict Fixed (0% Stretch)',
       carpet_area_min: newCustomerForm.carpet_area_min || '',
       carpet_area_max: newCustomerForm.carpet_area_max || '',
@@ -11158,9 +10816,6 @@ export default function App() {
         !(cleanMobile && cleanMobile.length >= 7 && r.mobile && r.mobile.replace(/\D/g, '') === cleanMobile)
       );
       const updatedQueue = [newMatchingRecord, ...filtered];
-      try {
-        localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(updatedQueue));
-      } catch (err) {}
       syncAllToMongoDB({ matching_requests: updatedQueue });
       return updatedQueue;
     });
@@ -11176,9 +10831,6 @@ export default function App() {
         if (cleanMobile && cleanMobile.length >= 7 && lMob && (lMob.endsWith(cleanMobile) || cleanMobile.endsWith(lMob))) return false;
         return true;
       });
-      try {
-        localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(updatedLeads));
-      } catch (e) {}
       syncAllToMongoDB({ leads: updatedLeads });
       return updatedLeads;
     });
@@ -11507,8 +11159,17 @@ export default function App() {
     };
 
     const parseBudgetRangeInLakhs = (customerObj: any): { min: number; max: number } => {
-      let minBud = parseSingleValToLakhs(customerObj?.budget_min);
-      let maxBud = parseSingleValToLakhs(customerObj?.budget_max);
+      const parseWithUnit = (val: any, unit?: string): number => {
+        const s = String(val ?? '').toLowerCase();
+        if (s.includes('crore') || s.includes('cr')) return parseSingleValToLakhs(val);
+        const base = parseSingleValToLakhs(val);
+        if (base > 0 && base < 1000 && typeof val !== 'number' && normalizeBudgetUnit(unit) === 'Crore (Cr)') {
+          return base * 100;
+        }
+        return base;
+      };
+      let minBud = parseWithUnit(customerObj?.budget_min, customerObj?.budget_min_unit || customerObj?.budget_unit);
+      let maxBud = parseWithUnit(customerObj?.budget_max, customerObj?.budget_max_unit || customerObj?.budget_unit);
 
       if (minBud > 0 && maxBud > 0 && minBud <= maxBud) {
         return { min: minBud, max: maxBud };
@@ -14428,6 +14089,7 @@ export default function App() {
               onRecycleItem={handleRecycleItem}
               recycledItems={recycledItems}
               setRecycledItems={setRecycledItems}
+              syncAllToMongoDB={syncAllToMongoDB}
               bankDetails={bankDetails}
               setBankDetails={setBankDetails}
             />
@@ -20745,20 +20407,30 @@ export default function App() {
                         💰 INVESTMENT BUDGET RANGE & FLEXIBILITY LIMIT
                       </span>
                       <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#4ade80' }}>
-                        Current: ₹{newCustomerForm.budget_min || '0'} to ₹{newCustomerForm.budget_max || '0'} {newCustomerForm.budget_unit || 'Lakhs'} ({newCustomerForm.budget_flexibility || 'Strict Fixed'})
+                        Current: {formatBudgetSummaryText(newCustomerForm.budget_min, newCustomerForm.budget_max, newCustomerForm.budget_min_unit || newCustomerForm.budget_unit, newCustomerForm.budget_max_unit || newCustomerForm.budget_unit, 'to')} ({newCustomerForm.budget_flexibility || 'Strict Fixed'})
                       </span>
                     </div>
 
                     {/* QUICK BUDGET PRESET BUTTONS */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                       {[
-                        { label: '⚡ Under ₹50 L', min: '20', max: '50', unit: 'Lakhs' },
-                        { label: '⚡ ₹50 L – ₹1 Cr', min: '50', max: '100', unit: 'Lakhs' },
-                        { label: '⚡ ₹1.20 Cr – ₹1.80 Cr', min: '1.20', max: '1.80', unit: 'Crore (Cr)' },
-                        { label: '⚡ ₹1.80 Cr – ₹3 Cr', min: '1.80', max: '3.00', unit: 'Crore (Cr)' },
-                        { label: '⚡ Above ₹3 Cr', min: '3.00', max: '10.00', unit: 'Crore (Cr)' },
+                        { label: '⚡ ₹15 L – ₹20 L', min: '15', max: '20', minUnit: 'Lakhs (L)' as const, maxUnit: 'Lakhs (L)' as const },
+                        { label: '⚡ ₹20 L – ₹25 L', min: '20', max: '25', minUnit: 'Lakhs (L)' as const, maxUnit: 'Lakhs (L)' as const },
+                        { label: '⚡ ₹25 L – ₹35 L', min: '25', max: '35', minUnit: 'Lakhs (L)' as const, maxUnit: 'Lakhs (L)' as const },
+                        { label: '⚡ ₹35 L – ₹50 L', min: '35', max: '50', minUnit: 'Lakhs (L)' as const, maxUnit: 'Lakhs (L)' as const },
+                        { label: '⚡ ₹50 L – ₹75 L', min: '50', max: '75', minUnit: 'Lakhs (L)' as const, maxUnit: 'Lakhs (L)' as const },
+                        { label: '⚡ ₹75 L – ₹1 Cr', min: '75', max: '1', minUnit: 'Lakhs (L)' as const, maxUnit: 'Crore (Cr)' as const },
+                        { label: '⚡ ₹1.20 Cr – ₹1.80 Cr', min: '1.20', max: '1.80', minUnit: 'Crore (Cr)' as const, maxUnit: 'Crore (Cr)' as const },
+                        { label: '⚡ ₹1.80 Cr – ₹3 Cr', min: '1.80', max: '3.00', minUnit: 'Crore (Cr)' as const, maxUnit: 'Crore (Cr)' as const },
+                        { label: '⚡ Above ₹3 Cr', min: '3.00', max: '10.00', minUnit: 'Crore (Cr)' as const, maxUnit: 'Crore (Cr)' as const },
                       ].map(preset => {
-                        const isSelected = newCustomerForm.budget_min === preset.min && newCustomerForm.budget_max === preset.max;
+                        const currentMinUnit = normalizeBudgetUnit(newCustomerForm.budget_min_unit || newCustomerForm.budget_unit, 'Lakhs (L)');
+                        const currentMaxUnit = normalizeBudgetUnit(newCustomerForm.budget_max_unit || newCustomerForm.budget_unit, 'Lakhs (L)');
+                        const isSelected =
+                          newCustomerForm.budget_min === preset.min &&
+                          newCustomerForm.budget_max === preset.max &&
+                          currentMinUnit === preset.minUnit &&
+                          currentMaxUnit === preset.maxUnit;
                         return (
                           <button
                             key={preset.label}
@@ -20767,7 +20439,9 @@ export default function App() {
                               ...newCustomerForm,
                               budget_min: preset.min,
                               budget_max: preset.max,
-                              budget_unit: preset.unit
+                              budget_unit: preset.minUnit,
+                              budget_min_unit: preset.minUnit,
+                              budget_max_unit: preset.maxUnit
                             })}
                             style={{
                               background: isSelected ? (isLight ? '#e0f2fe' : 'rgba(2, 132, 199, 0.25)') : (isLight ? '#ffffff' : '#0f172a'),
@@ -20810,8 +20484,12 @@ export default function App() {
                             }}
                           />
                           <select
-                            value={newCustomerForm.budget_unit || 'Crore (Cr)'}
-                            onChange={e => setNewCustomerForm({ ...newCustomerForm, budget_unit: e.target.value })}
+                            value={normalizeBudgetUnit(newCustomerForm.budget_min_unit || newCustomerForm.budget_unit, 'Lakhs (L)')}
+                            onChange={e => setNewCustomerForm({
+                              ...newCustomerForm,
+                              budget_unit: e.target.value,
+                              budget_min_unit: e.target.value
+                            })}
                             style={{
                               width: '110px',
                               padding: '8px 8px',
@@ -20823,8 +20501,8 @@ export default function App() {
                               fontSize: '0.78rem'
                             }}
                           >
-                            <option value="Crore (Cr)">Crore (Cr)</option>
                             <option value="Lakhs (L)">Lakhs (L)</option>
+                            <option value="Crore (Cr)">Crore (Cr)</option>
                           </select>
                         </div>
                       </div>
@@ -20851,8 +20529,12 @@ export default function App() {
                             }}
                           />
                           <select
-                            value={newCustomerForm.budget_unit || 'Crore (Cr)'}
-                            onChange={e => setNewCustomerForm({ ...newCustomerForm, budget_unit: e.target.value })}
+                            value={normalizeBudgetUnit(newCustomerForm.budget_max_unit || newCustomerForm.budget_unit, 'Lakhs (L)')}
+                            onChange={e => setNewCustomerForm({
+                              ...newCustomerForm,
+                              budget_max_unit: e.target.value,
+                              budget_unit: newCustomerForm.budget_min_unit || e.target.value
+                            })}
                             style={{
                               width: '110px',
                               padding: '8px 8px',
@@ -20864,8 +20546,8 @@ export default function App() {
                               fontSize: '0.78rem'
                             }}
                           >
-                            <option value="Crore (Cr)">Crore (Cr)</option>
                             <option value="Lakhs (L)">Lakhs (L)</option>
+                            <option value="Crore (Cr)">Crore (Cr)</option>
                           </select>
                         </div>
                       </div>
@@ -21041,7 +20723,7 @@ export default function App() {
                     color: isLight ? '#15803d' : '#34d399'
                   }}>
                     <span>
-                      📊 TARGET PROFILING: Budget = ₹{newCustomerForm.budget_min || '0'} – ₹{newCustomerForm.budget_max || '0'} {newCustomerForm.budget_unit || 'Cr'} ({newCustomerForm.budget_flexibility || '± 10% Flexible'}) • Area = {newCustomerForm.carpet_area_min || '0'} – {newCustomerForm.carpet_area_max || '0'} {newCustomerForm.area_unit?.split(' ')[0] || 'Sq.Ft.'}
+                      📊 TARGET PROFILING: Budget = {formatBudgetSummaryText(newCustomerForm.budget_min, newCustomerForm.budget_max, newCustomerForm.budget_min_unit || newCustomerForm.budget_unit, newCustomerForm.budget_max_unit || newCustomerForm.budget_unit, '–')} ({newCustomerForm.budget_flexibility || '± 10% Flexible'}) • Area = {newCustomerForm.carpet_area_min || '0'} – {newCustomerForm.carpet_area_max || '0'} {newCustomerForm.area_unit?.split(' ')[0] || 'Sq.Ft.'}
                     </span>
                   </div>
                 </div>
@@ -21665,7 +21347,7 @@ export default function App() {
                       </div>
                       <div style={{ minWidth: 0, overflow: 'hidden' }}>
                         <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block', fontSize: '0.68rem' }}>Budget Range:</span>
-                        <strong style={{ color: '#22c55e', fontSize: '0.8rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{newCustomerForm.budget_min ? `₹${newCustomerForm.budget_min} - ₹${newCustomerForm.budget_max} ${newCustomerForm.budget_unit || 'Lakhs'}` : '-'}</strong>
+                        <strong style={{ color: '#22c55e', fontSize: '0.8rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{newCustomerForm.budget_min ? formatBudgetSummaryText(newCustomerForm.budget_min, newCustomerForm.budget_max, newCustomerForm.budget_min_unit || newCustomerForm.budget_unit, newCustomerForm.budget_max_unit || newCustomerForm.budget_unit, '-') : '-'}</strong>
                       </div>
                       <div style={{ minWidth: 0, overflow: 'hidden' }}>
                         <span style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'block', fontSize: '0.68rem' }}>Preferred Area:</span>

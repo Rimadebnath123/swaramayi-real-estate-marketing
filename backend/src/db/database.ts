@@ -432,6 +432,8 @@ export interface Schema {
     approval_seq: number;
   };
   recycle_bin?: any[];
+  sourcing_requests?: any[];
+  visit_feedbacks?: any[];
 }
 
 const initialData: Schema = {
@@ -500,6 +502,8 @@ const initialData: Schema = {
   system_settings: { is_lockdown_active: false },
   lead_transfers: [],
   followups: [],
+  sourcing_requests: [],
+  visit_feedbacks: [],
   sequences: {
     customer_seq: 0,
     property_seq: 0,
@@ -554,6 +558,8 @@ export async function loadData() {
       if (Array.isArray(mongoData.site_visits)) dbStore.data.site_visits = mongoData.site_visits as any;
       if (Array.isArray(mongoData.cost_sheets)) (dbStore.data as any).cost_sheets = mongoData.cost_sheets as any;
       if (Array.isArray(mongoData.matching_requests)) (dbStore.data as any).matching_requests = mongoData.matching_requests as any;
+      if (Array.isArray(mongoData.sourcing_requests)) (dbStore.data as any).sourcing_requests = mongoData.sourcing_requests as any;
+      if (Array.isArray(mongoData.visit_feedbacks)) (dbStore.data as any).visit_feedbacks = mongoData.visit_feedbacks as any;
       if (Array.isArray(mongoData.developers)) (dbStore.data as any).developers = mongoData.developers as any;
       if (Array.isArray(mongoData.rating_invites)) (dbStore.data as any).rating_invites = mongoData.rating_invites as any;
       if (Array.isArray(mongoData.recycled_items)) (dbStore.data as any).recycled_items = mongoData.recycled_items as any;

@@ -2,6 +2,11 @@ import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { dbStore, loadData, saveData, generateID, PropertyRecord, CustomerRecord } from '../db/database.js';
 import { syncToMongoDB, LeadModel, SiteVisitModel, RatingInviteModel } from '../db/mongoPersistence.js';
+import {
+  resolvePropertyLocation,
+  normalizeLocationText,
+  getCachedLocalities,
+} from '../utils/locationResolver.js';
 
 // Helper to generate a URL-friendly slug
 function slugify(text: string): string {
@@ -104,11 +109,12 @@ function formatPublicProperty(p: any) {
   let crmPrice = parsePriceString(p.final_estimated_price) || parsePriceString(p.base_price) || parsePriceString(p.price);
   let crmSuperArea = parseAreaString(p.built_up_area_sqft) || parseAreaString(p.areaSqft) || parseAreaString(p.area);
   let crmCarpetArea = parseAreaString(p.carpet_area_sqft) || parseAreaString(p.carpetArea);
-  let crmBeds = p.bedrooms || (p.configuration ? parseInt(p.configuration) || 0 : 0);
+  let crmBeds = Number(p.bedrooms) || (p.configuration ? parseInt(String(p.configuration), 10) || 0 : 0);
   let crmConfig = p.configuration || (crmBeds > 0 ? `${crmBeds}BHK` : '');
-  let crmLocality = p.locality || p.location || '';
-  let crmAddress = p.location_address || p.full_address || '';
-  let crmCity = p.city || '';
+  const resolvedLoc = resolvePropertyLocation(p);
+  let crmLocality = resolvedLoc.locality;
+  let crmAddress = resolvedLoc.full_address;
+  let crmCity = resolvedLoc.city;
 
   crmCode = p.property_code || p.code || p.id || crmCode;
   crmDev = p.developer || p.developer_name || p.builder_name || p.developer_company || crmDev;
@@ -120,7 +126,6 @@ function formatPublicProperty(p: any) {
   const parsedCarpet = parseFloat(String(p.carpet_area || '').replace(/[^0-9.]/g, ''));
   if (!isNaN(parsedCarpet) && parsedCarpet > 0) crmCarpetArea = parsedCarpet;
   if (p.configuration) crmConfig = p.configuration;
-  if (p.locality || p.location) crmLocality = p.locality || p.location;
 
   const price = crmPrice > 0 ? crmPrice : 0;
   const area = crmSuperArea > 0 ? crmSuperArea : (crmCarpetArea > 0 ? crmCarpetArea : 0);
@@ -128,20 +133,53 @@ function formatPublicProperty(p: any) {
   const pricePerSqft = explicitSqftRate > 0 ? explicitSqftRate : (area > 0 && price > 0 ? Math.round(price / area) : 0);
 
   const statusRaw = String(p.status || p.availability_status || p.property_status || 'LIVE').toUpperCase();
+  const possessionRaw = String(p.possession_status || p.possession || '').toLowerCase();
   let constructionStatus = 'LIVE / AVAILABLE';
-  if (statusRaw === 'LIVE' || statusRaw === 'AVAILABLE' || statusRaw.includes('LIVE') || statusRaw.includes('READY') || statusRaw === 'READY_TO_MOVE') {
-    constructionStatus = 'LIVE / AVAILABLE';
-  } else if (statusRaw.includes('UNDER') || statusRaw === 'UNDER_CONSTRUCTION') {
-    constructionStatus = 'Under Construction';
+  if (statusRaw.includes('SOLD')) {
+    constructionStatus = 'Sold Out';
   } else if (statusRaw.includes('BOOKED')) {
     constructionStatus = 'Booked';
   } else if (statusRaw.includes('HOLD')) {
     constructionStatus = 'Hold / Reserved';
-  } else if (statusRaw.includes('SOLD')) {
-    constructionStatus = 'Sold Out';
+  } else if (statusRaw.includes('UNDER') || statusRaw === 'UNDER_CONSTRUCTION' || possessionRaw.includes('under')) {
+    constructionStatus = 'Under Construction';
+  } else if (statusRaw === 'LIVE' || statusRaw === 'AVAILABLE' || statusRaw.includes('LIVE') || statusRaw.includes('READY') || statusRaw === 'READY_TO_MOVE') {
+    constructionStatus = 'LIVE / AVAILABLE';
   } else if (p.constructionStatus) {
     constructionStatus = p.constructionStatus;
   }
+
+  const rawCategoryStr = String(p.category || p.listingType || p.transaction_type || '').toLowerCase();
+  const rawPropTypeStr = String(p.propertyType || p.property_type || '').toLowerCase();
+  const titleAndProject = `${title} ${p.project_name || ''}`.toLowerCase();
+  let normalizedCategory = 'Buy';
+  if (
+    rawCategoryStr.includes('pg') ||
+    rawCategoryStr.includes('hostel') ||
+    rawCategoryStr.includes('co-living') ||
+    rawPropTypeStr.includes('pg')
+  ) {
+    normalizedCategory = 'PG';
+  } else if (
+    rawCategoryStr.includes('rent') ||
+    rawCategoryStr.includes('lease') ||
+    /\brent\b/.test(titleAndProject)
+  ) {
+    normalizedCategory = 'Rent';
+  } else if (
+    rawCategoryStr.includes('commercial') ||
+    rawPropTypeStr.includes('commercial') ||
+    rawPropTypeStr.includes('office') ||
+    rawPropTypeStr.includes('shop') ||
+    rawPropTypeStr.includes('retail')
+  ) {
+    normalizedCategory = 'Commercial';
+  }
+
+  const normalizedListingType =
+    normalizedCategory === 'Rent'
+      ? 'Rent'
+      : (p.listingType || p.transaction_type || 'Sale');
 
   const isSold = isSoldProperty(p);
   const images = extractPropertyImages(p, title, crmCode);
@@ -157,10 +195,10 @@ function formatPublicProperty(p: any) {
     description: (p.description && p.description.trim().length > 0)
       ? p.description
       : (crmConfig ? `${crmConfig} ${p.property_type || p.propertyType || 'Property'}` : (p.title || '')),
-    category: (String(p.category || p.transaction_type || 'Buy').toLowerCase().includes('rent')) ? 'Rent' : 'Buy',
+    category: normalizedCategory,
     propertyType: p.propertyType || p.property_type || 'Apartment',
     property_type: p.property_type || p.propertyType || 'Apartment',
-    listingType: p.listingType || p.transaction_type || 'Sale',
+    listingType: normalizedListingType,
     price,
     base_price: price,
     final_estimated_price: price,
@@ -170,6 +208,7 @@ function formatPublicProperty(p: any) {
     locality: crmLocality,
     location_address: crmAddress,
     full_address: crmAddress,
+    _locationSearchText: resolvedLoc.searchText,
     society: p.society || p.project_name || title,
     developer: crmDev,
     developer_name: crmDev,
@@ -317,17 +356,42 @@ function formatPublicProperty(p: any) {
   };
 }
 
+function matchesLocationQuery(p: any, rawQuery: string): boolean {
+  const qNorm = normalizeLocationText(rawQuery);
+  if (!qNorm || qNorm === 'all' || qNorm === 'all kolkata locations' || qNorm === 'all locations') {
+    return true;
+  }
+  const searchSpace =
+    p._locationSearchText ||
+    normalizeLocationText(
+      [
+        p.location,
+        p.locality,
+        p.city,
+        p.full_address,
+        p.location_address,
+        p.project_name,
+        p.title,
+        p.description,
+      ]
+        .filter(Boolean)
+        .join(' ')
+    );
+  return searchSpace.includes(qNorm);
+}
+
 // 1. Get Public Properties List (Active properties only - excludes SOLD OUT)
 export async function getPublicProperties(req: Request, res: Response) {
   loadData();
-  const { 
+  const {
     search, type, propertyType, category, listingType, city, location, locality,
-    minPrice, maxPrice, bedrooms, featured, recent, isSold, status
+    minPrice, maxPrice, minSqft, bedrooms, furnishing, featured, recent, isSold, status,
+    reraApproved, sort, page, limit
   } = req.query;
 
-  const wantsSold = 
-    isSold === 'true' || 
-    String(isSold) === 'true' || 
+  const wantsSold =
+    isSold === 'true' ||
+    String(isSold) === 'true' ||
     String(status || '').toLowerCase().includes('sold');
 
   let properties: any[] = [];
@@ -336,7 +400,7 @@ export async function getPublicProperties(req: Request, res: Response) {
     const explicitlySold = dbStore.data.properties.filter(p => !p.is_deleted && isSoldProperty(p));
     const bookedPropIds = new Set((dbStore.data.bookings || []).map((b: any) => b.property_code || b.property_id || b.unit_id).filter(Boolean));
     const bookingSold = dbStore.data.properties.filter(p => !p.is_deleted && bookedPropIds.has(p.property_code || p.id));
-    
+
     const combinedSoldMap = new Map<string, any>();
     [...explicitlySold, ...bookingSold].forEach(p => combinedSoldMap.set(p.id || p.property_code, p));
     properties = Array.from(combinedSoldMap.values());
@@ -355,29 +419,36 @@ export async function getPublicProperties(req: Request, res: Response) {
     return formatted;
   });
 
-  if (search && typeof search === 'string') {
-    const q = search.toLowerCase();
-    publicList = publicList.filter(p => 
+  if (search && typeof search === 'string' && search.trim()) {
+    const q = search.trim().toLowerCase();
+    publicList = publicList.filter(p =>
       p.title.toLowerCase().includes(q) ||
       p.property_code.toLowerCase().includes(q) ||
-      p.location.toLowerCase().includes(q) ||
-      p.city.toLowerCase().includes(q) ||
-      (p.project_name && p.project_name.toLowerCase().includes(q))
+      matchesLocationQuery(p, search) ||
+      (p.project_name && p.project_name.toLowerCase().includes(q)) ||
+      (p.description && p.description.toLowerCase().includes(q))
     );
   }
 
   if (type || propertyType) {
-    const filterType = ((type || propertyType) as string).trim().toLowerCase();
+    const filterType = String(type || propertyType).trim().toLowerCase();
     publicList = publicList.filter(p => {
-      const pt = (p.propertyType || p.property_type || '').toLowerCase();
+      const pt = String(p.propertyType || p.property_type || '').toLowerCase().trim();
       if (pt === filterType) return true;
-      if (pt.includes(filterType) || filterType.includes(pt)) return true;
 
-      const isApartmentFilter = filterType.includes('apartment') || filterType.includes('flat');
-      const isApartmentProperty = pt.includes('apartment') || pt.includes('flat') || pt.includes('residence') || pt.includes('bhk');
+      // Exact subtype filters shouldn't accidentally pull in unrelated types
+      if (filterType === 'gated villa') return pt.includes('gated villa');
+      if (filterType === 'independent house') return pt.includes('independent house') || pt.includes('house');
+      if (filterType === 'semi complex') return pt.includes('semi complex') || pt.includes('semi-complex');
+      if (filterType === 'commercial space') return pt.includes('commercial') || pt.includes('office') || pt.includes('shop');
+
+      if (pt.includes(filterType) || (pt && filterType.includes(pt))) return true;
+
+      const isApartmentFilter = filterType === 'apartment' || filterType.includes('apartment') || filterType.includes('flat');
+      const isApartmentProperty = pt.includes('apartment') || pt.includes('flat') || pt.includes('residence');
       if (isApartmentFilter && isApartmentProperty) return true;
 
-      const isVillaFilter = filterType.includes('villa') || filterType.includes('house');
+      const isVillaFilter = filterType === 'villa' || filterType.includes('villa') || filterType.includes('house');
       const isVillaProperty = pt.includes('villa') || pt.includes('house') || pt.includes('bungalow') || pt.includes('duplex');
       if (isVillaFilter && isVillaProperty) return true;
 
@@ -393,55 +464,146 @@ export async function getPublicProperties(req: Request, res: Response) {
     });
   }
 
-  if (category) {
-    const catFilter = (category as string).trim().toLowerCase();
+  if (category && typeof category === 'string' && category.trim()) {
+    const catFilter = category.trim().toLowerCase();
     publicList = publicList.filter(p => {
-      const pCat = (p.category || p.listingType || p.transaction_type || '').toLowerCase();
+      const pCat = String(p.category || '').toLowerCase();
+      const pList = String(p.listingType || p.transaction_type || '').toLowerCase();
+      const pt = String(p.propertyType || p.property_type || '').toLowerCase();
       if (catFilter === 'buy' || catFilter === 'sale') {
-        return !pCat || pCat === 'buy' || pCat === 'sale' || pCat.includes('buy') || pCat.includes('sale');
+        return pCat !== 'rent' && pCat !== 'pg' && !pList.includes('rent') && !pList.includes('lease');
       }
       if (catFilter === 'rent') {
-        return pCat.includes('rent') || pCat.includes('lease');
+        return pCat === 'rent' || pList.includes('rent') || pList.includes('lease');
       }
       if (catFilter === 'commercial') {
-        const pt = (p.propertyType || p.property_type || '').toLowerCase();
-        return pCat.includes('commercial') || pt.includes('commercial') || pt.includes('office') || pt.includes('shop');
+        return pCat === 'commercial' || pt.includes('commercial') || pt.includes('office') || pt.includes('shop') || pt.includes('retail');
+      }
+      if (catFilter === 'pg' || catFilter.includes('co-living')) {
+        return pCat === 'pg' || pt.includes('pg') || pt.includes('hostel');
       }
       return pCat === catFilter || pCat.includes(catFilter);
     });
   }
 
-  if (city) {
-    publicList = publicList.filter(p => p.city.toLowerCase().includes((city as string).toLowerCase()));
+  if (city && typeof city === 'string' && city.trim()) {
+    const cNorm = normalizeLocationText(city);
+    publicList = publicList.filter(p => normalizeLocationText(p.city).includes(cNorm) || matchesLocationQuery(p, city));
   }
 
-  if (location || locality) {
-    const loc = (location || locality) as string;
-    publicList = publicList.filter(p => p.location.toLowerCase().includes(loc.toLowerCase()));
+  if ((location || locality) && String(location || locality).trim()) {
+    const locQuery = String(location || locality).trim();
+    publicList = publicList.filter(p => matchesLocationQuery(p, locQuery));
   }
 
-  if (minPrice) {
-    publicList = publicList.filter(p => p.price >= Number(minPrice));
+  if (minPrice !== undefined && String(minPrice).trim() !== '') {
+    const minP = Number(minPrice);
+    if (!isNaN(minP)) publicList = publicList.filter(p => (Number(p.price) || 0) >= minP);
   }
 
-  if (maxPrice) {
-    publicList = publicList.filter(p => p.price <= Number(maxPrice));
+  if (maxPrice !== undefined && String(maxPrice).trim() !== '') {
+    const maxP = Number(maxPrice);
+    if (!isNaN(maxP) && maxP > 0) publicList = publicList.filter(p => (Number(p.price) || 0) <= maxP);
   }
 
-  if (bedrooms) {
-    publicList = publicList.filter(p => p.bedrooms >= Number(bedrooms));
+  if (minSqft !== undefined && String(minSqft).trim() !== '') {
+    const minArea = Number(minSqft);
+    if (!isNaN(minArea) && minArea > 0) publicList = publicList.filter(p => (Number(p.areaSqft) || 0) >= minArea);
   }
 
-  if (featured === 'true' || String(featured) === 'true') {
+  if (bedrooms !== undefined && String(bedrooms).trim() !== '') {
+    const rawBhk = String(bedrooms).trim();
+    const bhkNum = parseInt(rawBhk.replace(/[^0-9]/g, ''), 10);
+    if (!isNaN(bhkNum) && bhkNum > 0) {
+      if (rawBhk.includes('+') || bhkNum >= 5) {
+        publicList = publicList.filter(p => Number(p.bedrooms) >= bhkNum);
+      } else {
+        const bhkRegex = new RegExp(`\\b${bhkNum}\\s*bhk\\b`, 'i');
+        publicList = publicList.filter(p => Number(p.bedrooms) === bhkNum || bhkRegex.test(String(p.configuration || '')));
+      }
+    }
+  }
+
+  if (furnishing && typeof furnishing === 'string' && furnishing.trim()) {
+    const fFilter = furnishing.toLowerCase().replace(/[-_\s]+/g, ' ').trim();
+    publicList = publicList.filter(p => {
+      const pf = String(p.furnishing || p.furnishing_status || '').toLowerCase().replace(/[-_\s]+/g, ' ').trim();
+      if (!pf) return false;
+      if (fFilter === 'unfurnished') return pf === 'unfurnished';
+      if (fFilter.includes('semi')) return pf.includes('semi');
+      if (fFilter.includes('fully') || fFilter === 'furnished') {
+        return pf.includes('fully') || (pf.includes('furnished') && !pf.includes('unfurnished') && !pf.includes('semi'));
+      }
+      return pf.includes(fFilter);
+    });
+  }
+
+  if (!wantsSold && status && typeof status === 'string' && status.trim()) {
+    const sFilter = status.toLowerCase().trim();
+    publicList = publicList.filter(p => {
+      const cStatus = String(p.constructionStatus || '').toLowerCase();
+      const rawStatus = String(p.status || p.availability_status || '').toLowerCase();
+      const possStatus = String(p.possessionStatus || p.possession_status || '').toLowerCase();
+      if (sFilter.includes('live') || sFilter.includes('available')) {
+        return cStatus.includes('live') || rawStatus === 'available' || rawStatus === 'live';
+      }
+      if (sFilter.includes('under')) {
+        return cStatus.includes('under') || possStatus.includes('under');
+      }
+      if (sFilter.includes('booked')) {
+        return cStatus.includes('booked') || rawStatus.includes('booked');
+      }
+      if (sFilter.includes('hold') || sFilter.includes('reserved')) {
+        return cStatus.includes('hold') || rawStatus.includes('hold');
+      }
+      return cStatus.includes(sFilter) || rawStatus.includes(sFilter);
+    });
+  }
+
+  if (reraApproved === 'true' || String(reraApproved) === 'true') {
+    publicList = publicList.filter(p =>
+      Boolean(p.reraApproved) || Boolean(String(p.reraNumber || p.rera_id || p.hera_no || '').trim())
+    );
+  }
+
+  if ((featured === 'true' || String(featured) === 'true') && publicList.some(p => p.featured)) {
     publicList = publicList.filter(p => p.featured);
   }
+
+  const sortMode = String(sort || 'newest').toLowerCase();
+  if (sortMode === 'price_asc') {
+    publicList.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+  } else if (sortMode === 'price_desc') {
+    publicList.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+  } else if (sortMode === 'most_viewed') {
+    publicList.sort((a, b) => (Number(b.views) || 0) - (Number(a.views) || 0));
+  } else if (sortMode === 'featured') {
+    publicList.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+  }
+
+  const total = publicList.length;
+  const shouldPaginate = page !== undefined || limit !== undefined;
+  const limitNum = shouldPaginate ? Math.max(1, Math.min(100, Number(limit) || 24)) : Math.max(1, total);
+  const totalPages = shouldPaginate ? Math.max(1, Math.ceil(total / limitNum)) : 1;
+  const pageNum = shouldPaginate ? Math.min(totalPages, Math.max(1, Number(page) || 1)) : 1;
+  const pagedList = shouldPaginate
+    ? publicList.slice((pageNum - 1) * limitNum, pageNum * limitNum)
+    : publicList;
+
+  const cleanData = pagedList.map(({ _locationSearchText, ...rest }) => rest);
 
   return res.json({
     status: 'success',
     success: true,
-    count: publicList.length,
-    total: publicList.length,
-    data: publicList
+    count: cleanData.length,
+    total,
+    meta: {
+      page: pageNum,
+      limit: limitNum,
+      total,
+      totalPages,
+    },
+    data: cleanData
   });
 }
 
@@ -581,7 +743,8 @@ export async function getPublicProjects(req: Request, res: Response) {
         const priceMin = p.final_estimated_price || p.base_price || 0;
         const priceMax = Math.round(priceMin * 1.25);
         
-        let crmLocality = p.locality || p.location || 'Kolkata';
+        const resolvedLoc = resolvePropertyLocation(p);
+        const crmLocality = resolvedLoc.locality;
 
         propertyProjects.push({
           id: p.id,
@@ -591,10 +754,10 @@ export async function getPublicProjects(req: Request, res: Response) {
           slug: slugify(projName),
           description: p.description || `${p.configuration || '3BHK'} residential apartment with modern amenities in ${crmLocality}, Kolkata.`,
           developer: p.developer_name || p.developer || '',
-          city: p.city || 'Kolkata',
+          city: resolvedLoc.city || 'Kolkata',
           location: crmLocality,
           locality: crmLocality,
-          location_address: p.location_address || '',
+          location_address: resolvedLoc.full_address || '',
           priceMin,
           priceMax,
           propertyTypes: [p.property_type || p.propertyType || 'Apartment'],
@@ -788,12 +951,16 @@ export async function getPublicLocations(req: Request, res: Response) {
   ]);
 
   dbStore.data.properties.forEach(p => {
-    if (p.city) citiesSet.add(p.city);
-    if (p.locality) locationsSet.add(p.locality);
+    const resolved = resolvePropertyLocation(p);
+    if (resolved.city) citiesSet.add(resolved.city);
+    if (resolved.locality && resolved.locality.toLowerCase() !== 'greater kolkata') {
+      locationsSet.add(resolved.locality);
+    }
   });
+  getCachedLocalities().forEach((loc) => locationsSet.add(loc));
 
   const cities = Array.from(citiesSet);
-  const locations = Array.from(locationsSet);
+  const locations = Array.from(locationsSet).sort((a, b) => a.localeCompare(b));
 
   return res.json({
     status: 'success',
@@ -813,12 +980,8 @@ export async function getPublicLocationBySlug(req: Request, res: Response) {
   const matchingProperties = dbStore.data.properties
     .filter(p => !p.is_deleted && !isSoldProperty(p))
     .map(formatPublicProperty)
-    .filter(p => 
-      p.location.toLowerCase().includes(nameFromSlug.toLowerCase()) ||
-      p.locality.toLowerCase().includes(nameFromSlug.toLowerCase()) ||
-      p.city.toLowerCase().includes(nameFromSlug.toLowerCase()) ||
-      (p.description && p.description.toLowerCase().includes(nameFromSlug.toLowerCase()))
-    );
+    .filter(p => matchesLocationQuery(p, nameFromSlug))
+    .map(({ _locationSearchText, ...rest }) => rest);
 
   const locationObj = {
     id: slug,

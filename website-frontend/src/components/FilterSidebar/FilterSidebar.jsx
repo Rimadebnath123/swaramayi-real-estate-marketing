@@ -4,7 +4,7 @@ import { KOLKATA_LOCATIONS } from '../PropertySearch/PropertySearchBox';
 
 export default function FilterSidebar({ filters, setFilters, onReset, isMobile = false }) {
   const handleChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value, page: '1' }));
   };
 
   return (
@@ -106,10 +106,14 @@ export default function FilterSidebar({ filters, setFilters, onReset, isMobile =
           >
             <option value="">All Types</option>
             <option value="Apartment">Apartment / Flat</option>
-            <option value="Villa">Villa / House</option>
-            <option value="Penthouse">Sky Villa / Penthouse</option>
+            <option value="Semi Complex">Semi Complex</option>
+            <option value="Villa">Villa / House (All)</option>
+            <option value="Gated Villa">Gated Villa</option>
+            <option value="Independent House">Independent House</option>
+            <option value="Commercial Space">Commercial Space</option>
             <option value="Commercial Office">Commercial Office</option>
             <option value="Retail Shop">Retail Shop</option>
+            <option value="Penthouse">Sky Villa / Penthouse</option>
             <option value="Plot">Plot / Land</option>
           </select>
         </div>
@@ -117,19 +121,25 @@ export default function FilterSidebar({ filters, setFilters, onReset, isMobile =
         {/* Bedrooms / BHK */}
         <div>
           <label className="block font-bold text-gray-700 uppercase tracking-wider mb-1.5">Bedrooms (BHK)</label>
-          <div className="grid grid-cols-4 gap-1.5">
-            {['1', '2', '3', '4'].map((bhk) => (
+          <div className="grid grid-cols-5 gap-1">
+            {[
+              { value: '1', label: '1 BHK' },
+              { value: '2', label: '2 BHK' },
+              { value: '3', label: '3 BHK' },
+              { value: '4', label: '4 BHK' },
+              { value: '5+', label: '5+' },
+            ].map((bhk) => (
               <button
-                key={bhk}
+                key={bhk.value}
                 type="button"
-                onClick={() => handleChange('bedrooms', filters.bedrooms === bhk ? '' : bhk)}
-                className={`py-2 rounded-lg font-bold border transition-colors ${
-                  filters.bedrooms === bhk
+                onClick={() => handleChange('bedrooms', filters.bedrooms === bhk.value ? '' : bhk.value)}
+                className={`py-2 rounded-lg font-bold border text-[11px] transition-colors ${
+                  filters.bedrooms === bhk.value || (bhk.value === '5+' && filters.bedrooms === '5')
                     ? 'bg-navy-900 text-gold-400 border-navy-900'
                     : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-gold-500'
                 }`}
               >
-                {bhk} BHK
+                {bhk.label}
               </button>
             ))}
           </div>

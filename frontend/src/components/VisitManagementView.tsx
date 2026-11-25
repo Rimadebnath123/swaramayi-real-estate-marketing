@@ -465,7 +465,6 @@ export const VisitManagementView: React.FC<VisitManagementViewProps> = ({
     );
 
     if (setBookings) setBookings(updatedBookings);
-    try { localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(updatedBookings)); } catch (e) {}
 
     let updatedProps: any[] = [];
     if (setProperties && properties.length > 0) {

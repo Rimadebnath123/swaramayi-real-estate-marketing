@@ -17,15 +17,18 @@ export default function Properties() {
   const [loading, setLoading] = useState(true);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const requestIdRef = React.useRef(0);
 
   // Extract initial filters from searchParams
   const [filters, setFilters] = useState({
+    search: searchParams.get('search') || '',
     category: searchParams.get('category') || '',
     location: searchParams.get('location') || '',
     propertyType: searchParams.get('propertyType') || '',
     bedrooms: searchParams.get('bedrooms') || '',
     minPrice: searchParams.get('minPrice') || '',
     maxPrice: searchParams.get('maxPrice') || '',
+    minSqft: searchParams.get('minSqft') || '',
     furnishing: searchParams.get('furnishing') || '',
     status: searchParams.get('status') || '',
     isSold: searchParams.get('isSold') || '',
@@ -36,12 +39,14 @@ export default function Properties() {
 
   useEffect(() => {
     setFilters({
+      search: searchParams.get('search') || '',
       category: searchParams.get('category') || '',
       location: searchParams.get('location') || '',
       propertyType: searchParams.get('propertyType') || '',
       bedrooms: searchParams.get('bedrooms') || '',
       minPrice: searchParams.get('minPrice') || '',
       maxPrice: searchParams.get('maxPrice') || '',
+      minSqft: searchParams.get('minSqft') || '',
       furnishing: searchParams.get('furnishing') || '',
       status: searchParams.get('status') || '',
       isSold: searchParams.get('isSold') || '',
@@ -52,10 +57,14 @@ export default function Properties() {
   }, [searchParams]);
 
   useEffect(() => {
-    fetchProperties();
+    const timer = setTimeout(() => {
+      fetchProperties();
+    }, 150);
+    return () => clearTimeout(timer);
   }, [filters]);
 
   const fetchProperties = async () => {
+    const reqId = ++requestIdRef.current;
     try {
       setLoading(true);
       const params = {};
@@ -64,12 +73,17 @@ export default function Properties() {
       });
 
       const res = await propertyService.getProperties(params);
+      if (reqId !== requestIdRef.current) return;
       setProperties(res.data || []);
-      setMeta(res.meta || { page: 1, totalPages: 1, total: res.data?.length || 0 });
+      setMeta(res.meta || { page: Number(filters.page) || 1, totalPages: 1, total: res.total ?? (res.data?.length || 0) });
     } catch (error) {
-      console.error('Error fetching properties:', error);
+      if (reqId === requestIdRef.current) {
+        console.error('Error fetching properties:', error);
+      }
     } finally {
-      setLoading(false);
+      if (reqId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -77,12 +91,14 @@ export default function Properties() {
 
   const handleResetFilters = () => {
     const resetObj = {
+      search: '',
       category: '',
       location: '',
       propertyType: '',
       bedrooms: '',
       minPrice: '',
       maxPrice: '',
+      minSqft: '',
       furnishing: '',
       status: '',
       isSold: '',

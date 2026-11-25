@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 
 import { loadData } from './db/database.js';
 import { connectMongoDB } from './db/mongoose.js';
+import { ensureMongoCollections } from './db/mongoPersistence.js';
 
 import authRoutes from './routes/auth.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
@@ -27,6 +28,7 @@ const PORT = process.env.PORT || 5000;
 loadData();
 connectMongoDB().then(async (connected) => {
   if (connected) {
+    await ensureMongoCollections();
     await loadData();
     console.log('✅ In-memory store synced with MongoDB Atlas on startup');
   }

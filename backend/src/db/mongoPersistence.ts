@@ -21,6 +21,7 @@ export const CostSheetSchema = new mongoose.Schema({ id: { type: String, unique:
 export const MatchingRequestSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const ProjectVisitAgreementSchema = new mongoose.Schema({ id: { type: String, unique: true, sparse: true } }, options);
 export const SourcingRequestSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
+export const VisitFeedbackSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const DeveloperSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const RatingInviteSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
 export const RecycleBinSchema = new mongoose.Schema({ id: { type: String, unique: true } }, options);
@@ -43,6 +44,7 @@ export const CostSheetModel = mongoose.models.CostSheet || mongoose.model('CostS
 export const MatchingRequestModel = mongoose.models.MatchingRequest || mongoose.model('MatchingRequest', MatchingRequestSchema);
 export const ProjectVisitAgreementModel = mongoose.models.ProjectVisitAgreement || mongoose.model('ProjectVisitAgreement', ProjectVisitAgreementSchema);
 export const SourcingRequestModel = mongoose.models.SourcingRequest || mongoose.model('SourcingRequest', SourcingRequestSchema);
+export const VisitFeedbackModel = mongoose.models.VisitFeedback || mongoose.model('VisitFeedback', VisitFeedbackSchema);
 export const DeveloperModel = mongoose.models.Developer || mongoose.model('Developer', DeveloperSchema);
 export const RatingInviteModel = mongoose.models.RatingInvite || mongoose.model('RatingInvite', RatingInviteSchema);
 export const RecycleBinModel = mongoose.models.RecycleBin || mongoose.model('RecycleBin', RecycleBinSchema);
@@ -340,7 +342,28 @@ export async function syncToMongoDB(data: any) {
       }
       await syncCollection(ProjectVisitAgreementModel, pvaList);
     }
-    if (Array.isArray(data.sourcing_requests)) await syncCollection(SourcingRequestModel, data.sourcing_requests);
+    if (Array.isArray(data.sourcing_requests)) {
+      if (data.sourcing_requests.length === 0) {
+        await SourcingRequestModel.deleteMany({});
+      } else {
+        const activeSrcIds = data.sourcing_requests.map((s: any) => String(s.id || s.sourcing_id || '')).filter(Boolean);
+        if (activeSrcIds.length > 0) {
+          await SourcingRequestModel.deleteMany({ id: { $nin: activeSrcIds } }).catch(() => {});
+        }
+      }
+      await syncCollection(SourcingRequestModel, data.sourcing_requests);
+    }
+    if (Array.isArray(data.visit_feedbacks)) {
+      if (data.visit_feedbacks.length === 0) {
+        await VisitFeedbackModel.deleteMany({});
+      } else {
+        const activeFbIds = data.visit_feedbacks.map((fb: any) => String(fb.id || fb.visitId || '')).filter(Boolean);
+        if (activeFbIds.length > 0) {
+          await VisitFeedbackModel.deleteMany({ id: { $nin: activeFbIds } }).catch(() => {});
+        }
+      }
+      await syncCollection(VisitFeedbackModel, data.visit_feedbacks);
+    }
     if (Array.isArray(data.developers)) {
       // Safely delete ONLY developers explicitly marked as recycled in recycled_items
       if (Array.isArray(data.recycled_items)) {
@@ -381,6 +404,17 @@ export async function syncToMongoDB(data: any) {
   }
 }
 
+// Ensure explicit MongoDB collections exist even before first document insert
+export async function ensureMongoCollections() {
+  if (mongoose.connection.readyState !== 1) return;
+  try {
+    await Promise.all([
+      SourcingRequestModel.createCollection().catch(() => {}),
+      VisitFeedbackModel.createCollection().catch(() => {})
+    ]);
+  } catch (e) {}
+}
+
 // Load existing data from MongoDB Atlas into memory store
 export async function loadDataFromMongoDB() {
   if (mongoose.connection.readyState !== 1) {
@@ -405,6 +439,7 @@ export async function loadDataFromMongoDB() {
       mongoMatchingRequests,
       mongoPvaAgreements,
       mongoSourcingRequests,
+      mongoVisitFeedbacks,
       mongoDevelopers,
       mongoRatingInvites,
       mongoRecycledItems,
@@ -427,6 +462,7 @@ export async function loadDataFromMongoDB() {
       MatchingRequestModel.find({}).lean(),
       ProjectVisitAgreementModel.find({}).lean(),
       SourcingRequestModel.find({}).lean(),
+      VisitFeedbackModel.find({}).lean(),
       DeveloperModel.find({}).lean(),
       RatingInviteModel.find({}).lean(),
       RecycleBinModel.find({}).lean(),
@@ -546,6 +582,7 @@ export async function loadDataFromMongoDB() {
       matching_requests: mongoMatchingRequests,
       pva_agreements: mongoPvaAgreements,
       sourcing_requests: mongoSourcingRequests,
+      visit_feedbacks: mongoVisitFeedbacks,
       developers: mongoDevelopers,
       rating_invites: mongoRatingInvites,
       recycled_items: mongoRecycledItems,

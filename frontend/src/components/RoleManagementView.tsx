@@ -183,41 +183,13 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
   };
 
   // Local persistent Branches & Teams state strictly sourced from database/props
-  const [localBranches, setLocalBranches] = React.useState<any[]>(() => {
-    if (branches && Array.isArray(branches) && branches.length > 0) {
-      const clean = branches.filter((b: any) => !isDemoBranch(b));
-      if (clean.length > 0) return clean;
-    }
-    try {
-      const stored = localStorage.getItem('swaramayi_enterprise_branches_v9');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          const clean = parsed.filter((b: any) => !isDemoBranch(b));
-          if (clean.length > 0) return clean;
-        }
-      }
-    } catch (e) {}
-    return (branches && Array.isArray(branches)) ? branches.filter((b: any) => !isDemoBranch(b)) : [];
-  });
+  const [localBranches, setLocalBranches] = React.useState<any[]>(() => (
+    (branches && Array.isArray(branches)) ? branches.filter((b: any) => !isDemoBranch(b)) : []
+  ));
 
-  const [localTeams, setLocalTeams] = React.useState<any[]>(() => {
-    if (teams && Array.isArray(teams) && teams.length > 0) {
-      const clean = teams.filter((t: any) => !isDemoTeam(t));
-      if (clean.length > 0) return clean;
-    }
-    try {
-      const stored = localStorage.getItem('swaramayi_enterprise_teams_v2');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          const clean = parsed.filter((t: any) => !isDemoTeam(t));
-          if (clean.length > 0) return clean;
-        }
-      }
-    } catch (e) {}
-    return (teams && Array.isArray(teams)) ? teams.filter((t: any) => !isDemoTeam(t)) : [];
-  });
+  const [localTeams, setLocalTeams] = React.useState<any[]>(() => (
+    (teams && Array.isArray(teams)) ? teams.filter((t: any) => !isDemoTeam(t)) : []
+  ));
 
   // Direct live fetch on mount from MongoDB database to guarantee fresh records
   React.useEffect(() => {
@@ -235,12 +207,10 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
             if (Array.isArray(mData.branches) && mData.branches.length > 0) {
               const cleanBranches = mData.branches.filter((b: any) => !isDemoBranch(b));
               setLocalBranches(cleanBranches);
-              try { localStorage.setItem('swaramayi_enterprise_branches_v9', JSON.stringify(cleanBranches)); } catch (e) {}
             }
             if (Array.isArray(mData.teams) && mData.teams.length > 0) {
               const cleanTeams = mData.teams.filter((t: any) => !isDemoTeam(t));
               setLocalTeams(cleanTeams);
-              try { localStorage.setItem('swaramayi_enterprise_teams_v2', JSON.stringify(cleanTeams)); } catch (e) {}
             }
             if (Array.isArray(mData.users) && mData.users.length > 0 && setUsers) {
               setUsers(mData.users);
@@ -260,7 +230,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       const clean = branches.filter((b: any) => !isDemoBranch(b));
       if (clean.length > 0) {
         setLocalBranches(clean);
-        try { localStorage.setItem('swaramayi_enterprise_branches_v9', JSON.stringify(clean)); } catch (e) {}
       }
     }
   }, [branches]);
@@ -270,7 +239,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       const clean = teams.filter((t: any) => !isDemoTeam(t));
       if (clean.length > 0) {
         setLocalTeams(clean);
-        try { localStorage.setItem('swaramayi_enterprise_teams_v2', JSON.stringify(clean)); } catch (e) {}
       }
     }
   }, [teams]);
@@ -636,16 +604,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       } : u);
 
       if (setUsers) setUsers(updatedUsers);
-      try {
-        const stripImage = (list: any[]) => list.map(item => {
-          const { profileImage, avatar, ...rest } = item;
-          return rest;
-        });
-        const cleanList = stripImage(updatedUsers);
-        ['swaramayi_enterprise_users_v8', 'swaramayi_users_v7', 'swaramayi_users_v6', 'swaramayi_users'].forEach(k => {
-          try { localStorage.setItem(k, JSON.stringify(cleanList)); } catch (e) {}
-        });
-      } catch (err) {}
 
       // Direct MongoDB User Update API call
       try {
@@ -710,16 +668,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       };
       const updatedUsers = [newU, ...(users || [])];
       if (setUsers) setUsers(updatedUsers);
-      try {
-        const stripImage = (list: any[]) => list.map(item => {
-          const { profileImage, avatar, ...rest } = item;
-          return rest;
-        });
-        const cleanList = stripImage(updatedUsers);
-        ['swaramayi_enterprise_users_v8', 'swaramayi_users_v7', 'swaramayi_users_v6', 'swaramayi_users'].forEach(k => {
-          try { localStorage.setItem(k, JSON.stringify(cleanList)); } catch (e) {}
-        });
-      } catch (err) {}
 
       // Direct MongoDB User Creation API call
       try {
@@ -771,13 +719,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
         u.full_name !== userName
       );
       if (setUsers) setUsers(updatedUsers);
-      try {
-        ['swaramayi_enterprise_users_v8', 'swaramayi_users_v7', 'swaramayi_users_v6', 'swaramayi_users_v5', 'swaramayi_users'].forEach(k => {
-          try {
-            localStorage.setItem(k, JSON.stringify(updatedUsers));
-          } catch (e) {}
-        });
-      } catch (err) {}
 
       // Direct MongoDB User Permanent Deletion API call
       try {
@@ -872,9 +813,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
     }
 
     setLocalBranches(updatedBranches);
-    try {
-      localStorage.setItem('swaramayi_enterprise_branches_v9', JSON.stringify(updatedBranches));
-    } catch (err) {}
     if (syncAllToMongoDB) syncAllToMongoDB({ branches: updatedBranches });
 
     setShowBranchModalInternal(false);
@@ -889,9 +827,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
     if (window.confirm(`Are you sure you want to delete Enterprise Branch "${branchName}"?`)) {
       const updated = localBranches.filter(b => b.id !== branchId && b.branch_name !== branchName);
       setLocalBranches(updated);
-      try {
-        localStorage.setItem('swaramayi_enterprise_branches_v9', JSON.stringify(updated));
-      } catch (err) {}
       if (syncAllToMongoDB) syncAllToMongoDB({ branches: updated });
       alert(`🗑️ Branch "${branchName}" removed from Company Hierarchy.`);
     }
@@ -966,9 +901,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
     }
 
     setLocalTeams(updatedTeams);
-    try {
-      localStorage.setItem('swaramayi_enterprise_teams_v2', JSON.stringify(updatedTeams));
-    } catch (err) {}
     if (syncAllToMongoDB) syncAllToMongoDB({ teams: updatedTeams });
 
     setShowTeamModalInternal(false);
@@ -983,9 +915,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
     if (window.confirm(`Are you sure you want to delete Team Squad "${teamName}"?`)) {
       const updated = localTeams.filter(t => t.id !== teamId && t.team_name !== teamName);
       setLocalTeams(updated);
-      try {
-        localStorage.setItem('swaramayi_enterprise_teams_v2', JSON.stringify(updated));
-      } catch (err) {}
       if (syncAllToMongoDB) syncAllToMongoDB({ teams: updated });
       alert(`🗑️ Team "${teamName}" removed successfully.`);
     }
@@ -1345,22 +1274,10 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       return isIdMatch || isNameMatch;
     };
 
-    // Load from props or localStorage fallbacks
-    let currentCustList = Array.isArray(customers) && customers.length > 0 ? customers : [];
-    if (currentCustList.length === 0) {
-      try {
-        const stored = localStorage.getItem('swaramayi_customers_master_v3_clean');
-        if (stored) currentCustList = JSON.parse(stored);
-      } catch (e) { console.error(e); }
-    }
+    // Load from props (live MongoDB state)
+    const currentCustList = Array.isArray(customers) && customers.length > 0 ? customers : [];
 
-    let currentLeads = Array.isArray(leadsList) && leadsList.length > 0 ? leadsList : [];
-    if (currentLeads.length === 0) {
-      try {
-        const stored = localStorage.getItem('swaramayi_leads_v5_clean');
-        if (stored) currentLeads = JSON.parse(stored);
-      } catch (e) { console.error(e); }
-    }
+    const currentLeads = Array.isArray(leadsList) && leadsList.length > 0 ? leadsList : [];
 
     let currentVisits = Array.isArray(scheduledVisits) && scheduledVisits.length > 0 ? scheduledVisits : [];
     if (currentVisits.length === 0) {
@@ -1444,7 +1361,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
         return c;
       });
       if (setCustomers) setCustomers(updatedCusts);
-      try { localStorage.setItem('swaramayi_customers_master_v3_clean', JSON.stringify(updatedCusts)); } catch (e) { console.error(e); }
 
       // 2. Reassign Leads
       let updatedLeads = (leadsList || []).map((l: any) => {
@@ -1454,7 +1370,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
         return l;
       });
       if (setLeadsList) setLeadsList(updatedLeads);
-      try { localStorage.setItem('swaramayi_leads_v5_clean', JSON.stringify(updatedLeads)); } catch (e) { console.error(e); }
 
       // 3. Reassign Visits
       let updatedVisits = (scheduledVisits || []).map((v: any) => {
@@ -1655,7 +1570,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
       return u;
     });
     if (setUsers) setUsers(updatedUsers);
-    try { localStorage.setItem('swaramayi_users_v7', JSON.stringify(updatedUsers)); } catch (e) {}
 
     // 2. Update matching property in properties state & persistence
     let updatedProperties = (properties || []).map((p: any) => {
@@ -1708,7 +1622,6 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({
         return u;
       });
       if (setUsers) setUsers(updatedUsers);
-      try { localStorage.setItem('swaramayi_users_v7', JSON.stringify(updatedUsers)); } catch (e) {}
 
       // 2. Clear property advisor fields
       let updatedProperties = (properties || []).map((p: any) => {

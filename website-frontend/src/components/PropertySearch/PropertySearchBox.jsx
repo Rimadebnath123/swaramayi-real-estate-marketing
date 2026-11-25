@@ -62,15 +62,26 @@ export const KOLKATA_LOCATIONS = [
   "Action Area 3",
   "Baguiati",
   "Baruipur",
+  "Belghoria",
+  "Bidhannagar",
   "BT Road",
+  "Champadali",
   "Chinar Park",
+  "Ghola",
   "Joka",
   "Kaikhali",
+  "Kamarhati",
   "Kestopur",
+  "Khardaha",
   "Lake Town",
+  "North Dumdum",
+  "Panihati",
   "Park Street",
+  "Pratapgarh",
   "Rajarhat Chowmatha",
   "Sector V",
+  "Serampore",
+  "Sodepur",
   "Sonarpur",
   "Ultadanga",
   "VIP Road"
@@ -254,10 +265,14 @@ export default function PropertySearchBox() {
               >
                 <option value="">All Property Types</option>
                 <option value="Apartment">Apartment / Flat</option>
-                <option value="Villa">Villa / House</option>
-                <option value="Penthouse">Sky Villa / Penthouse</option>
+                <option value="Semi Complex">Semi Complex</option>
+                <option value="Villa">Villa / House (All)</option>
+                <option value="Gated Villa">Gated Villa</option>
+                <option value="Independent House">Independent House</option>
+                <option value="Commercial Space">Commercial Space</option>
                 <option value="Commercial Office">Commercial Office</option>
                 <option value="Retail Shop">Retail Shop</option>
+                <option value="Penthouse">Sky Villa / Penthouse</option>
                 <option value="Plot">Plot / Land</option>
               </select>
             </div>

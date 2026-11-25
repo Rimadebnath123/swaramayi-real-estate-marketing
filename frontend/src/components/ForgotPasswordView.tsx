@@ -207,17 +207,6 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
 
       await onUpdateUsers(updatedUsers);
 
-      // 3. Update clean local cache (ensuring no profile images in localStorage)
-      try {
-        const cleanUsers = updatedUsers.map((u: any) => {
-          const c = { ...u };
-          delete c.profileImage;
-          delete c.avatar;
-          return c;
-        });
-        localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(cleanUsers));
-      } catch (e) {}
-
       setSuccessMsg('✅ Password successfully reset and saved to MongoDB Atlas!');
       setStep('SUCCESS');
     } catch (err: any) {

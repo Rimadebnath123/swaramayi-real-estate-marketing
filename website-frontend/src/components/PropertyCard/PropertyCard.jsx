@@ -141,7 +141,9 @@ export default function PropertyCard({ property }) {
           <div className="flex items-center space-x-1 text-xs font-semibold text-gray-500 mb-1">
             <MapPin className="w-3.5 h-3.5 text-gold-600 shrink-0" />
             <span className="truncate">
-              {property.location}, {property.city || 'Kolkata'}
+              {property.location && property.city && property.location.toLowerCase() !== property.city.toLowerCase()
+                ? `${property.location}, ${property.city}`
+                : `${property.location || property.city || 'Kolkata'}, Kolkata`}
             </span>
           </div>
 

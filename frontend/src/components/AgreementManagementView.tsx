@@ -175,9 +175,6 @@ export const AgreementManagementView: React.FC<AgreementManagementViewProps> = (
           return prev;
         }
         const updated = [newBookingObj, ...(prev || [])];
-        try {
-          localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(updated));
-        } catch (err) {}
         if (syncAllToMongoDB) {
           syncAllToMongoDB({ bookings: updated });
         }

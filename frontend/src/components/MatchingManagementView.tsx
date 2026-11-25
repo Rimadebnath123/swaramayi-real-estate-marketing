@@ -455,22 +455,11 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
           nextList = [newSourcingObj, ...existingList];
         }
 
-        try {
-          localStorage.setItem('swaramayi_sourcing_requests_v1', JSON.stringify(nextList));
-        } catch (e) {
-          console.error('Error persisting sourcing requests', e);
-        }
+        if (syncAllToMongoDB) syncAllToMongoDB({ sourcing_requests: nextList });
         return nextList;
       });
-    } else {
-      try {
-        const saved = localStorage.getItem('swaramayi_sourcing_requests_v1');
-        const list = saved ? JSON.parse(saved) : [];
-        const nextList = [newSourcingObj, ...(Array.isArray(list) ? list : [])];
-        localStorage.setItem('swaramayi_sourcing_requests_v1', JSON.stringify(nextList));
-      } catch (e) {
-        console.error('Error saving sourcing requests fallback', e);
-      }
+    } else if (syncAllToMongoDB) {
+      syncAllToMongoDB({ sourcing_requests: [newSourcingObj] });
     }
 
     // AUTOMATICALLY REMOVE FROM MATCHING MANAGEMENT QUEUE UPON TRANSFER
@@ -493,11 +482,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
           if (targetCustName && rName && rName.toLowerCase() === targetCustName.toLowerCase()) return false;
           return true;
         });
-        try {
-          localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(next));
-        } catch (e) {
-          console.error('Error persisting matching queue after sourcing shift', e);
-        }
+        if (syncAllToMongoDB) syncAllToMongoDB({ matching_requests: next });
         return next;
       });
     }
@@ -548,11 +533,6 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             if (custName && rName && rName.toLowerCase() === custName.toLowerCase()) return false;
             return true;
           });
-          try {
-            localStorage.setItem('swaramayi_matching_queue_v7_clean', JSON.stringify(nextMatches));
-          } catch (e) {
-            console.error(e);
-          }
           return nextMatches;
         });
       }
@@ -570,11 +550,6 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             if (custName && cName && cName.toLowerCase() === custName.toLowerCase()) return false;
             return true;
           });
-          try {
-            localStorage.setItem('swaramayi_customers_v7_clean', JSON.stringify(nextCusts));
-          } catch (e) {
-            console.error(e);
-          }
           return nextCusts;
         });
       }
@@ -592,9 +567,6 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
             if (custName && lName && lName.toLowerCase() === custName.toLowerCase()) return false;
             return true;
           });
-          try {
-            localStorage.setItem('swaramayi_leads_v7_clean', JSON.stringify(nextLeads));
-          } catch (e) {}
           return nextLeads;
         });
       }
@@ -727,18 +699,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
           const sourcedMobiles = new Set<string>();
           const sourcedNames = new Set<string>();
 
-          let activeSourcingQueue = sourcingRequests || [];
-          if (!activeSourcingQueue.length) {
-            try {
-              const saved = localStorage.getItem('swaramayi_sourcing_requests_v1');
-              if (saved) {
-                const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed)) activeSourcingQueue = parsed;
-              }
-            } catch (e) {
-              console.error(e);
-            }
-          }
+          const activeSourcingQueue = sourcingRequests || [];
 
           activeSourcingQueue.forEach((s: any) => {
             if (s.matching_id) sourcedMatchingIds.add(s.matching_id.toString().trim().toLowerCase());
@@ -785,29 +746,7 @@ export const MatchingManagementView: React.FC<MatchingManagementViewProps> = ({
               if (cName && svName && cName.length > 2 && cName === svName) return true;
               return false;
             });
-            if (v) return v;
-
-            let localPlans: any[] = [];
-            try {
-              const saved = typeof window !== 'undefined' ? localStorage.getItem('swaramayi_visit_plans_v7_clean') : null;
-              if (saved) {
-                const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed)) localPlans = parsed;
-              }
-            } catch (e) {
-              console.error(e);
-            }
-
-            return localPlans.find((vp: any) => {
-              if (vp.status === 'CANCELLED' || vp.status === 'DELETED') return false;
-              const vpNum = (vp.customerNumber || vp.customerId || '').toString().trim().toLowerCase();
-              const vpName = (vp.customerName || vp.name || '').toString().trim().toLowerCase();
-              const vpMob = (vp.mobile || '').toString().replace(/\D/g, '');
-              if (cNum && vpNum && cNum === vpNum) return true;
-              if (cMob && vpMob && cMob.length >= 7 && cMob === vpMob) return true;
-              if (cName && vpName && cName.length > 2 && cName === vpName) return true;
-              return false;
-            });
+            return v || null;
           };
 
           const findActualCostSheet = (reqId?: string, custNum?: string, custName?: string, mob?: string) => {

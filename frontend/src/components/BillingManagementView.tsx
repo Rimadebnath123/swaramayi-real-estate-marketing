@@ -106,9 +106,6 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
 
     if (has188 && setInvoices) {
       setInvoices(sanitized);
-      try {
-        localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(sanitized));
-      } catch (e) {}
       if (syncAllToMongoDB) {
         syncAllToMongoDB({ invoices: sanitized });
       }
@@ -278,9 +275,6 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
     if (setBookings) {
       setBookings(updatedBookings);
     }
-    try {
-      localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(updatedBookings));
-    } catch (e) {}
 
     if (syncAllToMongoDB) {
       syncAllToMongoDB({
@@ -341,9 +335,6 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
     });
 
     setInvoices(updated);
-    try {
-      localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(updated));
-    } catch (e) {}
     if (syncAllToMongoDB) {
       syncAllToMongoDB({ invoices: updated });
     }
@@ -798,9 +789,6 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                                     return inv;
                                   });
                                   setInvoices(updated);
-                                  try {
-                                    localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(updated));
-                                  } catch (err) {}
                                   if (syncAllToMongoDB) {
                                     syncAllToMongoDB({ invoices: updated });
                                   }
@@ -1053,15 +1041,13 @@ export const BillingManagementView: React.FC<BillingManagementViewProps> = ({
                                       return b;
                                     });
                                     setBookings(updatedBookingsList);
-                                    try {
-                                      localStorage.setItem('swaramayi_bookings_v3_clean', JSON.stringify(updatedBookingsList));
-                                    } catch (err) {}
+                                    if (syncAllToMongoDB) {
+                                      syncAllToMongoDB({ invoices: remainingInvoices, bookings: updatedBookingsList });
+                                    }
+                                  } else if (syncAllToMongoDB) {
+                                    syncAllToMongoDB({ invoices: remainingInvoices });
                                   }
-                                }
-                                try {
-                                  localStorage.setItem('swaramayi_invoices_v6', JSON.stringify(remainingInvoices));
-                                } catch (err) {}
-                                if (syncAllToMongoDB) {
+                                } else if (syncAllToMongoDB) {
                                   syncAllToMongoDB({ invoices: remainingInvoices });
                                 }
                                 alert(`🗑️ Invoice record moved to Recycle Bin.`);

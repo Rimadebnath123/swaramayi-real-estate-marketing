@@ -105,15 +105,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         });
         if (setUsers) setUsers(updatedUsers);
 
-        // 3. For localStorage, store ONLY clean user metadata (strip base64 images so image data is NEVER stored in localStorage)
+        // 3. Store only clean logged-in user metadata (never store large base64 images or full user directory in localStorage)
         try {
-          const stripImage = (list: any[]) => list.map(u => {
-            const { avatar, profileImage, ...rest } = u;
-            return rest;
-          });
           const { avatar, profileImage, ...cleanUser } = updatedUser;
-          localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(stripImage(updatedUsers)));
-          localStorage.setItem('swaramayi_users_v7', JSON.stringify(stripImage(updatedUsers)));
           localStorage.setItem('swaramayi_logged_in_user', JSON.stringify(cleanUser));
         } catch (err) {}
 
@@ -160,13 +154,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     if (setUsers) setUsers(updatedUsers);
 
     try {
-      const stripImage = (list: any[]) => list.map(u => {
-        const { avatar, profileImage, ...rest } = u;
-        return rest;
-      });
       const { avatar, profileImage, ...cleanUser } = updatedUser;
-      localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(stripImage(updatedUsers)));
-      localStorage.setItem('swaramayi_users_v7', JSON.stringify(stripImage(updatedUsers)));
       localStorage.setItem('swaramayi_logged_in_user', JSON.stringify(cleanUser));
     } catch (err) {}
 
@@ -324,15 +312,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     );
     if (setUsers) setUsers(updatedUsers);
 
-    // Persist clean metadata to localStorage (never store large profile images in localStorage)
+    // Persist clean logged-in user metadata (never store large profile images or full user directory in localStorage)
     try {
-      const stripAvatar = (list: any[]) => list.map(u => {
-        const { avatar, profileImage, ...rest } = u;
-        return rest;
-      });
       const { avatar, profileImage, ...cleanUser } = updatedUser;
-      localStorage.setItem('swaramayi_enterprise_users_v8', JSON.stringify(stripAvatar(updatedUsers)));
-      localStorage.setItem('swaramayi_users_v7', JSON.stringify(stripAvatar(updatedUsers)));
       localStorage.setItem('swaramayi_logged_in_user', JSON.stringify(cleanUser));
     } catch (err) {}
 

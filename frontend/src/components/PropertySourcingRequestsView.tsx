@@ -24,6 +24,7 @@ interface PropertySourcingRequestsViewProps {
   costSheetShares?: any[];
   scheduledVisits?: any[];
   onRecycleItem?: (itemData: any) => void;
+  syncAllToMongoDB?: (overrideData?: any) => Promise<void> | void;
 }
 
 export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsViewProps> = ({
@@ -42,21 +43,10 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
   individualCostSheets = [],
   costSheetShares = [],
   scheduledVisits = [],
-  onRecycleItem
+  onRecycleItem,
+  syncAllToMongoDB
 }) => {
-  // Sourcing Requests Queue with LocalStorage Persistence & Dynamic Fallback
-  const [internalSourcingRequests, setInternalSourcingRequests] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('swaramayi_sourcing_requests_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (err) {
-      console.error('Error loading sourcing requests', err);
-    }
-    return [];
-  });
+  const [internalSourcingRequests, setInternalSourcingRequests] = useState<any[]>([]);
 
   const sourcingRequests = sourcingRequestsProps || internalSourcingRequests;
   const setSourcingRequests = setSourcingRequestsProps || setInternalSourcingRequests;
@@ -96,15 +86,6 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
     matched_property_code: ''
   });
 
-  // Persist to LocalStorage whenever sourcingRequests change
-  useEffect(() => {
-    try {
-      localStorage.setItem('swaramayi_sourcing_requests_v1', JSON.stringify(sourcingRequests));
-    } catch (err) {
-      console.error('Error persisting sourcing requests', err);
-    }
-  }, [sourcingRequests]);
-
   // Handle Create Sourcing Request
   const handleCreateRequest = (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,18 +118,6 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
       });
 
       try {
-        const savedRec = localStorage.getItem('swaramayi_recycled_items');
-        if (savedRec) {
-          const parsed = JSON.parse(savedRec);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((r: any) => {
-              extractNum(r?.id);
-              extractNum(r?.customer_number);
-              extractNum(r?.originalData?.customer_number);
-              extractNum(r?.originalData?.customerId);
-            });
-          }
-        }
         const savedSeq = localStorage.getItem('swaramayi_max_customer_seq');
         if (savedSeq) {
           const seq = parseInt(savedSeq, 10);
@@ -190,6 +159,7 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
 
     const nextList = [newReqObj, ...sourcingRequests];
     setSourcingRequests(nextList);
+    if (syncAllToMongoDB) syncAllToMongoDB({ sourcing_requests: nextList });
     setShowCreateModal(false);
     
     // Reset Form
@@ -233,6 +203,7 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
     });
 
     setSourcingRequests(nextList);
+    if (syncAllToMongoDB) syncAllToMongoDB({ sourcing_requests: nextList });
     setShowUpdateModal(null);
     alert(`✅ SOURCING REQUEST ${reqId} UPDATED!\n\nStatus set to: ${updateForm.status}`);
   };
@@ -258,11 +229,7 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
           if (targetMob && rMob && targetMob.length >= 7 && targetMob === rMob) return false;
           return true;
         });
-        try {
-          localStorage.setItem('swaramayi_sourcing_requests_v1', JSON.stringify(nextList));
-        } catch (e) {
-          console.error('Error persisting sourcing requests after send to matching', e);
-        }
+        if (syncAllToMongoDB) syncAllToMongoDB({ sourcing_requests: nextList });
         return nextList;
       });
     }
@@ -604,6 +571,7 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
                               }
                               const nextList = sourcingRequests.filter((r: any) => r.id !== req.id);
                               setSourcingRequests(nextList);
+                              if (syncAllToMongoDB) syncAllToMongoDB({ sourcing_requests: nextList });
                               alert(`🗑️ Sourcing Request ${req.id} moved to Recycle Bin.`);
                             }
                           }}
@@ -815,6 +783,7 @@ export const PropertySourcingRequestsView: React.FC<PropertySourcingRequestsView
                                     }
                                     const nextList = sourcingRequests.filter((r: any) => r.id !== req.id);
                                     setSourcingRequests(nextList);
+                                    if (syncAllToMongoDB) syncAllToMongoDB({ sourcing_requests: nextList });
                                     alert(`🗑️ Sourcing Request ${req.id} moved to Recycle Bin.`);
                                   }
                                 }}

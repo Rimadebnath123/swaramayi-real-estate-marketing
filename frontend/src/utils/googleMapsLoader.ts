@@ -127,3 +127,90 @@ export const geocodeAddress = async (address: string): Promise<{ lat: number; ln
 
   return null;
 };
+
+const reverseGeocodeCache = new Map<string, string>();
+
+// Reverse geocode lat/lng using Google Maps Geocoder first, then OpenStreetMap Nominatim fallback
+export const reverseGeocodeCoords = async (lat: number, lng: number): Promise<{ fullAddress: string; rawDetails: any }> => {
+  if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return { fullAddress: '', rawDetails: null };
+  }
+
+  const cacheKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+  if (reverseGeocodeCache.has(cacheKey)) {
+    return { fullAddress: reverseGeocodeCache.get(cacheKey)!, rawDetails: null };
+  }
+
+  // 1. Try Google Maps Geocoder (loads SDK on demand if VITE_GOOGLE_MAPS_API_KEY is valid)
+  try {
+    const maps = await loadGoogleMapsApi();
+    if (maps && maps.Geocoder) {
+      const geocoder = new maps.Geocoder();
+      const googleRes = await new Promise<any>((resolve) => {
+        geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
+          if (status === 'OK' && Array.isArray(results) && results.length > 0) {
+            const detailed =
+              results.find((r: any) => !Array.isArray(r.types) || !r.types.includes('plus_code')) ||
+              results[0];
+            resolve(detailed);
+          } else {
+            resolve(null);
+          }
+        });
+      });
+
+      if (googleRes?.formatted_address) {
+        reverseGeocodeCache.set(cacheKey, googleRes.formatted_address);
+        return { fullAddress: googleRes.formatted_address, rawDetails: googleRes };
+      }
+    }
+  } catch (err) {
+    // Google Maps API not available or Geocoding API not activated, proceed to OSM fallback
+  }
+
+  // 2. Fallback to OpenStreetMap Nominatim Reverse Geocoding
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const resp = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      { signal: controller.signal, headers: { 'Accept-Language': 'en' } }
+    );
+    clearTimeout(timeoutId);
+
+    if (resp.ok) {
+      const data = await resp.json();
+      const addr = data.address || {};
+      const rawParts = [
+        addr.house_number || addr.building || addr.amenity || addr.shop || addr.office || addr.tourism || '',
+        addr.road || addr.street || addr.pedestrian || addr.highway || '',
+        addr.neighbourhood || addr.quarter || addr.residential || '',
+        addr.suburb || addr.hamlet || addr.locality || '',
+        addr.subdistrict || addr.town || addr.village || addr.city_district || addr.municipality || '',
+        addr.city || addr.county || addr.state_district || '',
+        addr.state ? (addr.postcode ? `${addr.state} - ${addr.postcode}` : addr.state) : (addr.postcode || ''),
+        addr.country || 'India'
+      ].filter(Boolean);
+
+      const dedupedParts: string[] = [];
+      rawParts.forEach((p: string) => {
+        const trimmed = p.trim();
+        if (trimmed && !dedupedParts.some(existing => existing.toLowerCase() === trimmed.toLowerCase())) {
+          dedupedParts.push(trimmed);
+        }
+      });
+
+      const constructed = dedupedParts.join(', ');
+      const bestAddress = (data.display_name && data.display_name.length > constructed.length)
+        ? data.display_name
+        : (constructed || data.display_name || '');
+
+      if (bestAddress) {
+        reverseGeocodeCache.set(cacheKey, bestAddress);
+        return { fullAddress: bestAddress, rawDetails: addr };
+      }
+    }
+  } catch (osmErr) {}
+
+  return { fullAddress: '', rawDetails: null };
+};

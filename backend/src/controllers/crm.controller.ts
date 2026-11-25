@@ -436,7 +436,7 @@ export async function smartSearch(req: AuthRequest, res: Response) {
 import { 
   syncToMongoDB, loadDataFromMongoDB, PropertyModel, DeveloperModel, 
   CustomerModel, LeadModel, AgreementModel, ProjectVisitAgreementModel, CostSheetModel, 
-  InvoiceModel, SiteVisitModel, MatchingRequestModel, RecycleBinModel
+  InvoiceModel, SiteVisitModel, MatchingRequestModel, SourcingRequestModel, VisitFeedbackModel, RecycleBinModel
 } from '../db/mongoPersistence.js';
 
 let lastAtlasBackgroundSync = 0;
@@ -466,6 +466,12 @@ export async function getMongoDBSync(req: AuthRequest, res: Response) {
           }
           if (Array.isArray(mongoData.developers) && mongoData.developers.length > 0) {
             (dbStore.data as any).developers = mongoData.developers as any;
+          }
+          if (Array.isArray(mongoData.sourcing_requests)) {
+            (dbStore.data as any).sourcing_requests = mongoData.sourcing_requests as any;
+          }
+          if (Array.isArray(mongoData.visit_feedbacks)) {
+            (dbStore.data as any).visit_feedbacks = mongoData.visit_feedbacks as any;
           }
           lastAtlasBackgroundSync = Date.now();
         }
@@ -548,6 +554,7 @@ export async function syncMongoDB(req: AuthRequest, res: Response) {
     if (Array.isArray(payload.pva_agreements)) (dbStore.data as any).pva_agreements = payload.pva_agreements;
     if (Array.isArray(payload.project_visit_agreements)) (dbStore.data as any).pva_agreements = payload.project_visit_agreements;
     if (Array.isArray(payload.sourcing_requests)) (dbStore.data as any).sourcing_requests = payload.sourcing_requests;
+    if (Array.isArray(payload.visit_feedbacks)) (dbStore.data as any).visit_feedbacks = payload.visit_feedbacks;
     if (Array.isArray(payload.developers)) (dbStore.data as any).developers = payload.developers;
     if (Array.isArray(payload.rating_invites)) (dbStore.data as any).rating_invites = payload.rating_invites;
     if (Array.isArray(payload.files)) (dbStore.data as any).files = payload.files;
@@ -937,6 +944,20 @@ export async function purgeSingleItemFromDB(item: any) {
       await SiteVisitModel.deleteMany(query);
       if (Array.isArray(dbStore.data.site_visits)) {
         dbStore.data.site_visits = dbStore.data.site_visits.filter((v: any) => !extractItemIdentifiers(v).ids.some(id => ids.includes(id)));
+      }
+    }
+
+    if (cat.includes('sourcing') || (item.originalLocation && item.originalLocation.includes('Sourcing'))) {
+      await SourcingRequestModel.deleteMany(query);
+      if (Array.isArray((dbStore.data as any).sourcing_requests)) {
+        (dbStore.data as any).sourcing_requests = (dbStore.data as any).sourcing_requests.filter((s: any) => !extractItemIdentifiers(s).ids.some(id => ids.includes(id)));
+      }
+    }
+
+    if (cat.includes('feedback')) {
+      await VisitFeedbackModel.deleteMany(query);
+      if (Array.isArray((dbStore.data as any).visit_feedbacks)) {
+        (dbStore.data as any).visit_feedbacks = (dbStore.data as any).visit_feedbacks.filter((fb: any) => !extractItemIdentifiers(fb).ids.some(id => ids.includes(id)));
       }
     }
 
